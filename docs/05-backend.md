@@ -1,7 +1,34 @@
 # 05 — Backend
 
-Backend nằm trong `backend` (Tauri + Rust). Không có server ngoài, không có cloud.
+Backend nằm trong `backend/` (Rust). Không có server ngoài, không có cloud.
 Nó là **nguồn sự thật duy nhất**: cấu hình, phiên, sổ sách, khoá API đều ở đây.
+
+## 0. Hiện trạng
+
+Tài liệu này mô tả đích đến. Phần đã dựng và phần còn lại:
+
+| Hạng mục | Trạng thái |
+|---|---|
+| HTTP server, chặn Host/Origin/token | **xong** |
+| Phục vụ `/d/<id>/` và `/a/<id>/` cho OBS, chặn thoát thư mục | **xong** |
+| Sổ thiết kế, quét `design.json`, báo thiết kế chưa build | **xong** |
+| Một thiết kế một lúc, trả `409` kèm tên cái đang chạy | **xong** |
+| Cấu hình module theo thiết kế, ghi nguyên tử | **xong** |
+| WebSocket đẩy cấu hình xuống ngay, không tải lại trang | **xong** |
+| Kiểm tra cấu hình theo schema zod của module | chưa — xem mục 4 |
+| Nguồn sự kiện TikTok | chưa |
+| SQLite cho sổ quà | chưa — mới có `database/schema.sql` |
+| Khoá API, `/api/tts`, `/api/ai/tick` | chưa |
+| Vỏ Tauri, webview TikTok, `agent-port.json` | chưa |
+
+Chạy thử khi phát triển, không cần Tauri:
+
+```bash
+cd backend && cargo run
+# rồi mở http://127.0.0.1:47830/d/<id>/
+```
+
+Token in ra ở dòng log đầu tiên. Test: `cd backend && cargo test` (45 unit + 15 tích hợp).
 
 ## 1. Vì sao cần backend thật
 
@@ -94,7 +121,10 @@ Một cơ sở dữ liệu **dùng chung cho dev và production**, không tách 
 Quy tắc ghi:
 
 - Ghi ra file `.tmp` rồi `rename` — không bao giờ ghi đè trực tiếp. Mã cũ đã làm đúng ở `store.rs`, giữ nguyên.
-- Cấu hình được kiểm tra bằng schema của module **trước khi** ghi. Sai thì trả `400` kèm lý do cụ thể, không im lặng sửa thành mặc định.
+- Cấu hình được kiểm tra **trước khi** ghi. Sai thì trả `400` kèm lý do cụ thể, không im lặng sửa thành mặc định.
+  Hiện backend mới kiểm tra được hình dạng (phải là object, id hợp lệ, kích thước dưới 1 MB).
+  Kiểm tra đầy đủ theo schema zod của từng module cần bước build xuất `schema.json`
+  từ `client/modules/*` ra cho backend đọc — làm cùng lúc với registry module.
 - Sổ quà chỉ thêm, không sửa, không xoá. `POST /api/designs/<id>/reset` xoá phiên nhưng **không** đụng sổ quà.
 
 Vì sao SQLite chỉ cho sổ quà: dữ liệu này cần truy vấn theo ngày, theo phòng, và phải

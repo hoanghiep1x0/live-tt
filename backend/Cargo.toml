@@ -1,0 +1,39 @@
+[package]
+name = "live-backend"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.78"
+description = "Máy chủ nội bộ: phục vụ thiết kế cho OBS, giữ cấu hình, phát sự kiện live"
+
+[lib]
+name = "live_backend"
+path = "src/lib.rs"
+
+# Chạy độc lập khi phát triển, không cần dựng Tauri.
+[[bin]]
+name = "live-backend"
+path = "src/main.rs"
+
+[dependencies]
+axum = { version = "0.7.9", features = ["ws"] }
+tokio = { version = "1.41.1", features = ["rt-multi-thread", "macros", "net", "fs", "signal"] }
+tower = { version = "0.5.1", features = ["util"] }
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.133"
+futures-util = "0.3.31"
+mime_guess = "2.0.5"
+rand = "0.8.5"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+# Test tích hợp nằm ở tests/backend/ theo quy ước dự án, không ở backend/tests/.
+[[test]]
+name = "http"
+path = "../tests/backend/http.rs"
+
+[dev-dependencies]
+tempfile = "3.14.0"
+
+[profile.release]
+strip = true
+lto = true
