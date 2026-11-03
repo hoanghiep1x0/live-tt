@@ -1,0 +1,221 @@
+# 02 — Hợp đồng dùng chung
+
+Mọi type trong tài liệu này nằm ở `client/shared/contracts`. Backend (Rust) và frontend (TS) đều theo.
+Đổi hợp đồng là đổi điểm chạm của cả hệ thống, phải sửa tài liệu này trước khi sửa mã.
+
+## 1. Sơ đồ ba cửa
+
+```
+   nguồn          cửa vào              bus chung            cửa ra
+┌──────────┐   ┌───────────┐      ┌──────────────┐     ┌──────────┐
+│ TikTok   │──▶│           │      │              │────▶│  Effect  │──▶ sân khấu
+│ giả lập  │──▶│ LiveEvent │─────▶│  FeedItem[]  │     └──────────┘
+│ thủ công │──▶│           │      │              │────▶┌──────────┐
+└──────────┘   └───────────┘      └──────────────┘     │ Command  │──▶ cổng duyệt
+                                                        └──────────┘
+```
+
+## 2. Cửa vào — `LiveEvent`
+
+Giữ nguyên hình dạng của mã cũ, đã chạy với live thật.
+
+```ts
+export interface EventUser {
+  user: string;       // nick, định danh duy nhất
+  name: string;       // tên hiển thị
+  avatar?: string;
+}
+
+export type LiveEvent = EventUser & (
+  | { kind: 'gift'; gift: string; count: number; xuEach: number }
+  | { kind: 'like'; count: number; total?: number }
+  | { kind: 'comment'; text: string }
+  | { kind: 'join' }
+  | { kind: 'leave' }
+);
+```
+
+Mọi nguồn (webview TikTok, cầu nối, giả lập, bảng thử) đều chuẩn hoá về đây.
+Thêm nguồn mới = viết một mapper trả `LiveEvent`, không đụng gì khác.
+
+## 3. Bus chung — `FeedItem`
+
+```ts
+export type FeedKind =
+  | LiveEvent['kind']
+  | 'milestone' | 'system' | 'vote' | 'seat' | 'message' | 'host';
+
+export interface FeedItem {
+  id: number;
+  at: number;          // mốc thời gian, ms
+  kind: FeedKind;
+  name: string;
+  text: string;
+  user?: string;
+  xu?: number;         // điểm sau quy đổi
+  coins?: number;      // xu thật TikTok, dùng cho sổ đối soát
+  virtual?: boolean;   // nhân vật ảo: không đọc, không thông báo
+  scripted?: boolean;  // câu do agent viết
+  voice?: string;      // "nhà-cung-cấp:tên-giọng"
+  story?: string;      // tên chuyện đang kể
+}
+```
+
+`virtual` là cờ quan trọng: module nào đọc feed cũng phải bỏ qua mục `virtual`
+trừ khi có lý do rõ ràng, nếu không bot sẽ tự cảm ơn chính nó.
+
+## 4. Cửa ra — `Effect`
+
+Module trả về `Effect[]`. Thiết kế quyết định thực thi thế nào.
+
+```ts
+export type Effect =
+  | { kind: 'say';     text: string; voice?: string; priority?: Priority }
+  | { kind: 'sfx';     sound: SfxName; volume?: number }
+  | { kind: 'overlay'; slot: SlotName; node: OverlayNode; ttlMs?: number }
+  | { kind: 'spawn';   actor: string; at?: Vec2; action?: string }
+  | { kind: 'record';  table: 'gift' | 'vote' | 'raffle'; row: Json }
+  | { kind: 'command'; command: RoomCommand; reason: string };
+
+export type Priority = 'low' | 'normal' | 'high';
+```
+
+Quy tắc:
+
+- `say` đi qua hàng chờ giọng đọc, `high` chen lên trước (ví dụ cảm ơn quà lớn).
+- `overlay` gắn vào **slot** mà thiết kế khai báo. Thiết kế không có slot đó thì effect bị bỏ, có ghi log, **không lỗi**.
+- `command` là cửa duy nhất để module tác động sang module khác hoặc sang phiên; đi qua cổng duyệt.
+
+## 5. Slot — chỗ thiết kế cho module cắm vào
+
+Thiết kế khai báo slot trong `design.json`. Module khai báo slot nó cần.
+
+```ts
+export type SlotName =
+  | 'top-bar' | 'bottom-bar' | 'left' | 'right'
+  | 'center' | 'full' | 'ticker' | 'stage-3d';
+```
+
+Manager đối chiếu hai danh sách và báo cho người dùng biết module nào chưa hiển thị được
+trên thiết kế đang chạy. Đây là chỗ thay cho bảng `ROOM_MODULES` cũ, nhưng tự động.
+
+## 6. Lệnh có kiểm soát — `RoomCommand`
+
+```ts
+export type RoomCommand =
+  | { op: 'say';        text: string; voice?: string }
+  | { op: 'set-module'; moduleId: string; on: boolean }
+  | { op: 'set-config'; moduleId: string; patch: Json }
+  | { op: 'set-design'; designId: string }
+  | { op: 'seed';       n: number }
+  | { op: 'next-story' };
+
+export type Gate = 'lam' | 'goi-y' | 'bo';
+```
+
+Người, luật tự động và AI dùng chung whitelist này, và chung cổng `gateFor`.
+Mã cũ đã làm đúng ở `ops.ts` + `autopilot.ts`; chuyển sang nguyên tắc nguyên vẹn.
+
+## 7. Manifest module
+
+```ts
+export interface ModuleManifest<C = Json> {
+  id: string;                      // kebab-case, duy nhất
+  name: string;                    // tên tiếng Việt trên thẻ
+  icon: string;                    // emoji hoặc tên icon
+  summary: string;                 // một dòng dưới tên
+  group: 'quick' | 'other';        // nhóm trên trang Tính năng
+  configVersion: number;
+  schema: ZodType<C>;              // kèm giá trị mặc định
+  quick?: QuickField[];            // ô chỉnh nhanh trên thẻ, tối đa 3
+  slots?: SlotName[];              // slot cần có để hiển thị
+  needs?: Capability[];            // 'tts' | 'audio' | 'stage-3d' | 'net'
+  action?: { label: string; op: string };   // nút trên thẻ, vd "Quay"
+  migrate?: (old: Json, fromVersion: number) => C;
+}
+
+export interface QuickField {
+  key: string;        // khoá trong config
+  label: string;      // nhãn ngắn trên thẻ, vd "Số bot"
+}
+
+export type Capability = 'tts' | 'audio' | 'stage-3d' | 'net' | 'storage';
+```
+
+`needs` để manager báo trước: module cần `tts` mà máy chưa cấu hình giọng đọc thì
+hiện cảnh báo trên thẻ thay vì để người dùng bật rồi thấy im lặng.
+
+## 8. Lõi module
+
+```ts
+export interface ModuleCore<C, S = unknown> {
+  init(config: C): S;
+
+  /** Một mục mới trên bus. Trả về hiệu ứng, không tự thực thi. */
+  onFeed?(state: S, item: FeedItem, ctx: Ctx<C>): Effect[];
+
+  /** Nhịp đều, mặc định 1 giây. Khai báo tickMs để đổi. */
+  onTick?(state: S, now: number, ctx: Ctx<C>): Effect[];
+  tickMs?: number;
+
+  /** Cấu hình đổi giữa lúc đang chạy. BẮT BUỘC nếu module có cấu hình. */
+  onConfig?(state: S, config: C): S;
+
+  /** Người dùng bấm nút action trên thẻ. */
+  onAction?(state: S, op: string, ctx: Ctx<C>): Effect[];
+
+  /** Dọn dẹp khi tắt module hoặc đổi thiết kế. */
+  dispose?(state: S): void;
+}
+
+export interface Ctx<C> {
+  config: C;
+  now: number;
+  rand: () => number;
+  /** Chỉ đọc. Module không sửa phiên trực tiếp. */
+  session: Readonly<SessionView>;
+}
+```
+
+`SessionView` là bản rút gọn chỉ đọc: tổng xu, tổng tim, số người xem, danh sách người đang trong phòng,
+mục feed gần đây. Module **không** thấy toàn bộ state, để không ai phụ thuộc vào chi tiết nội bộ.
+
+## 9. Manifest thiết kế — `design.json`
+
+```json
+{
+  "id": "ke-chuyen",
+  "name": "Phòng kể chuyện",
+  "summary": "AI MC đọc truyện, khán giả ngồi ghế hình quạt",
+  "version": "1.0.0",
+  "canvas": { "width": 1080, "height": 1920 },
+  "slots": ["top-bar", "center", "bottom-bar", "ticker"],
+  "provides": ["stage-3d"],
+  "recommends": ["gift-thanks", "welcome", "tts-mc", "top-givers"],
+  "entry": "dist/index.html"
+}
+```
+
+- `slots` — chỗ module cắm vào.
+- `provides` — khả năng thiết kế tự có, thoả `needs` của module.
+- `recommends` — module gợi ý bật khi lần đầu chọn thiết kế. **Chỉ gợi ý**, không ép.
+
+## 10. Thông điệp WebSocket
+
+```ts
+// Backend → thiết kế và manager
+type Down =
+  | { t: 'feed';    items: FeedItem[] }
+  | { t: 'session'; view: SessionView }
+  | { t: 'config';  moduleId: string; config: Json }
+  | { t: 'modules'; enabled: string[] }
+  | { t: 'live';    designId: string | null };
+
+// Manager → backend
+type Up =
+  | { t: 'command'; command: RoomCommand; by: 'nguoi' | 'luat' | 'ai' }
+  | { t: 'ping' };
+```
+
+Thiết kế chỉ nhận, không gửi lệnh lên. Muốn tác động thì qua `Effect` dạng `command`,
+do runtime trong thiết kế gửi lên kèm nhãn nguồn.

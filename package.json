@@ -1,0 +1,25 @@
+{
+  "name": "live-studio",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Phòng live TikTok: thiết kế đóng gói riêng, tính năng cắm thêm dạng module",
+  "workspaces": [
+    "client/shared/*",
+    "client/modules/*",
+    "client/designs/*",
+    "client/manager"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --build --force",
+    "build:designs": "npm run build --workspaces --if-present",
+    "dev": "npm run dev -w @live/manager"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}

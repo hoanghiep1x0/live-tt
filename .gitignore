@@ -1,0 +1,26 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Thùng rác — xoá được bất cứ lúc nào. Giữ lại mỗi README.
+.tmp/*
+!.tmp/README.md
+
+# Biến môi trường thật. Mẫu là .env.example.
+.env
+.env.local
+
+# Dữ liệu thật và khoá API. Chỉ commit schema và migrations.
+database/*.sqlite
+database/*.sqlite-wal
+database/*.sqlite-shm
+database/designs/
+database/secrets.json
+
+# Rust
+backend/target/
+
+# Hệ điều hành
+Thumbs.db
+desktop.ini
+.DS_Store
