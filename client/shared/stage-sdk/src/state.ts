@@ -6,7 +6,7 @@
  */
 
 import { WS_PATH } from '@live/contracts';
-import type { Down, Json, SessionView } from '@live/contracts';
+import type { Down, Json, SessionView, Up } from '@live/contracts';
 import { VOICE_MAC_DINH } from './audio';
 import type { VoiceCfg } from './audio';
 
@@ -74,6 +74,16 @@ const CHO_DAU = 500;
 const CHO_TRAN = 10_000;
 
 /** Nối WebSocket và gọi `nhan` mỗi lần trạng thái đổi. Trả về hàm đóng. */
+/** Socket đang mở, để gửi lệnh lên. Một sân khấu chỉ có một đường nối. */
+let socket: WebSocket | null = null;
+
+/** Gửi một lệnh lên backend. Backend mới là nơi quyết có làm hay không. */
+export function guiLenh(up: Up): boolean {
+  if (socket === null || socket.readyState !== WebSocket.OPEN) return false;
+  socket.send(JSON.stringify(up));
+  return true;
+}
+
 export function connectStage(nhan: (s: StageState) => void): () => void {
   let s = BAN_DAU;
   let ws: WebSocket | null = null;
@@ -89,6 +99,7 @@ export function connectStage(nhan: (s: StageState) => void): () => void {
   const mo = (): void => {
     const giaoThuc = location.protocol === 'https:' ? 'wss' : 'ws';
     ws = new WebSocket(`${giaoThuc}://${location.host}${WS_PATH}`);
+    socket = ws;
 
     ws.onopen = () => {
       cho = CHO_DAU;
@@ -114,6 +125,7 @@ export function connectStage(nhan: (s: StageState) => void): () => void {
 
   return () => {
     dong = true;
+    socket = null;
     if (hen !== undefined) clearTimeout(hen);
     ws?.close();
   };

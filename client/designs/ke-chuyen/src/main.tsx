@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { StageProvider } from '@live/stage-sdk';
+import { BangXem, StageProvider } from '@live/stage-sdk';
 import { Stage } from './Stage';
 import './stage.css';
 
@@ -11,5 +11,9 @@ if (goc === null) throw new Error('thiếu #san-khau trong index.html');
 createRoot(goc).render(
   <StageProvider designId="ke-chuyen">
     <Stage />
+    {/* NGOÀI `.stage`, cố ý: `.stage` khai `container-type`, mà thuộc tính đó
+        biến nó thành khối chứa cho con `position: fixed` — đặt bảng vào trong
+        thì nó nằm lọt trong khung và lên sóng. */}
+    <BangXem />
   </StageProvider>,
 );

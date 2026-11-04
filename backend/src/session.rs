@@ -122,8 +122,6 @@ pub struct SessionView {
 pub struct Session {
     design_id: String,
     started_at: i64,
-    /// Số ghế của phòng, do thiết kế khai trong design.json.
-    suc_chua: usize,
     /// Đổi xu TikTok sang điểm của phòng. Mỗi bối cảnh có thể khác nhau.
     ti_le: f64,
     totals: Totals,
@@ -145,7 +143,6 @@ impl Session {
         Self {
             design_id: design_id.to_string(),
             started_at: now,
-            suc_chua,
             ti_le: if ti_le > 0.0 { ti_le } else { 1.0 },
             totals: Totals::default(),
             viewers: HashMap::new(),

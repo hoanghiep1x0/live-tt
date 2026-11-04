@@ -5,10 +5,9 @@
 //! trình cầu nối, đã có sẵn ở bản cũ (`D:\Live\tools\bridge`).
 
 use std::net::{Ipv4Addr, SocketAddr};
-use std::sync::Arc;
 use std::time::Duration;
 
-use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::extract::ws::{Message, WebSocketUpgrade};
 use axum::response::Response;
 use axum::routing::get;
 use futures_util::{SinkExt, StreamExt};

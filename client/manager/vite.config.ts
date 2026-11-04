@@ -20,6 +20,7 @@ export default defineConfig({
       '@live/contracts',
       '@live/mod-chat-bubbles',
       '@live/mod-gift-thanks',
+      '@live/mod-story',
       '@live/mod-top-givers',
       '@live/mod-welcome',
       '@live/mod-likes-counter',

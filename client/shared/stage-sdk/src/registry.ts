@@ -15,6 +15,8 @@ import { moduleLikesCounter } from '@live/mod-likes-counter';
 import { Stage as LikesCounterStage } from '@live/mod-likes-counter/stage';
 import { moduleTopGivers } from '@live/mod-top-givers';
 import { Stage as TopGiversStage } from '@live/mod-top-givers/stage';
+import { moduleStory } from '@live/mod-story';
+import { Stage as StoryStage } from '@live/mod-story/stage';
 import { moduleFollowThanks } from '@live/mod-follow-thanks';
 import { moduleGiftThanks } from '@live/mod-gift-thanks';
 import { moduleWelcome } from '@live/mod-welcome';
@@ -105,6 +107,7 @@ export const SO_MODULE: readonly DangKy[] = [
   dangKy(moduleGiftThanks),
   dangKy(moduleWelcome),
   dangKy(moduleFollowThanks),
+  dangKy(moduleStory, { slot: 'screen', Part: StoryStage }),
   dangKy(moduleTopGivers, { slot: 'tops', Part: TopGiversStage }),
   dangKy(moduleChatBubbles, { slot: 'chat', Part: ChatBubblesStage }),
   dangKy(moduleLikesCounter, { slot: 'target', Part: LikesCounterStage }),

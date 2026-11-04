@@ -10,13 +10,14 @@
   },
   "dependencies": {
     "@live/contracts": "*",
-    "@live/runtime": "*",
     "@live/mod-chat-bubbles": "*",
     "@live/mod-follow-thanks": "*",
     "@live/mod-gift-thanks": "*",
     "@live/mod-likes-counter": "*",
+    "@live/mod-story": "*",
     "@live/mod-top-givers": "*",
-    "@live/mod-welcome": "*"
+    "@live/mod-welcome": "*",
+    "@live/runtime": "*"
   },
   "peerDependencies": {
     "react": "19.3.1"

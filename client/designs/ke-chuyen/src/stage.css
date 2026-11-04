@@ -55,10 +55,13 @@ body {
 }
 
 /* ---- Nền: ảnh chánh điện + ba lớp tối dần xuống rạp ghế ---- */
+/* Nền trôi rất chậm. Bắt buộc, không phải trang trí: TikTok soi khung hình đứng
+   yên lâu và xếp vào nội dung kém chất lượng, mà nền là vùng lớn nhất màn. */
 .stage-shade {
   position: absolute;
-  inset: 0;
+  inset: -2%;
   z-index: -2;
+  animation: nen-troi 48s ease-in-out infinite alternate;
   background:
     linear-gradient(
       180deg,
@@ -92,6 +95,14 @@ body {
 @keyframes halo-tho {
   50% {
     opacity: 0.72;
+  }
+}
+@keyframes nen-troi {
+  from {
+    transform: scale(1.01) translate(-0.5%, -0.3%);
+  }
+  to {
+    transform: scale(1.045) translate(0.6%, 0.4%);
   }
 }
 
@@ -240,55 +251,77 @@ body {
 .stage-waiting {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1cqw;
   text-align: center;
   padding: 4cqw;
   color: var(--stage-soft);
-  font-size: 3cqw;
+  font-size: 2.6cqw;
+}
+.stage-waiting b {
+  font-size: 3.6cqw;
+  color: var(--gold);
+}
+/* Màn chờ cũng phải động: khung đứng im là TikTok soi. */
+.stage-waiting-sen {
+  width: 10cqw;
+  height: 10cqw;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--stage-glow), rgba(0, 0, 0, 0) 70%);
+  animation: cho-tho 4s ease-in-out infinite;
+}
+@keyframes cho-tho {
+  50% {
+    transform: scale(1.25);
+    opacity: 0.6;
+  }
 }
 
-/* ---- Lời dẫn trong khung ---- */
-
-.man-loi {
+/* Lời MC: chào hỏi, cảm ơn quà. Nằm trên hàng ghế, KHÔNG nằm trong khung chiếu
+   — khung đó dành cho nội dung truyện. */
+.stage-host {
   position: absolute;
-  z-index: 3;
-  margin: 0;
-  text-align: center;
-  color: #fff;
-  animation: man-loi-vao 0.3s ease-out;
+  left: 50%;
+  /* Nằm ĐÈ LÊN hàng ghế, ngay dưới dải chữ chạy. Khoảng giữa khung chiếu và
+     hàng ghế đã kín: hàng vinh danh rồi thanh tiến độ. */
+  top: calc(var(--hall-top) + 1.6cqw);
+  transform: translateX(-50%);
+  z-index: 6;
+  max-width: 72cqw;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.4cqw;
+  padding: 1.6cqw 2.4cqw;
+  border-radius: 2cqw;
+  background: linear-gradient(180deg, rgba(32, 16, 6, 0.92), rgba(18, 8, 3, 0.92));
+  border: 0.2cqw solid color-mix(in srgb, var(--gold2) 50%, transparent);
+  box-shadow: 0 1cqw 3cqw rgba(0, 0, 0, 0.6);
+  animation: mc-vao 0.3s ease-out;
 }
-
-/* Có video hoặc ảnh: nằm dưới đáy như phụ đề, có nền mờ dần để chữ nổi lên
-   hình mà không che mất hình. */
-.man-sub {
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 6cqw 2.4cqw 2.2cqw;
-  font-size: 2.7cqw;
+.stage-host p {
+  margin: 0;
+  font-size: 2.5cqw;
   line-height: 1.4;
   font-weight: 600;
-  text-shadow: 0 0.2cqw 0.6cqw rgba(0, 0, 0, 0.95), 0 0 1.2cqw rgba(0, 0, 0, 0.8);
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.72) 55%);
+  color: #fff;
 }
-
-/* Không có hình: chữ là nội dung chính, đặt giữa khung cho cân bố cục. */
-.man-giua {
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 0 4cqw;
-  font-size: 3.4cqw;
-  line-height: 1.5;
-  font-weight: 600;
-  text-shadow: 0 0.2cqw 0.6cqw rgba(0, 0, 0, 0.8);
+.stage-host-ai {
+  flex: none;
+  font-size: 1.9cqw;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--gold-fg);
+  background: linear-gradient(180deg, var(--gold1), var(--gold2));
+  padding: 0.1cqw 1cqw;
+  border-radius: 1cqw;
 }
-
-@keyframes man-loi-vao {
+@keyframes mc-vao {
   from {
     opacity: 0;
+    transform: translateX(-50%) translateY(1.4cqw);
   }
 }
 

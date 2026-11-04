@@ -15,7 +15,6 @@ import {
 
 const NEN = 'bg/amitabha-stage.png';
 const HOA_SEN = 'fx/lotus.png';
-const VIDEO_MAU = 'video/mau-su-tich-cay-vu-sua.webm';
 
 interface ChoNgoi {
   key: string;
@@ -116,9 +115,6 @@ export function Stage() {
   const s = useStage();
   const asset = useAsset();
   const loiMc = useLoiMc();
-  // Khung đang chiếu gì. Có video hay ảnh thì lời dẫn xuống làm phụ đề để người
-  // xem nhìn vào hình; chỉ có chữ thì chữ đứng giữa khung cho cân.
-  const [trongKhung] = useState<'video' | 'anh' | 'chu'>('video');
   const [huong] = useState<Huong>('portrait');
   const khung = useRef<HTMLDivElement>(null);
 
@@ -159,21 +155,20 @@ export function Stage() {
 
       {!s.noiDuoc ? <div className="stage-offline">mất kết nối máy chủ</div> : null}
 
-      <section className="stage-screen" data-trong-khung={trongKhung}>
+      <section className="stage-screen">
         <span className="stage-ai-label">Nội dung do AI</span>
         <div className="stage-screen-inner">
-          {trongKhung === 'video' ? (
-            <video className="stage-video" src={asset(VIDEO_MAU)} autoPlay muted loop playsInline />
-          ) : null}
+          {/* Chưa bật module kể chuyện thì khung vẫn phải có gì đó, và vẫn phải
+              động — TikTok soi khung hình đứng yên lâu. */}
+          <div className="stage-waiting">
+            <span className="stage-waiting-sen" />
+            <b>Phòng kể chuyện</b>
+            Bật tính năng Kể chuyện để chiếu truyện lên đây
+          </div>
           <Slot name="screen" />
           <div className="slot-screen-overlay">
             <Slot name="screen-overlay" />
           </div>
-          {loiMc !== null ? (
-            <p className={trongKhung === 'chu' ? 'man-loi man-giua' : 'man-loi man-sub'}>
-              {loiMc.text}
-            </p>
-          ) : null}
         </div>
       </section>
 
@@ -214,6 +209,15 @@ export function Stage() {
       <div className="slot-chat">
         <Slot name="chat" />
       </div>
+      {/* Lời MC: chào hỏi, cảm ơn quà. KHÔNG nằm trong khung chiếu — khung đó
+          dành cho nội dung truyện. */}
+      {loiMc === null ? null : (
+        <div className="stage-host" role="status">
+          <span className="stage-host-ai">MC</span>
+          <p>{loiMc.text}</p>
+        </div>
+      )}
+
       <div className="slot-center">
         <Slot name="center" />
       </div>
