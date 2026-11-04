@@ -442,17 +442,25 @@ export function BangXem() {
 
   if (an) return null;
 
+  // Nút bánh răng cố định ở góc phải trên, lớp 10001 — tức là NẰM TRÊN cả modal.
+  // Đang mở modal thì nó đè đúng chỗ nút đóng của modal: hai dấu ✕ chồng nhau,
+  // bấm trúng cái ngoài là đóng cả bảng. Mở modal thì giấu nó đi; đóng modal
+  // xong nó về chỗ cũ.
+  const dangMoModal = sua !== null || suaMc;
+
   return (
     <>
-      <button
-        type="button"
-        className="bx-nut"
-        title={mo ? 'Đóng bảng xem thử' : 'Bật tắt tính năng để xem thử'}
-        aria-expanded={mo}
-        onClick={() => setMo(!mo)}
-      >
-        {mo ? '✕' : '⚙'}
-      </button>
+      {dangMoModal ? null : (
+        <button
+          type="button"
+          className="bx-nut"
+          title={mo ? 'Đóng bảng xem thử' : 'Bật tắt tính năng để xem thử'}
+          aria-expanded={mo}
+          onClick={() => setMo(!mo)}
+        >
+          {mo ? '✕' : '⚙'}
+        </button>
+      )}
 
       {!mo ? null : (
         <aside className="bx-ngan" aria-label="Xem thử tính năng">

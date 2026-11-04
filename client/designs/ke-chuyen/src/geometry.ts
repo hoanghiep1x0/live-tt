@@ -23,11 +23,11 @@ export const PORTRAIT_BOTTOM_GAP = 1;
 export const LOWER_TOP = SCREEN_BOTTOM_RATIO * STAGE_H;
 export const HALL_TOP = LOWER_TOP + 32;
 export const HALL_H = 172 - HALL_TOP;
-/** Đỉnh khung dọc, ngay dưới dải tiêu đề (dải đó kết thúc quãng 5,9cqw). Cả
- *  khung nhấc lên sát đây để đáy khung chừa được khoảng trống cho hàng top và
- *  dải chữ ở dưới; chiều cao khung giữ nguyên. Nhãn "Nội dung do AI" vì vậy
- *  dời vào trong khung — ngoài khung thì nó chiếm đúng chỗ vừa lấy được. */
-export const OVERLAY_TOP = 6.6;
+/** Đỉnh khung dọc. Dải tiêu đề kết thúc quãng 5,9cqw, nên khung có thể bắt đầu
+ *  ngay từ 6,6 — nhưng để thấp hơn một chút cho dải trên thở, và khung bớt cao
+ *  thì cụm dưới (dòng đua, hàng bồ đoàn, thanh tiến độ) rộng chỗ hơn. Lời minh
+ *  bạch không còn nằm trong khung nữa, nó đã lên dải trên cạnh chữ LIVE. */
+export const OVERLAY_TOP = 9;
 /** Khung ngang nâng cao hơn mốc phần dưới một đoạn, cho cân đối. */
 export const LANDSCAPE_LIFT = 14.3;
 /** Khung ngang: cụm top / tiến độ / dải chữ nâng lên cùng khung. */

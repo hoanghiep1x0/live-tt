@@ -55,7 +55,7 @@ export const ANH_DUNG: readonly string[] = Array.from(
 
 /** Lấy ảnh theo kiểu. Mảng dựng đủ `SO_KIEU` phần tử và `kieuChibi` luôn trả số
  *  trong khoảng đó, nhưng `noUncheckedIndexedAccess` không biết điều ấy. */
-function anhCua(ds: readonly string[], kieu: number): string {
+export function anhCua(ds: readonly string[], kieu: number): string {
   return ds[kieu] ?? ds[0] ?? '';
 }
 
@@ -68,30 +68,12 @@ export function kieuChibi(user: string): number {
   return h % SO_KIEU;
 }
 
-/** Đi từ cuối lối giữa lên tới ghế mất ngần này. Phải khớp `ghe-di` trong
- *  stage.css. Bản cũ cho một lượt đi ở lối giữa 5,2 giây cho cả quãng rạp; ở
- *  đây quãng ngắn hơn vì đi thẳng từ lối vào tới ghế. */
-const DI_MS = 1_500;
-/** Người rời ghế được giữ lại ngần này để đi ra. Khớp `ghe-ra` trong stage.css. */
-const RA_MS = 1_500;
+/** Người rời ghế được giữ lại ngần này để mờ dần. Khớp `ghe-an` trong stage.css. */
+const RA_MS = 500;
 
-/** Một khán giả: đi vào bằng dáng ĐỨNG, tới nơi mới đổi sang dáng NGỒI.
- *
- *  Bản cũ dựng hai dáng khác nhau từ cùng một nhân vật (`buildChibi(v, {
- *  standing })`) chứ không trượt cái dáng ngồi vào chỗ — người ngồi mà trôi
- *  ngang qua rạp thì nhìn ra ngay là ảnh dán. */
-function Khan({ user, asset }: { user: string; asset: (p: string) => string }) {
-  const kieu = kieuChibi(user);
-  const [dangDi, setDangDi] = useState(true);
-  return (
-    <img
-      className={dangDi ? 'seat-chibi dang-di' : 'seat-chibi'}
-      src={asset(anhCua(dangDi ? ANH_DUNG : ANH_NGOI, kieu))}
-      alt=""
-      onAnimationEnd={() => setDangDi(false)}
-    />
-  );
-}
+/** Ghế KHÔNG có màn đi: người đi vào / đi ra là một lượt riêng ở lối đi (xem
+ *  `LoiDi.tsx`), đúng như bản cũ — không ai băng qua ghế để tới chỗ của mình.
+ *  Ở đây chỉ là ngồi xuống và đứng lên, mờ nhẹ cho khỏi lộp bộp. */
 
 export function HangGhe({
   ghe,
@@ -155,10 +137,6 @@ export function HangGhe({
               top: `${g.y}cqw`,
               // @ts-expect-error biến CSS tuỳ chỉnh
               '--seat-scale': g.scale,
-              // Quãng đường từ cuối lối giữa lên ghế này. `x` tính bằng % bề
-              // rộng màn, `y` bằng cqw — cùng một thước, vì 1% = 1cqw.
-              '--di-x': `${(50 - g.x).toFixed(1)}cqw`,
-              '--di-y': `${Math.max(0, 54 - g.y).toFixed(1)}cqw`,
               // Lệch pha nhịp thở, kẻo cả rạp phập phồng cùng lúc.
               '--tho-tre': `${(-(g.flat % 17) * 0.2).toFixed(1)}s`,
             }}
@@ -166,14 +144,18 @@ export function HangGhe({
           >
             {ai !== undefined ? (
               // `key` theo nick: người này đứng lên người kia ngồi xuống thì
-              // React dựng lại, màn đi vào chạy lại từ đầu.
-              <Khan key={ai.user} user={ai.user} asset={asset} />
+              // React dựng lại, màn ngồi xuống chạy lại.
+              <img
+                key={ai.user}
+                className="seat-chibi"
+                src={asset(anhCua(ANH_NGOI, kieuChibi(ai.user)))}
+                alt=""
+              />
             ) : cu === undefined ? null : (
-              // Ghế vừa trống: người cũ đứng dậy đi ngược đường lúc vào.
               <img
                 key={`ra:${cu.user}:${cu.at}`}
                 className="seat-chibi di-ra"
-                src={asset(anhCua(ANH_DUNG, kieuChibi(cu.user)))}
+                src={asset(anhCua(ANH_NGOI, kieuChibi(cu.user)))}
                 alt=""
               />
             )}
@@ -227,4 +209,3 @@ export function TenKhan({ ghe, ngoi }: { ghe: ChoNgoi[]; ngoi: Map<number, Seat>
   );
 }
 
-export { DI_MS, RA_MS };

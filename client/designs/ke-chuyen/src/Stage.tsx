@@ -14,6 +14,7 @@ import { bienCss } from './geometry';
 import type { Huong } from './geometry';
 import { GHE_MAC_DINH, hallContentH, hallRowsFor } from './seats';
 import { dungGhe, HangGhe, TenKhan } from './parts/HangGhe';
+import { LoiDi } from './parts/LoiDi';
 
 /** Lựa chọn của riêng phòng này, hiện thành thẻ "Khung phòng" ở bảng xem.
  *
@@ -43,6 +44,17 @@ const CAU_BE = 'nguoi/cau-be.png';
  *  máy quay trực diện, rồi chụp ra PNG nền trong. Xem `assets/CREDITS.md`. */
 const BE_CHIBI = 'nguoi/be-chibi.png';
 
+/** Nhịp thô cho những thứ bắt đầu / kết thúc theo thời gian. Nửa giây là đủ:
+ *  phần chạy mượt nằm ở CSS, đây chỉ quyết định lúc nào dựng và lúc nào bỏ. */
+function useNhip(): number {
+  const [t, datT] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => datT(Date.now()), 500);
+    return () => clearInterval(id);
+  }, []);
+  return t;
+}
+
 /** Đồng hồ cho màn chờ. Nhịp 250ms của sân khấu không tới thiết kế, mà màn chờ
  *  chỉ cần tới giây, nên một nhịp một giây là đủ. Giờ máy chứ không phải giờ
  *  phiên: người xem đọc nó như đồng hồ treo tường. */
@@ -63,6 +75,9 @@ export function Stage() {
   /** Module sàn nhảy xin sáng slot `floor` suốt màn nhảy. */
   const sanSang = useSlotSang('floor');
   const gio = useDongHo();
+  // Đồng hồ cho lượt người ra vào ở lối đi: chỉ cần đủ mịn để bắt đầu và kết
+  // thúc một lượt, phần chạy là của CSS.
+  const nhip = useNhip();
   // Khung dọc là mặc định; người vận hành gạt công tắc ở bảng xem thì đổi ngay,
   // không tải lại trang.
   const huong: Huong = useThietKe()['khungNgang'] === true ? 'landscape' : 'portrait';
@@ -103,6 +118,10 @@ export function Stage() {
           <span className="dot" />
           LIVE
         </span>
+        {/* Lời minh bạch nằm ở DẢI TRÊN, không nằm trong khung chiếu: nó nói về
+            cả phòng chứ không riêng cái đang chiếu, và để trong khung thì nó
+            che mất hình. */}
+        <span className="chip stage-ai-label">Nội dung do AI đề xuất</span>
         <span className="stage-title">Phòng kể chuyện</span>
         <span className="chip">
           👥 {t.viewers} · ❤ {t.likes} · 🎁 {t.xu}
@@ -113,7 +132,6 @@ export function Stage() {
       {!s.noiDuoc ? <div className="stage-offline">mất kết nối máy chủ</div> : null}
 
       <section className="stage-screen">
-        <span className="stage-ai-label">Nội dung do AI</span>
         <div className="stage-screen-inner">
           {/* Màn chờ của bản cũ: lời chào, đồng hồ lớn, một câu giữ chân. Không
               có câu nào nhắc người vận hành bật module — màn này đang phát ra
@@ -160,6 +178,7 @@ export function Stage() {
       <section className="stage-hall">
         <div className="hall-content" style={{ height: `${hallContentH(rows)}cqw` }}>
           <HangGhe ghe={ghe} rows={rows} ngoi={ngoi} asset={asset} />
+          <LoiDi feed={s.session.recentFeed} now={nhip} asset={asset} />
         </div>
       </section>
 

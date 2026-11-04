@@ -341,22 +341,14 @@ body {
   object-fit: cover;
   display: block;
 }
-/* Nhãn nằm trong góc trên trái khung. Trước đây treo ngoài mép trên, nhưng chỗ
-   đó là khoảng hẹp giữa dải tiêu đề và khung — nhường lại để nhấc cả khung lên,
-   lấy khoảng trống cho hàng top ở dưới. Nền tối mờ nên vẫn đọc được trên mọi
-   cảnh, và góc trên trái của khung 9:16 hiếm khi có chi tiết quan trọng. */
+/* Lời minh bạch ở dải trên, cạnh chữ LIVE. Nó nói về cả phòng — MC, giọng đọc,
+   nhân vật minh hoạ — chứ không riêng thứ đang chiếu trong khung, nên chỗ của
+   nó là dải trên chứ không phải trong khung. Để trong khung thì vừa che hình
+   vừa ăn mất chiều cao khung. */
 .stage-ai-label {
-  position: absolute;
-  top: calc(var(--pad-screen) + 1cqw);
-  left: calc(var(--pad-screen) + 1cqw);
-  z-index: 2;
   font-size: 2cqw;
-  line-height: 1.5;
+  font-weight: 500;
   color: var(--stage-soft);
-  background: var(--stage-chip-bg);
-  padding: 0.2cqw 1.4cqw;
-  border-radius: 1cqw;
-  white-space: nowrap;
 }
 /* ---- Màn chờ: lúc chưa module nào chiếu gì lên khung ----
    Dựng theo màn chờ bản cũ (.stage-waiting / .waiting-* trong index.css): nền
@@ -606,53 +598,96 @@ body {
   animation-delay: var(--tho-tre, 0s);
 }
 
-/* ---- Đi vào và đi ra ----
-   Bản cũ cho khách ĐI: dáng đứng có chân, đi từ cuối lối giữa lên tới ghế rồi
-   mới ngồi (`buildChibi(v, { standing })` + `walk` trong ChibiLayer). Ở đây
-   dáng đứng là ảnh riêng, quãng đường do React tính ra `--di-x` / `--di-y`:
-   từ giữa rạp ở cuối hàng ghế đi thẳng tới ghế của mình. Người cao hơn một
-   chút lúc đang đứng, tới nơi hạ xuống đúng cỡ ngồi — đó là lúc đổi sang ảnh
-   ngồi. Nhún nhẹ theo bước chân cho ra dáng đi, không phải trượt. */
-.seat-chibi.dang-di {
-  animation: ghe-di 1.5s ease-in-out both, ghe-buoc 0.42s ease-in-out infinite;
-  z-index: 2;
+/* Ngồi xuống / đứng lên: chỉ mờ nhẹ tại chỗ. KHÔNG có màn đi tới ghế — bản cũ
+   không cho ai băng qua ghế, người đi vào đi ra là một lượt riêng ở lối đi
+   (xem `.loi-di` bên dưới). */
+.seat-chibi {
+  animation: ghe-ngoi 0.4s ease-out both, ghe-tho 3.4s ease-in-out infinite alternate;
+  animation-delay: 0s, var(--tho-tre, 0s);
 }
-@keyframes ghe-di {
+@keyframes ghe-ngoi {
   from {
     opacity: 0;
-    transform: translate(calc(-50% + var(--di-x, 0cqw)), var(--di-y, 6cqw)) scale(1.18);
-  }
-  12% {
-    opacity: 1;
+    transform: translate(-50%, 0.9cqw) scale(0.9);
   }
   to {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
-  }
-}
-@keyframes ghe-buoc {
-  50% {
-    margin-bottom: 0.32cqw;
   }
 }
 /* Đi ra: ngược đúng đường lúc vào — lùi về phía lối giữa rồi khuất xuống dưới.
    Không để họ tắt phụt giữa rạp: tắt nhân vật ảo là tám người biến mất một lúc,
    nhìn như lỗi phần mềm chứ không như khách ra về. */
 .seat-chibi.di-ra {
-  animation: ghe-ra 1.5s ease-in-out forwards, ghe-buoc 0.42s ease-in-out infinite;
-  z-index: 2;
+  animation: ghe-an 0.5s ease-in forwards;
 }
-@keyframes ghe-ra {
-  from {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
+@keyframes ghe-an {
+  to {
+    opacity: 0;
+    transform: translate(-50%, 0.9cqw) scale(0.9);
   }
-  88% {
+}
+
+/* ---- Lối đi: người vào phòng và rời phòng ----
+   Bản cũ cho họ đi DỌC một trong ba lối, chỉ đổi `y`, `x` đứng yên — không ai
+   băng qua ghế để tới chỗ của mình (`walkFrom`/`walkTo` trong StageView). Lớp
+   này nằm trong lòng rạp ghế nên cuộn theo rạp. */
+.lop-loi-di {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.loi-di {
+  position: absolute;
+  top: 0;
+  width: 6.4cqw;
+  height: auto;
+  transform: translate(-50%, -100%);
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 0.3cqw 0.4cqw rgba(0, 0, 0, 0.55));
+  animation-duration: 5.2s, 0.42s;
+  animation-timing-function: linear, ease-in-out;
+  animation-iteration-count: 1, infinite;
+  animation-fill-mode: both, none;
+  animation-name: loi-vao, loi-buoc;
+}
+.loi-di.ra {
+  animation-name: loi-ra, loi-buoc;
+}
+/* Vào: từ dưới đáy rạp đi ngược lên phía sân khấu. Ra: ngược lại.
+   Mốc lấy của bản cũ: `HALL_TOP + HALL_H + 3` ↔ `HALL_TOP + 6`. */
+@keyframes loi-vao {
+  from {
+    opacity: 0;
+    top: calc(100% + 3cqw);
+  }
+  6%,
+  94% {
     opacity: 1;
   }
   to {
     opacity: 0;
-    transform: translate(calc(-50% + var(--di-x, 0cqw)), var(--di-y, 6cqw)) scale(1.18);
+    top: 6cqw;
+  }
+}
+@keyframes loi-ra {
+  from {
+    opacity: 0;
+    top: 6cqw;
+  }
+  6%,
+  94% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    top: calc(100% + 3cqw);
+  }
+}
+@keyframes loi-buoc {
+  50% {
+    margin-top: -0.34cqw;
   }
 }
 @keyframes ghe-tho {
@@ -668,11 +703,12 @@ body {
     animation: none;
     transform: translateX(-50%);
   }
-  .seat-chibi.dang-di {
-    animation: ghe-di 1.5s linear both;
+  .loi-di {
+    animation-name: loi-vao;
+    animation-timing-function: linear;
   }
-  .seat-chibi.di-ra {
-    animation: ghe-ra 1.5s linear forwards;
+  .loi-di.ra {
+    animation-name: loi-ra;
   }
 }
 
@@ -803,8 +839,13 @@ body {
   position: absolute;
   left: 11%;
   top: calc(var(--lower-top) + 21.9cqw - var(--group-lift));
-  width: 10cqw;
-  height: auto;
+  /* Cỡ theo CHIỀU CAO, không theo bề rộng. Bản cũ đặt bé bằng tỉ lệ rig:
+     `(CHIBI_CQW / CHIBI_HEIGHT) * HERO_SCALE` = (7 / 2,25) × 1,45, nhân với
+     chiều cao rig 2,25 ra đúng 10,1cqw. Lấy bề rộng 10cqw như bản 2D dự phòng
+     thì ảnh chụp 3D cao vống lên 16cqw, bé to hơn cả bé gái — mà bé phải NHỎ
+     hơn vì ngồi xa hơn. */
+  height: 10.1cqw;
+  width: auto;
   transform: translate(-50%, -100%);
   transform-origin: 50% 100%;
   filter: drop-shadow(0 0.5cqw 0.7cqw rgba(0, 0, 0, 0.5));
