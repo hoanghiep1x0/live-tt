@@ -8,7 +8,8 @@ Chuyển từ bản cũ ở `D:\Live\client\public\assets`. Mỗi thiết kế g
 | `bg/amitabha-stage.png` | Nền sân khấu (chánh điện), 941×1672 | Tự dựng cho dự án |
 | `fx/lotus.png` | Hoa sen phát sáng dưới avatar top | Tự dựng cho dự án |
 | `fx/halo.png` | Vòng hào quang sau bồ đoàn top | Tự dựng cho dự án |
-| `chibi/chibi-{1..6}-{sit,cheer}.svg` | Khán giả chibi bản 2D dự phòng, và ảnh thay khi thiếu avatar TikTok | Tự vẽ cho dự án |
+| `chibi/khan-{1..6}.png` | Khán giả chibi ngồi ghế, 6 kiểu, cao 320px | Chụp từ rig 3D `buildChibi` của bản cũ |
+| `chibi/chibi-{1..6}-{sit,cheer}.svg` | Ảnh thay khi thiếu avatar TikTok | Tự vẽ cho dự án |
 | `video/mau-su-tich-cay-vu-sua.webm` | Video mẫu chiếu trong khung, 720×1280, 64 giây | Tự dựng, xem `video/CREDITS.md` |
 | `nguoi/co-be.png` | Bé gái ngồi thiền ở đầu trái thanh tiến độ | Bản cũ `charity/art/mascot@3x.png` |
 | `nguoi/cau-be.png` | Cậu bé quỳ ở đầu phải thanh tiến độ | Bản cũ `charity/art/boy@3x.png` |
@@ -26,6 +27,9 @@ có file ảnh nào để mang sang; ảnh này lấy bằng cách chạy lại 
     buildHero() + animateHero(hero, 0, 0, 0, true)   // mood 0 = đang buồn
     HemisphereLight(0xfff4e0, 0x5a3a28, 1.6) + DirectionalLight(0xffe6c4, 1.8)
     máy quay trực diện, ôm sát khối bé, nền trong
+
+Sáu khán giả chibi cũng vậy: `buildChibi(0..5)` + `animateChibi(rig, 0, false)`
+với cùng bộ đèn, máy quay trực diện ôm sát từng người.
 
 Muốn chụp lại (đổi tâm trạng, đổi cỡ) thì dựng lại đoạn đó rồi chụp canvas.
 Không kéo three.js vào bản mới: 600KB sau nén chỉ để vẽ một bé ngồi yên là

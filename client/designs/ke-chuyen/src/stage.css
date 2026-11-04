@@ -592,8 +592,11 @@ body {
 .seat-chibi {
   position: absolute;
   left: 50%;
-  bottom: 1cqw;
-  width: 2.9cqw;
+  /* Đúng cỡ của bản cũ (`.chibi` trong index.css: rộng 5,8cqw, đáy 0,8cqw).
+     Người ngồi cao hơn hẳn cái bồ đoàn, nhô lên che một phần hàng ghế sau —
+     nhờ vậy rạp trông có chiều sâu chứ không phẳng lì. */
+  bottom: 0.8cqw;
+  width: 5.8cqw;
   height: auto;
   pointer-events: none;
   transform-origin: 50% 100%;

@@ -8,6 +8,7 @@ import { Switch } from './ui/switch';
 const KIEU: Record<ProviderKind, string> = {
   openai: 'Kiểu OpenAI (VieNeu, OpenAI, 9router…)',
   elevenlabs: 'ElevenLabs',
+  anthropic: 'Anthropic — cho MC, không phải giọng đọc',
 };
 
 /** Mẫu điền sẵn cho những nhà hay dùng. Chọn một mẫu là điền hộ địa chỉ và
@@ -61,6 +62,17 @@ const MAU: readonly Mau[] = [
     baseUrl: '',
     model: 'eleven_multilingual_v2',
     goiY: 'Giọng là voice_id, chỉ chữ và số.',
+  },
+  {
+    ten: 'MC do AI dẫn (Anthropic)',
+    id: 'mc',
+    kind: 'anthropic',
+    baseUrl: '',
+    model: '',
+    goiY:
+      'Khoá cho MC, KHÔNG phải giọng đọc. Tên ngắn phải đúng là "mc" thì MC mới tìm ra. ' +
+      'Model chọn ở thẻ MC trên bảng xem, không điền ở đây. Địa chỉ để trống là gọi ' +
+      'api.anthropic.com; điền khi anh chạy một cổng trung chuyển trên máy.',
   },
 ];
 
@@ -172,8 +184,8 @@ export function VoiceDialog({ onToast }: Props) {
       <DialogBody
         size="md"
         icon={<KeyRound size={15} />}
-        title="Giọng đọc"
-        desc="Một phiên có nhiều nhân vật, mỗi nhân vật một giọng. Khoá API nằm ở máy chủ và không bao giờ gửi về trang này."
+        title="Giọng đọc và khoá API"
+        desc="Một phiên có nhiều nhân vật, mỗi nhân vật một giọng. Khoá cho MC do AI dẫn cũng cắm ở đây (tên ngắn “mc”). Khoá nằm ở máy chủ và không bao giờ gửi về trang này."
         foot={<DialogClose className="btn btn-gold">Xong</DialogClose>}
       >
         <div className="quick-grid">
@@ -345,7 +357,8 @@ export function VoiceDialog({ onToast }: Props) {
           <section className="quick-sec">
             <div className="quick-head">
               <span className="mod-icon">🔑</span>
-              <b>Nhà cung cấp</b>
+              <b>Khoá API</b>
+              <small>Giọng đọc và MC. Khoá chỉ nằm ở máy chủ, không bao giờ gửi ra trang nào</small>
             </div>
 
             {ds.length === 0 ? (
@@ -427,7 +440,7 @@ export function VoiceDialog({ onToast }: Props) {
                   ))}
                 </select>
               </div>
-              {moi.kind === 'openai' ? (
+              {moi.kind === 'openai' || moi.kind === 'anthropic' ? (
                 <div className="form-row">
                   <label htmlFor="n-url">Địa chỉ</label>
                   <input
@@ -442,7 +455,7 @@ export function VoiceDialog({ onToast }: Props) {
                   </span>
                 </div>
               ) : null}
-              <div className="form-row">
+              <div className="form-row" hidden={moi.kind === 'anthropic'}>
                 <label htmlFor="n-model">Model mặc định</label>
                 <input
                   className="input"

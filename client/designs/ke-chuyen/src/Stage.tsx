@@ -50,8 +50,12 @@ const CAU_BE = 'nguoi/cau-be.png';
  *  máy quay trực diện, rồi chụp ra PNG nền trong. Xem `assets/CREDITS.md`. */
 const BE_CHIBI = 'nguoi/be-chibi.png';
 
-/** Sáu kiểu khán giả chibi, đúng bộ ảnh của bản cũ. */
-const CHIBI = Array.from({ length: 6 }, (_, i) => `chibi/chibi-${i + 1}-sit.svg`);
+/** Sáu kiểu khán giả chibi. Đây là CHÍNH sáu nhân vật của bản cũ: chạy lại
+ *  `buildChibi(0..5)` trong `chibi3d.ts` với đúng bộ đèn cũ rồi chụp ra PNG nền
+ *  trong — xem `assets/CREDITS.md`. Không dùng `chibi/chibi-{n}-sit.svg`: bộ đó
+ *  là ảnh dự phòng phẳng, bản cũ chỉ lấy khi máy không chạy được WebGL, và nhìn
+ *  khác hẳn người ngồi trong rạp. */
+const CHIBI = Array.from({ length: 6 }, (_, i) => `chibi/khan-${i + 1}.png`);
 
 /** Mỗi người xem giữ đúng một kiểu chibi suốt buổi: băm từ nick chứ không bốc
  *  ngẫu nhiên, nên hai cửa sổ xem cùng một phòng thấy giống hệt nhau và người

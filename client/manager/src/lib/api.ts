@@ -28,7 +28,7 @@ export interface SourceStatus {
   problem?: string;
 }
 
-export type ProviderKind = 'openai' | 'elevenlabs';
+export type ProviderKind = 'openai' | 'elevenlabs' | 'anthropic';
 
 export interface ProviderInfo {
   id: string;
