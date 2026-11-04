@@ -81,7 +81,9 @@ Module không có test cho `core.ts` thì không được đăng ký vào regist
 
 | Chỗ | Ngôn ngữ |
 |---|---|
-| Định danh trong mã (biến, hàm, type, tên file) | Tiếng Anh, không dấu |
+| Type, interface, tên component React, tên file | Tiếng Anh, không dấu |
+| Khoá JSON, id, đường dẫn REST — mọi thứ qua ranh giới | Tiếng Anh, không dấu |
+| Biến và hàm nội bộ | Tiếng Việt **không dấu** cũng được, vd `tu_choi`, `kiemModule` |
 | Chữ hiện trên giao diện | Tiếng Việt có dấu |
 | Chú thích trong mã | Tiếng Việt, giải thích **vì sao**, không kể lại mã làm gì |
 | Tài liệu, commit, tên nhánh | Tiếng Việt |

@@ -15,6 +15,9 @@ Tài liệu này mô tả đích đến. Phần đã dựng và phần còn lạ
 | Một thiết kế một lúc, trả `409` kèm tên cái đang chạy | **xong** |
 | Cấu hình module theo thiết kế, ghi nguyên tử | **xong** |
 | WebSocket đẩy cấu hình xuống ngay, không tải lại trang | **xong** |
+| Phục vụ `/m/<id>/` — assets riêng của module | **xong** |
+| Đổi tên thiết kế, link Studio, xoá dữ liệu phiên | **xong** |
+| Nạp cấu hình gợi ý của bối cảnh (`defaults` trong design.json) | **xong** |
 | Kiểm tra cấu hình theo schema zod của module | chưa — xem mục 4 |
 | Nguồn sự kiện TikTok | chưa |
 | SQLite cho sổ quà | chưa — mới có `database/schema.sql` |
@@ -28,7 +31,9 @@ cd backend && cargo run
 # rồi mở http://127.0.0.1:47830/d/<id>/
 ```
 
-Token in ra ở dòng log đầu tiên. Test: `cd backend && cargo test` (45 unit + 15 tích hợp).
+Cổng và token công bố ở `.tmp/agent-port.json` (`{ port, token, pid }`), xoá khi máy chủ
+dừng. Dev server của Vite đọc file đó rồi tự gắn header, nên **token không bao giờ nằm
+trong mã trang**. Test: `cd backend && cargo test` (56 unit + 25 tích hợp).
 
 ## 1. Vì sao cần backend thật
 
@@ -63,8 +68,9 @@ Quy tắc kiểm tra request, giữ nguyên tinh thần `local_port.rs` của m�
 | Route | Việc |
 |---|---|
 | `GET /d/<designId>/` | Trang thiết kế — **URL cho OBS Browser Source** |
-| `GET /d/<designId>/<đường dẫn>` | File trong `client/client/designs/<id>/dist/` |
-| `GET /a/<designId>/<đường dẫn>` | File trong `client/client/designs/<id>/assets/` |
+| `GET /d/<designId>/<đường dẫn>` | File trong `client/designs/<id>/dist/` |
+| `GET /a/<designId>/<đường dẫn>` | File trong `client/designs/<id>/assets/` |
+| `GET /m/<moduleId>/<đường dẫn>` | File trong `client/modules/<id>/assets/` — dùng được ở mọi thiết kế |
 
 Hai `designId` khác nhau không bao giờ đọc được file của nhau. Đường dẫn bị chuẩn hoá
 và kiểm tra nằm trong thư mục gốc của thiết kế, chặn `..`.
@@ -74,8 +80,8 @@ và kiểm tra nằm trong thư mục gốc của thiết kế, chặn `..`.
 | Route | Việc |
 |---|---|
 | `GET /api/designs` | Danh sách thiết kế, đọc từ `client/designs/*/design.json` |
-| `POST /api/designs/<id>/rename` | Đổi tên |
-| `POST /api/designs/<id>/reset` | Xoá dữ liệu phiên của thiết kế |
+| `PUT /api/designs/<id>/settings` | Đổi tên hiện trên thẻ, đặt link TikTok Studio |
+| `POST /api/designs/<id>/reset` | Xoá dữ liệu phiên; **không** đụng cấu hình module và sổ quà |
 | `GET /api/live` | Thiết kế đang phát, hoặc `null` |
 | `POST /api/live` | Bật phát một thiết kế |
 | `DELETE /api/live` | Tắt phát |
@@ -111,6 +117,7 @@ database/
 ├─ designs/                       không commit
 │  └─ <designId>/
 │     ├─ config.json              cấu hình mọi module cho thiết kế này
+│     ├─ settings.json            tên và link Studio do người vận hành đặt
 │     └─ session.json             bản chụp phiên, để mở lại không mất
 └─ secrets.json                   không commit — khoá API, chỉ backend đọc
 ```

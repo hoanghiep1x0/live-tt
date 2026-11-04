@@ -3,6 +3,7 @@
 //! Chỉ nghe 127.0.0.1. Phục vụ ba thứ:
 //! - `/d/<id>/…`   bản build của thiết kế — URL cho OBS Browser Source
 //! - `/a/<id>/…`   assets riêng của thiết kế
+//! - `/m/<id>/…`   assets riêng của module, dùng được ở mọi thiết kế
 //! - `/api/…`      REST cho trang quản lý, đòi token
 //! - `/ws`         bus phát sự kiện và cấu hình xuống
 
@@ -11,6 +12,7 @@ pub mod designs;
 pub mod files;
 pub mod guard;
 pub mod paths;
+pub mod settings;
 pub mod state;
 pub mod store;
 pub mod ws;
@@ -36,6 +38,8 @@ pub fn router(st: Arc<AppState>) -> Router {
             "/api/live",
             get(api::get_live).post(api::post_live).delete(api::delete_live),
         )
+        .route("/api/designs/:design_id/settings", put(api::put_settings))
+        .route("/api/designs/:design_id/reset", post(api::post_reset))
         .route("/api/designs/:design_id/modules", get(api::list_modules))
         .route("/api/designs/:design_id/modules/:module_id", get(api::get_module))
         .route("/api/designs/:design_id/modules/:module_id/config", put(api::put_config))
@@ -44,7 +48,8 @@ pub fn router(st: Arc<AppState>) -> Router {
     let files = Router::new()
         .route("/d/:id/", get(files::serve_root))
         .route("/d/:id/*rest", get(files::serve_dist))
-        .route("/a/:id/*rest", get(files::serve_assets));
+        .route("/a/:id/*rest", get(files::serve_assets))
+        .route("/m/:id/*rest", get(files::serve_module_assets));
 
     // Lớp chặn giữ sẵn trạng thái trong closure thay vì `from_fn_with_state`:
     // cùng kết quả, nhưng không kéo theo suy luận kiểu rắc rối.

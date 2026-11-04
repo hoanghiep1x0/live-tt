@@ -75,6 +75,7 @@ pub async fn list_modules(
     if !st.design_exists(&design_id) {
         return Err(AppError::NotFound(format!("không có thiết kế \"{design_id}\"")));
     }
+    st.ensure_seeded(&design_id)?;
     Ok(Json(json!({ "modules": st.all_modules(&design_id)? })))
 }
 
@@ -101,6 +102,28 @@ pub async fn put_config(
     st.set_config(&design_id, &module_id, config)?;
     let m = st.module_state(&design_id, &module_id)?;
     Ok(Json(json!({ "enabled": m.enabled, "config": m.config })))
+}
+
+/// Đổi tên hoặc link Studio. Khoá vắng thì giữ nguyên, `null` thì xoá.
+pub async fn put_settings(
+    State(st): State<Arc<AppState>>,
+    Path(design_id): Path<String>,
+    Json(patch): Json<Value>,
+) -> Result<Json<Value>, AppError> {
+    kiem_id(&design_id, "id thiết kế")?;
+    let s = st.set_settings(&design_id, &patch)?;
+    Ok(Json(json!({ "settings": s })))
+}
+
+/// Xoá dữ liệu phiên. Trả về đúng những gì đã xoá, để người dùng không phải
+/// đoán xem nút vừa bấm có làm gì hay không.
+pub async fn post_reset(
+    State(st): State<Arc<AppState>>,
+    Path(design_id): Path<String>,
+) -> Result<Json<Value>, AppError> {
+    kiem_id(&design_id, "id thiết kế")?;
+    let da_xoa = st.reset_design(&design_id)?;
+    Ok(Json(json!({ "cleared": da_xoa })))
 }
 
 #[derive(Deserialize)]

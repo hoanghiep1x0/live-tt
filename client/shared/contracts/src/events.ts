@@ -16,6 +16,10 @@ export type LiveEvent = EventUser &
     | { kind: 'like'; count: number; total?: number }
     | { kind: 'comment'; text: string }
     | { kind: 'join' }
+    | { kind: 'follow' }
+    | { kind: 'share' }
+    /** Hội viên trả phí. `months` là số tháng đã theo, TikTok có gửi thì mới có. */
+    | { kind: 'subscribe'; months?: number }
     /** TikTok không gửi; chỉ đến từ giả lập hoặc cầu nối riêng. */
     | { kind: 'leave' }
   );
@@ -40,6 +44,11 @@ export interface FeedItem {
   xu?: number;
   /** Xu thật TikTok, giữ nguyên để đối soát sổ sách. */
   coins?: number;
+  /** Tên quà và số lượng, chỉ có ở mục `gift`. Module cảm ơn quà cần cả hai để
+   *  điền `{qua}` và `{soluong}` — nếu bus chỉ mang `text` thì nó phải đi phân
+   *  tích lại câu chữ, việc đó hỏng ngay khi đổi cách viết câu. */
+  gift?: string;
+  count?: number;
   /** Nhân vật ảo: module phải bỏ qua, nếu không bot sẽ tự cảm ơn chính nó. */
   virtual?: boolean;
   /** Câu do agent viết cho nhân vật ảo. */

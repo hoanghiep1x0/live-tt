@@ -1,0 +1,33 @@
+{
+  "name": "@live/manager",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@live/contracts": "*",
+    "@live/mod-follow-thanks": "*",
+    "@live/mod-gift-thanks": "*",
+    "@live/mod-likes-counter": "*",
+    "@live/mod-welcome": "*",
+    "@radix-ui/react-dialog": "1.3.1",
+    "@radix-ui/react-switch": "1.4.1",
+    "clsx": "2.1.1",
+    "lucide-react": "1.67.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "tailwind-merge": "3.7.0"
+  },
+  "devDependencies": {
+    "@live/dev-proxy": "*",
+    "@tailwindcss/vite": "4.3.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "tailwindcss": "4.3.4"
+  }
+}

@@ -66,18 +66,25 @@ nên nó gần như là một thiết kế độc lập sẵn rồi.
 
 Xong khi: `curl http://127.0.0.1:47830/api/designs` trả danh sách rỗng, và `cargo test` xanh.
 
-### GĐ 1 — Lát cắt dọc đầu tiên
+### GĐ 1 — Lát cắt dọc đầu tiên — phần lớn đã xong
 
-Một thiết kế + một module chạy thông suốt từ sự kiện thật tới hiệu ứng trên màn.
+Một thiết kế + vài module chạy thông suốt. Đổi thứ tự so với kế hoạch đầu: làm `ke-chuyen`
+trước `tich-phuoc`, vì đó là phòng **đã từng phát live thật**, nên nó mới là bằng chứng.
 
-- `client/client/designs/tich-phuoc` — chuyển trước vì đã độc lập sẵn
-- `client/modules/gift-thanks` — module đơn giản nhất có đủ: cấu hình, ô chỉnh nhanh, effect
-- `client/manager` — thay mock HTML bằng React thật, ba tab, nối backend
+| Việc | Trạng thái |
+|---|---|
+| `client/manager` — React + Tailwind + Radix, ba tab, nối backend | **xong** |
+| `client/shared/runtime` — gọi móc sự kiện, lọc nhân vật ảo | **xong** |
+| `client/shared/stage-sdk` — nối WS, slot, đường dẫn asset | **xong**, phần tối thiểu |
+| `client/modules/gift-thanks`, `welcome`, `likes-counter`, `follow-thanks` | **xong**, có test |
+| `client/designs/ke-chuyen` — bố cục và assets chuyển từ bản cũ | **xong** phần thiết kế vẽ |
+| Nguồn sự kiện TikTok | chưa — nên phiên còn rỗng |
 
-Xong khi: mở OBS Browser Source tới `http://127.0.0.1:47830/d/tich-phuoc/`, có quà thật
-thì nghe lời cảm ơn, và **gạt công tắc trên trang quản lý đổi hành vi ngay, không tải lại trang**.
+Đã chứng minh được: bật phát từ trang quản lý → thẻ đổi trạng thái qua WebSocket, cấu hình
+gợi ý của bối cảnh tự nạp, và **đổi cấu hình đẩy xuống phòng đang phát ngay, không tải lại trang**.
 
-Đây là giai đoạn chứng minh kiến trúc. Nếu chỗ nào không khớp thì sửa tài liệu ở đây, chưa muộn.
+Còn thiếu để gọi là xong hẳn: nguồn sự kiện thật, và các module có phần vẽ (`stage.tsx`) để
+những slot đang rỗng có nội dung.
 
 ### GĐ 2 — Nhóm module nhẹ
 

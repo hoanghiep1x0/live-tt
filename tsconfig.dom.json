@@ -1,0 +1,33 @@
+{
+  // Phần chạm DOM: trang quản lý, stage-sdk, và các thiết kế.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["node", "vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@live/contracts": ["client/shared/contracts/src/index.ts"],
+      "@live/runtime": ["client/shared/runtime/src/index.ts"],
+      "@live/stage-sdk": ["client/shared/stage-sdk/src/index.ts"],
+      "@live/dev-proxy": ["client/shared/dev-proxy/src/index.ts"],
+      "@live/mod-*": ["client/modules/*/src/index.ts"]
+    }
+  },
+  "include": [
+    "client/manager/src/**/*.ts",
+    "client/manager/src/**/*.tsx",
+    "client/manager/vite.config.ts",
+    "client/shared/dev-proxy/src/**/*.ts",
+    "client/shared/stage-sdk/src/**/*.ts",
+    "client/shared/stage-sdk/src/**/*.tsx",
+    "client/designs/*/src/**/*.ts",
+    "client/designs/*/src/**/*.tsx",
+    "client/designs/*/vite.config.ts"
+  ]
+}

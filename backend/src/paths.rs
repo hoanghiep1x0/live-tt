@@ -30,6 +30,19 @@ impl Layout {
         self.designs_dir().join(id).join("assets")
     }
 
+    pub fn modules_dir(&self) -> PathBuf {
+        self.root.join("client").join("modules")
+    }
+
+    /// Assets RIÊNG của một module.
+    ///
+    /// Module phải chạy được ở mọi bối cảnh phòng — đám cưới, chùa, quán bar —
+    /// nên hình và tiếng của nó đi theo nó, không nằm trong thư mục của một
+    /// thiết kế nào. Nhờ vậy bật module ở phòng mới là xong, không phải copy file.
+    pub fn module_assets(&self, id: &str) -> PathBuf {
+        self.modules_dir().join(id).join("assets")
+    }
+
     pub fn design_manifest(&self, id: &str) -> PathBuf {
         self.designs_dir().join(id).join("design.json")
     }
@@ -41,6 +54,16 @@ impl Layout {
     /// Cấu hình mọi module của một thiết kế.
     pub fn config_file(&self, design_id: &str) -> PathBuf {
         self.database_dir().join("designs").join(design_id).join("config.json")
+    }
+
+    /// Cài đặt người vận hành đặt cho thiết kế: tên hiện trên thẻ, link Studio.
+    pub fn settings_file(&self, design_id: &str) -> PathBuf {
+        self.database_dir().join("designs").join(design_id).join("settings.json")
+    }
+
+    /// Bản chụp phiên, để mở lại không mất. "Reset dữ liệu" xoá đúng file này.
+    pub fn session_file(&self, design_id: &str) -> PathBuf {
+        self.database_dir().join("designs").join(design_id).join("session.json")
     }
 
     pub fn secrets_file(&self) -> PathBuf {

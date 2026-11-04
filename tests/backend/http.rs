@@ -4,7 +4,7 @@
 //! `backend/Cargo.toml` trỏ tới đây bằng mục `[[test]]`.
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use axum::body::Body;
 use axum::http::{header, Request, StatusCode};
@@ -19,6 +19,8 @@ const HOST: &str = "127.0.0.1:47830";
 
 struct Moi {
     _dir: tempfile::TempDir,
+    /// Gốc dự án giả, để test soi thẳng vào đĩa khi cần.
+    root: PathBuf,
     app: axum::Router,
 }
 
@@ -43,7 +45,8 @@ fn moi() -> Moi {
     dung_thiet_ke(dir.path(), "ke-chuyen", true);
     dung_thiet_ke(dir.path(), "hip-hop", true);
     let st = AppState::new(Layout::new(dir.path()), PORT, TOKEN.into());
-    Moi { _dir: dir, app: router(st) }
+    let root = dir.path().to_path_buf();
+    Moi { _dir: dir, root, app: router(st) }
 }
 
 impl Moi {
@@ -265,10 +268,210 @@ async fn thiet_ke_chua_build_van_hien_kem_ly_do() {
     fs::create_dir_all(dir.path().join("database")).unwrap();
     dung_thiet_ke(dir.path(), "ke-chuyen", false);
     let st = AppState::new(Layout::new(dir.path()), PORT, TOKEN.into());
-    let m = Moi { _dir: dir, app: router(st) };
+    let root = dir.path().to_path_buf();
+    let m = Moi { _dir: dir, root, app: router(st) };
 
     let (_, j) = m.api("GET", "/api/designs", None).await;
     let d = &j["designs"][0];
     assert_eq!(d["status"], json!("error"));
     assert!(d["problem"].as_str().unwrap().contains("chưa build"));
+}
+
+/// Lấy một thiết kế trong danh sách `/api/designs`.
+fn tim<'a>(j: &'a Value, id: &str) -> &'a Value {
+    j["designs"]
+        .as_array()
+        .expect("thiếu designs")
+        .iter()
+        .find(|d| d["manifest"]["id"] == json!(id))
+        .unwrap_or_else(|| panic!("không thấy thiết kế {id}"))
+}
+
+#[tokio::test]
+async fn doi_ten_hien_tren_the_ma_khong_sua_design_json() {
+    let m = moi();
+    let truoc = fs::read_to_string(
+        m.root.join("client").join("designs").join("ke-chuyen").join("design.json"),
+    )
+    .unwrap();
+
+    let (ma, _) = m
+        .api("PUT", "/api/designs/ke-chuyen/settings", Some(json!({ "name": "Phòng đêm" })))
+        .await;
+    assert_eq!(ma, StatusCode::OK);
+
+    let (_, j) = m.api("GET", "/api/designs", None).await;
+    let d = tim(&j, "ke-chuyen");
+    assert_eq!(d["displayName"], json!("Phòng đêm"));
+    assert_eq!(d["manifest"]["name"], json!("Phòng ke-chuyen"), "tên gốc phải còn nguyên");
+
+    let sau = fs::read_to_string(
+        m.root.join("client").join("designs").join("ke-chuyen").join("design.json"),
+    )
+    .unwrap();
+    assert_eq!(truoc, sau, "không được sửa design.json của thiết kế");
+}
+
+#[tokio::test]
+async fn chua_dat_ten_thi_lay_ten_trong_manifest() {
+    let m = moi();
+    let (_, j) = m.api("GET", "/api/designs", None).await;
+    assert_eq!(tim(&j, "hip-hop")["displayName"], json!("Phòng hip-hop"));
+}
+
+#[tokio::test]
+async fn link_studio_ngoai_tiktok_bi_tu_choi() {
+    let m = moi();
+    for xau in [
+        "https://ke-gian.example/live",
+        "http://livestudio.tiktok.com",
+        "https://livestudio.tiktok.com@ke-gian.example/",
+    ] {
+        let (ma, j) = m
+            .api("PUT", "/api/designs/ke-chuyen/settings", Some(json!({ "studioUrl": xau })))
+            .await;
+        assert_eq!(ma, StatusCode::BAD_REQUEST, "phải chặn {xau}");
+        assert!(j["error"].is_string());
+    }
+
+    let (ma, _) = m
+        .api(
+            "PUT",
+            "/api/designs/ke-chuyen/settings",
+            Some(json!({ "studioUrl": "https://livestudio.tiktok.com/room/7" })),
+        )
+        .await;
+    assert_eq!(ma, StatusCode::OK);
+
+    let (_, j) = m.api("GET", "/api/designs", None).await;
+    assert_eq!(tim(&j, "ke-chuyen")["studioUrl"], json!("https://livestudio.tiktok.com/room/7"));
+}
+
+#[tokio::test]
+async fn reset_xoa_du_lieu_phien_nhung_giu_cau_hinh_module() {
+    let m = moi();
+    m.api(
+        "PUT",
+        "/api/designs/ke-chuyen/modules/gift-thanks/config",
+        Some(json!({ "minCoins": 42 })),
+    )
+    .await;
+    let phien = m.root.join("database").join("designs").join("ke-chuyen").join("session.json");
+    fs::create_dir_all(phien.parent().unwrap()).unwrap();
+    fs::write(&phien, r#"{"totals":{"xu":9}}"#).unwrap();
+
+    let (ma, j) = m.api("POST", "/api/designs/ke-chuyen/reset", None).await;
+    assert_eq!(ma, StatusCode::OK);
+    assert_eq!(j["cleared"], json!(["session.json"]));
+    assert!(!phien.exists());
+
+    let (_, j) = m.api("GET", "/api/designs/ke-chuyen/modules/gift-thanks", None).await;
+    assert_eq!(j["config"]["minCoins"], json!(42), "cấu hình module phải còn");
+}
+
+#[tokio::test]
+async fn reset_khi_chua_co_du_lieu_thi_noi_ro_la_khong_xoa_gi() {
+    let m = moi();
+    let (ma, j) = m.api("POST", "/api/designs/ke-chuyen/reset", None).await;
+    assert_eq!(ma, StatusCode::OK);
+    assert_eq!(j["cleared"], json!([]));
+}
+
+#[tokio::test]
+async fn khong_doi_duoc_cai_dat_cua_thiet_ke_khong_ton_tai() {
+    let m = moi();
+    let (ma, _) = m
+        .api("PUT", "/api/designs/khong-co/settings", Some(json!({ "name": "X" })))
+        .await;
+    assert_eq!(ma, StatusCode::NOT_FOUND);
+    let (ma, _) = m.api("POST", "/api/designs/khong-co/reset", None).await;
+    assert_eq!(ma, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn obs_tai_duoc_assets_cua_module() {
+    let m = moi();
+    let d = m.root.join("client").join("modules").join("gift-thanks").join("assets");
+    fs::create_dir_all(&d).unwrap();
+    fs::write(d.join("qua.svg"), "<svg/>").unwrap();
+
+    let (ma, than) = m.obs("/m/gift-thanks/qua.svg").await;
+    assert_eq!(ma, StatusCode::OK);
+    assert_eq!(than, "<svg/>");
+}
+
+#[tokio::test]
+async fn assets_module_khong_thoat_ra_ngoai_duoc() {
+    let m = moi();
+    let d = m.root.join("client").join("modules").join("gift-thanks").join("assets");
+    fs::create_dir_all(&d).unwrap();
+
+    for duong in [
+        "/m/gift-thanks/../../../../database/secrets.json",
+        "/m/gift-thanks/../../welcome/assets/x.svg",
+    ] {
+        let (ma, _) = m.obs(duong).await;
+        assert!(
+            ma == StatusCode::FORBIDDEN || ma == StatusCode::NOT_FOUND,
+            "{duong} trả {ma}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn boi_canh_moi_nap_cau_hinh_goi_y_mot_lan() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::create_dir_all(dir.path().join("database")).unwrap();
+    let d = dir.path().join("client").join("designs").join("dam-cuoi");
+    fs::create_dir_all(d.join("dist")).unwrap();
+    fs::write(d.join("dist").join("index.html"), "<!doctype html>").unwrap();
+    fs::write(
+        d.join("design.json"),
+        r#"{
+            "id": "dam-cuoi",
+            "name": "Đám cưới online",
+            "recommends": ["gift-thanks", "welcome"],
+            "defaults": {
+              "gift-thanks": { "template": "Cảm ơn {ten} đã gửi lời chúc!" },
+              "music": { "vol": 20 }
+            }
+        }"#,
+    )
+    .unwrap();
+    let st = AppState::new(Layout::new(dir.path()), PORT, TOKEN.into());
+    let root = dir.path().to_path_buf();
+    let m = Moi { _dir: dir, root, app: router(st) };
+
+    let (ma, j) = m.api("GET", "/api/designs/dam-cuoi/modules", None).await;
+    assert_eq!(ma, StatusCode::OK);
+    let mods = &j["modules"];
+    assert_eq!(mods["gift-thanks"]["enabled"], json!(true), "module gợi ý phải bật");
+    assert_eq!(
+        mods["gift-thanks"]["config"]["template"],
+        json!("Cảm ơn {ten} đã gửi lời chúc!"),
+        "câu chữ của bối cảnh phải được nạp"
+    );
+    assert_eq!(mods["welcome"]["enabled"], json!(true));
+    assert_eq!(mods["music"]["config"]["vol"], json!(20));
+    assert!(
+        mods["music"].get("enabled").is_none() || mods["music"]["enabled"] == json!(false),
+        "có cấu hình gợi ý nhưng không nằm trong recommends thì không tự bật"
+    );
+
+    // Người vận hành sửa rồi: nạp lại KHÔNG được ghi đè.
+    m.api(
+        "PUT",
+        "/api/designs/dam-cuoi/modules/gift-thanks/config",
+        Some(json!({ "template": "Câu của tôi" })),
+    )
+    .await;
+    let (_, j) = m.api("GET", "/api/designs/dam-cuoi/modules", None).await;
+    assert_eq!(j["modules"]["gift-thanks"]["config"]["template"], json!("Câu của tôi"));
+}
+
+#[tokio::test]
+async fn thiet_ke_khong_khai_goi_y_thi_khong_nap_gi() {
+    let m = moi();
+    let (_, j) = m.api("GET", "/api/designs/ke-chuyen/modules", None).await;
+    assert_eq!(j["modules"], json!({}));
 }

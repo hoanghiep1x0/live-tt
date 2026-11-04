@@ -8,6 +8,7 @@ use tokio::sync::broadcast;
 
 use crate::designs::{self, DesignInfo};
 use crate::paths::Layout;
+use crate::settings::{self, Settings, SettingsError};
 use crate::store::{self, StoreError};
 
 /// Sức chứa hàng chờ phát xuống. Client chậm quá mức này thì mất bớt tin cũ,
@@ -45,6 +46,15 @@ impl From<StoreError> for AppError {
     }
 }
 
+impl From<SettingsError> for AppError {
+    fn from(e: SettingsError) -> Self {
+        match e {
+            SettingsError::Invalid(m) => Self::BadRequest(m),
+            SettingsError::Store(e) => Self::Internal(e.to_string()),
+        }
+    }
+}
+
 impl AppState {
     pub fn new(layout: Layout, port: u16, token: String) -> Arc<Self> {
         let (tx, _) = broadcast::channel(BUS_CAP);
@@ -79,6 +89,9 @@ impl AppState {
         if !self.design_exists(id) {
             return Err(AppError::NotFound(format!("không có thiết kế \"{id}\"")));
         }
+        // Lần đầu phát một bối cảnh thì nạp cấu hình gợi ý của nó, để phòng lên
+        // hình là đã có tính năng chạy, không phải bật tay từng cái.
+        self.ensure_seeded(id)?;
         {
             let mut cur = self.live.write().expect("khoá live hỏng");
             match cur.as_deref() {
@@ -101,6 +114,23 @@ impl AppState {
         }
     }
 
+    // ---- Cài đặt người vận hành đặt cho thiết kế ----
+
+    pub fn set_settings(&self, design_id: &str, patch: &Value) -> Result<Settings, AppError> {
+        if !self.design_exists(design_id) {
+            return Err(AppError::NotFound(format!("không có thiết kế \"{design_id}\"")));
+        }
+        Ok(settings::apply(&self.layout, design_id, patch)?)
+    }
+
+    /// Xoá dữ liệu phiên. Cấu hình module và sổ quà không bị đụng tới.
+    pub fn reset_design(&self, design_id: &str) -> Result<Vec<String>, AppError> {
+        if !self.design_exists(design_id) {
+            return Err(AppError::NotFound(format!("không có thiết kế \"{design_id}\"")));
+        }
+        Ok(settings::reset(&self.layout, design_id)?)
+    }
+
     // ---- Cấu hình module, lưu theo từng thiết kế ----
 
     fn modules_of(&self, design_id: &str) -> Result<Map<String, Value>, StoreError> {
@@ -116,6 +146,51 @@ impl AppState {
             &self.layout.config_file(design_id),
             &json!({ "modules": Value::Object(modules) }),
         )
+    }
+
+    /// Nạp cấu hình gợi ý của bối cảnh, **chỉ khi** thiết kế chưa có cấu hình nào.
+    ///
+    /// Nhờ vậy làm một phòng mới (đám cưới, chùa, quán bar) là viết `recommends`
+    /// và `defaults` trong `design.json`, không sửa module nào. Nạp một lần duy
+    /// nhất: người vận hành chỉnh sau đó thì chỉnh của họ phải được giữ.
+    pub fn ensure_seeded(&self, design_id: &str) -> Result<bool, AppError> {
+        if self.layout.config_file(design_id).exists() {
+            return Ok(false);
+        }
+        let m = designs::read_manifest(&self.layout.design_manifest(design_id), design_id)
+            .map_err(AppError::NotFound)?;
+
+        let mut modules = Map::new();
+        let mut dat = |id: &str, enabled: bool, config: Value| {
+            // design.json do người viết thiết kế soạn; id sai thì bỏ, không ghi
+            // rác vào cấu hình rồi để trang quản lý vẽ một thẻ không tồn tại.
+            if !crate::paths::valid_id(id) {
+                tracing::warn!(design_id, id, "bỏ id module sai định dạng trong design.json");
+                return;
+            }
+            let e = modules.entry(id.to_string()).or_insert_with(|| json!({ "config": {} }));
+            if let Some(o) = e.as_object_mut() {
+                if enabled {
+                    o.insert("enabled".into(), Value::Bool(true));
+                }
+                if config.is_object() {
+                    o.insert("config".into(), config);
+                }
+            }
+        };
+
+        for (id, cfg) in &m.defaults {
+            dat(id, false, cfg.clone());
+        }
+        for id in &m.recommends {
+            dat(id, true, Value::Null);
+        }
+
+        if modules.is_empty() {
+            return Ok(false);
+        }
+        self.save_modules(design_id, modules)?;
+        Ok(true)
     }
 
     pub fn module_state(&self, design_id: &str, module_id: &str) -> Result<ModuleState, AppError> {

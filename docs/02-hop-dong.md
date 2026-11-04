@@ -92,9 +92,18 @@ Thiết kế khai báo slot trong `design.json`. Module khai báo slot nó cần
 
 ```ts
 export type SlotName =
-  | 'top-bar' | 'bottom-bar' | 'left' | 'right'
-  | 'center' | 'full' | 'ticker' | 'stage-3d';
+  | 'top-bar' | 'ticker'
+  | 'screen' | 'screen-overlay'
+  | 'tops' | 'target'
+  | 'stage-3d' | 'seats' | 'floor'
+  | 'chat' | 'center'
+  | 'corner-left' | 'corner-right'
+  | 'bottom-bar' | 'full';
 ```
+
+Tên slot nói **vai trí trong một phòng live**, không nói bối cảnh. Phòng kể chuyện, đám cưới
+hay quán bar đều có khung chiếu, hàng vinh danh, vùng khán giả, góc chat — nhờ vậy một module
+vẽ được ở mọi bối cảnh mà không cần biết mình đang ở phòng nào.
 
 Manager đối chiếu hai danh sách và báo cho người dùng biết module nào chưa hiển thị được
 trên thiết kế đang chạy. Đây là chỗ thay cho bảng `ROOM_MODULES` cũ, nhưng tự động.
@@ -125,18 +134,25 @@ export interface ModuleManifest<C = Json> {
   icon: string;                    // emoji hoặc tên icon
   summary: string;                 // một dòng dưới tên
   group: 'quick' | 'other';        // nhóm trên trang Tính năng
+  triggers: FeedKind[];            // chạy khi nào — khớp khoá trong core.hooks
+  fields: ConfigField[];           // mô tả ô cấu hình, manager tự dựng form
   configVersion: number;
   schema: ZodType<C>;              // kèm giá trị mặc định
-  quick?: QuickField[];            // ô chỉnh nhanh trên thẻ, tối đa 3
+  quick?: string[];                // khoá hiện ngay trên thẻ, tối đa 3
   slots?: SlotName[];              // slot cần có để hiển thị
   needs?: Capability[];            // 'tts' | 'audio' | 'stage-3d' | 'net'
   action?: { label: string; op: string };   // nút trên thẻ, vd "Quay"
   migrate?: (old: Json, fromVersion: number) => C;
 }
 
-export interface QuickField {
+export interface ConfigField {
   key: string;        // khoá trong config
-  label: string;      // nhãn ngắn trên thẻ, vd "Số bot"
+  label: string;      // nhãn đầy đủ trong modal
+  type: 'text' | 'textarea' | 'number' | 'toggle' | 'select' | 'range' | 'time';
+  short?: string;     // nhãn ngắn khi ô này hiện trên thẻ, vd "Số bot"
+  hint?: string;
+  options?: { value: string; label: string }[];   // bắt buộc với 'select'
+  min?: number; max?: number; step?: number; unit?: string;
 }
 
 export type Capability = 'tts' | 'audio' | 'stage-3d' | 'net' | 'storage';
@@ -145,14 +161,18 @@ export type Capability = 'tts' | 'audio' | 'stage-3d' | 'net' | 'storage';
 `needs` để manager báo trước: module cần `tts` mà máy chưa cấu hình giọng đọc thì
 hiện cảnh báo trên thẻ thay vì để người dùng bật rồi thấy im lặng.
 
+Giá trị mặc định **chỉ** nằm trong `schema` (`.default(...)`). Manager lấy bằng
+`schema.parse({})`. Để mặc định ở hai chỗ thì sớm muộn hai chỗ lệch nhau.
+
 ## 8. Lõi module
 
 ```ts
 export interface ModuleCore<C, S = unknown> {
   init(config: C): S;
 
-  /** Một mục mới trên bus. Trả về hiệu ứng, không tự thực thi. */
-  onFeed?(state: S, item: FeedItem, ctx: Ctx<C>): Effect[];
+  /** Móc theo loại sự kiện — cửa duy nhất nhận tin từ bus.
+   *  Cùng cách nghĩ với mục Sự kiện của TikTok LIVE Studio. */
+  hooks?: Partial<Record<FeedKind, FeedHook<C, S>>>;
 
   /** Nhịp đều, mặc định 1 giây. Khai báo tickMs để đổi. */
   onTick?(state: S, now: number, ctx: Ctx<C>): Effect[];
@@ -168,6 +188,24 @@ export interface ModuleCore<C, S = unknown> {
   dispose?(state: S): void;
 }
 
+export interface FeedHook<C, S> {
+  /** Mặc định bỏ qua nhân vật ảo — runtime lọc, module không phải tự nhớ. */
+  includeVirtual?: boolean;
+  run(state: S, item: FeedItem, ctx: Ctx<C>): Effect[];
+}
+```
+
+Gọi lõi qua `@live/runtime`, đừng gọi `hooks.gift.run(...)` thẳng — làm vậy là bỏ qua lớp
+lọc nhân vật ảo:
+
+```ts
+import { runFeed, runTick, runAction } from '@live/runtime';
+runFeed(module, state, item, ctx);
+```
+
+## 9. Ngữ cảnh — `Ctx`
+
+```ts
 export interface Ctx<C> {
   config: C;
   now: number;

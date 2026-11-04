@@ -15,10 +15,14 @@ export type {
 export { ID_RE } from './module';
 export type {
   Capability,
-  QuickField,
+  ConfigField,
+  ConfigFieldType,
   ModuleAction,
+  ModuleUi,
   ModuleManifest,
   Ctx,
+  FeedHook,
+  FeedHooks,
   ModuleCore,
   LiveModule,
 } from './module';

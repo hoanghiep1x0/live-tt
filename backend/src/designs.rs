@@ -3,12 +3,15 @@
 //! Thiết kế chưa build thì vẫn liệt kê, kèm lý do — người dùng cần thấy nó tồn tại
 //! và biết phải chạy build, thay vì thấy danh sách trống không hiểu vì sao.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::paths::{valid_id, Layout};
+use crate::settings;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Canvas {
@@ -26,6 +29,8 @@ impl Default for Canvas {
 pub struct DesignManifest {
     pub id: String,
     pub name: String,
+    #[serde(default = "icon_mac_dinh")]
+    pub icon: String,
     #[serde(default)]
     pub summary: String,
     #[serde(default = "mot_cham_khong")]
@@ -38,6 +43,9 @@ pub struct DesignManifest {
     pub provides: Vec<String>,
     #[serde(default)]
     pub recommends: Vec<String>,
+    /// Cấu hình gợi ý cho bối cảnh này, nạp một lần lúc thiết kế chưa có gì.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub defaults: BTreeMap<String, Value>,
     #[serde(default = "entry_mac_dinh")]
     pub entry: String,
 }
@@ -48,6 +56,10 @@ fn mot_cham_khong() -> String {
 
 fn entry_mac_dinh() -> String {
     "dist/index.html".into()
+}
+
+fn icon_mac_dinh() -> String {
+    "🎬".into()
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -66,6 +78,12 @@ pub struct DesignInfo {
     pub obs_url: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub problem: Option<String>,
+    /// Tên người vận hành tự đặt, hoặc `manifest.name` nếu chưa đặt. Giữ riêng
+    /// thay vì ghi đè `manifest.name` để không ai phải đoán tên nào là tên gốc.
+    #[serde(rename = "displayName")]
+    pub display_name: String,
+    #[serde(rename = "studioUrl", skip_serializing_if = "Option::is_none")]
+    pub studio_url: Option<String>,
 }
 
 /// Đọc một design.json. Trả lý do đọc được khi hỏng, để hiện lên thẻ thiết kế.
@@ -109,6 +127,7 @@ pub fn scan(layout: &Layout, port: u16, live: Option<&str>) -> Vec<DesignInfo> {
         }
 
         let obs_url = format!("http://127.0.0.1:{port}/d/{name}/");
+        let dat = settings::read(layout, &name);
         match read_manifest(&manifest_path, &name) {
             Ok(m) => {
                 let da_build = layout.design_dist(&name).join("index.html").exists();
@@ -119,23 +138,35 @@ pub fn scan(layout: &Layout, port: u16, live: Option<&str>) -> Vec<DesignInfo> {
                 } else {
                     (DesignStatus::Off, None)
                 };
-                out.push(DesignInfo { manifest: m, status, obs_url, problem });
+                let display_name = dat.name.clone().unwrap_or_else(|| m.name.clone());
+                out.push(DesignInfo {
+                    manifest: m,
+                    status,
+                    obs_url,
+                    problem,
+                    display_name,
+                    studio_url: dat.studio_url,
+                });
             }
             Err(ly_do) => out.push(DesignInfo {
                 manifest: DesignManifest {
                     id: name.clone(),
                     name: name.clone(),
+                    icon: icon_mac_dinh(),
                     summary: String::new(),
                     version: mot_cham_khong(),
                     canvas: Canvas::default(),
                     slots: Vec::new(),
                     provides: Vec::new(),
                     recommends: Vec::new(),
+                    defaults: BTreeMap::new(),
                     entry: entry_mac_dinh(),
                 },
                 status: DesignStatus::Error,
                 obs_url,
                 problem: Some(ly_do),
+                display_name: dat.name.unwrap_or_else(|| name.clone()),
+                studio_url: dat.studio_url,
             }),
         }
     }

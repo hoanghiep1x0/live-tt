@@ -1,0 +1,34 @@
+{
+  "id": "ke-chuyen",
+  "name": "Phòng kể chuyện",
+  "icon": "📖",
+  "summary": "AI MC đọc truyện, khán giả ngồi ghế hình quạt, top người tặng",
+  "version": "0.2.0",
+  "canvas": { "width": 1080, "height": 1920 },
+  "slots": [
+    "top-bar",
+    "ticker",
+    "screen",
+    "screen-overlay",
+    "tops",
+    "target",
+    "stage-3d",
+    "seats",
+    "floor",
+    "chat",
+    "center",
+    "corner-left",
+    "corner-right",
+    "bottom-bar",
+    "full"
+  ],
+  "provides": ["stage-3d", "audio", "tts"],
+  "recommends": ["gift-thanks", "welcome", "likes-counter", "follow-thanks"],
+  "defaults": {
+    "gift-thanks": { "template": "Cảm ơn {ten} đã tặng {qua}!" },
+    "welcome": { "template": "Chào {ten} ghé phòng nghe truyện nha!" },
+    "likes-counter": { "template": "Đã {phantram}% mục tiêu tim, cảm ơn cả phòng!" }
+  },
+  "entry": "dist/index.html",
+  "quality": { "auto": true, "minFps": 24 }
+}

@@ -1,0 +1,27 @@
+{
+  // Phần chạy được ở Node: hợp đồng, runtime, lõi module, test.
+  // Cố ý KHÔNG khai `lib: DOM` — nhờ vậy `core.ts` chạm `document` hay `window`
+  // là lỗi biên dịch ngay, đúng quy ước 01 §5, không phải trông vào review.
+  // Phần chạm DOM (manager, stage-sdk, thiết kế) nằm ở tsconfig.dom.json.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true,
+    "types": [],
+    "baseUrl": ".",
+    "paths": {
+      "@live/contracts": ["client/shared/contracts/src/index.ts"],
+      "@live/runtime": ["client/shared/runtime/src/index.ts"],
+      "@live/mod-*": ["client/modules/*/src/index.ts"]
+    }
+  },
+  "include": [
+    "client/shared/contracts/**/*.ts",
+    "client/shared/runtime/**/*.ts",
+    "client/modules/**/*.ts",
+    "tests/**/*.ts"
+  ]
+}

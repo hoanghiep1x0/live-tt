@@ -1,0 +1,511 @@
+/* Phòng kể chuyện — bố cục sân khấu.
+ *
+ * Chuyển từ mã cũ (D:\Live client/src/styles/index.css dòng 314–802 + comfort.css).
+ * Chỉ giữ phần BỐ CỤC và HÌNH KHỐI do thiết kế vẽ. Nội dung do tính năng sinh ra
+ * nằm trong các `<Slot>`, không có CSS ở đây.
+ *
+ * Đơn vị cqw = 1% bề rộng `.stage`. Không dùng transform scale: khung rộng
+ * min(100vw, 100vh×9/16), cao theo aspect-ratio, mọi thứ bên trong tính bằng cqw.
+ */
+
+:root {
+  --stage-bg: #120e09;
+  --stage-bg-deep: #0b0805;
+  --stage-glow: rgba(246, 169, 187, 0.28);
+  --stage-ring: rgba(242, 196, 90, 0.85);
+  --stage-soft: #e6dccb;
+  --stage-screen-glow: rgba(255, 210, 120, 0.35);
+  --stage-screen-drop: rgba(0, 0, 0, 0.6);
+  --stage-chip-bg: rgba(0, 0, 0, 0.5);
+  --stage-name-bg: rgba(0, 0, 0, 0.72);
+  --stage-cheer-glow: #ffd27a;
+  --gold: #f2c45a;
+  --accent: #e2536f;
+  --live: #ff3b5c;
+  --pad-screen: 1.2cqw;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  color: #fff;
+  font-family: 'Be Vietnam Pro', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+}
+
+/* ---- Khung máy chủ ---- */
+.stage {
+  --case-hue: 350;
+  container-type: inline-size;
+  position: relative;
+  width: min(100vw, calc(100vh * 9 / 16));
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  background: var(--stage-bg);
+  isolation: isolate;
+  font-size: 3cqw;
+  line-height: 1.3;
+}
+
+/* ---- Nền: ảnh chánh điện + ba lớp tối dần xuống rạp ghế ---- */
+.stage-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(12, 6, 3, 0.5) 0%,
+      rgba(12, 6, 3, 0.3) 22%,
+      rgba(12, 6, 3, 0.45) 50%,
+      rgba(10, 5, 3, 0.72) 66%,
+      rgba(8, 4, 2, 0.82) 100%
+    ),
+    var(--stage-backdrop, none) center top / cover no-repeat,
+    radial-gradient(
+      ellipse at 50% 0%,
+      hsl(var(--case-hue) 30% 16%),
+      var(--stage-bg) 55%,
+      var(--stage-bg-deep) 100%
+    );
+}
+
+.stage-halo {
+  position: absolute;
+  left: 50%;
+  top: 10%;
+  width: 80cqw;
+  height: 80cqw;
+  transform: translate(-50%, -50%);
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--stage-glow), rgba(0, 0, 0, 0) 65%);
+  animation: halo-tho 6s ease-in-out infinite;
+}
+@keyframes halo-tho {
+  50% {
+    opacity: 0.72;
+  }
+}
+
+/* ---- Dải trên ---- */
+.stage-topbar {
+  position: absolute;
+  top: 2.4cqw;
+  left: 3cqw;
+  right: 3cqw;
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
+  z-index: 4;
+}
+.chip {
+  background: var(--stage-chip-bg);
+  padding: 0.3cqw 1.1cqw;
+  border-radius: 1.2cqw;
+  white-space: nowrap;
+  font-size: 2.2cqw;
+  font-weight: 600;
+}
+.chip-live {
+  background: var(--live);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7cqw;
+}
+.chip-live .dot {
+  width: 1.1cqw;
+  height: 1.1cqw;
+  border-radius: 50%;
+  background: #fff;
+  animation: nhap 1.4s ease-in-out infinite;
+}
+@keyframes nhap {
+  50% {
+    opacity: 0.35;
+  }
+}
+.stage-title {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-weight: 600;
+  font-size: 2.6cqw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--stage-soft);
+}
+
+/* ---- Dải chữ chạy, ngay trên hàng ghế A ---- */
+.stage-heading {
+  position: absolute;
+  top: calc(var(--hall-top) - 4.4cqw);
+  height: 5cqw;
+  left: 0;
+  right: 0;
+  padding: 0 3cqw;
+  z-index: 1;
+  background: linear-gradient(
+    90deg,
+    rgba(18, 8, 3, 0),
+    rgba(18, 8, 3, 0.72) 14%,
+    rgba(18, 8, 3, 0.72) 86%,
+    rgba(18, 8, 3, 0)
+  );
+  border-width: 0.2cqw 0;
+  border-style: solid;
+  border-color: rgba(242, 196, 90, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4cqw;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.stage-honor {
+  position: relative;
+  flex: 0 0 auto;
+  width: 7.6cqw;
+  height: 6.4cqw;
+  transform: scale(0.78);
+  transform-origin: 50% 60%;
+}
+.stage-lotus {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ---- Khung chiếu ---- */
+.stage-screen {
+  position: absolute;
+  left: 50%;
+  top: var(--screen-top);
+  width: var(--screen-w);
+  height: var(--screen-h);
+  transition: top 0.5s ease, width 0.5s ease, height 0.5s ease;
+  transform: translateX(-50%);
+  padding: var(--pad-screen);
+  z-index: 3;
+  border-radius: 2cqw;
+  border: 0.4cqw solid var(--stage-ring);
+  background: linear-gradient(
+    135deg,
+    hsl(var(--case-hue) 45% 22%),
+    hsl(calc(var(--case-hue) + 40) 40% 12%)
+  );
+  box-shadow: 0 0 6cqw var(--stage-screen-glow), 0 2cqw 5cqw var(--stage-screen-drop);
+}
+.stage-screen-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 1cqw;
+  background: var(--stage-bg-deep);
+}
+.stage-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.stage-ai-label {
+  position: absolute;
+  top: 1.6cqw;
+  left: 1.6cqw;
+  z-index: 2;
+  font-size: 2cqw;
+  background: var(--stage-chip-bg);
+  padding: 0.2cqw 1.4cqw;
+  border-radius: 1cqw;
+}
+.stage-waiting {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 4cqw;
+  color: var(--stage-soft);
+  font-size: 3cqw;
+}
+
+/* ---- Hàng vinh danh top ---- */
+.stage-tops {
+  position: absolute;
+  top: calc(var(--lower-top) + 7cqw - var(--group-lift));
+  left: 0;
+  right: 0;
+  height: 12cqw;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 1.4cqw;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ---- Thanh tiến độ ---- */
+.stage-target {
+  position: absolute;
+  top: calc(var(--lower-top) + 20.2cqw - var(--group-lift));
+  left: 5cqw;
+  right: 5cqw;
+  text-align: center;
+  font-size: 2.2cqw;
+  z-index: 2;
+}
+
+/* ---- Rạp ghế cuộn được ---- */
+.stage-hall {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--hall-top);
+  bottom: var(--hall-gap);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  z-index: 1;
+}
+.stage-hall::-webkit-scrollbar {
+  display: none;
+}
+.hall-content {
+  position: relative;
+  width: 100%;
+}
+.row-label {
+  position: absolute;
+  left: 0.8cqw;
+  transform: translateY(-50%);
+  font-size: 1.8cqw;
+  font-weight: 700;
+  color: rgba(255, 246, 228, 0.35);
+}
+
+/* Một cái ghế = sofa mini: lưng (::before) + đệm (::after) */
+.seat {
+  --seat-line: rgba(255, 246, 228, 0.85);
+  --seat-back: linear-gradient(180deg, rgba(255, 246, 228, 0.42), rgba(220, 205, 180, 0.22)),
+    rgba(24, 12, 6, 0.55);
+  --seat-cushion: linear-gradient(180deg, rgba(255, 250, 238, 0.55), rgba(230, 215, 190, 0.3)),
+    rgba(24, 12, 6, 0.55);
+  position: absolute;
+  width: 3.9cqw;
+  height: 2.8cqw;
+  transform: translate(-50%, -50%) scale(var(--seat-scale, 1));
+  transition: filter 0.3s;
+  backface-visibility: hidden;
+}
+.seat::before,
+.seat::after {
+  content: '';
+  position: absolute;
+  border: max(1px, 0.2cqw) solid var(--seat-line);
+  transition: background 0.3s, border-color 0.3s;
+}
+.seat::before {
+  left: 0.5cqw;
+  right: 0.5cqw;
+  top: 0;
+  height: 2.1cqw;
+  border-radius: 1.2cqw 1.2cqw 0.4cqw 0.4cqw;
+  background: var(--seat-back);
+}
+.seat::after {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1.6cqw;
+  border-radius: 0.8cqw;
+  background: var(--seat-cushion);
+}
+.seat.tier-vang {
+  --seat-line: rgba(255, 216, 120, 0.9);
+  --seat-back: linear-gradient(180deg, rgba(255, 214, 120, 0.5), rgba(200, 150, 50, 0.28)),
+    rgba(24, 12, 6, 0.55);
+  --seat-cushion: linear-gradient(180deg, rgba(255, 232, 170, 0.6), rgba(230, 180, 80, 0.32)),
+    rgba(24, 12, 6, 0.55);
+}
+.seat.tier-hong {
+  --seat-line: rgba(255, 170, 192, 0.9);
+  --seat-back: linear-gradient(180deg, rgba(255, 170, 192, 0.48), rgba(200, 90, 120, 0.26)),
+    rgba(24, 12, 6, 0.55);
+  --seat-cushion: linear-gradient(180deg, rgba(255, 205, 218, 0.58), rgba(230, 120, 150, 0.3)),
+    rgba(24, 12, 6, 0.55);
+}
+/* Hàng G: ghế xanh lục, để thấy rõ chỗ rạp nối thêm */
+.seat.row-g {
+  --seat-line: rgba(140, 235, 150, 0.9);
+  --seat-back: linear-gradient(180deg, rgba(140, 235, 150, 0.5), rgba(50, 160, 80, 0.28)),
+    rgba(24, 12, 6, 0.55);
+  --seat-cushion: linear-gradient(180deg, rgba(190, 250, 195, 0.6), rgba(70, 190, 100, 0.32)),
+    rgba(24, 12, 6, 0.55);
+}
+.seat.taken.tier-vang {
+  --seat-back: linear-gradient(180deg, #f3c55c, #b07a1e);
+  --seat-cushion: linear-gradient(180deg, #ffe7a0, #d29a32);
+  --seat-line: #ffe39a;
+}
+.seat.taken.tier-hong {
+  --seat-back: linear-gradient(180deg, #ee93a9, #a83c56);
+  --seat-cushion: linear-gradient(180deg, #ffc6d3, #d4607b);
+  --seat-line: #ffd0dc;
+}
+.seat.taken.tier-trang {
+  --seat-back: linear-gradient(180deg, #e2dccf, #978e7d);
+  --seat-cushion: linear-gradient(180deg, #fffaf0, #c9c0ae);
+  --seat-line: #fff6e4;
+}
+
+/* Lớp nhãn tên khán giả: bám theo cuộn của rạp, nằm trên canvas 3D */
+.stage-seat-names {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--hall-top);
+  bottom: var(--hall-gap);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+.seat-tag {
+  position: absolute;
+  width: 3.9cqw;
+  height: 2.8cqw;
+  transform: translate(-50%, -50%) scale(var(--seat-scale, 1));
+}
+.seat-label {
+  position: absolute;
+  z-index: 1;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.2cqw;
+  max-width: 7cqw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.9cqw;
+  line-height: 1.25;
+  font-weight: 600;
+  background: var(--stage-name-bg);
+  color: #fff;
+  padding: 0 0.9cqw;
+  border-radius: 1cqw;
+}
+
+/* ---- Chỗ cắm cho tính năng ---- */
+.slot-stage-3d {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  clip-path: inset(calc(var(--hall-top) - 8cqw) 0 var(--hall-gap) 0);
+}
+.slot-floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--hall-top) - 2cqw);
+  height: 10cqw;
+  z-index: 7;
+  pointer-events: none;
+}
+.slot-chat {
+  position: absolute;
+  right: 3cqw;
+  bottom: 13cqw;
+  width: 42cqw;
+  height: 44cqw;
+  pointer-events: none;
+  z-index: 3;
+}
+.slot-center {
+  position: absolute;
+  left: 50%;
+  top: var(--screen-mid);
+  transform: translate(-50%, -50%);
+  width: 62cqw;
+  z-index: 6;
+}
+.slot-corner-left {
+  position: absolute;
+  left: 3cqw;
+  bottom: 13cqw;
+  z-index: 3;
+}
+.slot-corner-right {
+  position: absolute;
+  right: 3cqw;
+  bottom: 24cqw;
+  z-index: 3;
+}
+.slot-full {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.slot-screen-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ---- Chân màn ---- */
+.stage-hints {
+  position: absolute;
+  left: 3cqw;
+  right: 3cqw;
+  bottom: 0.6cqw;
+  text-align: center;
+  font-size: 2.2cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2cqw;
+  z-index: 4;
+  color: var(--stage-soft);
+}
+.stage-honest {
+  opacity: 0.7;
+  font-size: 2cqw;
+}
+
+/* Mất kết nối máy chủ: nói rõ trên màn, vì OBS đang phát ra ngoài */
+.stage-offline {
+  position: absolute;
+  top: 2.4cqw;
+  right: 3cqw;
+  z-index: 8;
+  background: var(--live);
+  padding: 0.3cqw 1.2cqw;
+  border-radius: 1.2cqw;
+  font-size: 2cqw;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@live/design-ke-chuyen",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@live/contracts": "*",
+    "@live/stage-sdk": "*",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@live/dev-proxy": "*",
+    "@vitejs/plugin-react": "6.2.1"
+  }
+}

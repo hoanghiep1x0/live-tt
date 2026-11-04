@@ -8,16 +8,41 @@ export type Priority = 'low' | 'normal' | 'high';
 export type SfxName = 'gift' | 'join' | 'sad' | 'comfort' | 'fanfare' | 'tick';
 
 /** Chỗ thiết kế chừa sẵn cho module cắm vào. Thiết kế khai báo slot nó có
- *  trong design.json; module khai báo slot nó cần trong manifest. */
+ *  trong design.json; module khai báo slot nó cần trong manifest.
+ *
+ *  Tên slot nói **vai trí trong một phòng live**, không nói bối cảnh: phòng kể
+ *  chuyện, đám cưới hay quán bar đều có khung chiếu, hàng vinh danh, vùng khán
+ *  giả, góc chat. Nhờ vậy một module vẽ được ở mọi bối cảnh mà không phải biết
+ *  mình đang ở phòng nào. */
 export type SlotName =
+  /** Dải trên cùng: tên phòng, chip LIVE, mã phiên. */
   | 'top-bar'
-  | 'bottom-bar'
-  | 'left'
-  | 'right'
-  | 'center'
-  | 'full'
+  /** Dải chữ chạy ngang. */
   | 'ticker'
-  | 'stage-3d';
+  /** Khung chiếu chính: video, ảnh, chữ truyện. */
+  | 'screen'
+  /** Phủ bên trong khung chiếu, ví dụ bình luận trong khung. */
+  | 'screen-overlay'
+  /** Hàng vinh danh top. */
+  | 'tops'
+  /** Thanh mục tiêu, tiến độ. */
+  | 'target'
+  /** Canvas 3D. */
+  | 'stage-3d'
+  /** Vùng khán giả — thứ vẽ theo từng ghế. */
+  | 'seats'
+  /** Sàn diễn phía trước khán giả. */
+  | 'floor'
+  /** Bóng chat nổi. */
+  | 'chat'
+  /** Giữa màn: thẻ hướng dẫn, hộp đạt mốc. */
+  | 'center'
+  | 'corner-left'
+  | 'corner-right'
+  /** Chân màn: dòng cú pháp, câu minh bạch. */
+  | 'bottom-bar'
+  /** Phủ toàn màn: quà bay, pháo hoa. */
+  | 'full';
 
 export type Effect =
   /** Nói một câu. Đi qua hàng chờ giọng đọc; `high` chen lên trước. */

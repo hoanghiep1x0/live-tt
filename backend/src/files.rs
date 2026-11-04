@@ -14,11 +14,12 @@ use axum::response::{IntoResponse, Response};
 use crate::paths::{safe_join, valid_id};
 use crate::state::AppState;
 
-/// Nơi lấy file: bản build hay thư mục assets.
+/// Nơi lấy file: bản build của thiết kế, assets của thiết kế, hay assets của module.
 #[derive(Clone, Copy)]
 pub enum Kind {
     Dist,
     Assets,
+    ModuleAssets,
 }
 
 pub async fn serve_root(
@@ -42,13 +43,22 @@ pub async fn serve_assets(
     serve(&st, Kind::Assets, &id, &rest).await
 }
 
+/// Assets riêng của một module, dùng được ở mọi thiết kế.
+pub async fn serve_module_assets(
+    State(st): State<Arc<AppState>>,
+    AxPath((id, rest)): AxPath<(String, String)>,
+) -> Response {
+    serve(&st, Kind::ModuleAssets, &id, &rest).await
+}
+
 async fn serve(st: &AppState, kind: Kind, id: &str, rest: &str) -> Response {
     if !valid_id(id) {
-        return loi(StatusCode::BAD_REQUEST, "id thiết kế sai định dạng");
+        return loi(StatusCode::BAD_REQUEST, "id sai định dạng");
     }
     let base = match kind {
         Kind::Dist => st.layout.design_dist(id),
         Kind::Assets => st.layout.design_assets(id),
+        Kind::ModuleAssets => st.layout.module_assets(id),
     };
 
     // Đường dẫn thư mục ("" hoặc kết thúc bằng "/") thì lấy index.html.
