@@ -31,6 +31,14 @@ export const LUA_CHON: readonly DesignOption[] = [
     value: false,
     hint: 'Tắt là khung dọc 9:16 như mặc định; bật thì khung nằm ngang 16:9 và cụm top nâng lên theo',
   },
+  {
+    key: 'anUi',
+    label: 'Cảnh an ủi',
+    short: 'An ủi',
+    type: 'toggle',
+    value: true,
+    hint: 'Mỗi phút một lượt: hai khán giả đang ngồi chạy lên ôm bé và cậu bé, tim bay, rồi về chỗ',
+  },
 ];
 
 const NEN = 'bg/amitabha-stage.png';
@@ -83,7 +91,8 @@ export function Stage() {
   const nhip = useNhip();
   // Lượt an ủi đang diễn ra. Thuần theo đồng hồ nên hai cửa sổ xem cùng phòng
   // thấy cùng một lượt.
-  const canh = canhAnUi(nhip);
+  const batAnUi = useThietKe()['anUi'] !== false;
+  const canh = batAnUi ? canhAnUi(nhip) : null;
   const beDuocOm = canh !== null && canh.nhanVat === 'be';
   // Khung dọc là mặc định; người vận hành gạt công tắc ở bảng xem thì đổi ngay,
   // không tải lại trang.

@@ -642,18 +642,53 @@ body {
   position: absolute;
   top: 0;
   width: 6.4cqw;
-  height: auto;
   transform: translate(-50%, -100%);
   transform-origin: 50% 100%;
-  filter: drop-shadow(0 0.3cqw 0.4cqw rgba(0, 0, 0, 0.55));
-  animation-duration: 5.2s, 0.42s;
-  animation-timing-function: linear, ease-in-out;
-  animation-iteration-count: 1, infinite;
-  animation-fill-mode: both, none;
-  animation-name: loi-vao, loi-buoc;
+  animation: loi-vao 5.2s linear both;
 }
 .loi-di.ra {
-  animation-name: loi-ra, loi-buoc;
+  animation-name: loi-ra;
+}
+.loi-anh {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 0.3cqw 0.4cqw rgba(0, 0, 0, 0.55));
+  animation: loi-buoc 0.42s ease-in-out infinite;
+}
+/* Nhãn tên đi theo trên đầu, như `stage-walk-labels` của bản cũ. Hiện ngắt
+   quãng ở giữa quãng đường: hiện suốt thì rạp đầy chữ. */
+.loi-ten {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(var(--lech-nhan, -50%));
+  margin-bottom: 0.5cqw;
+  padding: 0.2cqw 1cqw;
+  border-radius: 1cqw;
+  background: var(--stage-name-bg);
+  color: #fff4dc;
+  font-size: 2cqw;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  opacity: 0;
+  animation: loi-nhan 5.2s ease-in-out both;
+  animation-delay: inherit;
+}
+@keyframes loi-nhan {
+  0%,
+  18% {
+    opacity: 0;
+  }
+  28%,
+  72% {
+    opacity: 1;
+  }
+  82%,
+  100% {
+    opacity: 0;
+  }
 }
 /* Thẻ ảnh đặt sẵn ở GHẾ của người đó; hoạt ảnh chỉ dịch đi.
    Vào: hiện ở đáy rạp ngay lối của mình → đi lên tới hàng ghế của mình → rẽ
@@ -996,22 +1031,39 @@ body {
 .om-nguoi {
   position: absolute;
   width: 6.4cqw;
+  /* Chạy thì nhanh chân hơn đi dạo. */
+  animation-timing-function: ease-in-out;
   height: auto;
   transform: translate(-50%, -100%);
   transform-origin: 50% 100%;
   filter: drop-shadow(0 0.3cqw 0.4cqw rgba(0, 0, 0, 0.55));
-  animation: om-di 8.2s ease-in-out both, loi-buoc 0.42s ease-in-out infinite;
+  animation: om-di 8.2s ease-in-out both, loi-buoc 0.3s ease-in-out infinite;
 }
-/* 1,6s chạy lên · 5s ôm · 1,6s chạy về, tức 19,5% · 80,5% của 8,2s. */
+/* 1,6s chạy lên · 5s ôm · 1,6s chạy về, tức 19,5% · 80,5% của 8,2s.
+   Chạy theo ba chặng như người thật: ra lối gần nhất trong hàng của mình, chạy
+   dọc lối lên đầu rạp, rồi mới vòng vào đứng cạnh nhân vật. Lúc về đi ngược
+   đúng đường. Không cắt chéo qua ghế người khác. */
 @keyframes om-di {
-  from {
+  0% {
     transform: translate(-50%, -100%);
+  }
+  7% {
+    transform: translate(calc(-50% + var(--om-loi, 0cqw)), -100%);
+  }
+  14% {
+    transform: translate(calc(-50% + var(--om-loi, 0cqw)), calc(-100% + var(--om-len, 0cqw)));
   }
   19.5%,
   80.5% {
     transform: translate(calc(-50% + var(--om-x, 0cqw)), calc(-100% + var(--om-y, 0cqw)));
   }
-  to {
+  86% {
+    transform: translate(calc(-50% + var(--om-loi, 0cqw)), calc(-100% + var(--om-len, 0cqw)));
+  }
+  93% {
+    transform: translate(calc(-50% + var(--om-loi, 0cqw)), -100%);
+  }
+  100% {
     transform: translate(-50%, -100%);
   }
 }

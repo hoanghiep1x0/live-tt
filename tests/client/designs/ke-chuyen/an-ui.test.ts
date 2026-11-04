@@ -7,8 +7,8 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Seat } from '@live/contracts';
-import { canhAnUi, chonNguoiOm, TONG_MS } from '../../../../client/designs/ke-chuyen/src/parts/AnUi';
-import type { ChoNgoi } from '../../../../client/designs/ke-chuyen/src/parts/HangGhe';
+import { canhAnUi, chonNguoiOm, TONG_MS } from '../../../../client/designs/ke-chuyen/src/parts/an-ui';
+import type { ChoNgoi } from '../../../../client/designs/ke-chuyen/src/parts/ghe';
 
 const CHU_KY_MS = 60_000;
 
@@ -58,14 +58,14 @@ describe('chọn người ôm', () => {
     const g = ghe(8);
     const s = ngoi(8);
     expect(chonNguoiOm(s, g, 5, 2)).toEqual(chonNguoiOm(s, g, 5, 2));
-    const a = chonNguoiOm(s, g, 5, 2).map((x) => x.user);
-    const b = chonNguoiOm(s, g, 6, 2).map((x) => x.user);
+    const a = chonNguoiOm(s, g, 5, 2).map((x: { user: string }) => x.user);
+    const b = chonNguoiOm(s, g, 6, 2).map((x: { user: string }) => x.user);
     expect(a).not.toEqual(b);
   });
 
   it('không chọn trùng một người hai chỗ', () => {
     const ra = chonNguoiOm(ngoi(8), ghe(8), 2, 2);
-    expect(new Set(ra.map((x) => x.user)).size).toBe(ra.length);
+    expect(new Set(ra.map((x: { user: string }) => x.user)).size).toBe(ra.length);
   });
 
   it('rạp chỉ có một người thì chỉ một người chạy lên', () => {

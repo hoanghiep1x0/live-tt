@@ -15,65 +15,22 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Seat } from '@live/contracts';
-import { rowName, seatLayout, seatsInRow, tierOf } from '../seats';
-
-export interface ChoNgoi {
-  key: string;
-  r: number;
-  /** Chỉ số phẳng, đếm từ ghế đầu hàng A. Backend xếp chỗ theo đúng thứ tự này,
-   *  nên `Seat.i` khớp thẳng vào đây mà không cần bảng quy đổi. */
-  flat: number;
-  x: number;
-  y: number;
-  scale: number;
-}
-
-export function dungGhe(rows: number): ChoNgoi[] {
-  const ra: ChoNgoi[] = [];
-  let flat = 0;
-  for (let r = 0; r < rows; r += 1) {
-    for (let i = 0; i < seatsInRow(r); i += 1) {
-      ra.push({ key: `${r}-${i}`, r, flat, ...seatLayout(r, i) });
-      flat += 1;
-    }
-  }
-  return ra;
-}
-
-/** Sáu kiểu khán giả, mỗi kiểu hai dáng. Đây là CHÍNH sáu nhân vật của bản cũ:
- *  chạy lại `buildChibi(0..5)` trong `chibi3d.ts` với đúng bộ đèn rồi chụp ra
- *  PNG nền trong — xem `assets/CREDITS.md`. */
-const SO_KIEU = 6;
-export const ANH_NGOI: readonly string[] = Array.from(
-  { length: SO_KIEU },
-  (_, i) => `chibi/khan-${i + 1}.png`,
-);
-export const ANH_DUNG: readonly string[] = Array.from(
-  { length: SO_KIEU },
-  (_, i) => `chibi/dung-${i + 1}.png`,
-);
-
-/** Lấy ảnh theo kiểu. Mảng dựng đủ `SO_KIEU` phần tử và `kieuChibi` luôn trả số
- *  trong khoảng đó, nhưng `noUncheckedIndexedAccess` không biết điều ấy. */
-export function anhCua(ds: readonly string[], kieu: number): string {
-  return ds[kieu] ?? ds[0] ?? '';
-}
-
-/** Mỗi người xem giữ đúng một kiểu suốt buổi: băm từ nick chứ không bốc ngẫu
- *  nhiên, nên hai cửa sổ xem cùng một phòng thấy giống hệt nhau và người đó đổi
- *  ghế vẫn là người đó. Chuyển nguyên ý `chibiVariantOf` của bản cũ. */
-export function kieuChibi(user: string): number {
-  let h = 0;
-  for (let i = 0; i < user.length; i += 1) h = (h * 31 + user.charCodeAt(i)) % 100_003;
-  return h % SO_KIEU;
-}
+import { rowName, seatLayout, tierOf } from '../seats';
+import { ANH_NGOI, anhCua, kieuChibi } from './ghe';
+import type { ChoNgoi } from './ghe';
 
 /** Người rời ghế được giữ lại ngần này để mờ dần. Khớp `ghe-an` trong stage.css. */
 const RA_MS = 500;
+/** Người mới vào phải ĐI HẾT quãng đường rồi mới hiện ra trên ghế. Khớp `DI_MS`
+ *  của `LoiDi`: ngồi sẵn trên ghế rồi mới thấy mình đi vào là ngược đời. */
+const VAO_MS = 5_200;
 
 /** Ghế KHÔNG có màn đi: người đi vào / đi ra là một lượt riêng ở lối đi (xem
  *  `LoiDi.tsx`), đúng như bản cũ — không ai băng qua ghế để tới chỗ của mình.
  *  Ở đây chỉ là ngồi xuống và đứng lên, mờ nhẹ cho khỏi lộp bộp. */
+
+export type { ChoNgoi } from './ghe';
+export { ANH_DUNG, ANH_NGOI, anhCua, dungGhe, kieuChibi } from './ghe';
 
 export function HangGhe({
   ghe,
@@ -90,6 +47,11 @@ export function HangGhe({
   // rạp. Giữ người vừa đứng dậy thêm `RA_MS` để họ đi ra, rồi mới bỏ thật.
   const [diRa, setDiRa] = useState<ReadonlyMap<number, { user: string; at: number }>>(new Map());
   const truoc = useRef<Map<number, string>>(new Map());
+  /** Người vừa vào, đang trên đường tới ghế. Mốc là lúc mình thấy họ. */
+  const dangToi = useRef<Map<string, number>>(new Map());
+  /** Lượt dựng đầu tiên: ai đang ngồi là đã ngồi từ trước, không phải vừa vào.
+   *  Mở trang giữa buổi mà cả rạp cùng đứng dậy đi lại là sai. */
+  const lanDau = useRef(true);
 
   useEffect(() => {
     const nay = new Map<number, string>();
@@ -98,6 +60,17 @@ export function HangGhe({
     const ra: [number, string][] = [];
     for (const [i, u] of truoc.current) {
       if (nay.get(i) !== u) ra.push([i, u]);
+    }
+    const gioVao = Date.now();
+    if (!lanDau.current) {
+      const cu = new Set(truoc.current.values());
+      for (const u of nay.values()) {
+        if (!cu.has(u) && !dangToi.current.has(u)) dangToi.current.set(u, gioVao);
+      }
+    }
+    lanDau.current = false;
+    for (const [u, t] of dangToi.current) {
+      if (gioVao - t >= VAO_MS) dangToi.current.delete(u);
     }
     truoc.current = nay;
 
@@ -120,6 +93,8 @@ export function HangGhe({
     <>
       {ghe.map((g) => {
         const ai = ngoi.get(g.flat);
+        // Còn đang trên đường thì chưa vẽ người ngồi: họ phải đi tới nơi đã.
+        const chuaToi = ai !== undefined && dangToi.current.has(ai.user);
         const cu = ai === undefined ? diRa.get(g.flat) : undefined;
         return (
           <div
@@ -128,7 +103,7 @@ export function HangGhe({
               'seat',
               `tier-${tierOf(g.r)}`,
               g.r === 6 ? 'row-g' : '',
-              ai === undefined ? '' : 'taken',
+              ai === undefined || chuaToi ? '' : 'taken',
             ]
               .filter(Boolean)
               .join(' ')}
@@ -142,7 +117,7 @@ export function HangGhe({
             }}
             aria-hidden
           >
-            {ai !== undefined ? (
+            {ai !== undefined && !chuaToi ? (
               // `key` theo nick: người này đứng lên người kia ngồi xuống thì
               // React dựng lại, màn ngồi xuống chạy lại.
               <img

@@ -18,62 +18,13 @@ import { useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { FeedItem, Seat } from '@live/contracts';
 import { AISLES_X } from '../seats';
-import { ANH_DUNG, anhCua, kieuChibi } from './HangGhe';
-import type { ChoNgoi } from './HangGhe';
+import { ANH_DUNG, anhCua } from './ghe';
+import type { ChoNgoi } from './ghe';
+import { cacLuot } from './di-lai';
+import type { LuotDi } from './di-lai';
 
-/** Một lượt đi hết ngần này. Lấy đúng `WALK_MS` của bản cũ. */
-export const DI_MS = 5_200;
-/** Trên cùng một lối, người sau xuất phát cách người trước ngần này — không dồn cục. */
-const CACH_MS = 1_400;
-/** Chờ lượt quá lâu thì bỏ: phòng quá đông thì không xếp hàng vô tận. */
-const CHO_TOI_DA_MS = 6_000;
-/** Nhiều hơn ngần này người cùng đi là rối mắt. */
-const TOI_DA = 6;
-
-export interface LuotDi {
-  key: string;
-  loi: number;
-  vao: boolean;
-  tu: number;
-  kieu: number;
-  /** Nick, để tra chỗ ngồi. */
-  ai: string;
-}
-
-/** Lối gần ghế này nhất. Người rời ghế đi ngang ra lối gần nhất rồi mới xuống,
- *  chứ không bước xuyên qua cả rạp. */
-export function loiGan(x: number): number {
-  let tot = 0;
-  for (let i = 1; i < AISLES_X.length; i += 1) {
-    if (Math.abs((AISLES_X[i] ?? 50) - x) < Math.abs((AISLES_X[tot] ?? 50) - x)) tot = i;
-  }
-  return tot;
-}
-
-/** Các lượt đang đi, tính thuần từ feed. Chuyển nguyên cách xếp lượt của bản
- *  cũ: mỗi lối một hàng chờ, người sau cách người trước `CACH_MS`. */
-export function cacLuot(
-  feed: readonly FeedItem[],
-  now: number,
-  choCua: (ai: string) => { x: number } | undefined,
-): LuotDi[] {
-  const ranh = AISLES_X.map(() => 0);
-  const ra: LuotDi[] = [];
-  // Feed của phiên xếp cũ → mới, mà hàng chờ phải tính theo thứ tự thời gian.
-  for (const f of feed) {
-    if (f.kind !== 'join' && f.kind !== 'leave') continue;
-    const ai = f.user ?? f.name;
-    const cho = choCua(ai);
-    const loi = cho === undefined ? f.id % AISLES_X.length : loiGan(cho.x);
-    const tu = Math.max(f.at, ranh[loi] ?? 0);
-    if (tu - f.at > CHO_TOI_DA_MS) continue;
-    ranh[loi] = tu + CACH_MS;
-    if (now >= tu && now < tu + DI_MS) {
-      ra.push({ key: `${f.kind}:${f.id}`, loi, vao: f.kind === 'join', tu, kieu: kieuChibi(ai), ai });
-    }
-  }
-  return ra.slice(-TOI_DA);
-}
+export { cacLuot, DI_MS, loiGan, tenNgan } from './di-lai';
+export type { LuotDi } from './di-lai';
 
 function MotNguoi({
   luot,
@@ -94,20 +45,30 @@ function MotNguoi({
   const loiX = AISLES_X[luot.loi] ?? 50;
   // Không biết ghế thì đứng ngay ở lối, đi mỗi chiều dọc.
   const goc = cho ?? { x: loiX, y: 6 };
+  // Nhãn tên nằm TRONG cùng thẻ với người, nên nó đi theo trên đầu — bản cũ
+  // cũng vậy (`stage-walk-labels`). Lối sát mép thì nhãn lệch vào trong cho
+  // khỏi bị cắt chữ.
+  const lechNhan = luot.loi === 0 ? '-12%' : luot.loi === AISLES_X.length - 1 ? '-88%' : '-50%';
   return (
-    <img
+    <span
       className={luot.vao ? 'loi-di vao' : 'loi-di ra'}
-      src={asset(anhCua(ANH_DUNG, luot.kieu))}
-      alt=""
-      style={{
-        left: `${goc.x}%`,
-        top: `${goc.y}cqw`,
-        // Quãng ngang ra lối, và quãng dọc xuống đáy rạp.
-        '--ra-loi': `${(loiX - goc.x).toFixed(1)}cqw`,
-        '--xuong': `${Math.max(3, cao + 3 - goc.y).toFixed(1)}cqw`,
-        animationDelay: `${tre}ms, ${tre}ms`,
-      } as CSSProperties}
-    />
+      style={
+        {
+          left: `${goc.x}%`,
+          top: `${goc.y}cqw`,
+          // Quãng ngang ra lối, và quãng dọc xuống đáy rạp.
+          '--ra-loi': `${(loiX - goc.x).toFixed(1)}cqw`,
+          '--xuong': `${Math.max(3, cao + 3 - goc.y).toFixed(1)}cqw`,
+          '--lech-nhan': lechNhan,
+          animationDelay: `${tre}ms`,
+        } as CSSProperties
+      }
+    >
+      <img className="loi-anh" src={asset(anhCua(ANH_DUNG, luot.kieu))} alt="" />
+      <b className="loi-ten">
+        {luot.ten} {luot.vao ? 'vào phòng' : 'rời phòng 👋'}
+      </b>
+    </span>
   );
 }
 

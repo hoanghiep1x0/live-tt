@@ -19,81 +19,15 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { Seat } from '@live/contracts';
 import { HALL_TOP } from '../geometry';
-import { ANH_DUNG, anhCua, kieuChibi } from './HangGhe';
-import type { ChoNgoi } from './HangGhe';
+import { AISLES_X } from '../seats';
+import { loiGan } from './di-lai';
+import { ANH_DUNG, anhCua, kieuChibi } from './ghe';
+import type { ChoNgoi } from './ghe';
+import { CHAY_MS, CHO_NHAN_VAT, CHO_OM, chonNguoiOm, OM_MS } from './an-ui';
+import type { Canh } from './an-ui';
 
-/** Mỗi chu kỳ một lượt an ủi. Bản cũ chờ ngẫu nhiên 40–90 giây; ở đây chốt một
- *  con số để nhịp là hàm thuần của đồng hồ. */
-const CHU_KY_MS = 60_000;
-const CHAY_MS = 1_600;
-const OM_MS = 5_000;
-export const TONG_MS = CHAY_MS * 2 + OM_MS;
-
-export type NhanVat = 'be' | 'cau-be';
-
-/** Chỗ đứng ôm quanh từng nhân vật, lấy nguyên `HUG_SPOTS` của bản cũ (x %,
- *  đáy chân y cqw). Bé ở sát mép trái nên cả hai người đứng bên phải; cậu bé
- *  thì một người trước mặt, một người lùi sau mép phải. */
-const CHO_OM: Record<NhanVat, readonly { x: number; y: number }[]> = {
-  be: [
-    { x: 15.4, y: 114 },
-    { x: 19, y: 113.6 },
-  ],
-  'cau-be': [
-    { x: 84.9, y: 124 },
-    { x: 97.2, y: 116.8 },
-  ],
-};
-
-/** Nhân vật được ôm đứng ở đâu, để đặt tim. */
-const CHO_NHAN_VAT: Record<NhanVat, { x: number; y: number }> = {
-  be: { x: 11, y: 117 },
-  'cau-be': { x: 91.5, y: 118 },
-};
-
-export interface Canh {
-  /** Số thứ tự lượt — dùng làm hạt bốc người, nên cùng lượt là cùng người. */
-  k: number;
-  nhanVat: NhanVat;
-  /** Đã trôi bao lâu kể từ đầu lượt. */
-  t: number;
-}
-
-/** Lượt an ủi đang diễn ra, hoặc `null`. Hàm thuần. */
-export function canhAnUi(now: number): Canh | null {
-  const k = Math.floor(now / CHU_KY_MS);
-  const t = now % CHU_KY_MS;
-  if (t >= TONG_MS) return null;
-  return { k, nhanVat: k % 2 === 0 ? 'be' : 'cau-be', t };
-}
-
-/** Chọn người ôm từ những ai đang ngồi. Thuần theo `k` nên hai cửa sổ chọn
- *  đúng một nhóm. Rạp trống thì không có lượt nào — không dựng người từ hư
- *  không để làm phòng có vẻ đông. */
-export function chonNguoiOm(
-  ngoi: Map<number, Seat>,
-  ghe: readonly ChoNgoi[],
-  k: number,
-  soNguoi: number,
-): { user: string; x: number; y: number }[] {
-  const co = [...ngoi.entries()]
-    .map(([i, ai]) => {
-      const g = ghe.find((x) => x.flat === i);
-      return g === undefined ? null : { user: ai.user, x: g.x, y: g.y };
-    })
-    .filter((x): x is { user: string; x: number; y: number } => x !== null)
-    // Hàng gần sân khấu (y nhỏ) được ưu tiên, như bản cũ.
-    .sort((a, b) => a.y - b.y);
-  if (co.length === 0) return [];
-
-  const ra: { user: string; x: number; y: number }[] = [];
-  for (let i = 0; i < soNguoi; i += 1) {
-    const j = (k * 7 + i * 13) % co.length;
-    const nguoi = co[j];
-    if (nguoi !== undefined && !ra.some((x) => x.user === nguoi.user)) ra.push(nguoi);
-  }
-  return ra;
-}
+export { canhAnUi, chonNguoiOm, TONG_MS } from './an-ui';
+export type { Canh, NhanVat } from './an-ui';
 
 function NguoiOm({
   tu,
@@ -120,6 +54,10 @@ function NguoiOm({
         {
           left: `${tu.x}%`,
           top: `${HALL_TOP + tu.y}cqw`,
+          // Ba chặng, không cắt chéo qua ghế người khác: ra lối gần nhất trong
+          // hàng của mình → chạy dọc lối lên đầu rạp → vòng vào chỗ đứng ôm.
+          '--om-loi': `${(AISLES_X[loiGan(tu.x)] ?? 50) - tu.x}cqw`,
+          '--om-len': `${(HALL_TOP + 2 - (HALL_TOP + tu.y)).toFixed(1)}cqw`,
           '--om-x': `${(den.x - tu.x).toFixed(1)}cqw`,
           '--om-y': `${(den.y - (HALL_TOP + tu.y)).toFixed(1)}cqw`,
           animationDelay: `${tre}ms, ${tre}ms`,
