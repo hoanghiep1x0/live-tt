@@ -118,6 +118,13 @@ export function useRunner(s: StageState): KetQuaChay {
 
     const ctx = { now: bayGio(), rand: Math.random, session: s.session };
     const ra: Effect[] = [];
+    // Câu MC đi qua feed như mọi mục khác. Nhờ vậy nó nằm trong phiên (lượt sau
+    // AI đọc lại được mình vừa nói gì), và cửa sổ xem mở giữa chừng cũng bắt
+    // đúng mạch. Không module nào sinh ra nó — nó từ backend xuống.
+    for (const f of moi) {
+      if (f.kind !== 'host') continue;
+      ra.push(f.voice === undefined ? { kind: 'say', text: f.text } : { kind: 'say', text: f.text, voice: f.voice });
+    }
     for (const t of song.current.values()) {
       for (const f of moi) ra.push(...t.feed(f, ctx));
     }

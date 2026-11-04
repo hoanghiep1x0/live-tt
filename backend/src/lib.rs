@@ -8,6 +8,7 @@
 //! - `/s/…`        lối cho sân khấu: giọng đọc, không đòi token
 //! - `/ws`         bus phát sự kiện và cấu hình xuống
 
+pub mod ai;
 pub mod api;
 pub mod bot;
 pub mod designs;

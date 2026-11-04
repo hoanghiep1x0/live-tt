@@ -73,6 +73,9 @@ export type RoomCommand =
   /** Nhân vật ảo: bật tắt và số lượng. Nội dung họ nói là của thiết kế
    *  (`crowd` trong design.json), lệnh này chỉ chỉnh số. */
   | { op: 'set-bot'; patch: Json }
+  /** MC do AI dẫn: bật tắt, nhịp xem lại phòng, model, lời dặn thêm. Khoá API
+   *  KHÔNG đi qua đây — nó nằm ở kho khoá của backend. */
+  | { op: 'set-ai'; patch: Json }
   | { op: 'seed'; n: number }
   | { op: 'next-story' };
 

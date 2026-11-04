@@ -75,6 +75,11 @@ pub fn dung_goi(
     let lam_tron = |x: f32| (f64::from(x) * 100.0).round() / 100.0;
     let speed = lam_tron(speed);
     match kind {
+        // Anthropic là nhà cung cấp cho MC, không đọc được thành tiếng. Nói rõ
+        // ở đây còn hơn để nó rơi vào nhánh OpenAI rồi lỗi khó hiểu tận đầu kia.
+        ProviderKind::Anthropic => Err(TtsError::Invalid(
+            "nhà cung cấp này dùng cho MC, không phải giọng đọc".into(),
+        )),
         ProviderKind::Openai => {
             let b = if base.is_empty() {
                 return Err(TtsError::Invalid("nhà cung cấp chưa có địa chỉ".into()));
@@ -188,7 +193,7 @@ pub fn sinh(layout: &Layout, req: &YeuCau) -> Result<Vec<u8>, TtsError> {
     let (url, ten_header, _, body) = dung_goi(p.kind, &base, &giong, &p.model, &text, speed)?;
     let gia_tri_header = match p.kind {
         ProviderKind::Openai => format!("Bearer {}", p.key),
-        ProviderKind::Elevenlabs => p.key.clone(),
+        ProviderKind::Elevenlabs | ProviderKind::Anthropic => p.key.clone(),
     };
 
     let agent = ureq::Agent::config_builder()

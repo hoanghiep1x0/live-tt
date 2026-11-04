@@ -497,3 +497,10 @@
   line-height: 1.45;
   color: #9aa3b5;
 }
+
+/* Thẻ MC: cùng nhóm với thẻ thiết kế và nhân vật ảo — thứ của phiên, không
+   phải module cắm vào slot. */
+.bx-the-mc {
+  border-color: #3f4a63;
+  background: linear-gradient(160deg, rgba(28, 36, 54, 0.9), rgba(18, 20, 28, 0.9));
+}

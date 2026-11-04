@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { LOAI_PHONG } from '@live/contracts';
 import type { ConfigField, Json } from '@live/contracts';
-import { BOT_MAC_DINH } from './state';
+import { AI_MAC_DINH, BOT_MAC_DINH } from './state';
 import { ONhanh, OConfig } from './OConfig';
 import { SO_MODULE, timDangKy } from './registry';
 import { guiLenh } from './state';
@@ -236,6 +236,146 @@ function TheThietKe() {
   );
 }
 
+function suaAi(key: string, v: Json): void {
+  const duoc = guiLenh({
+    t: 'command',
+    command: { op: 'set-ai', patch: { [key]: v } as Json },
+    by: 'nguoi',
+    reason: 'sửa MC từ bảng xem thử',
+  });
+  if (!duoc) console.warn('[xem thử] chưa nối được máy chủ');
+}
+
+const O_NHIP: ConfigField = {
+  key: 'everySec',
+  label: 'Mấy giây MC xem lại phòng một lượt',
+  short: 'Nhịp (giây)',
+  type: 'number',
+  min: 10,
+  max: 300,
+  unit: 'giây',
+};
+
+const O_MODEL: ConfigField = {
+  key: 'model',
+  label: 'Model',
+  short: 'Model',
+  type: 'select',
+  options: [
+    { value: 'claude-opus-5-5', label: 'Opus 5.5 — giỏi nhất, đắt nhất' },
+    { value: 'claude-sonnet-5-5', label: 'Sonnet 5.5 — cân bằng' },
+    { value: 'claude-haiku-5-5', label: 'Haiku 5.5 — nhanh, rẻ' },
+  ],
+};
+
+const O_DAN: ConfigField = {
+  key: 'extra',
+  label: 'Lời dặn thêm cho MC',
+  type: 'textarea',
+  hint: 'Ghép sau lời dặn gốc. Ví dụ: tên phòng, chủ đề tối nay, điều cần tránh',
+};
+
+/** Thẻ MC do AI dẫn.
+ *
+ *  Khoá API KHÔNG có ở đây và không bao giờ đi qua đây: nó nằm trong kho khoá
+ *  của backend (nhà cung cấp "mc"), thêm ở trang quản lý. Bản cũ để khoá trong
+ *  localStorage của trang đang live — đúng cái trang mà OBS đang thu. */
+function TheMc({ mo }: { mo: () => void }) {
+  const s = useStage();
+  const roi = s.live === null;
+  const ai = s.ai ?? AI_MAC_DINH;
+
+  return (
+    <article className="bx-the bx-the-mc" data-bat={ai.enabled}>
+      <button type="button" className="bx-cham" aria-label="Cấu hình MC" onClick={mo} />
+      <div className="bx-the-dau">
+        <span className="bx-icon">🎙</span>
+        <span className="bx-ten">
+          <b>MC do AI dẫn</b>
+          <small>Đọc tin phòng rồi nói chuyện với khách theo tên, kể chuyện từng nhịp</small>
+        </span>
+        <input
+          type="checkbox"
+          className="bx-cong"
+          checked={ai.enabled}
+          disabled={roi}
+          aria-label="Bật MC do AI dẫn"
+          onChange={(e) => suaAi('enabled', e.target.checked)}
+        />
+      </div>
+      <div className="bx-the-nhanh">
+        <ONhanh
+          field={O_NHIP}
+          value={ai.everySec}
+          disabled={roi || !ai.enabled}
+          onChange={(v) => suaAi('everySec', v)}
+        />
+        <ONhanh
+          field={O_MODEL}
+          value={ai.model}
+          disabled={roi || !ai.enabled}
+          onChange={(v) => suaAi('model', v)}
+        />
+      </div>
+      <p className="bx-the-nhac">
+        Khoá API đặt ở trang quản lý, nhà cung cấp “mc”. Khoá không bao giờ rời máy chủ.
+      </p>
+    </article>
+  );
+}
+
+/** Modal lời dặn thêm cho MC. Textarea dài nên không nhét lên thẻ được. */
+function ModalMc({ dong }: { dong: () => void }) {
+  const s = useStage();
+  const ai = s.ai ?? AI_MAC_DINH;
+  const roi = s.live === null;
+
+  return (
+    <div className="bx-tam" role="dialog" aria-modal aria-label="MC do AI dẫn">
+      <div className="bx-modal">
+        <div className="bx-dau2">
+          <span className="bx-icon">🎙</span>
+          <span className="bx-ten">
+            <b>MC do AI dẫn</b>
+            <small>Lời dặn gốc đã có sẵn; đây là phần dặn thêm của riêng phòng</small>
+          </span>
+          <button type="button" className="bx-x" onClick={dong} aria-label="Đóng">
+            ✕
+          </button>
+        </div>
+        <div className="bx-than">
+          <OConfig
+            moduleId="mc"
+            field={O_NHIP}
+            value={ai.everySec}
+            disabled={roi}
+            onChange={(v) => suaAi('everySec', v)}
+          />
+          <OConfig
+            moduleId="mc"
+            field={O_MODEL}
+            value={ai.model}
+            disabled={roi}
+            onChange={(v) => suaAi('model', v)}
+          />
+          <OConfig
+            moduleId="mc"
+            field={O_DAN}
+            value={ai.extra}
+            disabled={roi}
+            onChange={(v) => suaAi('extra', v)}
+          />
+        </div>
+        <div className="bx-chan2">
+          <button type="button" className="bx-xong" onClick={dong}>
+            Xong
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const O_SO_NGUOI: ConfigField = {
   key: 'count',
   label: 'Số nhân vật ảo giữ trong phòng',
@@ -297,6 +437,7 @@ export function BangXem() {
   const s = useStage();
   const [mo, setMo] = useState(false);
   const [sua, setSua] = useState<string | null>(null);
+  const [suaMc, setSuaMc] = useState(false);
   const [an] = useState(trongObs);
 
   if (an) return null;
@@ -325,6 +466,7 @@ export function BangXem() {
                 cách xếp với trang quản lý, để người vận hành không phải học
                 hai bố cục. */}
             <TheThietKe />
+            <TheMc mo={() => setSuaMc(true)} />
             <TheNhanVatAo />
 
             <h3 className="bx-muc">Chỉnh nhanh</h3>
@@ -352,6 +494,7 @@ export function BangXem() {
           </p>
 
           {sua === null ? null : <Modal id={sua} dong={() => setSua(null)} />}
+          {!suaMc ? null : <ModalMc dong={() => setSuaMc(false)} />}
         </aside>
       )}
     </>

@@ -28,6 +28,8 @@ pub enum ProviderKind {
     Openai,
     /// ElevenLabs: khoá ở header `xi-api-key`, giọng nằm trong đường dẫn.
     Elevenlabs,
+    /// Anthropic Messages API cho MC. Khoá ở header `x-api-key`.
+    Anthropic,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]

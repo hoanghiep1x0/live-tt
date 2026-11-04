@@ -25,8 +25,29 @@ export interface StageState {
   /** Nhân vật ảo: tắt bật và số lượng. Thiết kế đọc để biết có phải ghi dòng
    *  minh bạch ở chân màn không; bảng xem đọc để vẽ thẻ. */
   bot: BotCfg;
+  /** MC do AI dẫn. Chỉ phần người vận hành chỉnh — khoá API không bao giờ ra
+   *  khỏi backend. */
+  ai: AiCfg;
   noiDuoc: boolean;
 }
+
+/** MC do AI dẫn. Câu MC về sân khấu qua feed (`kind: 'host'`), không phải qua
+ *  đây — đây chỉ là mấy nút chỉnh. */
+export interface AiCfg {
+  enabled: boolean;
+  everySec: number;
+  model: string;
+  extra: string;
+}
+
+/** Mặc định TẮT: bật là tiêu tiền API của người vận hành, và là để một cái máy
+ *  nói chuyện với khán giả thay họ. */
+export const AI_MAC_DINH: AiCfg = {
+  enabled: false,
+  everySec: 30,
+  model: 'claude-sonnet-5-5',
+  extra: '',
+};
 
 /** Nhân vật ảo minh hoạ. Nội dung họ nói nằm ở `crowd` trong design.json của
  *  từng phòng, không phải ở đây. */
@@ -59,6 +80,7 @@ export const BAN_DAU: StageState = {
   design: {},
   voice: VOICE_MAC_DINH,
   bot: BOT_MAC_DINH,
+  ai: AI_MAC_DINH,
   noiDuoc: false,
 };
 
@@ -78,6 +100,11 @@ export function apTin(s: StageState, d: Down): StageState {
     }
     case 'config':
       return { ...s, config: { ...s.config, [d.moduleId]: d.config } };
+    case 'ai': {
+      const c = d.cfg;
+      if (typeof c !== 'object' || c === null || Array.isArray(c)) return s;
+      return { ...s, ai: { ...AI_MAC_DINH, ...(c as Partial<AiCfg>) } };
+    }
     case 'bot': {
       const c = d.cfg;
       if (typeof c !== 'object' || c === null || Array.isArray(c)) return s;

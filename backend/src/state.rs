@@ -47,6 +47,9 @@ pub struct AppState {
     /// Đổi nguồn là tăng số này; tác vụ nguồn cũ thấy số khác thì tự thoát.
     the_he_nguon: AtomicU64,
     loi_nguon: RwLock<Option<String>>,
+    /// Một lượt gọi MC đang bay. Gọi chồng lên nhau là MC nói hai câu cùng lúc
+    /// và hoá đơn API nhân đôi.
+    ai_ban: std::sync::atomic::AtomicBool,
     tx: broadcast::Sender<Value>,
 }
 
@@ -100,6 +103,7 @@ impl AppState {
             nguon: RwLock::new(SourceCfg::default()),
             the_he_nguon: AtomicU64::new(0),
             loi_nguon: RwLock::new(None),
+            ai_ban: std::sync::atomic::AtomicBool::new(false),
             tx,
         })
     }
@@ -251,6 +255,7 @@ impl AppState {
                 ra.push(json!({ "t": "design", "config": Value::Object(cfg) }));
             }
             ra.push(json!({ "t": "bot", "cfg": self.bot_config(id) }));
+            ra.push(json!({ "t": "ai", "cfg": self.ai_config(id) }));
         }
 
         ra.push(json!({ "t": "voice", "cfg": crate::voice::read(&self.layout) }));
@@ -331,6 +336,76 @@ impl AppState {
         let mut doc = store::read_object(&path)?;
         doc.insert("modules".into(), Value::Object(modules));
         store::write_json_atomic(&path, &Value::Object(doc))
+    }
+
+    /// Cau hinh MC do AI dan cua mot thiet ke.
+    pub fn ai_config(&self, design_id: &str) -> crate::ai::AiCfg {
+        let doc = match store::read_object(&self.layout.config_file(design_id)) {
+            Ok(d) => d,
+            Err(_) => return crate::ai::AiCfg::default(),
+        };
+        match doc.get("ai") {
+            Some(v) => serde_json::from_value(v.clone()).unwrap_or_default(),
+            None => crate::ai::AiCfg::default(),
+        }
+    }
+
+    /// Gop mot patch vao cau hinh MC roi phat xuong ngay.
+    pub fn set_ai_config(&self, design_id: &str, patch: Value) -> Result<(), AppError> {
+        let Value::Object(patch) = patch else {
+            return Err(AppError::BadRequest("cấu hình MC phải là một object".into()));
+        };
+        let cu = self.ai_config(design_id);
+        let mut obj = match serde_json::to_value(cu) {
+            Ok(Value::Object(m)) => m,
+            _ => Map::new(),
+        };
+        for (k, v) in patch {
+            obj.insert(k, v);
+        }
+        let moi: crate::ai::AiCfg = serde_json::from_value(Value::Object(obj))
+            .map_err(|e| AppError::BadRequest(format!("cấu hình MC không hợp lệ: {e}")))?;
+        let moi_val = serde_json::to_value(moi).unwrap_or(Value::Null);
+
+        let path = self.layout.config_file(design_id);
+        let mut doc = store::read_object(&path)?;
+        doc.insert("ai".into(), moi_val.clone());
+        store::write_json_atomic(&path, &Value::Object(doc))?;
+
+        if self.live().as_deref() == Some(design_id) {
+            self.broadcast(json!({ "t": "ai", "cfg": moi_val }));
+        }
+        Ok(())
+    }
+
+    /// MC noi mot cau: ghi vao phien roi phat xuong feed.
+    ///
+    /// Di qua feed chu khong phai mot tin rieng: cau MC phai nam trong phien de
+    /// luot sau AI doc lai duoc minh vua noi gi, va cua so xem mo giua chung
+    /// cung thay MC dang ke toi dau.
+    pub fn mc_noi(&self, text: String, voice: Option<String>) {
+        let now = bay_gio_ms();
+        let item = {
+            let mut g = self.phien.write().expect("khoá phiên hỏng");
+            match g.as_mut() {
+                Some(p) => p.mc_noi(now, text, voice),
+                None => return,
+            }
+        };
+        self.broadcast(json!({ "t": "feed", "items": [item] }));
+    }
+
+    /// Co ban cua MC: mot luot goi AI dang bay, khong goi chong len.
+    pub fn ai_dang_chay(&self) -> bool {
+        self.ai_ban.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    pub fn ai_bat_dau(&self) {
+        self.ai_ban.store(true, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub fn ai_xong(&self) {
+        self.ai_ban.store(false, std::sync::atomic::Ordering::Relaxed);
     }
 
     /// Tat bat va so luong nhan vat ao cua mot thiet ke.

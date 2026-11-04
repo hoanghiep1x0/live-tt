@@ -72,6 +72,9 @@ pub struct FeedItem {
     /// Nhân vật ảo. Module phải bỏ qua, nếu không bot tự cảm ơn chính nó.
     #[serde(rename = "virtual", skip_serializing_if = "Option::is_none")]
     pub ao: Option<bool>,
+    /// Giọng đọc dạng "nhà-cung-cấp:tên-giọng", chỉ có ở câu MC.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub voice: Option<String>,
 }
 
 impl FeedItem {
@@ -88,6 +91,7 @@ impl FeedItem {
             gift: None,
             count: None,
             ao: None,
+            voice: None,
         }
     }
 }
@@ -347,6 +351,22 @@ impl Session {
             self.feed.pop_front();
         }
         vec![item]
+    }
+
+    /// Ghi một câu MC vào feed.
+    ///
+    /// Câu MC phải nằm TRONG phiên chứ không chỉ phát thẳng xuống sân khấu: lượt
+    /// sau AI cần đọc lại mình vừa nói gì mới nối mạch được, và cửa sổ xem mở
+    /// giữa chừng cũng thấy MC đang kể tới đâu.
+    pub fn mc_noi(&mut self, now: i64, text: String, voice: Option<String>) -> FeedItem {
+        let id = self.id_moi();
+        let mut item = FeedItem::moi(id, now, "host", "MC", text);
+        item.voice = voice;
+        self.feed.push_back(item.clone());
+        while self.feed.len() > FEED_GIU {
+            self.feed.pop_front();
+        }
+        item
     }
 
     pub fn totals(&self) -> &Totals {
@@ -681,6 +701,20 @@ mod tests {
             false,
         );
         assert_eq!(s.seats()[0].name, "An Nguyễn");
+    }
+
+    #[test]
+    fn cau_mc_vao_feed_de_luot_sau_doc_lai_duoc() {
+        let mut s = Session::new("ke-chuyen", 4, 1.0, 0);
+        s.apply(&vao("an"), 1_000, false);
+        let it = s.mc_noi(2_000, "Chào An nha".into(), Some("vieneu:mai".into()));
+        assert_eq!(it.kind, "host");
+        assert_eq!(it.name, "MC");
+        assert_eq!(it.voice.as_deref(), Some("vieneu:mai"));
+        let v = s.view(10);
+        let cuoi = v.recent_feed.last().unwrap();
+        assert_eq!(cuoi.kind, "host", "câu MC phải nằm trong phiên");
+        assert_eq!(s.totals().comments, 0, "câu MC không phải bình luận của khách");
     }
 
     #[test]

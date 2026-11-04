@@ -50,6 +50,18 @@ const CAU_BE = 'nguoi/cau-be.png';
  *  máy quay trực diện, rồi chụp ra PNG nền trong. Xem `assets/CREDITS.md`. */
 const BE_CHIBI = 'nguoi/be-chibi.png';
 
+/** Sáu kiểu khán giả chibi, đúng bộ ảnh của bản cũ. */
+const CHIBI = Array.from({ length: 6 }, (_, i) => `chibi/chibi-${i + 1}-sit.svg`);
+
+/** Mỗi người xem giữ đúng một kiểu chibi suốt buổi: băm từ nick chứ không bốc
+ *  ngẫu nhiên, nên hai cửa sổ xem cùng một phòng thấy giống hệt nhau và người
+ *  đó đổi ghế vẫn là người đó. Chuyển nguyên ý `chibiVariantOf` của bản cũ. */
+function kieuChibi(user: string): number {
+  let h = 0;
+  for (let i = 0; i < user.length; i += 1) h = (h * 31 + user.charCodeAt(i)) % 100_003;
+  return h % CHIBI.length;
+}
+
 /** Đồng hồ cho màn chờ. Nhịp 250ms của sân khấu không tới thiết kế, mà màn chờ
  *  chỉ cần tới giây, nên một nhịp một giây là đủ. Giờ máy chứ không phải giờ
  *  phiên: người xem đọc nó như đồng hồ treo tường. */
@@ -88,29 +100,54 @@ function dungGhe(rows: number): ChoNgoi[] {
 
 /** Hàng ghế. Ghế là đồ đạc của phòng nên thiết kế tự vẽ; ai ngồi đâu thì đọc
  *  từ phiên, và phiên nằm ở backend. */
-function HangGhe({ ghe, rows, ngoi }: { ghe: ChoNgoi[]; rows: number; ngoi: Map<number, Seat> }) {
+function HangGhe({
+  ghe,
+  rows,
+  ngoi,
+  anh,
+}: {
+  ghe: ChoNgoi[];
+  rows: number;
+  ngoi: Map<number, Seat>;
+  /** Sáu đường dẫn ảnh chibi, dựng sẵn ở `Stage` để khỏi tính lại 84 lần. */
+  anh: readonly string[];
+}) {
   return (
     <>
-      {ghe.map((g) => (
-        <div
-          key={g.key}
-          className={[
-            'seat',
-            `tier-${tierOf(g.r)}`,
-            g.r === 6 ? 'row-g' : '',
-            ngoi.has(g.flat) ? 'taken' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-          style={{
-            left: `${g.x}%`,
-            top: `${g.y}cqw`,
-            // @ts-expect-error biến CSS tuỳ chỉnh
-            '--seat-scale': g.scale,
-          }}
-          aria-hidden
-        />
-      ))}
+      {ghe.map((g) => {
+        const ai = ngoi.get(g.flat);
+        return (
+          <div
+            key={g.key}
+            className={[
+              'seat',
+              `tier-${tierOf(g.r)}`,
+              g.r === 6 ? 'row-g' : '',
+              ai === undefined ? '' : 'taken',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            style={{
+              left: `${g.x}%`,
+              top: `${g.y}cqw`,
+              // @ts-expect-error biến CSS tuỳ chỉnh
+              '--seat-scale': g.scale,
+              // Người mới đi từ lối đi giữa vào ghế của mình: ghế càng xa trục
+              // giữa thì quãng đi càng dài. Kẹp lại cho ghế mép không bay cả màn.
+              '--vao-x': `${Math.max(-16, Math.min(16, (50 - g.x) * 0.32)).toFixed(1)}cqw`,
+              // Lệch pha nhịp thở, kẻo cả rạp phập phồng cùng lúc.
+              '--tho-tre': `${(-(g.flat % 17) * 0.2).toFixed(1)}s`,
+            }}
+            aria-hidden
+          >
+            {ai === undefined ? null : (
+              // `key` theo nick: người này đứng lên người kia ngồi xuống thì
+              // React dựng lại thẻ ảnh, nhờ vậy màn đi vào chạy lại từ đầu.
+              <img key={ai.user} className="seat-chibi" src={anh[kieuChibi(ai.user)]} alt="" />
+            )}
+          </div>
+        );
+      })}
       {Array.from({ length: rows }, (_, r) => (
         <span key={`nhan-${r}`} className="row-label" style={{ top: `${seatLayout(r, 0).y}cqw` }}>
           {rowName(r)}
@@ -165,6 +202,7 @@ export function Stage() {
   /** Module sàn nhảy xin sáng slot `floor` suốt màn nhảy. */
   const sanSang = useSlotSang('floor');
   const gio = useDongHo();
+  const anhChibi = useMemo(() => CHIBI.map((p) => asset(p)), [asset]);
   // Khung dọc là mặc định; người vận hành gạt công tắc ở bảng xem thì đổi ngay,
   // không tải lại trang.
   const huong: Huong = useThietKe()['khungNgang'] === true ? 'landscape' : 'portrait';
@@ -261,7 +299,7 @@ export function Stage() {
 
       <section className="stage-hall">
         <div className="hall-content" style={{ height: `${hallContentH(rows)}cqw` }}>
-          <HangGhe ghe={ghe} rows={rows} ngoi={ngoi} />
+          <HangGhe ghe={ghe} rows={rows} ngoi={ngoi} anh={anhChibi} />
         </div>
       </section>
 

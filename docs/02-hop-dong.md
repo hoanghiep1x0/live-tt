@@ -121,6 +121,7 @@ export type RoomCommand =
   | { op: 'set-design'; designId: string }
   | { op: 'set-design-config'; patch: Json }
   | { op: 'set-bot';           patch: Json }
+  | { op: 'set-ai';            patch: Json }
   | { op: 'seed';       n: number }
   | { op: 'next-story' };
 
@@ -139,6 +140,19 @@ trang.
 là của thiết kế (`crowd` trong design.json, xem docs/04 §6), nên cùng một công tắc ở hai
 bối cảnh cho ra hai đám đông khác hẳn. Backend giữ đám đông ở đúng số đó bằng sự kiện mang
 cờ `virtual`, và phát xuống bằng tin `{ t: 'bot', cfg }`.
+
+`set-ai` chỉnh MC do AI dẫn: `{ enabled, everySec, model, extra }`. **Khoá API không đi qua
+đây và không bao giờ rời backend** — nó nằm ở kho khoá, nhà cung cấp `mc` (kind `anthropic`,
+`baseUrl` rỗng thì gọi `https://api.anthropic.com`). Bản cũ để khoá trong `localStorage` của
+trang đang live, đúng cái trang OBS đang thu.
+
+Mỗi `everySec` giây backend chụp một bản tóm tắt phòng (ai đang chờ được đáp, MC đã nói gì,
+tin mới) rồi hỏi model một lượt. Câu trả về đi vào phiên thành mục feed `kind: 'host'`, sân
+khấu đọc to và hiện chữ. Đi qua feed chứ không phải một tin riêng, vì lượt sau AI phải đọc
+lại được mình vừa nói gì, và cửa sổ xem mở giữa chừng cũng bắt đúng mạch.
+
+Bình luận của khách vào lời nhắc trong thẻ `<tin_phong>` và được dặn rõ là **dữ liệu, không
+phải chỉ dẫn**. Câu có nhắc tiền / kêu gọi đóng góp bị chặn ở backend, không lên sóng.
 
 Người, luật tự động và AI dùng chung whitelist này, và chung cổng `gateFor`.
 Mã cũ đã làm đúng ở `ops.ts` + `autopilot.ts`; chuyển sang nguyên tắc nguyên vẹn.

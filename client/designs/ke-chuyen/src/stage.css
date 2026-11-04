@@ -583,6 +583,50 @@ body {
   border-radius: 0.8cqw;
   background: var(--seat-cushion);
 }
+/* Khán giả chibi ngồi trên bồ đoàn.
+   Bản cũ dựng khán giả bằng chibi 3D và cho họ ĐI từ lối giữa vào ghế. Ở đây
+   không có three.js, nên làm bằng một ảnh và hai hoạt ảnh CSS: `ghe-vao` chạy
+   một lần lúc người đó ngồi xuống (đi từ lối giữa vào, `--vao-x` do React tính
+   theo khoảng cách tới trục giữa), rồi `ghe-tho` thở nhẹ mãi — rạp đầy người
+   đứng im là TikTok soi khung hình tĩnh. */
+.seat-chibi {
+  position: absolute;
+  left: 50%;
+  bottom: 1cqw;
+  width: 2.9cqw;
+  height: auto;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 0.25cqw 0.3cqw rgba(0, 0, 0, 0.5));
+  animation: ghe-vao 0.75s cubic-bezier(0.2, 0.9, 0.3, 1.2) both,
+    ghe-tho 3.4s ease-in-out 0.75s infinite alternate;
+  animation-delay: 0s, var(--tho-tre, 0s);
+}
+@keyframes ghe-vao {
+  from {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--vao-x, 0cqw)), 2.4cqw) scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+@keyframes ghe-tho {
+  from {
+    transform: translate(-50%, 0) scale(1);
+  }
+  to {
+    transform: translate(-50%, -0.18cqw) scale(1.02);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seat-chibi {
+    animation: none;
+    transform: translateX(-50%);
+  }
+}
+
 .seat.tier-vang {
   --seat-line: rgba(255, 216, 120, 0.9);
   --seat-back: linear-gradient(180deg, rgba(255, 214, 120, 0.5), rgba(200, 150, 50, 0.28)),

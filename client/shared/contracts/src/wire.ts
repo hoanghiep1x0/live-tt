@@ -16,6 +16,8 @@ export type Down =
   /** Nhân vật ảo đổi — áp nóng. Thiết kế đọc để biết có phải ghi dòng minh bạch
    *  "có nhân vật minh họa" ở chân màn hay không. */
   | { t: 'bot'; cfg: Json }
+  /** MC do AI dẫn đổi — áp nóng. Không bao giờ mang khoá API. */
+  | { t: 'ai'; cfg: Json }
   /** Cài đặt giọng đọc đổi — áp nóng, KHÔNG tải lại trang. */
   | { t: 'voice'; cfg: Json }
   | { t: 'live'; designId: string | null }
