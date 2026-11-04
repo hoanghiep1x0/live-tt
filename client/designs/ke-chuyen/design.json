@@ -8,6 +8,7 @@
   "slots": [
     "top-bar",
     "ticker",
+    "dance-floor",
     "screen",
     "screen-overlay",
     "tops",
