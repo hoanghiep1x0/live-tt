@@ -15,6 +15,7 @@ Chuyển từ bản cũ ở `D:\Live\client\public\assets`. Mỗi thiết kế g
 | `nguoi/co-be.png` | Bé gái ngồi thiền ở đầu trái thanh tiến độ | Bản cũ `charity/art/mascot@3x.png` |
 | `nguoi/cau-be.png` | Cậu bé quỳ ở đầu phải thanh tiến độ | Bản cũ `charity/art/boy@3x.png` |
 | `nguoi/be-chibi.png` | Bé chibi ngồi ôm gối, sau lưng bé gái, 399×640 | Chụp từ rig 3D `buildHero` của bản cũ |
+| `nguoi/be-vui.png` | Cũng bé đó, lúc được ôm thì vui lên | Chụp `animateHero(h, 0, 0, mood = 1)` |
 
 Ba nhân vật này là **đồ đạc của phòng**, không phải của module: bản cũ để cảnh
 an ủi điều khiển động tác (cúi chào, vỗ tay, lau nước mắt, bé khóc, khách chạy

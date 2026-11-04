@@ -655,34 +655,48 @@ body {
 .loi-di.ra {
   animation-name: loi-ra, loi-buoc;
 }
-/* Vào: từ dưới đáy rạp đi ngược lên phía sân khấu. Ra: ngược lại.
-   Mốc lấy của bản cũ: `HALL_TOP + HALL_H + 3` ↔ `HALL_TOP + 6`. */
+/* Thẻ ảnh đặt sẵn ở GHẾ của người đó; hoạt ảnh chỉ dịch đi.
+   Vào: hiện ở đáy rạp ngay lối của mình → đi lên tới hàng ghế của mình → rẽ
+   ngang vào ghế. Ra: ngược lại — đứng dậy, đi ngang ra lối, rồi mới xuống.
+   `--ra-loi` là quãng ngang từ ghế tới lối, `--xuong` là quãng dọc xuống đáy. */
 @keyframes loi-vao {
   from {
     opacity: 0;
-    top: calc(100% + 3cqw);
+    transform: translate(calc(-50% + var(--ra-loi, 0cqw)), calc(-100% + var(--xuong, 20cqw)));
   }
-  6%,
-  94% {
+  8% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--ra-loi, 0cqw)), -100%);
+  }
+  96% {
     opacity: 1;
   }
   to {
     opacity: 0;
-    top: 6cqw;
+    transform: translate(-50%, -100%);
   }
 }
 @keyframes loi-ra {
   from {
     opacity: 0;
-    top: 6cqw;
+    transform: translate(-50%, -100%);
   }
-  6%,
-  94% {
+  8% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--ra-loi, 0cqw)), -100%);
+  }
+  92% {
     opacity: 1;
   }
   to {
     opacity: 0;
-    top: calc(100% + 3cqw);
+    transform: translate(calc(-50% + var(--ra-loi, 0cqw)), calc(-100% + var(--xuong, 20cqw)));
   }
 }
 @keyframes loi-buoc {
@@ -966,5 +980,92 @@ body {
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* ---- Cảnh an ủi ----
+   Khán giả đứng dậy chạy lên ôm bé / cậu bé rồi chạy về. Lớp này nằm ở TẦNG
+   SÂN KHẤU, không trong rạp ghế: chỗ đứng ôm neo vào bé và cậu bé, mà hai em
+   đứng ngoài vùng cuộn của rạp. Xem `parts/AnUi.tsx`. */
+.lop-an-ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+.om-nguoi {
+  position: absolute;
+  width: 6.4cqw;
+  height: auto;
+  transform: translate(-50%, -100%);
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 0.3cqw 0.4cqw rgba(0, 0, 0, 0.55));
+  animation: om-di 8.2s ease-in-out both, loi-buoc 0.42s ease-in-out infinite;
+}
+/* 1,6s chạy lên · 5s ôm · 1,6s chạy về, tức 19,5% · 80,5% của 8,2s. */
+@keyframes om-di {
+  from {
+    transform: translate(-50%, -100%);
+  }
+  19.5%,
+  80.5% {
+    transform: translate(calc(-50% + var(--om-x, 0cqw)), calc(-100% + var(--om-y, 0cqw)));
+  }
+  to {
+    transform: translate(-50%, -100%);
+  }
+}
+
+.om-tim {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 3cqw;
+  line-height: 1;
+  white-space: nowrap;
+}
+.om-tim span {
+  display: inline-block;
+  margin: 0 0.2cqw;
+  animation: om-tim-bay 2.4s ease-out infinite;
+  animation-delay: calc(var(--i) * 0.28s);
+}
+@keyframes om-tim-bay {
+  from {
+    opacity: 0;
+    transform: translateY(0) scale(0.7);
+  }
+  25% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6cqw) scale(1.1);
+  }
+}
+
+/* Bé vui hẳn lên lúc được ôm, cô bé trên đài sen cúi đầu cảm ơn. */
+.stage-be.dang-vui {
+  animation: be-tho 1.6s ease-in-out infinite alternate;
+}
+.stage-kid.cui-chao {
+  animation: cui-chao 2.4s ease-in-out infinite;
+}
+@keyframes cui-chao {
+  0%,
+  100% {
+    transform: translate(-50%, -100%) rotate(0deg);
+  }
+  50% {
+    transform: translate(-50%, -100%) rotate(-6deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .om-nguoi {
+    animation: om-di 8.2s linear both;
+  }
+  .om-tim span,
+  .stage-kid.cui-chao {
+    animation: none;
   }
 }

@@ -15,6 +15,7 @@ import type { Huong } from './geometry';
 import { GHE_MAC_DINH, hallContentH, hallRowsFor } from './seats';
 import { dungGhe, HangGhe, TenKhan } from './parts/HangGhe';
 import { LoiDi } from './parts/LoiDi';
+import { AnUi, canhAnUi } from './parts/AnUi';
 
 /** Lựa chọn của riêng phòng này, hiện thành thẻ "Khung phòng" ở bảng xem.
  *
@@ -43,6 +44,8 @@ const CAU_BE = 'nguoi/cau-be.png';
  *  `buildHero` + `animateHero(t=0, cry=0, mood=0)` với đúng đèn của bản cũ,
  *  máy quay trực diện, rồi chụp ra PNG nền trong. Xem `assets/CREDITS.md`. */
 const BE_CHIBI = 'nguoi/be-chibi.png';
+/** Bé lúc được ôm. Cũng chụp từ rig cũ, chỉ khác `mood = 1`. */
+const BE_VUI = 'nguoi/be-vui.png';
 
 /** Nhịp thô cho những thứ bắt đầu / kết thúc theo thời gian. Nửa giây là đủ:
  *  phần chạy mượt nằm ở CSS, đây chỉ quyết định lúc nào dựng và lúc nào bỏ. */
@@ -78,6 +81,10 @@ export function Stage() {
   // Đồng hồ cho lượt người ra vào ở lối đi: chỉ cần đủ mịn để bắt đầu và kết
   // thúc một lượt, phần chạy là của CSS.
   const nhip = useNhip();
+  // Lượt an ủi đang diễn ra. Thuần theo đồng hồ nên hai cửa sổ xem cùng phòng
+  // thấy cùng một lượt.
+  const canh = canhAnUi(nhip);
+  const beDuocOm = canh !== null && canh.nhanVat === 'be';
   // Khung dọc là mặc định; người vận hành gạt công tắc ở bảng xem thì đổi ngay,
   // không tải lại trang.
   const huong: Huong = useThietKe()['khungNgang'] === true ? 'landscape' : 'portrait';
@@ -178,7 +185,14 @@ export function Stage() {
       <section className="stage-hall">
         <div className="hall-content" style={{ height: `${hallContentH(rows)}cqw` }}>
           <HangGhe ghe={ghe} rows={rows} ngoi={ngoi} asset={asset} />
-          <LoiDi feed={s.session.recentFeed} now={nhip} asset={asset} />
+          <LoiDi
+            feed={s.session.recentFeed}
+            now={nhip}
+            ghe={ghe}
+            ngoi={ngoi}
+            cao={hallContentH(rows)}
+            asset={asset}
+          />
         </div>
       </section>
 
@@ -204,10 +218,21 @@ export function Stage() {
       <div className="stage-kids" aria-hidden="true">
         {/* Vẽ TRƯỚC bé gái nên bị bé gái che một phần — đúng ý bản cũ: bé ngồi
             xa hơn, lệch phải, trong tầm nhìn của bé gái. */}
-        <img className="stage-be" src={asset(BE_CHIBI)} alt="" draggable={false} />
-        <img className="stage-kid kid-girl" src={asset(CO_BE)} alt="" draggable={false} />
+        <img
+          className={beDuocOm ? 'stage-be dang-vui' : 'stage-be'}
+          src={asset(beDuocOm ? BE_VUI : BE_CHIBI)}
+          alt=""
+          draggable={false}
+        />
+        <img
+          className={canh === null ? 'stage-kid kid-girl' : 'stage-kid kid-girl cui-chao'}
+          src={asset(CO_BE)}
+          alt=""
+          draggable={false}
+        />
         <img className="stage-kid kid-boy" src={asset(CAU_BE)} alt="" draggable={false} />
       </div>
+      <AnUi canh={canh} ngoi={ngoi} ghe={ghe} asset={asset} />
       <div className="slot-chat">
         <Slot name="chat" />
       </div>
