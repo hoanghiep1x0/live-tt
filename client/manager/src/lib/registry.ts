@@ -7,6 +7,7 @@
 
 import type { FeedKind, Json, ModuleUi } from '@live/contracts';
 import { manifest as chatBubbles } from '@live/mod-chat-bubbles';
+import { manifest as danceFloor } from '@live/mod-dance-floor';
 import { manifest as followThanks } from '@live/mod-follow-thanks';
 import { manifest as giftThanks } from '@live/mod-gift-thanks';
 import { manifest as likesCounter } from '@live/mod-likes-counter';
@@ -38,6 +39,7 @@ export const MODULES: readonly Registered[] = [
   reg(likesCounter),
   reg(followThanks),
   reg(ticker),
+  reg(danceFloor),
 ];
 
 /** Chữ hiện trên nhãn "Chạy khi" của thẻ. */

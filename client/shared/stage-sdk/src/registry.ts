@@ -25,6 +25,8 @@ import { moduleTopGivers } from '@live/mod-top-givers';
 import { Stage as TopGiversStage } from '@live/mod-top-givers/stage';
 import { moduleTicker } from '@live/mod-ticker';
 import { Stage as TickerStage } from '@live/mod-ticker/stage';
+import { moduleDanceFloor } from '@live/mod-dance-floor';
+import { Stage as DanceFloorStage } from '@live/mod-dance-floor/stage';
 import { moduleStory } from '@live/mod-story';
 import { Stage as StoryStage } from '@live/mod-story/stage';
 import { moduleFollowThanks } from '@live/mod-follow-thanks';
@@ -126,6 +128,7 @@ export const SO_MODULE: readonly DangKy[] = [
   dangKy(moduleChatBubbles, { slot: 'chat', Part: ChatBubblesStage }),
   dangKy(moduleLikesCounter, { slot: 'target', Part: LikesCounterStage }),
   dangKy(moduleTicker, { slot: 'ticker', Part: TickerStage }),
+  dangKy(moduleDanceFloor, { slot: 'floor', Part: DanceFloorStage }),
 ];
 
 export function timDangKy(id: string): DangKy | undefined {

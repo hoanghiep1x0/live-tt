@@ -19,6 +19,7 @@ export default defineConfig({
     exclude: [
       '@live/contracts',
       '@live/mod-chat-bubbles',
+      '@live/mod-dance-floor',
       '@live/mod-gift-thanks',
       '@live/mod-story',
       '@live/mod-ticker',
