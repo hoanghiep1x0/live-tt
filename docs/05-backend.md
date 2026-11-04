@@ -180,6 +180,16 @@ Mọi nguồn trả đúng `LiveEvent`, nên phần còn lại của hệ thốn
 | `bridge` | Nối tới tiến trình đọc TikTok chạy ngoài, qua WebSocket | **xong** |
 | `webview` | Tự đọc khung webcast trong webview TikTok | chưa |
 
+### Cờ `virtual` — của bot, không phải của nguồn mẫu
+
+Cờ này đánh dấu **nhân vật do máy dựng bên trong một phiên thật**, để module cảm ơn quà
+không tự cảm ơn con bot của chính mình. Nguồn `mau` KHÔNG gắn cờ này: nó là cả một phòng
+giả, gắn cờ thì không module nào chạy và nguồn mẫu mất sạch công dụng.
+
+Cờ nằm **ngay trong phiên**, không gắn thêm lúc phát xuống. Sân khấu nhận feed qua hai
+đường — tin `feed` và bản chụp `session` — hai đường mà nói khác nhau thì module lúc chạy
+lúc không.
+
 ### `bridge` — đường tới dữ liệu thật hôm nay
 
 ```

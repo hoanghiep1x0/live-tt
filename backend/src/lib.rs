@@ -14,8 +14,8 @@ pub mod files;
 pub mod guard;
 pub mod paths;
 pub mod session;
-pub mod source;
 pub mod settings;
+pub mod source;
 pub mod state;
 pub mod store;
 pub mod ws;
@@ -41,14 +41,25 @@ pub fn router(st: Arc<AppState>) -> Router {
         .route("/api/source", get(api::get_source).put(api::put_source))
         .route(
             "/api/live",
-            get(api::get_live).post(api::post_live).delete(api::delete_live),
+            get(api::get_live)
+                .post(api::post_live)
+                .delete(api::delete_live),
         )
         .route("/api/designs/:design_id/settings", put(api::put_settings))
         .route("/api/designs/:design_id/reset", post(api::post_reset))
         .route("/api/designs/:design_id/modules", get(api::list_modules))
-        .route("/api/designs/:design_id/modules/:module_id", get(api::get_module))
-        .route("/api/designs/:design_id/modules/:module_id/config", put(api::put_config))
-        .route("/api/designs/:design_id/modules/:module_id/enabled", post(api::post_enabled));
+        .route(
+            "/api/designs/:design_id/modules/:module_id",
+            get(api::get_module),
+        )
+        .route(
+            "/api/designs/:design_id/modules/:module_id/config",
+            put(api::put_config),
+        )
+        .route(
+            "/api/designs/:design_id/modules/:module_id/enabled",
+            post(api::post_enabled),
+        );
 
     let files = Router::new()
         .route("/d/:id/", get(files::serve_root))

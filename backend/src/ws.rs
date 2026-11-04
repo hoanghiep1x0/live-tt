@@ -21,11 +21,12 @@ async fn chay(socket: WebSocket, st: Arc<AppState>) {
     let (mut tx, mut rx) = socket.split();
     let mut bus = st.subscribe();
 
-    // Gửi ngay trạng thái hiện tại: client vừa nối không phải chờ sự kiện kế tiếp
-    // mới biết thiết kế nào đang phát.
-    let chao = json!({ "t": "live", "designId": st.live() });
-    if tx.send(Message::Text(chao.to_string())).await.is_err() {
-        return;
+    // Gửi ngay toàn bộ trạng thái: client vừa nối không phải chờ sự kiện kế tiếp
+    // mới biết phòng nào đang phát, module nào đang bật và phiên đang thế nào.
+    for tin in st.chao_ws() {
+        if tx.send(Message::Text(tin.to_string())).await.is_err() {
+            return;
+        }
     }
 
     loop {

@@ -175,20 +175,46 @@ không thuộc module. Xem [04 — Viết thiết kế](04-viet-thiet-ke.md) §5
 
 ## 7. Khi nào cần `stage.tsx`
 
-Chỉ khi module phải **vẽ**. Cảm ơn quà không cần — nó trả `say`, thiết kế lo phát tiếng.
+Chỉ khi module phải **vẽ**. Cảm ơn quà không cần — nó trả `say`, thiết kế lo đọc và hiện chữ.
 
-Cần: Top người tặng, Bộ đếm tim, Thông báo ghim, Nhân vật chibi, Nhân vật hip hop.
+Có rồi: `top-givers` (bảng vinh danh), `chat-bubbles` (bóng chat nổi), `likes-counter`
+(thanh tiến độ). Sẽ cần: Thông báo ghim, Nhân vật chibi, Nhân vật hip hop.
 
 ```tsx
-import type { StageProps } from '@live/stage-sdk';
+import type { StagePartProps } from '@live/stage-sdk';
+import './stage.css';
 
-export function Stage({ config, session }: StageProps<Config>) {
-  return <ol>{session.topGivers.slice(0, config.size).map((g) => <li key={g.user}>{g.name}</li>)}</ol>;
+export function Stage({ config, state, modState, now }: StagePartProps<Config, State>) {
+  return <ol>{state.session.topGivers.slice(0, config.size).map((g) => <li key={g.user}>{g.name}</li>)}</ol>;
 }
 ```
 
-`Stage` gắn vào slot mà manifest khai. Nó nhận cấu hình qua props, nên đổi cấu hình là vẽ lại
-ngay, không tải lại.
+| Props | Là gì |
+|---|---|
+| `config` | Cấu hình đầy đủ: mặc định của schema đã được gộp với thứ đã lưu |
+| `state` | Phiên, danh sách module đang bật, cấu hình mọi module |
+| `modState` | Trạng thái lõi của **chính module này** — đừng tính lại thứ lõi đã tính |
+| `now` | Giờ hiện tại, để vẽ theo thời gian (bóng chat tự tắt) |
+
+Ba luật:
+
+1. **Không xuất `Stage` từ `index.ts`.** `index.ts` phải nạp được ở Node (test, trang quản lý)
+   mà không kéo theo React và CSS. Khai một lối riêng trong `package.json`:
+   `"exports": { ".": "./src/index.ts", "./stage": "./src/stage.tsx" }`.
+2. **Không tính lại thứ lõi đã tính.** Bóng nào được hiện là việc của `core.ts`; `stage.tsx`
+   chỉ vẽ `modState`. Hai nơi cùng quyết thì sớm muộn hai nơi nói khác nhau.
+3. **CSS lấy màu từ biến của thiết kế**, kèm giá trị lui:
+   `background: var(--stage-chip-bg, rgba(0,0,0,.5))`. Nhờ vậy cùng một module trông hợp ở
+   phòng kể chuyện, phòng đám cưới và quán bar mà không phải sửa dòng nào. Đơn vị dùng `cqw`
+   — khung sân khấu khai `container-type: inline-size`.
+
+Rồi thêm một dòng vào `client/shared/stage-sdk/src/registry.ts`:
+
+```ts
+dangKy(moduleTopGivers, { slot: 'tops', Part: TopGiversStage }),
+```
+
+Thiết kế **không** import module; nó chỉ đặt `<Slot name="tops" />`.
 
 ## 8. Module có nút bấm
 

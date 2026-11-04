@@ -53,17 +53,26 @@ impl Layout {
 
     /// Cấu hình mọi module của một thiết kế.
     pub fn config_file(&self, design_id: &str) -> PathBuf {
-        self.database_dir().join("designs").join(design_id).join("config.json")
+        self.database_dir()
+            .join("designs")
+            .join(design_id)
+            .join("config.json")
     }
 
     /// Cài đặt người vận hành đặt cho thiết kế: tên hiện trên thẻ, link Studio.
     pub fn settings_file(&self, design_id: &str) -> PathBuf {
-        self.database_dir().join("designs").join(design_id).join("settings.json")
+        self.database_dir()
+            .join("designs")
+            .join(design_id)
+            .join("settings.json")
     }
 
     /// Bản chụp phiên, để mở lại không mất. "Reset dữ liệu" xoá đúng file này.
     pub fn session_file(&self, design_id: &str) -> PathBuf {
-        self.database_dir().join("designs").join(design_id).join("session.json")
+        self.database_dir()
+            .join("designs")
+            .join(design_id)
+            .join("session.json")
     }
 
     pub fn secrets_file(&self) -> PathBuf {
@@ -103,7 +112,10 @@ pub fn safe_join(base: &Path, rel: &str) -> Option<PathBuf> {
             return None;
         }
         // Chặn "C:", "\\\\máy\\chia-se" và các dạng tuyệt đối khác.
-        if Path::new(part).components().any(|c| !matches!(c, Component::Normal(_))) {
+        if Path::new(part)
+            .components()
+            .any(|c| !matches!(c, Component::Normal(_)))
+        {
             return None;
         }
         out.push(part);
@@ -168,7 +180,11 @@ mod tests {
 
     #[test]
     fn chan_duong_dan_tuyet_doi() {
-        for xau in ["C:/Windows/win.ini", "C:\\Windows\\win.ini", "//may/chia-se/x"] {
+        for xau in [
+            "C:/Windows/win.ini",
+            "C:\\Windows\\win.ini",
+            "//may/chia-se/x",
+        ] {
             assert!(safe_join(&base(), xau).is_none(), "phải chặn: {xau}");
         }
     }
@@ -189,7 +205,16 @@ mod tests {
 
     #[test]
     fn id_sai_bi_tu_choi() {
-        for id in ["", "k", "A", "Ke-Chuyen", "1-phong", "ke_chuyen", "ke chuyen", "../x"] {
+        for id in [
+            "",
+            "k",
+            "A",
+            "Ke-Chuyen",
+            "1-phong",
+            "ke_chuyen",
+            "ke chuyen",
+            "../x",
+        ] {
             assert!(!valid_id(id), "phải từ chối: {id}");
         }
     }

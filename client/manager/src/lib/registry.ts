@@ -6,9 +6,11 @@
  */
 
 import type { FeedKind, Json, ModuleUi } from '@live/contracts';
+import { manifest as chatBubbles } from '@live/mod-chat-bubbles';
 import { manifest as followThanks } from '@live/mod-follow-thanks';
 import { manifest as giftThanks } from '@live/mod-gift-thanks';
 import { manifest as likesCounter } from '@live/mod-likes-counter';
+import { manifest as topGivers } from '@live/mod-top-givers';
 import { manifest as welcome } from '@live/mod-welcome';
 
 export interface Registered {
@@ -28,6 +30,8 @@ function reg(m: HasSchema): Registered {
 export const MODULES: readonly Registered[] = [
   reg(giftThanks),
   reg(welcome),
+  reg(chatBubbles),
+  reg(topGivers),
   reg(likesCounter),
   reg(followThanks),
 ];

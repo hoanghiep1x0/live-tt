@@ -91,4 +91,5 @@ export interface Giver {
   name: string;
   xu: number;
   coins: number;
+  avatar?: string;
 }

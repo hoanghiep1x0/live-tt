@@ -1,0 +1,57 @@
+/* Bóng chat nổi. Màu lấy từ biến của thiết kế kèm giá trị lui, nên hợp mọi bối cảnh. */
+
+.mod-chat {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mod-chat-bong {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.9cqw 1.6cqw;
+  border-radius: 2cqw 2cqw 0.4cqw 2cqw;
+  font-size: 2.2cqw;
+  line-height: 1.35;
+  color: #fff;
+  background: var(--stage-name-bg, rgba(0, 0, 0, 0.72));
+  border: 0.15cqw solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0.6cqw 1.6cqw rgba(0, 0, 0, 0.45);
+  /* Mỗi nấc cao 8.4cqw: bóng mới đẩy bóng cũ lên trên, trượt chứ không nhảy. */
+  transform: translateY(calc(var(--nac) * -8.4cqw));
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: mod-chat-vao 0.35s ease-out;
+}
+
+.mod-chat-bong b {
+  display: block;
+  font-size: 1.9cqw;
+  font-weight: 700;
+  color: var(--stage-soft, #e6dccb);
+}
+
+.mod-chat-bong.la-qua {
+  color: var(--gold-fg, #2a1d08);
+  background: linear-gradient(180deg, var(--gold1, #e9c77e), var(--gold2, #b6873a));
+  border-color: rgba(120, 80, 20, 0.5);
+}
+.mod-chat-bong.la-qua b {
+  color: rgba(42, 29, 8, 0.75);
+}
+
+@keyframes mod-chat-vao {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--nac) * -8.4cqw + 2cqw));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mod-chat-bong {
+    animation: none;
+    transition: none;
+  }
+}

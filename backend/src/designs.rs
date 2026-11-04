@@ -21,7 +21,10 @@ pub struct Canvas {
 
 impl Default for Canvas {
     fn default() -> Self {
-        Self { width: 1080, height: 1920 }
+        Self {
+            width: 1080,
+            height: 1920,
+        }
     }
 }
 
@@ -107,7 +110,10 @@ pub fn read_manifest(path: &Path, dir_name: &str) -> Result<DesignManifest, Stri
         serde_json::from_slice(&body).map_err(|e| format!("design.json hỏng: {e}"))?;
 
     if !valid_id(&m.id) {
-        return Err(format!("id \"{}\" phải là kebab-case, bắt đầu bằng chữ", m.id));
+        return Err(format!(
+            "id \"{}\" phải là kebab-case, bắt đầu bằng chữ",
+            m.id
+        ));
     }
     // Trùng nhau thì URL cho OBS sẽ trỏ nhầm thư mục — bắt sớm còn hơn gỡ sau.
     if m.id != dir_name {
@@ -146,7 +152,10 @@ pub fn scan(layout: &Layout, port: u16, live: Option<&str>) -> Vec<DesignInfo> {
             Ok(m) => {
                 let da_build = layout.design_dist(&name).join("index.html").exists();
                 let (status, problem) = if !da_build {
-                    (DesignStatus::Error, Some("chưa build — chạy npm run build".into()))
+                    (
+                        DesignStatus::Error,
+                        Some("chưa build — chạy npm run build".into()),
+                    )
                 } else if live == Some(name.as_str()) {
                     (DesignStatus::Live, None)
                 } else {
@@ -209,11 +218,22 @@ mod tests {
     #[test]
     fn doc_manifest_day_du_gia_tri_mac_dinh() {
         let d = tempfile::tempdir().unwrap();
-        dung_thiet_ke(d.path(), "ke-chuyen", r#"{"id":"ke-chuyen","name":"Phòng kể chuyện"}"#, true);
+        dung_thiet_ke(
+            d.path(),
+            "ke-chuyen",
+            r#"{"id":"ke-chuyen","name":"Phòng kể chuyện"}"#,
+            true,
+        );
         let l = Layout::new(d.path());
         let m = read_manifest(&l.design_manifest("ke-chuyen"), "ke-chuyen").unwrap();
         assert_eq!(m.version, "1.0.0");
-        assert_eq!(m.canvas, Canvas { width: 1080, height: 1920 });
+        assert_eq!(
+            m.canvas,
+            Canvas {
+                width: 1080,
+                height: 1920
+            }
+        );
         assert_eq!(m.entry, "dist/index.html");
         assert!(m.slots.is_empty());
     }
@@ -221,7 +241,12 @@ mod tests {
     #[test]
     fn id_khac_ten_thu_muc_bi_tu_choi() {
         let d = tempfile::tempdir().unwrap();
-        dung_thiet_ke(d.path(), "ke-chuyen", r#"{"id":"hip-hop","name":"x"}"#, true);
+        dung_thiet_ke(
+            d.path(),
+            "ke-chuyen",
+            r#"{"id":"hip-hop","name":"x"}"#,
+            true,
+        );
         let l = Layout::new(d.path());
         let e = read_manifest(&l.design_manifest("ke-chuyen"), "ke-chuyen").unwrap_err();
         assert!(e.contains("khác tên thư mục"), "{e}");
@@ -230,7 +255,12 @@ mod tests {
     #[test]
     fn id_sai_dang_bi_tu_choi() {
         let d = tempfile::tempdir().unwrap();
-        dung_thiet_ke(d.path(), "ke-chuyen", r#"{"id":"Ke Chuyen","name":"x"}"#, true);
+        dung_thiet_ke(
+            d.path(),
+            "ke-chuyen",
+            r#"{"id":"Ke Chuyen","name":"x"}"#,
+            true,
+        );
         let l = Layout::new(d.path());
         assert!(read_manifest(&l.design_manifest("ke-chuyen"), "ke-chuyen").is_err());
     }
@@ -238,7 +268,12 @@ mod tests {
     #[test]
     fn chua_build_thi_bao_loi_chu_khong_bien_mat() {
         let d = tempfile::tempdir().unwrap();
-        dung_thiet_ke(d.path(), "ke-chuyen", r#"{"id":"ke-chuyen","name":"Phòng kể chuyện"}"#, false);
+        dung_thiet_ke(
+            d.path(),
+            "ke-chuyen",
+            r#"{"id":"ke-chuyen","name":"Phòng kể chuyện"}"#,
+            false,
+        );
         let ds = scan(&Layout::new(d.path()), 47830, None);
         assert_eq!(ds.len(), 1);
         assert_eq!(ds[0].status, DesignStatus::Error);
@@ -248,7 +283,12 @@ mod tests {
     #[test]
     fn danh_dau_thiet_ke_dang_phat() {
         let d = tempfile::tempdir().unwrap();
-        dung_thiet_ke(d.path(), "ke-chuyen", r#"{"id":"ke-chuyen","name":"A"}"#, true);
+        dung_thiet_ke(
+            d.path(),
+            "ke-chuyen",
+            r#"{"id":"ke-chuyen","name":"A"}"#,
+            true,
+        );
         dung_thiet_ke(d.path(), "hip-hop", r#"{"id":"hip-hop","name":"B"}"#, true);
         let ds = scan(&Layout::new(d.path()), 47830, Some("hip-hop"));
         let hip = ds.iter().find(|x| x.manifest.id == "hip-hop").unwrap();
@@ -260,7 +300,12 @@ mod tests {
     #[test]
     fn url_obs_tro_dung_thiet_ke() {
         let d = tempfile::tempdir().unwrap();
-        dung_thiet_ke(d.path(), "ke-chuyen", r#"{"id":"ke-chuyen","name":"A"}"#, true);
+        dung_thiet_ke(
+            d.path(),
+            "ke-chuyen",
+            r#"{"id":"ke-chuyen","name":"A"}"#,
+            true,
+        );
         let ds = scan(&Layout::new(d.path()), 47830, None);
         assert_eq!(ds[0].obs_url, "http://127.0.0.1:47830/d/ke-chuyen/");
     }

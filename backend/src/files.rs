@@ -22,10 +22,7 @@ pub enum Kind {
     ModuleAssets,
 }
 
-pub async fn serve_root(
-    State(st): State<Arc<AppState>>,
-    AxPath(id): AxPath<String>,
-) -> Response {
+pub async fn serve_root(State(st): State<Arc<AppState>>, AxPath(id): AxPath<String>) -> Response {
     serve(&st, Kind::Dist, &id, "index.html").await
 }
 
@@ -122,8 +119,12 @@ mod tests {
 
     #[test]
     fn duong_dan_thu_muc_lay_index_html() {
-        assert!(resolve_for_test(&base(), "").unwrap().ends_with("index.html"));
-        assert!(resolve_for_test(&base(), "ve/").unwrap().ends_with("index.html"));
+        assert!(resolve_for_test(&base(), "")
+            .unwrap()
+            .ends_with("index.html"));
+        assert!(resolve_for_test(&base(), "ve/")
+            .unwrap()
+            .ends_with("index.html"));
     }
 
     #[test]

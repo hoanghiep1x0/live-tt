@@ -222,15 +222,20 @@ body {
   object-fit: cover;
   display: block;
 }
+/* Nhãn nằm NGOÀI mép trên khung: trong khung thì nó che mất hình, mà đây là
+   lời ghi chú về nguồn nội dung, không phải nội dung. */
 .stage-ai-label {
   position: absolute;
-  top: 1.6cqw;
-  left: 1.6cqw;
+  top: -3.6cqw;
+  left: 0;
   z-index: 2;
   font-size: 2cqw;
+  line-height: 1.5;
+  color: var(--stage-soft);
   background: var(--stage-chip-bg);
   padding: 0.2cqw 1.4cqw;
   border-radius: 1cqw;
+  white-space: nowrap;
 }
 .stage-waiting {
   position: absolute;
@@ -241,6 +246,50 @@ body {
   padding: 4cqw;
   color: var(--stage-soft);
   font-size: 3cqw;
+}
+
+/* ---- Lời dẫn trong khung ---- */
+
+.man-loi {
+  position: absolute;
+  z-index: 3;
+  margin: 0;
+  text-align: center;
+  color: #fff;
+  animation: man-loi-vao 0.3s ease-out;
+}
+
+/* Có video hoặc ảnh: nằm dưới đáy như phụ đề, có nền mờ dần để chữ nổi lên
+   hình mà không che mất hình. */
+.man-sub {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 6cqw 2.4cqw 2.2cqw;
+  font-size: 2.7cqw;
+  line-height: 1.4;
+  font-weight: 600;
+  text-shadow: 0 0.2cqw 0.6cqw rgba(0, 0, 0, 0.95), 0 0 1.2cqw rgba(0, 0, 0, 0.8);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.72) 55%);
+}
+
+/* Không có hình: chữ là nội dung chính, đặt giữa khung cho cân bố cục. */
+.man-giua {
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0 4cqw;
+  font-size: 3.4cqw;
+  line-height: 1.5;
+  font-weight: 600;
+  text-shadow: 0 0.2cqw 0.6cqw rgba(0, 0, 0, 0.8);
+}
+
+@keyframes man-loi-vao {
+  from {
+    opacity: 0;
+  }
 }
 
 /* ---- Hàng vinh danh top ---- */

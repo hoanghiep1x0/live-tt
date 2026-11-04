@@ -35,7 +35,9 @@ fn kiem_id(id: &str, cho_gi: &str) -> Result<(), AppError> {
     if valid_id(id) {
         Ok(())
     } else {
-        Err(AppError::BadRequest(format!("{cho_gi} \"{id}\" sai định dạng")))
+        Err(AppError::BadRequest(format!(
+            "{cho_gi} \"{id}\" sai định dạng"
+        )))
     }
 }
 
@@ -73,7 +75,9 @@ pub async fn list_modules(
 ) -> Result<Json<Value>, AppError> {
     kiem_id(&design_id, "id thiết kế")?;
     if !st.design_exists(&design_id) {
-        return Err(AppError::NotFound(format!("không có thiết kế \"{design_id}\"")));
+        return Err(AppError::NotFound(format!(
+            "không có thiết kế \"{design_id}\""
+        )));
     }
     st.ensure_seeded(&design_id)?;
     Ok(Json(json!({ "modules": st.all_modules(&design_id)? })))
@@ -97,7 +101,9 @@ pub async fn put_config(
     kiem_id(&design_id, "id thiết kế")?;
     kiem_id(&module_id, "id module")?;
     if !st.design_exists(&design_id) {
-        return Err(AppError::NotFound(format!("không có thiết kế \"{design_id}\"")));
+        return Err(AppError::NotFound(format!(
+            "không có thiết kế \"{design_id}\""
+        )));
     }
     st.set_config(&design_id, &module_id, config)?;
     let m = st.module_state(&design_id, &module_id)?;
@@ -139,7 +145,9 @@ pub async fn post_enabled(
     kiem_id(&design_id, "id thiết kế")?;
     kiem_id(&module_id, "id module")?;
     if !st.design_exists(&design_id) {
-        return Err(AppError::NotFound(format!("không có thiết kế \"{design_id}\"")));
+        return Err(AppError::NotFound(format!(
+            "không có thiết kế \"{design_id}\""
+        )));
     }
     st.set_enabled(&design_id, &module_id, body.on)?;
     Ok(Json(json!({ "enabled": body.on })))
@@ -162,7 +170,9 @@ pub async fn put_source(
     if cfg.kind == crate::source::SourceKind::Bridge && !cfg.url.starts_with("ws://") {
         // Cầu nối chạy trên chính máy này; nhận ws:// chứ không nhận địa chỉ lạ
         // để không ai cấu hình nhầm thành một máy chủ ngoài Internet.
-        return Err(AppError::BadRequest("địa chỉ cầu nối phải bắt đầu bằng ws://".into()));
+        return Err(AppError::BadRequest(
+            "địa chỉ cầu nối phải bắt đầu bằng ws://".into(),
+        ));
     }
     crate::source::mo(st.clone(), cfg);
     Ok(Json(json!({ "source": st.nguon() })))

@@ -50,7 +50,10 @@ impl From<serde_json::Error> for StoreError {
 pub fn write_json_atomic(path: &Path, value: &Value) -> Result<(), StoreError> {
     let body = serde_json::to_vec_pretty(value)?;
     if body.len() > MAX_CONFIG_BYTES {
-        return Err(StoreError::TooLarge { got: body.len(), max: MAX_CONFIG_BYTES });
+        return Err(StoreError::TooLarge {
+            got: body.len(),
+            max: MAX_CONFIG_BYTES,
+        });
     }
     if let Some(dir) = path.parent() {
         fs::create_dir_all(dir)?;
@@ -79,7 +82,10 @@ pub fn read_json(path: &Path) -> Result<Option<Value>, StoreError> {
     match fs::read(path) {
         Ok(body) => {
             if body.len() > MAX_CONFIG_BYTES {
-                return Err(StoreError::TooLarge { got: body.len(), max: MAX_CONFIG_BYTES });
+                return Err(StoreError::TooLarge {
+                    got: body.len(),
+                    max: MAX_CONFIG_BYTES,
+                });
             }
             Ok(Some(serde_json::from_slice(&body)?))
         }
@@ -97,7 +103,10 @@ pub fn read_object(path: &Path) -> Result<Map<String, Value>, StoreError> {
 }
 
 fn tmp_sibling(path: &Path) -> PathBuf {
-    let mut name = path.file_name().map(|s| s.to_os_string()).unwrap_or_default();
+    let mut name = path
+        .file_name()
+        .map(|s| s.to_os_string())
+        .unwrap_or_default();
     name.push(format!(".{}.tmp", std::process::id()));
     path.with_file_name(name)
 }
@@ -110,8 +119,16 @@ mod tests {
     #[test]
     fn ghi_roi_doc_lai_duoc() {
         let d = tempfile::tempdir().unwrap();
-        let p = d.path().join("designs").join("ke-chuyen").join("config.json");
-        write_json_atomic(&p, &json!({ "modules": { "gift-thanks": { "enabled": true } } })).unwrap();
+        let p = d
+            .path()
+            .join("designs")
+            .join("ke-chuyen")
+            .join("config.json");
+        write_json_atomic(
+            &p,
+            &json!({ "modules": { "gift-thanks": { "enabled": true } } }),
+        )
+        .unwrap();
         let v = read_json(&p).unwrap().unwrap();
         assert_eq!(v["modules"]["gift-thanks"]["enabled"], json!(true));
     }

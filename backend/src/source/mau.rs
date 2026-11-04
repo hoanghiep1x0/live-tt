@@ -1,8 +1,12 @@
 //! Nguồn giả lập.
 //!
-//! Để dựng phòng, chỉnh bố cục và thử tính năng khi chưa lên sóng thật. Không
-//! giả vờ là TikTok: mọi mục nó sinh ra đều có cờ `virtual`, nên module cảm ơn
-//! quà và bot chào hỏi bỏ qua đúng như với nhân vật ảo.
+//! Để dựng phòng, chỉnh bố cục và thử tính năng khi chưa lên sóng thật.
+//!
+//! Sự kiện của nó KHÔNG mang cờ `virtual`. Cờ đó dành cho nhân vật do máy dựng
+//! bên trong một phiên thật — để module cảm ơn quà không tự cảm ơn con bot của
+//! chính mình. Còn đây là cả một phòng giả: đánh dấu ảo thì không module nào
+//! chạy, và nguồn mẫu mất sạch công dụng. Người vận hành biết mình đang ở nguồn
+//! nào: trang quản lý ghi rõ "Mẫu".
 //!
 //! Lõi sinh sự kiện là hàm thuần có `rand` tiêm vào, nên test chạy lại cho cùng
 //! một kết quả.
@@ -18,8 +22,8 @@ use crate::source::SourceCfg;
 use crate::state::AppState;
 
 const HO: &[&str] = &[
-    "Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Phan", "Vũ", "Võ", "Đặng", "Bùi", "Đỗ", "Hồ",
-    "Ngô", "Dương", "Lý",
+    "Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Phan", "Vũ", "Võ", "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô",
+    "Dương", "Lý",
 ];
 const TEN: &[&str] = &[
     "An", "Bình", "Chi", "Dung", "Giang", "Hà", "Hạnh", "Hùng", "Khánh", "Lan", "Linh", "Mai",
@@ -62,7 +66,11 @@ pub struct GiaLap {
 
 impl GiaLap {
     pub fn new(seed: u64) -> Self {
-        Self { rng: StdRng::seed_from_u64(seed), trong_phong: Vec::new(), dem: 0 }
+        Self {
+            rng: StdRng::seed_from_u64(seed),
+            trong_phong: Vec::new(),
+            dem: 0,
+        }
     }
 
     fn nguoi_moi(&mut self) -> EventUser {
@@ -96,14 +104,22 @@ impl GiaLap {
         if vao {
             let n = self.nguoi_moi();
             self.trong_phong.push(n.clone());
-            return LiveEvent { who: n, what: Payload::Join };
+            return LiveEvent {
+                who: n,
+                what: Payload::Join,
+            };
         }
 
         let who = self.ai_do();
         let what = if r < 40 {
-            Payload::Comment { text: CAU[self.rng.gen_range(0..CAU.len())].to_string() }
+            Payload::Comment {
+                text: CAU[self.rng.gen_range(0..CAU.len())].to_string(),
+            }
         } else if r < 70 {
-            Payload::Like { count: self.rng.gen_range(1..=15), total: None }
+            Payload::Like {
+                count: self.rng.gen_range(1..=15),
+                total: None,
+            }
         } else if r < 88 {
             let (ten, xu) = QUA[self.rng.gen_range(0..QUA.len())];
             Payload::Gift {
@@ -121,9 +137,15 @@ impl GiaLap {
             if self.trong_phong.len() > 8 {
                 let i = self.rng.gen_range(0..self.trong_phong.len());
                 let ra = self.trong_phong.remove(i);
-                return LiveEvent { who: ra, what: Payload::Leave };
+                return LiveEvent {
+                    who: ra,
+                    what: Payload::Leave,
+                };
             }
-            Payload::Like { count: 1, total: None }
+            Payload::Like {
+                count: 1,
+                total: None,
+            }
         };
 
         LiveEvent { who, what }
@@ -148,7 +170,7 @@ pub async fn chay(st: Arc<AppState>, cfg: SourceCfg, the_he: u64) {
             // người dùng bật phát là có sự kiện ngay, không phải mở lại nguồn.
             continue;
         }
-        st.ap_su_kien(g.buoc(), true);
+        st.ap_su_kien(g.buoc(), false);
     }
 }
 
@@ -178,7 +200,9 @@ mod tests {
     #[test]
     fn luc_dau_chu_yeu_la_nguoi_vao_phong() {
         let mut g = GiaLap::new(3);
-        let vao = (0..12).filter(|_| matches!(g.buoc().what, Payload::Join)).count();
+        let vao = (0..12)
+            .filter(|_| matches!(g.buoc().what, Payload::Join))
+            .count();
         assert!(vao >= 4, "phòng thưa thì phải có người vào, thấy {vao}");
     }
 
@@ -189,7 +213,11 @@ mod tests {
         for _ in 0..200 {
             let e = g.buoc();
             if matches!(e.what, Payload::Join) {
-                assert!(nick.insert(e.who.user.clone()), "trùng nick: {}", e.who.user);
+                assert!(
+                    nick.insert(e.who.user.clone()),
+                    "trùng nick: {}",
+                    e.who.user
+                );
             }
         }
         assert!(nick.len() > 5);
@@ -211,7 +239,12 @@ mod tests {
     fn qua_luon_co_ten_va_xu_duong() {
         let mut g = GiaLap::new(13);
         for _ in 0..300 {
-            if let Payload::Gift { gift, count, xu_each } = g.buoc().what {
+            if let Payload::Gift {
+                gift,
+                count,
+                xu_each,
+            } = g.buoc().what
+            {
                 assert!(!gift.is_empty());
                 assert!(count >= 1 && count <= 5);
                 assert!(xu_each > 0);

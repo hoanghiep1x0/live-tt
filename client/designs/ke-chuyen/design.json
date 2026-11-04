@@ -23,7 +23,14 @@
     "full"
   ],
   "provides": ["stage-3d", "audio", "tts"],
-  "recommends": ["gift-thanks", "welcome", "likes-counter", "follow-thanks"],
+  "recommends": [
+    "gift-thanks",
+    "welcome",
+    "chat-bubbles",
+    "top-givers",
+    "likes-counter",
+    "follow-thanks"
+  ],
   "defaults": {
     "gift-thanks": { "template": "Cảm ơn {ten} đã tặng {qua}!" },
     "welcome": { "template": "Chào {ten} ghé phòng nghe truyện nha!" },

@@ -3,25 +3,29 @@
 
 import { expect } from 'vitest';
 import { ID_RE } from '@live/contracts';
-import type { Ctx, LiveModule, SessionView } from '@live/contracts';
+import type { Ctx, Giver, LiveModule, SessionView } from '@live/contracts';
 import { hookKinds } from '@live/runtime';
 
-/** Phiên rỗng, chỉ khai số tim vì đó là con số duy nhất module cần tới giờ. */
-export function phien(likes = 0): SessionView {
+/** Phiên rỗng, khai thêm đúng những con số module đang cần. */
+export function phien(likes = 0, top: Giver[] = []): SessionView {
   return {
     designId: 'ke-chuyen',
     startedAt: 0,
     totals: { viewers: 0, likes, gifts: 0, xu: 0, comments: 0 },
-    topGivers: [],
+    topGivers: top,
     seats: [],
     recentUsers: [],
     recentFeed: [],
   };
 }
 
-export function ctx<C>(config: C, now = 0, likes = 0): Ctx<C> {
+export function ctx<C>(config: C, now = 0, likes = 0, top: Giver[] = []): Ctx<C> {
   // rand cố định: lõi thuần phải chạy lại cho cùng kết quả (quy ước 01 §5).
-  return { config, now, rand: () => 0.5, session: phien(likes) };
+  return { config, now, rand: () => 0.5, session: phien(likes, top) };
+}
+
+export function nguoiTang(user: string, name: string, xu: number): Giver {
+  return { user, name, xu, coins: xu };
 }
 
 /** Những điều mọi module phải đúng. Gọi trong test của từng module, nhờ vậy

@@ -37,7 +37,10 @@ pub enum TinCauNoi {
     SuKien(Box<LiveEvent>),
     /// Số người đang xem do TikTok đếm — tin con số này hơn số người mình thấy.
     Viewers(u64),
-    TrangThai { state: String, message: Option<String> },
+    TrangThai {
+        state: String,
+        message: Option<String>,
+    },
     /// Không hiểu, hoặc là tin cũ. Bỏ, không làm sập nguồn.
     Bo,
 }
@@ -62,7 +65,11 @@ fn doc_mot(v: Value, mo_luc: i64) -> TinCauNoi {
                 _ => TinCauNoi::Bo,
             },
             "status" => TinCauNoi::TrangThai {
-                state: v.get("state").and_then(Value::as_str).unwrap_or("?").to_string(),
+                state: v
+                    .get("state")
+                    .and_then(Value::as_str)
+                    .unwrap_or("?")
+                    .to_string(),
                 message: v
                     .get("message")
                     .and_then(Value::as_str)
@@ -80,9 +87,7 @@ fn doc_mot(v: Value, mo_luc: i64) -> TinCauNoi {
     }
 
     match serde_json::from_value::<LiveEvent>(v) {
-        Ok(e) if !e.who.user.is_empty() && !e.who.name.is_empty() => {
-            TinCauNoi::SuKien(Box::new(e))
-        }
+        Ok(e) if !e.who.user.is_empty() && !e.who.name.is_empty() => TinCauNoi::SuKien(Box::new(e)),
         _ => TinCauNoi::Bo,
     }
 }
@@ -189,7 +194,14 @@ mod tests {
         match &ra[0] {
             TinCauNoi::SuKien(e) => {
                 assert_eq!(e.who.user, "a");
-                assert!(matches!(e.what, Payload::Gift { count: 2, xu_each: 10, .. }));
+                assert!(matches!(
+                    e.what,
+                    Payload::Gift {
+                        count: 2,
+                        xu_each: 10,
+                        ..
+                    }
+                ));
             }
             x => panic!("phải là sự kiện, nhận {x:?}"),
         }
@@ -209,11 +221,18 @@ mod tests {
     #[test]
     fn bo_tin_cu_hon_luc_moi_noi() {
         let cu = doc_tin(r#"{"kind":"join","user":"a","name":"An","ts":900000}"#, MO);
-        assert_eq!(cu[0], TinCauNoi::Bo, "tin của phiên trước không được tính lại");
+        assert_eq!(
+            cu[0],
+            TinCauNoi::Bo,
+            "tin của phiên trước không được tính lại"
+        );
 
         // Trong khoảng khoan dung thì vẫn nhận.
         let vua = doc_tin(
-            &format!(r#"{{"kind":"join","user":"a","name":"An","ts":{}}}"#, MO - 1_000),
+            &format!(
+                r#"{{"kind":"join","user":"a","name":"An","ts":{}}}"#,
+                MO - 1_000
+            ),
             MO,
         );
         assert!(matches!(vua[0], TinCauNoi::SuKien(_)));
@@ -227,18 +246,28 @@ mod tests {
 
     #[test]
     fn doc_duoc_so_nguoi_xem() {
-        assert_eq!(doc_tin(r#"{"type":"viewers","count":1234}"#, MO)[0], TinCauNoi::Viewers(1234));
+        assert_eq!(
+            doc_tin(r#"{"type":"viewers","count":1234}"#, MO)[0],
+            TinCauNoi::Viewers(1234)
+        );
     }
 
     #[test]
     fn so_nguoi_xem_vo_ly_thi_bo() {
-        assert_eq!(doc_tin(r#"{"type":"viewers","count":99999999}"#, MO)[0], TinCauNoi::Bo);
+        assert_eq!(
+            doc_tin(r#"{"type":"viewers","count":99999999}"#, MO)[0],
+            TinCauNoi::Bo
+        );
         assert_eq!(doc_tin(r#"{"type":"viewers"}"#, MO)[0], TinCauNoi::Bo);
     }
 
     #[test]
     fn doc_duoc_trang_thai_kenh() {
-        match &doc_tin(r#"{"type":"status","state":"dang-live","message":"ổn"}"#, MO)[0] {
+        match &doc_tin(
+            r#"{"type":"status","state":"dang-live","message":"ổn"}"#,
+            MO,
+        )[0]
+        {
             TinCauNoi::TrangThai { state, message } => {
                 assert_eq!(state, "dang-live");
                 assert_eq!(message.as_deref(), Some("ổn"));

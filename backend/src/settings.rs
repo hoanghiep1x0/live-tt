@@ -47,7 +47,9 @@ pub fn read(layout: &Layout, design_id: &str) -> Settings {
 /// Áp một bản vá. Khoá có mặt thì đổi, `null` thì xoá, khoá vắng thì giữ nguyên.
 pub fn apply(layout: &Layout, design_id: &str, patch: &Value) -> Result<Settings, SettingsError> {
     let Some(obj) = patch.as_object() else {
-        return Err(SettingsError::Invalid("thân yêu cầu phải là một object".into()));
+        return Err(SettingsError::Invalid(
+            "thân yêu cầu phải là một object".into(),
+        ));
     };
 
     let mut s = read(layout, design_id);
@@ -56,7 +58,11 @@ pub fn apply(layout: &Layout, design_id: &str, patch: &Value) -> Result<Settings
         s.name = match v {
             Value::Null => None,
             Value::String(x) => Some(kiem_ten(x)?),
-            _ => return Err(SettingsError::Invalid("name phải là chuỗi hoặc null".into())),
+            _ => {
+                return Err(SettingsError::Invalid(
+                    "name phải là chuỗi hoặc null".into(),
+                ))
+            }
         };
     }
 
@@ -65,11 +71,18 @@ pub fn apply(layout: &Layout, design_id: &str, patch: &Value) -> Result<Settings
             Value::Null => None,
             Value::String(x) if x.trim().is_empty() => None,
             Value::String(x) => Some(kiem_studio_url(x.trim())?),
-            _ => return Err(SettingsError::Invalid("studioUrl phải là chuỗi hoặc null".into())),
+            _ => {
+                return Err(SettingsError::Invalid(
+                    "studioUrl phải là chuỗi hoặc null".into(),
+                ))
+            }
         };
     }
 
-    store::write_json_atomic(&layout.settings_file(design_id), &serde_json::to_value(&s).unwrap())?;
+    store::write_json_atomic(
+        &layout.settings_file(design_id),
+        &serde_json::to_value(&s).unwrap(),
+    )?;
     Ok(s)
 }
 
@@ -79,7 +92,9 @@ fn kiem_ten(x: &str) -> Result<String, SettingsError> {
         return Err(SettingsError::Invalid("tên không được để trống".into()));
     }
     if t.chars().count() > MAX_NAME_CHARS {
-        return Err(SettingsError::Invalid(format!("tên quá {MAX_NAME_CHARS} ký tự")));
+        return Err(SettingsError::Invalid(format!(
+            "tên quá {MAX_NAME_CHARS} ký tự"
+        )));
     }
     // Ký tự điều khiển lọt vào tên sẽ làm xuống dòng giữa thẻ và giữa log.
     if t.chars().any(char::is_control) {
@@ -96,7 +111,9 @@ fn kiem_ten(x: &str) -> Result<String, SettingsError> {
 fn kiem_studio_url(x: &str) -> Result<String, SettingsError> {
     let loi = |m: &str| SettingsError::Invalid(m.to_string());
 
-    if x.chars().any(|c| c.is_whitespace() || c.is_control() || c == '\\') {
+    if x.chars()
+        .any(|c| c.is_whitespace() || c.is_control() || c == '\\')
+    {
         return Err(loi("địa chỉ có ký tự không hợp lệ"));
     }
     let thap = x.to_ascii_lowercase();
@@ -152,16 +169,28 @@ mod tests {
     #[test]
     fn doi_ten_roi_doc_lai_duoc() {
         let (_d, l) = moi();
-        apply(&l, "ke-chuyen", &json!({ "name": "  Phòng kể chuyện đêm  " })).unwrap();
-        assert_eq!(read(&l, "ke-chuyen").name.as_deref(), Some("Phòng kể chuyện đêm"));
+        apply(
+            &l,
+            "ke-chuyen",
+            &json!({ "name": "  Phòng kể chuyện đêm  " }),
+        )
+        .unwrap();
+        assert_eq!(
+            read(&l, "ke-chuyen").name.as_deref(),
+            Some("Phòng kể chuyện đêm")
+        );
     }
 
     #[test]
     fn va_mot_khoa_khong_lam_mat_khoa_kia() {
         let (_d, l) = moi();
         apply(&l, "ke-chuyen", &json!({ "name": "Phòng A" })).unwrap();
-        apply(&l, "ke-chuyen", &json!({ "studioUrl": "https://livestudio.tiktok.com/room/9" }))
-            .unwrap();
+        apply(
+            &l,
+            "ke-chuyen",
+            &json!({ "studioUrl": "https://livestudio.tiktok.com/room/9" }),
+        )
+        .unwrap();
         let s = read(&l, "ke-chuyen");
         assert_eq!(s.name.as_deref(), Some("Phòng A"));
         assert!(s.studio_url.is_some());
@@ -188,7 +217,10 @@ mod tests {
     fn ten_rong_hoac_qua_dai_bi_tu_choi() {
         let (_d, l) = moi();
         for x in [json!({ "name": "   " }), json!({ "name": "a".repeat(81) })] {
-            assert!(matches!(apply(&l, "ke-chuyen", &x), Err(SettingsError::Invalid(_))), "{x}");
+            assert!(
+                matches!(apply(&l, "ke-chuyen", &x), Err(SettingsError::Invalid(_))),
+                "{x}"
+            );
         }
     }
 
@@ -231,15 +263,24 @@ mod tests {
     #[test]
     fn reset_xoa_phien_nhung_giu_cau_hinh() {
         let (_d, l) = moi();
-        store::write_json_atomic(&l.config_file("ke-chuyen"), &json!({ "modules": { "a": {} } }))
-            .unwrap();
-        store::write_json_atomic(&l.session_file("ke-chuyen"), &json!({ "totals": { "xu": 9 } }))
-            .unwrap();
+        store::write_json_atomic(
+            &l.config_file("ke-chuyen"),
+            &json!({ "modules": { "a": {} } }),
+        )
+        .unwrap();
+        store::write_json_atomic(
+            &l.session_file("ke-chuyen"),
+            &json!({ "totals": { "xu": 9 } }),
+        )
+        .unwrap();
 
         let da_xoa = reset(&l, "ke-chuyen").unwrap();
         assert_eq!(da_xoa, vec!["session.json".to_string()]);
         assert!(!l.session_file("ke-chuyen").exists());
-        assert!(l.config_file("ke-chuyen").exists(), "cấu hình module phải còn");
+        assert!(
+            l.config_file("ke-chuyen").exists(),
+            "cấu hình module phải còn"
+        );
     }
 
     #[test]

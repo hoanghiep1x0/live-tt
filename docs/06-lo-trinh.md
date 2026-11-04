@@ -75,7 +75,7 @@ trước `tich-phuoc`, vì đó là phòng **đã từng phát live thật**, n�
 |---|---|
 | `client/manager` — React + Tailwind + Radix, ba tab, nối backend | **xong** |
 | `client/shared/runtime` — gọi móc sự kiện, lọc nhân vật ảo | **xong** |
-| `client/shared/stage-sdk` — nối WS, slot, đường dẫn asset | **xong**, phần tối thiểu |
+| `client/shared/stage-sdk` — nối WS, chạy lõi module, slot, asset | **xong** |
 | `client/modules/gift-thanks`, `welcome`, `likes-counter`, `follow-thanks` | **xong**, có test |
 | `client/designs/ke-chuyen` — bố cục và assets chuyển từ bản cũ | **xong** phần thiết kế vẽ |
 | Lõi phiên ở backend: tổng, ghế, top người tặng, feed | **xong** |
@@ -85,8 +85,12 @@ trước `tich-phuoc`, vì đó là phòng **đã từng phát live thật**, n�
 Đã chứng minh được: bật phát từ trang quản lý → thẻ đổi trạng thái qua WebSocket, cấu hình
 gợi ý của bối cảnh tự nạp, và **đổi cấu hình đẩy xuống phòng đang phát ngay, không tải lại trang**.
 
-Còn thiếu để gọi là xong hẳn: các module có phần vẽ (`stage.tsx`) để những slot đang rỗng
-có nội dung, và nguồn `webview` để không cần tiến trình cầu nối ngoài.
+| Module có phần vẽ: `top-givers`, `chat-bubbles`, `likes-counter` | **xong** |
+| Thực thi `Effect`: `say` thành phụ đề, `overlay` sáng slot | **xong** |
+| Thực thi `sfx` (cần assets module) và `command` (cần cổng duyệt) | chưa |
+
+Còn thiếu để gọi là xong hẳn: giọng đọc thật cho `say`, tiếng động cho `sfx`, và nguồn
+`webview` để không cần tiến trình cầu nối ngoài.
 
 ### GĐ 2 — Nhóm module nhẹ
 

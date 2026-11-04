@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Seat } from '@live/contracts';
-import { Slot, useAsset, useStage } from '@live/stage-sdk';
+import { Slot, useAsset, useLoiMc, useStage } from '@live/stage-sdk';
 import { bienCss } from './geometry';
 import type { Huong } from './geometry';
 import {
@@ -115,6 +115,10 @@ function TenKhan({ ghe, ngoi }: { ghe: ChoNgoi[]; ngoi: Map<number, Seat> }) {
 export function Stage() {
   const s = useStage();
   const asset = useAsset();
+  const loiMc = useLoiMc();
+  // Khung đang chiếu gì. Có video hay ảnh thì lời dẫn xuống làm phụ đề để người
+  // xem nhìn vào hình; chỉ có chữ thì chữ đứng giữa khung cho cân.
+  const [trongKhung] = useState<'video' | 'anh' | 'chu'>('video');
   const [huong] = useState<Huong>('portrait');
   const khung = useRef<HTMLDivElement>(null);
 
@@ -155,14 +159,21 @@ export function Stage() {
 
       {!s.noiDuoc ? <div className="stage-offline">mất kết nối máy chủ</div> : null}
 
-      <section className="stage-screen">
+      <section className="stage-screen" data-trong-khung={trongKhung}>
         <span className="stage-ai-label">Nội dung do AI</span>
         <div className="stage-screen-inner">
-          <video className="stage-video" src={asset(VIDEO_MAU)} autoPlay muted loop playsInline />
+          {trongKhung === 'video' ? (
+            <video className="stage-video" src={asset(VIDEO_MAU)} autoPlay muted loop playsInline />
+          ) : null}
+          <Slot name="screen" />
           <div className="slot-screen-overlay">
             <Slot name="screen-overlay" />
           </div>
-          <Slot name="screen" />
+          {loiMc !== null ? (
+            <p className={trongKhung === 'chu' ? 'man-loi man-giua' : 'man-loi man-sub'}>
+              {loiMc.text}
+            </p>
+          ) : null}
         </div>
       </section>
 

@@ -108,8 +108,14 @@ mod tests {
     #[test]
     fn obs_tai_trang_thiet_ke_khong_can_token() {
         // OBS Browser Source không gửi Origin và không gửi được header tuỳ ý.
-        assert_eq!(kiem("/d/ke-chuyen/", Some("127.0.0.1:47830"), None, None), Verdict::Allow);
-        assert_eq!(kiem("/a/ke-chuyen/bg.png", Some("127.0.0.1:47830"), None, None), Verdict::Allow);
+        assert_eq!(
+            kiem("/d/ke-chuyen/", Some("127.0.0.1:47830"), None, None),
+            Verdict::Allow
+        );
+        assert_eq!(
+            kiem("/a/ke-chuyen/bg.png", Some("127.0.0.1:47830"), None, None),
+            Verdict::Allow
+        );
     }
 
     #[test]
@@ -127,11 +133,21 @@ mod tests {
     #[test]
     fn token_sai_bi_tu_choi() {
         assert_eq!(
-            kiem("/api/designs", Some("127.0.0.1:47830"), None, Some("Bearer sai")),
+            kiem(
+                "/api/designs",
+                Some("127.0.0.1:47830"),
+                None,
+                Some("Bearer sai")
+            ),
             Verdict::Deny("token sai")
         );
         assert_eq!(
-            kiem("/api/designs", Some("127.0.0.1:47830"), None, Some("abc123")),
+            kiem(
+                "/api/designs",
+                Some("127.0.0.1:47830"),
+                None,
+                Some("abc123")
+            ),
             Verdict::Deny("token sai định dạng")
         );
     }
@@ -139,7 +155,12 @@ mod tests {
     #[test]
     fn trang_web_ngoai_bi_chan_du_co_token() {
         assert_eq!(
-            kiem("/api/designs", Some("127.0.0.1:47830"), Some("https://ke-gian.example"), Some(BEARER)),
+            kiem(
+                "/api/designs",
+                Some("127.0.0.1:47830"),
+                Some("https://ke-gian.example"),
+                Some(BEARER)
+            ),
             Verdict::Deny("Origin không được phép")
         );
     }
@@ -163,13 +184,21 @@ mod tests {
 
     #[test]
     fn thieu_host_bi_tu_choi() {
-        assert_eq!(kiem("/d/ke-chuyen/", None, None, None), Verdict::Deny("thiếu Host"));
+        assert_eq!(
+            kiem("/d/ke-chuyen/", None, None, None),
+            Verdict::Deny("thiếu Host")
+        );
     }
 
     #[test]
     fn trang_quan_ly_tu_dev_server_duoc_phep() {
         assert_eq!(
-            kiem("/api/designs", Some("127.0.0.1:47830"), Some("http://localhost:5180"), Some(BEARER)),
+            kiem(
+                "/api/designs",
+                Some("127.0.0.1:47830"),
+                Some("http://localhost:5180"),
+                Some(BEARER)
+            ),
             Verdict::Allow
         );
     }

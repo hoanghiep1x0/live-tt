@@ -37,6 +37,8 @@ pub struct Giver {
     pub name: String,
     pub xu: i64,
     pub coins: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -183,12 +185,15 @@ impl Session {
     /// Ghi nhận người xem; trả `true` nếu đây là lần đầu thấy người này.
     fn ghi_nguoi(&mut self, ev: &LiveEvent, now: i64) -> bool {
         let moi = !self.viewers.contains_key(&ev.who.user);
-        let v = self.viewers.entry(ev.who.user.clone()).or_insert_with(|| Viewer {
-            name: ev.who.name.clone(),
-            avatar: ev.who.avatar.clone(),
-            last_at: now,
-            da_tang: false,
-        });
+        let v = self
+            .viewers
+            .entry(ev.who.user.clone())
+            .or_insert_with(|| Viewer {
+                name: ev.who.name.clone(),
+                avatar: ev.who.avatar.clone(),
+                last_at: now,
+                da_tang: false,
+            });
         // Người đổi tên hiển thị giữa phiên là chuyện thường; theo tên mới nhất.
         v.name = ev.who.name.clone();
         if ev.who.avatar.is_some() {
@@ -229,7 +234,11 @@ impl Session {
             .keys()
             .filter(|u| match self.viewers.get(*u) {
                 Some(v) => {
-                    let han = if v.da_tang { GHE_VANG_TANG_QUA_MS } else { GHE_VANG_MS };
+                    let han = if v.da_tang {
+                        GHE_VANG_TANG_QUA_MS
+                    } else {
+                        GHE_VANG_MS
+                    };
                     now - v.last_at > han
                 }
                 None => true,
@@ -245,7 +254,12 @@ impl Session {
     }
 
     /// Áp một sự kiện. Trả về các mục feed mới sinh ra, để phát xuống.
-    pub fn apply(&mut self, ev: &LiveEvent, now: i64) -> Vec<FeedItem> {
+    ///
+    /// `ao` là nhân vật do máy dựng trong một phiên thật (module bot sẽ sinh ra).
+    /// Cờ này phải nằm NGAY TRONG phiên, không phải gắn thêm lúc phát xuống:
+    /// sân khấu nhận feed qua hai đường — tin feed và bản chụp phiên — hai đường
+    /// mà nói khác nhau thì module lúc chạy lúc không.
+    pub fn apply(&mut self, ev: &LiveEvent, now: i64, ao: bool) -> Vec<FeedItem> {
         self.ghi_nguoi(ev, now);
         let id = self.id_moi();
         let name = ev.who.name.clone();
@@ -279,7 +293,11 @@ impl Session {
                 it.count = Some(*count);
                 it
             }
-            Payload::Gift { gift, count, xu_each } => {
+            Payload::Gift {
+                gift,
+                count,
+                xu_each,
+            } => {
                 let coins = i64::from(*count) * xu_each;
                 let xu = (coins as f64 * self.ti_le).round() as i64;
                 self.totals.gifts += u64::from(*count);
@@ -288,18 +306,22 @@ impl Session {
                 if let Some(v) = self.viewers.get_mut(&user) {
                     v.da_tang = true;
                 }
+                let anh = ev.who.avatar.clone();
                 let g = self.givers.entry(user.clone()).or_insert_with(|| Giver {
                     user: user.clone(),
                     name: name.clone(),
                     xu: 0,
                     coins: 0,
+                    avatar: None,
                 });
                 g.name = name.clone();
+                if anh.is_some() {
+                    g.avatar = anh;
+                }
                 g.xu += xu;
                 g.coins += coins;
 
-                let mut it =
-                    FeedItem::moi(id, now, "gift", &name, format!("tặng {gift} ×{count}"));
+                let mut it = FeedItem::moi(id, now, "gift", &name, format!("tặng {gift} ×{count}"));
                 it.gift = Some(gift.clone());
                 it.count = Some(*count);
                 it.coins = Some(coins);
@@ -320,6 +342,7 @@ impl Session {
             ),
         };
         item.user = Some(user);
+        item.ao = if ao { Some(true) } else { None };
 
         self.cap_nhat_nguoi_xem();
         self.feed.push_back(item.clone());
@@ -401,8 +424,8 @@ mod tests {
     #[test]
     fn nguoi_vao_duoc_xep_cho() {
         let mut s = phien();
-        s.apply(&vao("an"), 1_000);
-        s.apply(&vao("binh"), 1_100);
+        s.apply(&vao("an"), 1_000, false);
+        s.apply(&vao("binh"), 1_100, false);
         let g = s.seats();
         assert_eq!(g.len(), 2);
         assert_eq!(g[0].i, 0);
@@ -413,8 +436,8 @@ mod tests {
     #[test]
     fn mot_nguoi_vao_hai_lan_khong_chiem_hai_ghe() {
         let mut s = phien();
-        s.apply(&vao("an"), 1_000);
-        s.apply(&vao("an"), 2_000);
+        s.apply(&vao("an"), 1_000, false);
+        s.apply(&vao("an"), 2_000, false);
         assert_eq!(s.seats().len(), 1);
         assert_eq!(s.totals().viewers, 1);
     }
@@ -423,28 +446,45 @@ mod tests {
     fn ra_phong_thi_tra_ghe_cho_nguoi_khac() {
         let mut s = phien();
         for u in ["a", "b", "c", "d"] {
-            s.apply(&vao(u), 1_000);
+            s.apply(&vao(u), 1_000, false);
         }
         assert_eq!(s.seats().len(), 4, "phòng 4 ghế thì kín");
 
         // Kín chỗ: người thứ năm vẫn vào phòng, chỉ là chưa có ghế.
-        s.apply(&vao("e"), 1_100);
+        s.apply(&vao("e"), 1_100, false);
         assert_eq!(s.seats().len(), 4);
         assert_eq!(s.totals().viewers, 5);
 
-        s.apply(&LiveEvent::new("a", "a", P::Leave), 1_200);
-        s.apply(&vao("e"), 1_300);
+        s.apply(&LiveEvent::new("a", "a", P::Leave), 1_200, false);
+        s.apply(&vao("e"), 1_300, false);
         let ghe: Vec<String> = s.seats().into_iter().map(|x| x.user).collect();
-        assert!(ghe.iter().any(|x| x == "e"), "ghế trống phải tới tay người đang chờ: {ghe:?}");
+        assert!(
+            ghe.iter().any(|x| x == "e"),
+            "ghế trống phải tới tay người đang chờ: {ghe:?}"
+        );
     }
 
     #[test]
     fn vang_qua_lau_thi_bi_thu_ghe() {
         let mut s = phien();
-        s.apply(&vao("an"), 1_000);
-        s.apply(&LiveEvent::new("binh", "Bình", P::Comment { text: "chào".into() }), 1_000);
+        s.apply(&vao("an"), 1_000, false);
+        s.apply(
+            &LiveEvent::new(
+                "binh",
+                "Bình",
+                P::Comment {
+                    text: "chào".into(),
+                },
+            ),
+            1_000,
+            false,
+        );
 
-        assert_eq!(s.thu_hoi_ghe(1_000 + GHE_VANG_MS), 0, "chưa quá hạn thì giữ nguyên");
+        assert_eq!(
+            s.thu_hoi_ghe(1_000 + GHE_VANG_MS),
+            0,
+            "chưa quá hạn thì giữ nguyên"
+        );
         assert_eq!(s.thu_hoi_ghe(1_001 + GHE_VANG_MS), 2);
         assert_eq!(s.seats().len(), 0);
         assert_eq!(s.totals().viewers, 0);
@@ -453,10 +493,19 @@ mod tests {
     #[test]
     fn nguoi_tung_tang_qua_duoc_giu_ghe_lau_hon() {
         let mut s = phien();
-        s.apply(&vao("an"), 1_000);
+        s.apply(&vao("an"), 1_000, false);
         s.apply(
-            &LiveEvent::new("hao", "Hào", P::Gift { gift: "Sen".into(), count: 1, xu_each: 10 }),
+            &LiveEvent::new(
+                "hao",
+                "Hào",
+                P::Gift {
+                    gift: "Sen".into(),
+                    count: 1,
+                    xu_each: 10,
+                },
+            ),
             1_000,
+            false,
         );
 
         s.thu_hoi_ghe(1_001 + GHE_VANG_MS);
@@ -471,12 +520,30 @@ mod tests {
     fn qua_cong_xu_va_len_bang_top() {
         let mut s = Session::new("ke-chuyen", 10, 1.0, 0);
         s.apply(
-            &LiveEvent::new("a", "An", P::Gift { gift: "Sen".into(), count: 3, xu_each: 10 }),
+            &LiveEvent::new(
+                "a",
+                "An",
+                P::Gift {
+                    gift: "Sen".into(),
+                    count: 3,
+                    xu_each: 10,
+                },
+            ),
             0,
+            false,
         );
         s.apply(
-            &LiveEvent::new("b", "Bình", P::Gift { gift: "Sen".into(), count: 1, xu_each: 99 }),
+            &LiveEvent::new(
+                "b",
+                "Bình",
+                P::Gift {
+                    gift: "Sen".into(),
+                    count: 1,
+                    xu_each: 99,
+                },
+            ),
             0,
+            false,
         );
         assert_eq!(s.totals().gifts, 4, "đếm số món, không phải số lần tặng");
         assert_eq!(s.totals().xu, 129);
@@ -492,8 +559,17 @@ mod tests {
         let mut s = Session::new("ke-chuyen", 10, 1.0, 0);
         for _ in 0..3 {
             s.apply(
-                &LiveEvent::new("a", "An", P::Gift { gift: "Sen".into(), count: 1, xu_each: 10 }),
+                &LiveEvent::new(
+                    "a",
+                    "An",
+                    P::Gift {
+                        gift: "Sen".into(),
+                        count: 1,
+                        xu_each: 10,
+                    },
+                ),
                 0,
+                false,
             );
         }
         let top = s.top_givers(5);
@@ -505,25 +581,71 @@ mod tests {
     fn ti_le_doi_xu_theo_boi_canh() {
         let mut s = Session::new("chua", 10, 2.5, 0);
         s.apply(
-            &LiveEvent::new("a", "An", P::Gift { gift: "Sen".into(), count: 2, xu_each: 10 }),
+            &LiveEvent::new(
+                "a",
+                "An",
+                P::Gift {
+                    gift: "Sen".into(),
+                    count: 2,
+                    xu_each: 10,
+                },
+            ),
             0,
+            false,
         );
         assert_eq!(s.totals().xu, 50, "20 xu TikTok × 2,5");
-        assert_eq!(s.top_givers(1)[0].coins, 20, "xu thật của TikTok giữ nguyên để đối soát");
+        assert_eq!(
+            s.top_givers(1)[0].coins,
+            20,
+            "xu thật của TikTok giữ nguyên để đối soát"
+        );
     }
 
     #[test]
     fn tim_lay_tong_cua_tiktok_khi_co() {
         let mut s = phien();
-        s.apply(&LiveEvent::new("a", "A", P::Like { count: 5, total: None }), 0);
+        s.apply(
+            &LiveEvent::new(
+                "a",
+                "A",
+                P::Like {
+                    count: 5,
+                    total: None,
+                },
+            ),
+            0,
+            false,
+        );
         assert_eq!(s.totals().likes, 5);
 
         // Tin rơi mất giữa chừng: tổng của TikTok kéo con số lên đúng.
-        s.apply(&LiveEvent::new("a", "A", P::Like { count: 5, total: Some(900) }), 0);
+        s.apply(
+            &LiveEvent::new(
+                "a",
+                "A",
+                P::Like {
+                    count: 5,
+                    total: Some(900),
+                },
+            ),
+            0,
+            false,
+        );
         assert_eq!(s.totals().likes, 900);
 
         // Tổng không bao giờ lùi, kể cả khi tin tới trễ.
-        s.apply(&LiveEvent::new("a", "A", P::Like { count: 1, total: Some(10) }), 0);
+        s.apply(
+            &LiveEvent::new(
+                "a",
+                "A",
+                P::Like {
+                    count: 1,
+                    total: Some(10),
+                },
+            ),
+            0,
+            false,
+        );
         assert_eq!(s.totals().likes, 901);
     }
 
@@ -531,8 +653,17 @@ mod tests {
     fn muc_feed_mang_du_thong_tin_cho_module() {
         let mut s = phien();
         let ra = s.apply(
-            &LiveEvent::new("a", "An", P::Gift { gift: "Hoa hồng".into(), count: 2, xu_each: 10 }),
+            &LiveEvent::new(
+                "a",
+                "An",
+                P::Gift {
+                    gift: "Hoa hồng".into(),
+                    count: 2,
+                    xu_each: 10,
+                },
+            ),
             5_000,
+            false,
         );
         let it = &ra[0];
         assert_eq!(it.kind, "gift");
@@ -546,8 +677,12 @@ mod tests {
     #[test]
     fn doi_ten_giua_phien_thi_theo_ten_moi() {
         let mut s = phien();
-        s.apply(&LiveEvent::new("a", "An", P::Join), 0);
-        s.apply(&LiveEvent::new("a", "An Nguyễn", P::Comment { text: "hi".into() }), 1);
+        s.apply(&LiveEvent::new("a", "An", P::Join), 0, false);
+        s.apply(
+            &LiveEvent::new("a", "An Nguyễn", P::Comment { text: "hi".into() }),
+            1,
+            false,
+        );
         assert_eq!(s.seats()[0].name, "An Nguyễn");
     }
 
@@ -555,20 +690,54 @@ mod tests {
     fn feed_khong_phinh_vo_han() {
         let mut s = Session::new("ke-chuyen", 10, 1.0, 0);
         for i in 0..(FEED_GIU + 50) {
-            s.apply(&LiveEvent::new("a", "A", P::Comment { text: format!("{i}") }), i as i64);
+            s.apply(
+                &LiveEvent::new(
+                    "a",
+                    "A",
+                    P::Comment {
+                        text: format!("{i}"),
+                    },
+                ),
+                i as i64,
+                false,
+            );
         }
         assert_eq!(s.feed.len(), FEED_GIU);
         let v = s.view(10);
         assert_eq!(v.recent_feed.len(), 10);
-        assert_eq!(v.recent_feed.last().unwrap().text, format!("{}", FEED_GIU + 49));
+        assert_eq!(
+            v.recent_feed.last().unwrap().text,
+            format!("{}", FEED_GIU + 49)
+        );
+    }
+
+    #[test]
+    fn co_nhan_vat_ao_nam_ngay_trong_phien() {
+        // Hai đường xuống sân khấu — tin feed và bản chụp phiên — phải nói
+        // giống nhau, nếu không module lúc chạy lúc không.
+        let mut s = phien();
+        let ra = s.apply(&vao("bot"), 0, true);
+        assert_eq!(ra[0].ao, Some(true));
+        assert_eq!(s.view(5).recent_feed[0].ao, Some(true));
+
+        let ra = s.apply(&vao("an"), 1, false);
+        assert_eq!(ra[0].ao, None, "người thật thì không gắn cờ");
     }
 
     #[test]
     fn view_khop_hinh_dang_hop_dong_ben_client() {
         let mut s = phien();
-        s.apply(&vao("an"), 1_000);
+        s.apply(&vao("an"), 1_000, false);
         let j = serde_json::to_value(s.view(5)).unwrap();
-        for k in ["designId", "startedAt", "totals", "topGivers", "seats", "recentUsers", "recentFeed"] {
+        for k in [
+            "designId",
+            "startedAt",
+            "totals",
+            "topGivers",
+            "seats",
+            "recentUsers",
+            "recentFeed",
+        ] {
             assert!(j.get(k).is_some(), "thiếu khoá {k}");
         }
         assert_eq!(j["totals"]["viewers"], serde_json::json!(1));

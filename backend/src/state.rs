@@ -9,10 +9,10 @@ use tokio::sync::broadcast;
 
 use crate::designs::{self, DesignInfo};
 use crate::events::LiveEvent;
-use crate::session::{Session, SessionView};
-use crate::source::{SourceCfg, SourceStatus};
 use crate::paths::Layout;
+use crate::session::{Session, SessionView};
 use crate::settings::{self, Settings, SettingsError};
+use crate::source::{SourceCfg, SourceStatus};
 use crate::store::{self, StoreError};
 
 /// Sức chứa hàng chờ phát xuống. Client chậm quá mức này thì mất bớt tin cũ,
@@ -56,7 +56,9 @@ pub enum AppError {
     NotFound(String),
     BadRequest(String),
     /// Đã có thiết kế khác đang phát — phải tắt nó trước.
-    Conflict { live: String },
+    Conflict {
+        live: String,
+    },
     Internal(String),
 }
 
@@ -126,7 +128,11 @@ impl AppState {
             let mut cur = self.live.write().expect("khoá live hỏng");
             match cur.as_deref() {
                 Some(dang) if dang == id => return Ok(()),
-                Some(dang) => return Err(AppError::Conflict { live: dang.to_string() }),
+                Some(dang) => {
+                    return Err(AppError::Conflict {
+                        live: dang.to_string(),
+                    })
+                }
                 None => *cur = Some(id.to_string()),
             }
         }
@@ -156,7 +162,11 @@ impl AppState {
     // ---- Phiên và nguồn sự kiện ----
 
     pub fn session_view(&self) -> Option<SessionView> {
-        self.phien.read().expect("khoá phiên hỏng").as_ref().map(|p| p.view(60))
+        self.phien
+            .read()
+            .expect("khoá phiên hỏng")
+            .as_ref()
+            .map(|p| p.view(60))
     }
 
     /// Áp một sự kiện vào phiên rồi phát mục feed xuống ngay.
@@ -169,18 +179,12 @@ impl AppState {
         let items = {
             let mut g = self.phien.write().expect("khoá phiên hỏng");
             match g.as_mut() {
-                Some(p) => p.apply(&ev, now),
+                Some(p) => p.apply(&ev, now, ao),
                 None => return,
             }
         };
         if items.is_empty() {
             return;
-        }
-        let mut items = items;
-        for it in &mut items {
-            // Nguồn giả lập đánh dấu rõ là nhân vật ảo, để module cảm ơn quà và
-            // bot chào hỏi bỏ qua — nếu không bot sẽ tự cảm ơn chính nó.
-            it.ao = if ao { Some(true) } else { None };
         }
         self.broadcast(json!({ "t": "feed", "items": items }));
     }
@@ -207,6 +211,39 @@ impl AppState {
         self.broadcast(json!({ "t": "session", "view": view }));
     }
 
+    /// Lời chào gửi cho client vừa nối: toàn bộ trạng thái hiện tại.
+    ///
+    /// Thiếu cái này thì một sân khấu mở giữa chừng chỉ biết "đang phát phòng
+    /// nào" mà không biết module nào đang bật — và nó sẽ đứng im cho tới khi có
+    /// người gạt một công tắc. Mở OBS sau khi lên sóng là chuyện bình thường,
+    /// nên trạng thái phải tự tới, không chờ ai gạt.
+    pub fn chao_ws(&self) -> Vec<Value> {
+        let live = self.live();
+        let mut ra = vec![json!({ "t": "live", "designId": live })];
+
+        if let Some(id) = live.as_deref() {
+            if let Ok(mods) = self.all_modules(id) {
+                let bat: Vec<&String> = mods
+                    .iter()
+                    .filter(|(_, v)| v.get("enabled").and_then(Value::as_bool).unwrap_or(false))
+                    .map(|(k, _)| k)
+                    .collect();
+                ra.push(json!({ "t": "modules", "enabled": bat }));
+
+                for (k, v) in &mods {
+                    if let Some(c) = v.get("config") {
+                        ra.push(json!({ "t": "config", "moduleId": k, "config": c }));
+                    }
+                }
+            }
+        }
+
+        if let Some(v) = self.session_view() {
+            ra.push(json!({ "t": "session", "view": v }));
+        }
+        ra
+    }
+
     pub fn the_he_nguon(&self) -> u64 {
         self.the_he_nguon.load(Ordering::SeqCst)
     }
@@ -231,14 +268,20 @@ impl AppState {
         let cfg = self.nguon.read().expect("khoá nguồn hỏng").clone();
         let problem = self.loi_nguon.read().expect("khoá nguồn hỏng").clone();
         let running = cfg.kind != crate::source::SourceKind::Tat && problem.is_none();
-        SourceStatus { cfg, running, problem }
+        SourceStatus {
+            cfg,
+            running,
+            problem,
+        }
     }
 
     // ---- Cài đặt người vận hành đặt cho thiết kế ----
 
     pub fn set_settings(&self, design_id: &str, patch: &Value) -> Result<Settings, AppError> {
         if !self.design_exists(design_id) {
-            return Err(AppError::NotFound(format!("không có thiết kế \"{design_id}\"")));
+            return Err(AppError::NotFound(format!(
+                "không có thiết kế \"{design_id}\""
+            )));
         }
         Ok(settings::apply(&self.layout, design_id, patch)?)
     }
@@ -246,7 +289,9 @@ impl AppState {
     /// Xoá dữ liệu phiên. Cấu hình module và sổ quà không bị đụng tới.
     pub fn reset_design(&self, design_id: &str) -> Result<Vec<String>, AppError> {
         if !self.design_exists(design_id) {
-            return Err(AppError::NotFound(format!("không có thiết kế \"{design_id}\"")));
+            return Err(AppError::NotFound(format!(
+                "không có thiết kế \"{design_id}\""
+            )));
         }
         Ok(settings::reset(&self.layout, design_id)?)
     }
@@ -285,10 +330,16 @@ impl AppState {
             // design.json do người viết thiết kế soạn; id sai thì bỏ, không ghi
             // rác vào cấu hình rồi để trang quản lý vẽ một thẻ không tồn tại.
             if !crate::paths::valid_id(id) {
-                tracing::warn!(design_id, id, "bỏ id module sai định dạng trong design.json");
+                tracing::warn!(
+                    design_id,
+                    id,
+                    "bỏ id module sai định dạng trong design.json"
+                );
                 return;
             }
-            let e = modules.entry(id.to_string()).or_insert_with(|| json!({ "config": {} }));
+            let e = modules
+                .entry(id.to_string())
+                .or_insert_with(|| json!({ "config": {} }));
             if let Some(o) = e.as_object_mut() {
                 if enabled {
                     o.insert("enabled".into(), Value::Bool(true));
@@ -317,8 +368,14 @@ impl AppState {
         let m = self.modules_of(design_id)?;
         let v = m.get(module_id);
         Ok(ModuleState {
-            enabled: v.and_then(|x| x.get("enabled")).and_then(Value::as_bool).unwrap_or(false),
-            config: v.and_then(|x| x.get("config")).cloned().unwrap_or_else(|| json!({})),
+            enabled: v
+                .and_then(|x| x.get("enabled"))
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            config: v
+                .and_then(|x| x.get("config"))
+                .cloned()
+                .unwrap_or_else(|| json!({})),
         })
     }
 
@@ -338,7 +395,9 @@ impl AppState {
             return Err(AppError::BadRequest("cấu hình phải là một object".into()));
         }
         let mut modules = self.modules_of(design_id)?;
-        let entry = modules.entry(module_id.to_string()).or_insert_with(|| json!({}));
+        let entry = modules
+            .entry(module_id.to_string())
+            .or_insert_with(|| json!({}));
         if let Some(obj) = entry.as_object_mut() {
             obj.insert("config".into(), config.clone());
         }
@@ -350,14 +409,11 @@ impl AppState {
         Ok(())
     }
 
-    pub fn set_enabled(
-        &self,
-        design_id: &str,
-        module_id: &str,
-        on: bool,
-    ) -> Result<(), AppError> {
+    pub fn set_enabled(&self, design_id: &str, module_id: &str, on: bool) -> Result<(), AppError> {
         let mut modules = self.modules_of(design_id)?;
-        let entry = modules.entry(module_id.to_string()).or_insert_with(|| json!({}));
+        let entry = modules
+            .entry(module_id.to_string())
+            .or_insert_with(|| json!({}));
         if let Some(obj) = entry.as_object_mut() {
             obj.insert("enabled".into(), Value::Bool(on));
         }
@@ -384,7 +440,11 @@ mod tests {
     fn dung(root: &Path, id: &str) {
         let d = root.join("client").join("designs").join(id);
         fs::create_dir_all(d.join("dist")).unwrap();
-        fs::write(d.join("design.json"), format!(r#"{{"id":"{id}","name":"{id}"}}"#)).unwrap();
+        fs::write(
+            d.join("design.json"),
+            format!(r#"{{"id":"{id}","name":"{id}"}}"#),
+        )
+        .unwrap();
         fs::write(d.join("dist").join("index.html"), "<!doctype html>").unwrap();
     }
 
@@ -407,7 +467,11 @@ mod tests {
             Err(AppError::Conflict { live }) => assert_eq!(live, "ke-chuyen"),
             kq => panic!("phải báo xung đột, nhận {kq:?}"),
         }
-        assert_eq!(s.live().as_deref(), Some("ke-chuyen"), "cái đang chạy không được đổi");
+        assert_eq!(
+            s.live().as_deref(),
+            Some("ke-chuyen"),
+            "cái đang chạy không được đổi"
+        );
 
         s.stop_live();
         s.go_live("hip-hop").unwrap();
@@ -435,7 +499,8 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         dung(d.path(), "ke-chuyen");
         let s = state(d.path());
-        s.set_config("ke-chuyen", "gift-thanks", json!({ "minCoins": 10 })).unwrap();
+        s.set_config("ke-chuyen", "gift-thanks", json!({ "minCoins": 10 }))
+            .unwrap();
         let m = s.module_state("ke-chuyen", "gift-thanks").unwrap();
         assert_eq!(m.config["minCoins"], json!(10));
         assert!(!m.enabled, "mặc định là tắt");
@@ -446,7 +511,8 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         dung(d.path(), "ke-chuyen");
         let s = state(d.path());
-        s.set_config("ke-chuyen", "gift-thanks", json!({ "minCoins": 10 })).unwrap();
+        s.set_config("ke-chuyen", "gift-thanks", json!({ "minCoins": 10 }))
+            .unwrap();
         s.set_enabled("ke-chuyen", "gift-thanks", true).unwrap();
         let m = s.module_state("ke-chuyen", "gift-thanks").unwrap();
         assert!(m.enabled);
@@ -470,10 +536,18 @@ mod tests {
         dung(d.path(), "ke-chuyen");
         dung(d.path(), "hip-hop");
         let s = state(d.path());
-        s.set_config("ke-chuyen", "music", json!({ "vol": 20 })).unwrap();
-        s.set_config("hip-hop", "music", json!({ "vol": 90 })).unwrap();
-        assert_eq!(s.module_state("ke-chuyen", "music").unwrap().config["vol"], json!(20));
-        assert_eq!(s.module_state("hip-hop", "music").unwrap().config["vol"], json!(90));
+        s.set_config("ke-chuyen", "music", json!({ "vol": 20 }))
+            .unwrap();
+        s.set_config("hip-hop", "music", json!({ "vol": 90 }))
+            .unwrap();
+        assert_eq!(
+            s.module_state("ke-chuyen", "music").unwrap().config["vol"],
+            json!(20)
+        );
+        assert_eq!(
+            s.module_state("hip-hop", "music").unwrap().config["vol"],
+            json!(90)
+        );
     }
 
     #[tokio::test]
@@ -484,7 +558,8 @@ mod tests {
         s.go_live("ke-chuyen").unwrap();
         let mut rx = s.subscribe();
 
-        s.set_config("ke-chuyen", "gift-thanks", json!({ "minCoins": 7 })).unwrap();
+        s.set_config("ke-chuyen", "gift-thanks", json!({ "minCoins": 7 }))
+            .unwrap();
 
         let msg = rx.recv().await.unwrap();
         assert_eq!(msg["t"], json!("config"));
@@ -501,8 +576,12 @@ mod tests {
         s.go_live("ke-chuyen").unwrap();
         let mut rx = s.subscribe();
 
-        s.set_config("hip-hop", "music", json!({ "vol": 10 })).unwrap();
+        s.set_config("hip-hop", "music", json!({ "vol": 10 }))
+            .unwrap();
 
-        assert!(rx.try_recv().is_err(), "không được phát cấu hình của thiết kế đang tắt");
+        assert!(
+            rx.try_recv().is_err(),
+            "không được phát cấu hình của thiết kế đang tắt"
+        );
     }
 }

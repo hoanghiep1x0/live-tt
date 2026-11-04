@@ -25,9 +25,15 @@ async fn cau_noi_gia(ws: WebSocketUpgrade) -> Response {
 
         // Lời chào phải tới trước, và phải là subscribe kèm kênh.
         let chao = rx.next().await;
-        let Some(Ok(Message::Text(s))) = chao else { return };
+        let Some(Ok(Message::Text(s))) = chao else {
+            return;
+        };
         let v: Value = serde_json::from_str(&s).unwrap_or(Value::Null);
-        assert_eq!(v["type"], json!("subscribe"), "backend phải gửi subscribe trước");
+        assert_eq!(
+            v["type"],
+            json!("subscribe"),
+            "backend phải gửi subscribe trước"
+        );
         assert_eq!(v["channel"], json!("kechuyen.dem"));
 
         let tin = vec![
@@ -125,12 +131,19 @@ async fn nhan_duoc_su_kien_that_tu_cau_noi() {
     assert_eq!(v.totals.xu, 30, "quà 3 × 10 xu");
     assert_eq!(v.totals.comments, 1);
     assert_eq!(v.totals.likes, 500, "lấy tổng tim của TikTok");
-    assert_eq!(v.totals.viewers, 1234, "số người xem lấy từ cầu nối, không phải số ghế");
+    assert_eq!(
+        v.totals.viewers, 1234,
+        "số người xem lấy từ cầu nối, không phải số ghế"
+    );
     assert_eq!(v.top_givers[0].user, "binh");
 
     // Tin từ cầu nối là người THẬT: không được đánh dấu là nhân vật ảo, nếu
     // không module cảm ơn quà sẽ bỏ qua hết.
-    let qua = v.recent_feed.iter().find(|f| f.kind == "gift").expect("thiếu mục quà");
+    let qua = v
+        .recent_feed
+        .iter()
+        .find(|f| f.kind == "gift")
+        .expect("thiếu mục quà");
     assert_eq!(qua.ao, None);
 
     live_backend::source::mo(st.clone(), SourceCfg::default());
@@ -171,11 +184,16 @@ async fn doi_nguon_thi_nguon_cu_tu_dung() {
 
     live_backend::source::mo(
         st.clone(),
-        SourceCfg { kind: SourceKind::Mau, nhip: 50, ..SourceCfg::default() },
+        SourceCfg {
+            kind: SourceKind::Mau,
+            nhip: 50,
+            ..SourceCfg::default()
+        },
     );
     let s = st.clone();
     assert!(
-        cho_den(Duration::from_secs(3), || s.session_view()
+        cho_den(Duration::from_secs(3), || s
+            .session_view()
             .is_some_and(|v| !v.recent_feed.is_empty()))
         .await,
         "nguồn mẫu phải sinh được sự kiện"

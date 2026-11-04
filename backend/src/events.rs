@@ -60,7 +60,11 @@ pub struct LiveEvent {
 impl LiveEvent {
     pub fn new(user: &str, name: &str, what: Payload) -> Self {
         Self {
-            who: EventUser { user: user.into(), name: name.into(), avatar: None },
+            who: EventUser {
+                user: user.into(),
+                name: name.into(),
+                avatar: None,
+            },
             what,
         }
     }
@@ -90,7 +94,11 @@ mod tests {
         let e = LiveEvent::new(
             "hanh.ng",
             "Hạnh",
-            Payload::Gift { gift: "Hoa hồng".into(), count: 3, xu_each: 10 },
+            Payload::Gift {
+                gift: "Hoa hồng".into(),
+                count: 3,
+                xu_each: 10,
+            },
         );
         assert_eq!(
             serde_json::to_value(&e).unwrap(),
@@ -101,9 +109,10 @@ mod tests {
 
     #[test]
     fn doc_duoc_tin_tu_cau_noi_ngoai() {
-        let v: LiveEvent =
-            serde_json::from_value(json!({ "user": "an", "name": "An", "kind": "comment", "text": "chào" }))
-                .unwrap();
+        let v: LiveEvent = serde_json::from_value(
+            json!({ "user": "an", "name": "An", "kind": "comment", "text": "chào" }),
+        )
+        .unwrap();
         assert_eq!(v.who.user, "an");
         assert!(matches!(v.what, Payload::Comment { ref text } if text == "chào"));
     }
@@ -131,11 +140,23 @@ mod tests {
             json!({ "user": "a", "name": "A", "kind": "like", "count": 5, "total": 900 }),
         )
         .unwrap();
-        assert!(matches!(co.what, Payload::Like { count: 5, total: Some(900) }));
+        assert!(matches!(
+            co.what,
+            Payload::Like {
+                count: 5,
+                total: Some(900)
+            }
+        ));
 
         let khong: LiveEvent =
             serde_json::from_value(json!({ "user": "a", "name": "A", "kind": "like", "count": 5 }))
                 .unwrap();
-        assert!(matches!(khong.what, Payload::Like { count: 5, total: None }));
+        assert!(matches!(
+            khong.what,
+            Payload::Like {
+                count: 5,
+                total: None
+            }
+        ));
     }
 }

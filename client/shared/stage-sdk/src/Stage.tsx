@@ -3,21 +3,32 @@ import type { ReactNode } from 'react';
 import type { Json, SessionView, SlotName } from '@live/contracts';
 import { connectStage, BAN_DAU } from './state';
 import type { StageState } from './state';
-import { partsCho } from './parts';
+import { partsCho } from './registry';
+import { useRunner } from './runner';
+import type { KetQuaChay, LoiMc } from './runner';
 import { designAssetUrl } from './assets';
 
 interface CtxValue {
   s: StageState;
   designId: string;
+  chay: KetQuaChay;
 }
 
-const Ctx = createContext<CtxValue>({ s: BAN_DAU, designId: '' });
+const RONG: KetQuaChay = {
+  modState: new Map(),
+  loiMc: null,
+  slotSang: new Map(),
+  now: 0,
+};
 
-/** Bọc quanh sân khấu. Giữ một WebSocket duy nhất cho cả trang. */
+const Ctx = createContext<CtxValue>({ s: BAN_DAU, designId: '', chay: RONG });
+
+/** Bọc quanh sân khấu. Giữ một WebSocket duy nhất và nuôi các lõi module. */
 export function StageProvider({ designId, children }: { designId: string; children: ReactNode }) {
   const [s, setS] = useState<StageState>(BAN_DAU);
   useEffect(() => connectStage(setS), []);
-  return <Ctx.Provider value={{ s, designId }}>{children}</Ctx.Provider>;
+  const chay = useRunner(s);
+  return <Ctx.Provider value={{ s, designId, chay }}>{children}</Ctx.Provider>;
 }
 
 export function useStage(): StageState {
@@ -26,6 +37,18 @@ export function useStage(): StageState {
 
 export function useSession(): SessionView {
   return useContext(Ctx).s.session;
+}
+
+/** Câu MC đang nói, hoặc `null`. Thiết kế quyết định vẽ nó ở đâu — trên video
+ *  thì làm phụ đề, không có video thì đặt giữa khung. */
+export function useLoiMc(): LoiMc | null {
+  return useContext(Ctx).chay.loiMc;
+}
+
+/** Slot nào đang được một module xin sáng. Thiết kế dùng để nhấn vùng đó lên. */
+export function useSlotSang(slot: SlotName): boolean {
+  const { chay } = useContext(Ctx);
+  return chay.slotSang.has(slot);
 }
 
 /** Đường dẫn tới một asset của thiết kế này. */
@@ -39,14 +62,27 @@ export function useAsset(): (path: string) => string {
  *  Thiết kế không biết module nào sẽ nằm ở đây, và không cần biết. Không có
  *  module nào thì slot rỗng — thiết kế vẫn phải lên hình đầy đủ (quy ước 04 §1). */
 export function Slot({ name }: { name: SlotName }) {
-  const { s } = useContext(Ctx);
+  const { s, chay } = useContext(Ctx);
   const parts = partsCho(name, s.enabled);
   if (parts.length === 0) return null;
   return (
     <>
-      {parts.map((p) => (
-        <p.Part key={p.moduleId} config={(s.config[p.moduleId] ?? {}) as Json} state={s} />
-      ))}
+      {parts.map((p) => {
+        const Part = p.Part;
+        if (Part === undefined) return null;
+        // Lõi được dựng ở effect, tức là sau lượt vẽ đầu. Phần vẽ nào cũng cần
+        // trạng thái lõi, nên chờ một nhịp còn hơn vẽ bằng `undefined`.
+        if (!chay.modState.has(p.id)) return null;
+        return (
+          <Part
+            key={p.id}
+            config={p.hopCauHinh((s.config[p.id] ?? {}) as Json)}
+            state={s}
+            modState={chay.modState.get(p.id)}
+            now={chay.now}
+          />
+        );
+      })}
     </>
   );
 }

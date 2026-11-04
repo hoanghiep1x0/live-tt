@@ -18,7 +18,9 @@ export default defineConfig({
   optimizeDeps: {
     exclude: [
       '@live/contracts',
+      '@live/mod-chat-bubbles',
       '@live/mod-gift-thanks',
+      '@live/mod-top-givers',
       '@live/mod-welcome',
       '@live/mod-likes-counter',
       '@live/mod-follow-thanks',

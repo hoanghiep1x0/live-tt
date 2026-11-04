@@ -26,6 +26,7 @@
     "client/shared/dev-proxy/src/**/*.ts",
     "client/shared/stage-sdk/src/**/*.ts",
     "client/shared/stage-sdk/src/**/*.tsx",
+    "client/modules/*/src/**/*.tsx",
     "client/designs/*/src/**/*.ts",
     "client/designs/*/src/**/*.tsx",
     "client/designs/*/vite.config.ts"

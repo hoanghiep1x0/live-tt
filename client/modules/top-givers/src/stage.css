@@ -1,0 +1,87 @@
+/* Bảng vinh danh.
+ *
+ * Mọi màu đều lấy từ biến của thiết kế kèm giá trị lui, nên module cắm vào bối
+ * cảnh nào cũng hợp màu bối cảnh đó mà không phải sửa một dòng nào.
+ * Đơn vị cqw: khung sân khấu khai `container-type: inline-size`.
+ */
+
+.mod-tops {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 1.4cqw;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: 100%;
+  height: 100%;
+}
+
+.mod-tops-o {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3cqw;
+  width: 15cqw;
+  min-width: 0;
+}
+
+.mod-tops-anh {
+  width: 7.4cqw;
+  height: 7.4cqw;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 3.4cqw;
+  background: var(--stage-chip-bg, rgba(0, 0, 0, 0.5));
+  border: 0.3cqw solid var(--stage-ring, #f2c45a);
+  box-shadow: 0 0 2cqw var(--stage-screen-glow, rgba(255, 210, 120, 0.35));
+}
+.mod-tops-anh img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Hạng nhất to hơn và sáng hơn — nhìn một cái là biết ai đang dẫn */
+.mod-tops-o[data-hang='1'] .mod-tops-anh {
+  width: 9cqw;
+  height: 9cqw;
+  box-shadow: 0 0 3cqw var(--stage-cheer-glow, #ffd27a);
+  animation: mod-tops-tho 3s ease-in-out infinite;
+}
+.mod-tops-o[data-hang='4'] .mod-tops-anh,
+.mod-tops-o[data-hang='5'] .mod-tops-anh {
+  width: 6.2cqw;
+  height: 6.2cqw;
+}
+@keyframes mod-tops-tho {
+  50% {
+    box-shadow: 0 0 4.4cqw var(--stage-cheer-glow, #ffd27a);
+  }
+}
+
+.mod-tops-ten {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.9cqw;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 0.2cqw 0.4cqw rgba(0, 0, 0, 0.8);
+}
+
+.mod-tops-xu {
+  font-size: 1.8cqw;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold, #f2c45a);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mod-tops-o[data-hang='1'] .mod-tops-anh {
+    animation: none;
+  }
+}

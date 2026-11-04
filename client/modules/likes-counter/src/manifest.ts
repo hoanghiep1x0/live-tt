@@ -18,7 +18,7 @@ export const manifest: ModuleManifest<Config> = {
   triggers: ['like'],
   configVersion: 1,
   schema,
-  slots: ['top-bar'],
+  slots: ['target'],
   fields: [
     { key: 'goal', label: 'Mục tiêu', type: 'number', unit: 'tim', min: 1 },
     {

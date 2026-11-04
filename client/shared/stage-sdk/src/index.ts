@@ -1,6 +1,16 @@
 export { apTin, connectStage, BAN_DAU, PHIEN_RONG } from './state';
 export type { StageState } from './state';
 export { designAssetUrl, moduleAssetUrl } from './assets';
-export { PARTS, partsCho } from './parts';
-export type { StagePart, StagePartProps } from './parts';
-export { Slot, StageProvider, useAsset, useSession, useStage } from './Stage';
+export { SO_MODULE, partsCho, timDangKy } from './registry';
+export type { CtxChung, DangKy, StagePartProps, TheSong } from './registry';
+export { useRunner } from './runner';
+export type { KetQuaChay, LoiMc } from './runner';
+export {
+  Slot,
+  StageProvider,
+  useAsset,
+  useLoiMc,
+  useSession,
+  useSlotSang,
+  useStage,
+} from './Stage';
