@@ -13,6 +13,9 @@ export type Down =
   /** Lựa chọn của thiết kế đang phát đổi — áp nóng, KHÔNG tải lại trang.
    *  Gửi cả cục chứ không gửi patch: client khỏi phải gộp. */
   | { t: 'design'; config: Json }
+  /** Nhân vật ảo đổi — áp nóng. Thiết kế đọc để biết có phải ghi dòng minh bạch
+   *  "có nhân vật minh họa" ở chân màn hay không. */
+  | { t: 'bot'; cfg: Json }
   /** Cài đặt giọng đọc đổi — áp nóng, KHÔNG tải lại trang. */
   | { t: 'voice'; cfg: Json }
   | { t: 'live'; designId: string | null }

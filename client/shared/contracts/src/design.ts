@@ -51,6 +51,20 @@ export const designManifestSchema = z.object({
   seats: z.number().int().positive().max(1_000_000).default(84),
   /** Đổi xu TikTok sang điểm của phòng. Mỗi bối cảnh có thể khác nhau. */
   pointRate: z.number().positive().max(1000).default(1),
+  /** Nhân vật ảo của riêng bối cảnh này.
+   *
+   *  Bắt buộc phải khai ở đây chứ không để backend giữ một bộ dùng chung: phòng
+   *  kể chuyện thì người ta "nghe hay quá", sàn bar thì "quẩy lên", đám cưới thì
+   *  "chúc hai bạn trăm năm". Một bộ câu dùng cho mọi phòng là lộ ngay.
+   *  Bỏ trống thì phòng không có nhân vật ảo, dù người vận hành có bật. */
+  crowd: z
+    .object({
+      /** Tên tự đặt, mỗi phần tử một tên. Rỗng thì ghép họ + tên Việt ngẫu nhiên. */
+      names: z.array(z.string().min(1)).default([]),
+      /** Câu họ bình luận. Rỗng là coi như bối cảnh này không khai đám đông. */
+      lines: z.array(z.string().min(1)).default([]),
+    })
+    .default({ names: [], lines: [] }),
   entry: z.string().default('dist/index.html'),
   quality: z
     .object({ auto: z.boolean().default(true), minFps: z.number().int().positive().default(24) })

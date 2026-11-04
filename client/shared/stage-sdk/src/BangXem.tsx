@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LOAI_PHONG } from '@live/contracts';
 import type { ConfigField, Json } from '@live/contracts';
+import { BOT_MAC_DINH } from './state';
 import { ONhanh, OConfig } from './OConfig';
 import { SO_MODULE, timDangKy } from './registry';
 import { guiLenh } from './state';
@@ -49,6 +50,16 @@ function suaThietKe(key: string, v: Json): void {
     command: { op: 'set-design-config', patch: { [key]: v } as Json },
     by: 'nguoi',
     reason: 'sửa lựa chọn thiết kế từ bảng xem thử',
+  });
+  if (!duoc) console.warn('[xem thử] chưa nối được máy chủ');
+}
+
+function suaBot(key: string, v: Json): void {
+  const duoc = guiLenh({
+    t: 'command',
+    command: { op: 'set-bot', patch: { [key]: v } as Json },
+    by: 'nguoi',
+    reason: 'sửa nhân vật ảo từ bảng xem thử',
   });
   if (!duoc) console.warn('[xem thử] chưa nối được máy chủ');
 }
@@ -225,6 +236,58 @@ function TheThietKe() {
   );
 }
 
+const O_SO_NGUOI: ConfigField = {
+  key: 'count',
+  label: 'Số nhân vật ảo giữ trong phòng',
+  short: 'Số người',
+  type: 'number',
+  min: 1,
+  max: 60,
+};
+
+/** Thẻ nhân vật ảo. Không phải module và cũng không phải lựa chọn thiết kế:
+ *  đây là thứ của chính phiên live, như cài đặt giọng đọc — nó sinh ra sự kiện
+ *  chứ không vẽ gì, nên không có chỗ cắm nào để làm module.
+ *
+ *  Câu họ nói là của thiết kế (`crowd` trong design.json), nên cùng một công
+ *  tắc này ở phòng kể chuyện và phòng sàn bar cho ra hai đám đông khác hẳn. */
+function TheNhanVatAo() {
+  const s = useStage();
+  const roi = s.live === null;
+  const bot = s.bot ?? BOT_MAC_DINH;
+
+  return (
+    <article className="bx-the bx-the-ao" data-bat={bot.enabled}>
+      <div className="bx-the-dau">
+        <span className="bx-icon">🎭</span>
+        <span className="bx-ten">
+          <b>Nhân vật ảo</b>
+          <small>Người xem minh hoạ vào ngồi ghế, bình luận, thả tim cho phòng đỡ trống</small>
+        </span>
+        <input
+          type="checkbox"
+          className="bx-cong"
+          checked={bot.enabled}
+          disabled={roi}
+          aria-label="Bật nhân vật ảo"
+          onChange={(e) => suaBot('enabled', e.target.checked)}
+        />
+      </div>
+      <div className="bx-the-nhanh">
+        <ONhanh
+          field={O_SO_NGUOI}
+          value={bot.count}
+          disabled={roi || !bot.enabled}
+          onChange={(v) => suaBot('count', v)}
+        />
+      </div>
+      <p className="bx-the-nhac">
+        Họ không tặng quà và không lên bảng top. Tắt thì họ đi ra dần chứ không biến mất một lúc.
+      </p>
+    </article>
+  );
+}
+
 /** Bảng xem thử: một ngăn bên phải, cuộn được, mỗi tính năng một thẻ.
  *
  *  Lệnh đi lên bằng kênh `RoomCommand` của hợp đồng, không phải một cửa REST
@@ -262,6 +325,7 @@ export function BangXem() {
                 cách xếp với trang quản lý, để người vận hành không phải học
                 hai bố cục. */}
             <TheThietKe />
+            <TheNhanVatAo />
 
             <h3 className="bx-muc">Chỉnh nhanh</h3>
             {SO_MODULE.filter((m) => m.ui.room === undefined).map((m) => (

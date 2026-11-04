@@ -22,8 +22,22 @@ export interface StageState {
    *  đụng tới — thiết kế lấy mặc định trong `DesignOption` của nó. */
   design: Readonly<Record<string, Json>>;
   voice: VoiceCfg;
+  /** Nhân vật ảo: tắt bật và số lượng. Thiết kế đọc để biết có phải ghi dòng
+   *  minh bạch ở chân màn không; bảng xem đọc để vẽ thẻ. */
+  bot: BotCfg;
   noiDuoc: boolean;
 }
+
+/** Nhân vật ảo minh hoạ. Nội dung họ nói nằm ở `crowd` trong design.json của
+ *  từng phòng, không phải ở đây. */
+export interface BotCfg {
+  enabled: boolean;
+  count: number;
+}
+
+/** Mặc định TẮT: dựng người xem giả mà người vận hành chưa bảo là tự ý làm
+ *  thay họ một việc có thể bị hiểu là lừa khán giả. */
+export const BOT_MAC_DINH: BotCfg = { enabled: false, count: 12 };
 
 /** Phiên rỗng: thứ sân khấu thấy khi chưa phát phòng nào, hoặc phòng chưa có ai.
  *  Sân khấu phải lên hình đầy đủ ở trạng thái này. */
@@ -44,6 +58,7 @@ export const BAN_DAU: StageState = {
   config: {},
   design: {},
   voice: VOICE_MAC_DINH,
+  bot: BOT_MAC_DINH,
   noiDuoc: false,
 };
 
@@ -63,6 +78,11 @@ export function apTin(s: StageState, d: Down): StageState {
     }
     case 'config':
       return { ...s, config: { ...s.config, [d.moduleId]: d.config } };
+    case 'bot': {
+      const c = d.cfg;
+      if (typeof c !== 'object' || c === null || Array.isArray(c)) return s;
+      return { ...s, bot: { ...BOT_MAC_DINH, ...(c as Partial<BotCfg>) } };
+    }
     case 'design': {
       const c = d.config;
       if (typeof c !== 'object' || c === null || Array.isArray(c)) return s;

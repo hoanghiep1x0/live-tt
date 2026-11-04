@@ -70,6 +70,9 @@ export type RoomCommand =
   /** Lựa chọn của chính thiết kế đang phát (khung dọc / ngang…), không thuộc
    *  module nào. Gộp vào cấu hình cũ chứ không thay cả cục. */
   | { op: 'set-design-config'; patch: Json }
+  /** Nhân vật ảo: bật tắt và số lượng. Nội dung họ nói là của thiết kế
+   *  (`crowd` trong design.json), lệnh này chỉ chỉnh số. */
+  | { op: 'set-bot'; patch: Json }
   | { op: 'seed'; n: number }
   | { op: 'next-story' };
 

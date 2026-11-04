@@ -9,6 +9,7 @@
 //! - `/ws`         bus phát sự kiện và cấu hình xuống
 
 pub mod api;
+pub mod bot;
 pub mod designs;
 pub mod events;
 pub mod files;

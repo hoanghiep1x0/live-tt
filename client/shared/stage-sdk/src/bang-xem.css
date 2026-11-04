@@ -484,3 +484,16 @@
 .bx-the-thietke .bx-the-nhanh {
   margin-top: 8px;
 }
+
+/* Thẻ nhân vật ảo: của phiên, không phải module — cùng kiểu viền với thẻ thiết
+   kế để người vận hành thấy ngay hai thẻ này khác loại với phần dưới. */
+.bx-the-ao {
+  border-color: #3f4a63;
+  background: linear-gradient(160deg, rgba(28, 36, 54, 0.9), rgba(18, 20, 28, 0.9));
+}
+.bx-the-nhac {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #9aa3b5;
+}

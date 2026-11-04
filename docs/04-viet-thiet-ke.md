@@ -159,6 +159,7 @@ không phải một nhánh mã mới. Thứ khác nhau giữa chúng chỉ có b
 | Câu chữ ("Cảm ơn đã tặng" ↔ "Cảm ơn đã gửi lời chúc") | cấu hình module, lưu theo từng thiết kế |
 | Hình tiếng riêng của bối cảnh | `assets/mod/<moduleId>/…` phủ lên asset module |
 | Bật tính năng nào | `recommends` + `defaults` trong `design.json` |
+| Nhân vật ảo nói gì | `crowd` trong `design.json` |
 
 Phần **cơ chế** — cảm ơn quà, chào người vào, top người tặng, bình chọn, quay thưởng, giọng
 đọc — không đổi gì cả. Viết một lần, chạy ở mọi bối cảnh.
@@ -175,6 +176,26 @@ có cấu hình nào. Người vận hành sửa sau đó thì sửa của họ 
   }
 }
 ```
+
+`crowd` là đám đông minh hoạ của riêng bối cảnh. Người vận hành bật tắt và chọn số lượng ở
+bảng xem, còn **họ nói gì là việc của thiết kế** — phòng kể chuyện thì "nghe hay quá", sàn
+bar thì "quẩy lên", đám cưới thì "chúc hai bạn trăm năm". Một bộ câu dùng chung cho mọi
+phòng là người xem nhận ra ngay:
+
+```json
+{
+  "crowd": {
+    "names": [],
+    "lines": ["nghe hay quá ạ", "kể tiếp đi ạ", "cho xin tên truyện với ạ"]
+  }
+}
+```
+
+`names` rỗng thì ghép họ + tên Việt ngẫu nhiên. `lines` rỗng nghĩa là bối cảnh này không có
+nhân vật ảo — người vận hành có bật thì cũng không ai vào. Họ không bao giờ tặng quà và
+không lên bảng top: sự kiện của họ mang cờ `virtual`, và quà giả trên bảng vinh danh là nói
+dối người xem chứ không còn là trang trí. Chân màn chỉ ghi "có nhân vật minh họa" khi đám
+đông đang bật.
 
 Nhờ vậy làm một phòng mới là: một thư mục thiết kế, assets của nó, và một khối `defaults`.
 Không thêm một dòng nào vào module nào.

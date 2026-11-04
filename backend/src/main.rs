@@ -48,6 +48,10 @@ async fn main() {
         }
     });
 
+    // Nhân vật ảo: giữ đám đông minh hoạ ở đúng số người vận hành đặt. Tác vụ
+    // sống suốt đời máy chủ, tự im khi chưa phát phòng nào hoặc đang tắt.
+    tokio::spawn(live_backend::bot::chay(st.clone()));
+
     let kq = axum::serve(listener, router(st))
         .with_graceful_shutdown(async {
             let _ = tokio::signal::ctrl_c().await;

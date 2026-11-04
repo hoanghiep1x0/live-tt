@@ -250,6 +250,7 @@ impl AppState {
             if let Ok(cfg) = self.design_config(id) {
                 ra.push(json!({ "t": "design", "config": Value::Object(cfg) }));
             }
+            ra.push(json!({ "t": "bot", "cfg": self.bot_config(id) }));
         }
 
         ra.push(json!({ "t": "voice", "cfg": crate::voice::read(&self.layout) }));
@@ -330,6 +331,60 @@ impl AppState {
         let mut doc = store::read_object(&path)?;
         doc.insert("modules".into(), Value::Object(modules));
         store::write_json_atomic(&path, &Value::Object(doc))
+    }
+
+    /// Tat bat va so luong nhan vat ao cua mot thiet ke.
+    pub fn bot_config(&self, design_id: &str) -> crate::bot::BotCfg {
+        let doc = match store::read_object(&self.layout.config_file(design_id)) {
+            Ok(d) => d,
+            Err(_) => return crate::bot::BotCfg::default(),
+        };
+        match doc.get("bot") {
+            Some(v) => serde_json::from_value(v.clone()).unwrap_or_default(),
+            None => crate::bot::BotCfg::default(),
+        }
+    }
+
+    /// Gop mot patch vao cau hinh nhan vat ao roi phat xuong ngay.
+    pub fn set_bot_config(&self, design_id: &str, patch: Value) -> Result<(), AppError> {
+        let Value::Object(patch) = patch else {
+            return Err(AppError::BadRequest(
+                "cấu hình nhân vật ảo phải là một object".into(),
+            ));
+        };
+        let cu = self.bot_config(design_id);
+        let mut obj = match serde_json::to_value(cu) {
+            Ok(Value::Object(m)) => m,
+            _ => Map::new(),
+        };
+        for (k, v) in patch {
+            obj.insert(k, v);
+        }
+        // Doc lai qua BotCfg de so lon hay kieu la bi chan ngay o day, khong
+        // phai doi toi luc chay.
+        let moi: crate::bot::BotCfg =
+            serde_json::from_value(Value::Object(obj)).map_err(|e| {
+                AppError::BadRequest(format!("cấu hình nhân vật ảo không hợp lệ: {e}"))
+            })?;
+        let moi_val = serde_json::to_value(moi).unwrap_or(Value::Null);
+
+        let path = self.layout.config_file(design_id);
+        let mut doc = store::read_object(&path)?;
+        doc.insert("bot".into(), moi_val.clone());
+        store::write_json_atomic(&path, &Value::Object(doc))?;
+
+        if self.live().as_deref() == Some(design_id) {
+            self.broadcast(json!({ "t": "bot", "cfg": moi_val }));
+        }
+        Ok(())
+    }
+
+    /// Cau va ten cua nhan vat ao, lay tu design.json cua thiet ke.
+    pub fn crowd_cua(&self, design_id: &str) -> (Vec<String>, Vec<String>) {
+        match designs::read_manifest(&self.layout.design_manifest(design_id), design_id) {
+            Ok(m) => (m.crowd.lines, m.crowd.names),
+            Err(_) => (Vec::new(), Vec::new()),
+        }
     }
 
     /// Lua chon cua chinh thiet ke (khung doc / ngang...), khong thuoc module nao.

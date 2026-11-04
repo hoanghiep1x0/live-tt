@@ -120,6 +120,7 @@ export type RoomCommand =
   | { op: 'set-config'; moduleId: string; patch: Json }
   | { op: 'set-design'; designId: string }
   | { op: 'set-design-config'; patch: Json }
+  | { op: 'set-bot';           patch: Json }
   | { op: 'seed';       n: number }
   | { op: 'next-story' };
 
@@ -133,6 +134,11 @@ schema zod như module), truyền vào `StageProvider`; bảng xem tự dựng f
 backend lưu nó cạnh `modules` trong file cấu hình của thiết kế rồi phát xuống
 bằng tin `{ t: 'design', config }`. Áp nóng như mọi thứ khác: không tải lại
 trang.
+
+`set-bot` chỉnh nhân vật ảo: `{ enabled, count }`. Chỉ có thế — câu họ nói và tên họ mang
+là của thiết kế (`crowd` trong design.json, xem docs/04 §6), nên cùng một công tắc ở hai
+bối cảnh cho ra hai đám đông khác hẳn. Backend giữ đám đông ở đúng số đó bằng sự kiện mang
+cờ `virtual`, và phát xuống bằng tin `{ t: 'bot', cfg }`.
 
 Người, luật tự động và AI dùng chung whitelist này, và chung cổng `gateFor`.
 Mã cũ đã làm đúng ở `ops.ts` + `autopilot.ts`; chuyển sang nguyên tắc nguyên vẹn.

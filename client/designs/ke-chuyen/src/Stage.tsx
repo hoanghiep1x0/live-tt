@@ -326,10 +326,13 @@ export function Stage() {
             Giữ đúng những thứ phòng này thật sự làm được hôm nay; có module
             nhận lệnh gõ thì trả lại đúng danh sách của bản cũ.
 
-            Dòng sau là lời minh bạch, chuyển nguyên `.stage-honest` của bản cũ. */}
+            Dòng sau là lời minh bạch, chuyển nguyên `.stage-honest` của bản cũ,
+            kể cả cách nó chỉ nhắc "có nhân vật minh họa" khi đám đông ảo đang
+            bật — ghi lúc không có ai ảo là nói sai về chính phòng mình. */}
         <span>Thả tim · bình luận · tặng quà để cả phòng lên sàn nhảy</span>
         <span className="stage-honest">
-          Phòng kể chuyện &amp; xem video · có nhân vật minh họa · MC &amp; giọng đọc dùng AI
+          Phòng kể chuyện &amp; xem video{s.bot.enabled ? ' · có nhân vật minh họa' : ''} · MC &amp;
+          giọng đọc dùng AI
         </span>
         <Slot name="bottom-bar" />
       </footer>

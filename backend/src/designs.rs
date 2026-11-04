@@ -28,6 +28,16 @@ impl Default for Canvas {
     }
 }
 
+/// Nhan vat ao cua rieng boi canh nay. Xem `bot.rs`: noi dung thuoc ve thiet
+/// ke chu khong phai mot bo dung chung o backend.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct Crowd {
+    #[serde(default)]
+    pub names: Vec<String>,
+    #[serde(default)]
+    pub lines: Vec<String>,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DesignManifest {
     pub id: String,
@@ -55,6 +65,9 @@ pub struct DesignManifest {
     /// Cấu hình gợi ý cho bối cảnh này, nạp một lần lúc thiết kế chưa có gì.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub defaults: BTreeMap<String, Value>,
+    /// Cau va ten cua nhan vat ao trong phong nay.
+    #[serde(default)]
+    pub crowd: Crowd,
     #[serde(default = "entry_mac_dinh")]
     pub entry: String,
 }
@@ -180,6 +193,7 @@ pub fn scan(layout: &Layout, port: u16, live: Option<&str>) -> Vec<DesignInfo> {
                     version: mot_cham_khong(),
                     canvas: Canvas::default(),
                     slots: Vec::new(),
+                    crowd: Crowd::default(),
                     provides: Vec::new(),
                     recommends: Vec::new(),
                     seats: ghe_mac_dinh(),
