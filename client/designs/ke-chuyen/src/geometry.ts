@@ -21,8 +21,12 @@ export const PORTRAIT_EXTEND = 2.2;
 export const LOWER_TOP = SCREEN_BOTTOM_RATIO * STAGE_H;
 export const HALL_TOP = LOWER_TOP + 32;
 export const HALL_H = 172 - HALL_TOP;
-/** Đỉnh khung dọc và cột thống kê, ngay dưới dải tiêu đề. */
-export const OVERLAY_TOP = 14;
+/** Đỉnh khung dọc, ngay dưới dải tiêu đề. Đáy khung neo cố định trên hàng bồ
+ *  đoàn, nên khung cao thêm bằng cách kéo đỉnh lên — 4,2cqw ≈ 20px ở khung
+ *  rộng 480px. Nhãn "Nội dung do AI" nằm ở -3,6cqw phía trên đỉnh khung, vừa
+ *  lọt dưới dải trên (kết thúc quãng 5,9cqw); hạ số này thêm nữa là nhãn đè
+ *  lên dải trên. */
+export const OVERLAY_TOP = 9.8;
 /** Khung ngang nâng cao hơn mốc phần dưới một đoạn, cho cân đối. */
 export const LANDSCAPE_LIFT = 14.3;
 /** Khung ngang: cụm top / tiến độ / dải chữ nâng lên cùng khung. */
