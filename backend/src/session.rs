@@ -160,6 +160,10 @@ impl Session {
         }
     }
 
+    pub fn started_at(&self) -> i64 {
+        self.started_at
+    }
+
     pub fn design_id(&self) -> &str {
         &self.design_id
     }

@@ -204,6 +204,16 @@ impl AppState {
         self.broadcast(json!({ "t": "feed", "items": items }));
     }
 
+    /// Mốc mở phiên đang chạy. Rẻ hơn `session_view` nhiều — bộ nhân vật ảo gọi
+    /// mỗi nhịp chỉ để biết phiên có bị dựng lại hay không.
+    pub fn phien_bat_dau(&self) -> Option<i64> {
+        self.phien
+            .read()
+            .expect("khoá phiên hỏng")
+            .as_ref()
+            .map(Session::started_at)
+    }
+
     pub fn dat_nguoi_xem(&self, n: u64) {
         if let Some(p) = self.phien.write().expect("khoá phiên hỏng").as_mut() {
             p.dat_nguoi_xem(n);

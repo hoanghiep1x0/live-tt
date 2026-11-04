@@ -174,18 +174,22 @@ const NHIP_MS: u64 = 1_500;
 
 pub async fn chay(st: Arc<AppState>) {
     let mut dam = DamDong::new(st.seed_gia_lap() ^ 0x6d68);
-    let mut phong_cu: Option<String> = None;
+    // Nhớ cả phòng LẪN mốc mở phiên. Chỉ nhớ phòng là hỏng: người vận hành ngắt
+    // rồi phát lại cùng một phòng thì phiên mới trắng tinh, mà bộ này vẫn tưởng
+    // tám người của mình còn ngồi trong đó nên không cho ai vào nữa — ghế trống
+    // mà công tắc gạt kiểu gì cũng không ra người.
+    let mut phong_cu: Option<(String, i64)> = None;
     let mut dong_ho = tokio::time::interval(Duration::from_millis(NHIP_MS));
 
     loop {
         dong_ho.tick().await;
-        let Some(id) = st.live() else {
+        let (Some(id), Some(moc)) = (st.live(), st.phien_bat_dau()) else {
             phong_cu = None;
             dam.quen_het();
             continue;
         };
-        if phong_cu.as_deref() != Some(id.as_str()) {
-            phong_cu = Some(id.clone());
+        if phong_cu.as_ref().map(|(p, m)| (p.as_str(), *m)) != Some((id.as_str(), moc)) {
+            phong_cu = Some((id.clone(), moc));
             dam.quen_het();
         }
 
@@ -288,6 +292,20 @@ mod tests {
         let ev = d.buoc(1, &cau(), &ten).unwrap();
         assert_eq!(ev.who.name, "Bé Na");
         assert!(ev.who.user.starts_with("mh"));
+    }
+
+    #[test]
+    fn phat_lai_cung_mot_phong_thi_cung_phai_quen() {
+        // Phiên mới là ghế trống: nhớ lại người cũ thì không ai vào nữa.
+        let mut d = DamDong::new(6);
+        let c = cau();
+        for _ in 0..3 {
+            d.buoc(3, &c, &[]);
+        }
+        assert_eq!(d.so_nguoi(), 3);
+        d.quen_het();
+        let ev = d.buoc(3, &c, &[]).unwrap();
+        assert!(matches!(ev.what, Payload::Join), "phải cho người vào lại từ đầu");
     }
 
     #[test]
