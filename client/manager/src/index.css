@@ -1339,3 +1339,16 @@ main {
   height: 28px;
   flex: none;
 }
+
+/* Giọng mặc định trong dàn giọng */
+.la-mac-dinh {
+  color: var(--gold-text);
+  fill: color-mix(in srgb, var(--gold1) 60%, transparent);
+}
+.voice-row .input-xs {
+  width: 120px;
+  flex: none;
+}
+.voice-row select.input-xs {
+  width: 110px;
+}

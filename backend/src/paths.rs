@@ -149,6 +149,24 @@ pub fn valid_id(id: &str) -> bool {
     chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
+/// Nhãn do người dùng tự đặt: tên nhà cung cấp giọng, id nhân vật trong dàn.
+///
+/// Lỏng hơn `valid_id` ở một điểm: được bắt đầu bằng số, vì có nhà cung cấp tên
+/// thật là "9router". Những nhãn này không dùng làm tên thư mục nên không cần
+/// chặt như id module và thiết kế.
+pub fn valid_label(x: &str) -> bool {
+    let n = x.len();
+    if !(2..=32).contains(&n) {
+        return false;
+    }
+    let mut chars = x.chars();
+    match chars.next() {
+        Some(c) if c.is_ascii_lowercase() || c.is_ascii_digit() => {}
+        _ => return false,
+    }
+    chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -206,6 +224,22 @@ mod tests {
         for id in ["ke-chuyen", "hip-hop", "bar-3d", "tich-phuoc", "kieu-1"] {
             assert!(valid_id(id), "phải nhận: {id}");
         }
+    }
+
+    #[test]
+    fn nhan_nguoi_dat_duoc_bat_dau_bang_so() {
+        for x in ["9router", "vieneu", "eleven", "be-gai", "mc2"] {
+            assert!(valid_label(x), "phải nhận: {x}");
+        }
+        for x in ["", "a", "9Router", "9 router", "chín_router", "-abc"] {
+            assert!(!valid_label(x), "phải từ chối: {x}");
+        }
+    }
+
+    #[test]
+    fn id_thu_muc_van_phai_bat_dau_bang_chu() {
+        // Nhãn thì lỏng, nhưng id thiết kế và module vẫn chặt vì nó là tên thư mục.
+        assert!(!valid_id("9router"));
     }
 
     #[test]

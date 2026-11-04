@@ -39,12 +39,21 @@ export interface ProviderInfo {
   hasKey: boolean;
 }
 
-export interface VoiceCfg {
-  enabled: boolean;
+/** Một nhân vật trong dàn giọng. Một phiên có nhiều nhân vật, mỗi người một giọng. */
+export interface CastVoice {
+  id: string;
   provider: string;
   voice: string;
+  role: string;
+}
+
+export interface VoiceCfg {
+  enabled: boolean;
   speed: number;
   volume: number;
+  /** Id giọng dùng khi câu không nói rõ đọc bằng giọng nào. */
+  default: string;
+  cast: CastVoice[];
 }
 
 export class ApiError extends Error {

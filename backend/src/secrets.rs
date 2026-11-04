@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::paths::{valid_id, Layout};
+use crate::paths::{valid_label, Layout};
 use crate::store::{self, StoreError};
 
 /// Khoá dài hơn mức này là dán nhầm cả đoạn văn bản.
@@ -95,7 +95,7 @@ pub fn get(layout: &Layout, id: &str) -> Option<Provider> {
 }
 
 pub fn set(layout: &Layout, id: &str, than: &Value) -> Result<ProviderInfo, SecretError> {
-    if !valid_id(id) {
+    if !valid_label(id) {
         return Err(SecretError::Invalid(format!("id nhà cung cấp \"{id}\" sai định dạng")));
     }
     let moi: Provider = serde_json::from_value(than.clone())
@@ -264,6 +264,13 @@ mod tests {
     fn id_sai_dinh_dang_bi_tu_choi() {
         let (_d, l) = moi();
         assert!(set(&l, "Vie Neu", &json!({ "kind": "openai", "key": "x" })).is_err());
+    }
+
+    #[test]
+    fn ten_nha_bat_dau_bang_so_van_duoc() {
+        // "9router" là tên thật của một nhà cung cấp.
+        let (_d, l) = moi();
+        assert!(set(&l, "9router", &json!({ "kind": "openai", "key": "x" })).is_ok());
     }
 
     #[test]

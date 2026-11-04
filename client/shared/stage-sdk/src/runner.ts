@@ -62,7 +62,7 @@ export function useRunner(s: StageState): KetQuaChay {
       if (e.kind === 'say') {
         // Vừa đọc to vừa hiện chữ: người xem tắt tiếng vẫn theo được.
         setLoiMc({ text: e.text, at: bayGio() });
-        giong.current?.noi(e.text, e.priority ?? 'normal');
+        giong.current?.noi(e.text, e.priority ?? 'normal', e.voice ?? '');
       } else if (e.kind === 'sfx') {
         playSfx(e.sound, e.volume ?? 1);
       } else if (e.kind === 'overlay') {

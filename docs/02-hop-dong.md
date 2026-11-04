@@ -83,6 +83,9 @@ export type Priority = 'low' | 'normal' | 'high';
 Quy tắc:
 
 - `say` đi qua hàng chờ giọng đọc, `high` chen lên trước (ví dụ cảm ơn quà lớn).
+- `say` có `voice` là **id một nhân vật trong dàn giọng** (`database/voice.json`),
+  ví dụ `'be-gai'`. Không ghi thì dùng giọng mặc định. Module không biết và không
+  cần biết giọng đó là của nhà cung cấp nào.
 - `overlay` gắn vào **slot** mà thiết kế khai báo. Thiết kế không có slot đó thì effect bị bỏ, có ghi log, **không lỗi**.
 - `command` là cửa duy nhất để module tác động sang module khác hoặc sang phiên; đi qua cổng duyệt.
 

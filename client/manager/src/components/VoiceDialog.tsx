@@ -1,14 +1,68 @@
 import { useEffect, useState } from 'react';
-import { KeyRound, Mic, Play, Trash2 } from 'lucide-react';
+import { KeyRound, Mic, Play, Plus, Star, Trash2 } from 'lucide-react';
 import { api, ttsThu } from '../lib/api';
-import type { ProviderInfo, ProviderKind, VoiceCfg } from '../lib/api';
+import type { CastVoice, ProviderInfo, ProviderKind, VoiceCfg } from '../lib/api';
 import { Dialog, DialogBody, DialogClose, DialogTrigger } from './ui/dialog';
 import { Switch } from './ui/switch';
 
 const KIEU: Record<ProviderKind, string> = {
-  openai: 'Kiểu OpenAI (VieNeu, OpenAI, 9router)',
+  openai: 'Kiểu OpenAI (VieNeu, OpenAI, 9router…)',
   elevenlabs: 'ElevenLabs',
 };
+
+/** Mẫu điền sẵn cho những nhà hay dùng. Chọn một mẫu là điền hộ địa chỉ và
+ *  model; người dùng chỉ còn phải dán khoá. "Tự điền" để trống hết. */
+interface Mau {
+  ten: string;
+  id: string;
+  kind: ProviderKind;
+  baseUrl: string;
+  model: string;
+  goiY: string;
+}
+
+const MAU: readonly Mau[] = [
+  {
+    ten: 'Tự điền',
+    id: '',
+    kind: 'openai',
+    baseUrl: '',
+    model: '',
+    goiY: 'Điền tay theo tài liệu của nhà cung cấp.',
+  },
+  {
+    ten: '9router (chạy trên máy)',
+    id: '9router',
+    kind: 'openai',
+    baseUrl: 'http://localhost:20128/v1',
+    model: 'google-tts/vi',
+    goiY: 'Giọng nằm trong model, ví dụ google-tts/vi hoặc edge-tts/vi-VN-HoaiMyNeural.',
+  },
+  {
+    ten: 'VieNeu',
+    id: 'vieneu',
+    kind: 'openai',
+    baseUrl: 'https://api.vieneu.io/api/v1',
+    model: 'vieneu-v4',
+    goiY: 'Tên giọng là tên người, ví dụ Anh Khôi.',
+  },
+  {
+    ten: 'OpenAI',
+    id: 'openai',
+    kind: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini-tts',
+    goiY: 'Tên giọng ví dụ alloy, nova.',
+  },
+  {
+    ten: 'ElevenLabs',
+    id: 'eleven',
+    kind: 'elevenlabs',
+    baseUrl: '',
+    model: 'eleven_multilingual_v2',
+    goiY: 'Giọng là voice_id, chỉ chữ và số.',
+  },
+];
 
 const CAU_THU = 'Xin chào cả phòng, đây là giọng đọc thử.';
 
@@ -16,15 +70,12 @@ interface Props {
   onToast(text: string, loi?: boolean): void;
 }
 
-/** Khoá API và giọng đọc.
- *
- *  Khoá **không bao giờ** đi ngược ra: ô khoá luôn trống, nhập thì đặt khoá mới,
- *  để trống thì giữ khoá cũ. Trang này chỉ biết "nhà nào đã có khoá". */
 export function VoiceDialog({ onToast }: Props) {
   const [ds, setDs] = useState<ProviderInfo[]>([]);
   const [cfg, setCfg] = useState<VoiceCfg | null>(null);
-  const [moi, setMoi] = useState({ id: '', kind: 'openai' as ProviderKind, baseUrl: '', key: '', model: '' });
-  const [dangThu, setDangThu] = useState(false);
+  const [mau, setMau] = useState(0);
+  const [moi, setMoi] = useState({ id: '', kind: 'openai' as ProviderKind, baseUrl: '', model: '', key: '' });
+  const [dangThu, setDangThu] = useState('');
 
   const tai = (): void => {
     void (async () => {
@@ -39,10 +90,35 @@ export function VoiceDialog({ onToast }: Props) {
   };
   useEffect(tai, []);
 
+  const luuGiong = (c: VoiceCfg): void => {
+    setCfg(c);
+    void (async () => {
+      try {
+        const kq = await api.setVoice(c);
+        setCfg(kq.voice);
+      } catch (e) {
+        onToast(e instanceof Error ? e.message : 'không lưu được', true);
+      }
+    })();
+  };
+
+  const suaCast = (i: number, v: Partial<CastVoice>): void => {
+    if (cfg === null) return;
+    const cast = cfg.cast.map((x, j) => (j === i ? { ...x, ...v } : x));
+    setCfg({ ...cfg, cast });
+  };
+
+  const chonMau = (i: number): void => {
+    setMau(i);
+    const m = MAU[i];
+    if (m === undefined) return;
+    setMoi({ id: m.id, kind: m.kind, baseUrl: m.baseUrl, model: m.model, key: '' });
+  };
+
   const luuNha = (): void => {
     const id = moi.id.trim();
     if (id === '') {
-      onToast('Đặt một tên ngắn cho nhà cung cấp, ví dụ vieneu', true);
+      onToast('Đặt một tên ngắn cho nhà cung cấp, ví dụ 9router', true);
       return;
     }
     void (async () => {
@@ -62,25 +138,14 @@ export function VoiceDialog({ onToast }: Props) {
     })();
   };
 
-  const luuGiong = (c: VoiceCfg): void => {
-    setCfg(c);
-    void (async () => {
-      try {
-        await api.setVoice(c);
-      } catch (e) {
-        onToast(e instanceof Error ? e.message : 'không lưu được', true);
-      }
-    })();
-  };
-
-  const ngheThu = (): void => {
+  const ngheThu = (v: CastVoice): void => {
     if (cfg === null) return;
-    setDangThu(true);
+    setDangThu(v.id);
     void (async () => {
       try {
         const blob = await ttsThu({
-          provider: cfg.provider,
-          voice: cfg.voice,
+          provider: v.provider,
+          voice: v.voice,
           text: CAU_THU,
           speed: cfg.speed,
         });
@@ -89,14 +154,15 @@ export function VoiceDialog({ onToast }: Props) {
         a.volume = cfg.volume;
         a.onended = () => URL.revokeObjectURL(url);
         await a.play();
-        onToast('Đang phát thử giọng');
       } catch (e) {
         onToast(e instanceof Error ? e.message : 'không nghe thử được', true);
       } finally {
-        setDangThu(false);
+        setDangThu('');
       }
     })();
   };
+
+  const goiY = MAU[mau]?.goiY ?? '';
 
   return (
     <Dialog>
@@ -107,97 +173,172 @@ export function VoiceDialog({ onToast }: Props) {
         size="md"
         icon={<KeyRound size={15} />}
         title="Giọng đọc"
-        desc="Khoá API nằm ở máy chủ, không bao giờ gửi về trang này. Chưa cấu hình nhà cung cấp thì sân khấu dùng giọng máy của trình duyệt."
+        desc="Một phiên có nhiều nhân vật, mỗi nhân vật một giọng. Khoá API nằm ở máy chủ và không bao giờ gửi về trang này."
         foot={<DialogClose className="btn btn-gold">Xong</DialogClose>}
       >
         <div className="quick-grid">
           <section className="quick-sec">
             <div className="quick-head">
-              <span className="mod-icon">🎙️</span>
-              <b>Giọng đang dùng</b>
+              <span className="mod-icon">🎭</span>
+              <b>Dàn giọng</b>
               <Switch
                 checked={cfg?.enabled === true}
                 onCheckedChange={(on) => cfg !== null && luuGiong({ ...cfg, enabled: on })}
                 label="Bật đọc to"
               />
             </div>
+
             {cfg === null ? (
               <p className="hint">Đang đọc cài đặt…</p>
             ) : (
-              <div className="form">
-                <div className="form-row">
-                  <label htmlFor="v-nha">Nhà cung cấp</label>
-                  <select
-                    className="input"
-                    id="v-nha"
-                    value={cfg.provider}
-                    onChange={(e) => luuGiong({ ...cfg, provider: e.target.value })}
-                  >
-                    <option value="">Giọng máy của trình duyệt</option>
-                    {ds.map((p) => (
-                      <option key={p.id} value={p.id} disabled={!p.hasKey}>
-                        {p.id}
-                        {p.hasKey ? '' : ' — chưa có khoá'}
-                      </option>
+              <>
+                {cfg.cast.length === 0 ? (
+                  <p className="hint">
+                    Chưa có giọng nào — sân khấu đang dùng giọng máy của trình duyệt. Thêm một
+                    giọng ở dưới.
+                  </p>
+                ) : (
+                  <div className="voice-list">
+                    {cfg.cast.map((v, i) => (
+                      <div className="voice-row" key={v.id}>
+                        <button
+                          type="button"
+                          className="btn btn-icon btn-ghost"
+                          title={
+                            cfg.default === v.id
+                              ? 'Đang là giọng mặc định'
+                              : 'Đặt làm giọng mặc định'
+                          }
+                          onClick={() => luuGiong({ ...cfg, default: v.id })}
+                        >
+                          <Star
+                            size={14}
+                            className={cfg.default === v.id ? 'la-mac-dinh' : ''}
+                          />
+                        </button>
+                        <span className="v-name">
+                          <b>{v.id}</b>
+                          <small>{v.role === '' ? 'chưa ghi vai' : v.role}</small>
+                        </span>
+                        <select
+                          className="input input-xs"
+                          value={v.provider}
+                          aria-label={`Nhà cung cấp của ${v.id}`}
+                          onChange={(e) => {
+                            suaCast(i, { provider: e.target.value });
+                            luuGiong({
+                              ...cfg,
+                              cast: cfg.cast.map((x, j) =>
+                                j === i ? { ...x, provider: e.target.value } : x,
+                              ),
+                            });
+                          }}
+                        >
+                          <option value="">— chọn nhà —</option>
+                          {ds.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.id}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          className="input input-xs"
+                          value={v.voice}
+                          placeholder="giọng hoặc model"
+                          aria-label={`Giọng của ${v.id}`}
+                          onChange={(e) => suaCast(i, { voice: e.target.value })}
+                          onBlur={() => luuGiong(cfg)}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-icon"
+                          disabled={dangThu !== '' || v.provider === ''}
+                          title="Nghe thử giọng này"
+                          onClick={() => ngheThu(v)}
+                        >
+                          <Play size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-icon"
+                          title={`Xoá ${v.id}`}
+                          onClick={() =>
+                            luuGiong({ ...cfg, cast: cfg.cast.filter((_, j) => j !== i) })
+                          }
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     ))}
-                  </select>
-                </div>
-                <div className="form-row">
-                  <label htmlFor="v-giong">Tên giọng</label>
-                  <input
-                    className="input"
-                    id="v-giong"
-                    value={cfg.voice}
-                    placeholder="vd: Anh Khôi"
-                    onChange={(e) => setCfg({ ...cfg, voice: e.target.value })}
-                    onBlur={() => luuGiong(cfg)}
-                  />
+                  </div>
+                )}
+
+                <div className="form" style={{ marginTop: 12 }}>
+                  <div className="field">
+                    <input
+                      className="input"
+                      placeholder="id nhân vật, vd: mc, be-gai"
+                      aria-label="Id nhân vật mới"
+                      id="g-moi"
+                    />
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => {
+                        const o = document.getElementById('g-moi');
+                        const id = o instanceof HTMLInputElement ? o.value.trim() : '';
+                        if (id === '') {
+                          onToast('Đặt id cho nhân vật, ví dụ mc hoặc be-gai', true);
+                          return;
+                        }
+                        if (o instanceof HTMLInputElement) o.value = '';
+                        luuGiong({
+                          ...cfg,
+                          cast: [...cfg.cast, { id, provider: '', voice: '', role: '' }],
+                        });
+                      }}
+                    >
+                      <Plus size={15} />
+                      Thêm nhân vật
+                    </button>
+                  </div>
                   <span className="hint">
-                    Không có API liệt kê giọng; tên giọng lấy từ trang của nhà cung cấp.
-                    ElevenLabs thì điền voice_id.
+                    Module đọc câu nào bằng giọng nào thì ghi id này vào hiệu ứng
+                    <code> say</code>. Không ghi thì dùng giọng có dấu sao.
                   </span>
-                </div>
-                <div className="form-row">
-                  <label htmlFor="v-toc">Tốc độ</label>
-                  <div className="range">
-                    <input
-                      type="range"
-                      id="v-toc"
-                      min={0.5}
-                      max={2}
-                      step={0.05}
-                      value={cfg.speed}
-                      onChange={(e) => luuGiong({ ...cfg, speed: e.target.valueAsNumber })}
-                    />
-                    <output>{cfg.speed.toFixed(2)}</output>
+
+                  <div className="form-row">
+                    <label htmlFor="v-toc">Tốc độ</label>
+                    <div className="range">
+                      <input
+                        type="range"
+                        id="v-toc"
+                        min={0.5}
+                        max={2}
+                        step={0.05}
+                        value={cfg.speed}
+                        onChange={(e) => luuGiong({ ...cfg, speed: e.target.valueAsNumber })}
+                      />
+                      <output>{cfg.speed.toFixed(2)}</output>
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <label htmlFor="v-vol">Âm lượng</label>
+                    <div className="range">
+                      <input
+                        type="range"
+                        id="v-vol"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={cfg.volume}
+                        onChange={(e) => luuGiong({ ...cfg, volume: e.target.valueAsNumber })}
+                      />
+                      <output>{Math.round(cfg.volume * 100)}%</output>
+                    </div>
                   </div>
                 </div>
-                <div className="form-row">
-                  <label htmlFor="v-vol">Âm lượng</label>
-                  <div className="range">
-                    <input
-                      type="range"
-                      id="v-vol"
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      value={cfg.volume}
-                      onChange={(e) => luuGiong({ ...cfg, volume: e.target.valueAsNumber })}
-                    />
-                    <output>{Math.round(cfg.volume * 100)}%</output>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={dangThu || cfg.provider === ''}
-                  onClick={ngheThu}
-                  title={cfg.provider === '' ? 'Chọn nhà cung cấp trước' : 'Nghe thử một câu'}
-                >
-                  <Play size={15} />
-                  Nghe thử
-                </button>
-              </div>
+              </>
             )}
           </section>
 
@@ -208,7 +349,7 @@ export function VoiceDialog({ onToast }: Props) {
             </div>
 
             {ds.length === 0 ? (
-              <p className="hint">Chưa có nhà nào. Thêm một nhà ở dưới.</p>
+              <p className="hint">Chưa có nhà nào. Chọn một mẫu ở dưới rồi dán khoá.</p>
             ) : (
               <div className="voice-list">
                 {ds.map((p) => (
@@ -246,12 +387,28 @@ export function VoiceDialog({ onToast }: Props) {
 
             <div className="form" style={{ marginTop: 14 }}>
               <div className="form-row">
+                <label htmlFor="n-mau">Mẫu</label>
+                <select
+                  className="input"
+                  id="n-mau"
+                  value={mau}
+                  onChange={(e) => chonMau(Number(e.target.value))}
+                >
+                  {MAU.map((m, i) => (
+                    <option key={m.ten} value={i}>
+                      {m.ten}
+                    </option>
+                  ))}
+                </select>
+                <span className="hint">{goiY}</span>
+              </div>
+              <div className="form-row">
                 <label htmlFor="n-id">Tên ngắn</label>
                 <input
                   className="input"
                   id="n-id"
                   value={moi.id}
-                  placeholder="vieneu"
+                  placeholder="9router"
                   onChange={(e) => setMoi({ ...moi, id: e.target.value })}
                 />
               </div>
@@ -277,7 +434,7 @@ export function VoiceDialog({ onToast }: Props) {
                     className="input"
                     id="n-url"
                     value={moi.baseUrl}
-                    placeholder="https://api.vieneu.io/api/v1"
+                    placeholder="http://localhost:20128/v1"
                     onChange={(e) => setMoi({ ...moi, baseUrl: e.target.value })}
                   />
                   <span className="hint">
@@ -286,14 +443,18 @@ export function VoiceDialog({ onToast }: Props) {
                 </div>
               ) : null}
               <div className="form-row">
-                <label htmlFor="n-model">Model (tuỳ chọn)</label>
+                <label htmlFor="n-model">Model mặc định</label>
                 <input
                   className="input"
                   id="n-model"
                   value={moi.model}
-                  placeholder="vieneu-v4"
+                  placeholder="google-tts/vi"
                   onChange={(e) => setMoi({ ...moi, model: e.target.value })}
                 />
+                <span className="hint">
+                  Dùng khi giọng của nhân vật để trống. Giọng có dấu gạch chéo thì chính nó là
+                  model.
+                </span>
               </div>
               <div className="form-row">
                 <label htmlFor="n-key">Khoá API</label>
@@ -306,7 +467,7 @@ export function VoiceDialog({ onToast }: Props) {
                   autoComplete="off"
                   onChange={(e) => setMoi({ ...moi, key: e.target.value })}
                 />
-                <span className="hint">Khoá được lưu ở máy chủ và không hiện lại ở đây.</span>
+                <span className="hint">Khoá lưu ở máy chủ và không hiện lại ở đây.</span>
               </div>
               <button type="button" className="btn btn-gold" onClick={luuNha}>
                 Lưu nhà cung cấp

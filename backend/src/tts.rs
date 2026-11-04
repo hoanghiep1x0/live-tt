@@ -23,11 +23,21 @@ const TIMEOUT: Duration = Duration::from_secs(60);
 
 const ELEVENLABS_BASE: &str = "https://api.elevenlabs.io/v1";
 
-#[derive(Debug, Deserialize)]
+/// Hai cách gọi, cùng một cửa:
+///
+/// - Sân khấu gửi `voiceId` — id một giọng trong dàn, backend tự tra ra nhà
+///   cung cấp và tên giọng. Sân khấu không cần biết dàn giọng được cấu hình sao.
+/// - Trang quản lý gửi thẳng `provider` + `voice`, để nghe thử một giọng **chưa
+///   lưu** vào dàn.
+#[derive(Debug, Default, Deserialize)]
 pub struct YeuCau {
-    pub provider: String,
-    pub voice: String,
     pub text: String,
+    #[serde(default, rename = "voiceId")]
+    pub voice_id: Option<String>,
+    #[serde(default)]
+    pub provider: Option<String>,
+    #[serde(default)]
+    pub voice: Option<String>,
     #[serde(default)]
     pub speed: Option<f32>,
 }
@@ -41,7 +51,14 @@ pub enum TtsError {
 }
 
 fn ten_hop_le(x: &str) -> bool {
-    !x.is_empty() && x.chars().count() <= 80 && !x.chars().any(char::is_control)
+    x.chars().count() <= 80 && !x.chars().any(char::is_control)
+}
+
+/// Có nhà cung cấp đặt giọng vào `model` chứ không có trường `voice` riêng —
+/// 9router là một. Quy ước giữ của bản cũ: tên giọng có dấu `/` thì chính nó là
+/// model, ví dụ `google-tts/vi` hay `edge-tts/vi-VN-HoaiMyNeural`.
+pub fn giong_la_model(voice: &str) -> bool {
+    voice.contains('/')
 }
 
 /// Dựng lời gọi cho một nhà cung cấp. Tách riêng để test được không cần mạng.
@@ -59,21 +76,36 @@ pub fn dung_goi(
     let speed = lam_tron(speed);
     match kind {
         ProviderKind::Openai => {
-            let b = if base.is_empty() { return Err(TtsError::Invalid("nhà cung cấp chưa có địa chỉ".into())) } else { base };
+            let b = if base.is_empty() {
+                return Err(TtsError::Invalid("nhà cung cấp chưa có địa chỉ".into()));
+            } else {
+                base
+            };
             let mut body = json!({
                 "input": text,
-                "voice": voice,
                 "response_format": "mp3",
                 "speed": speed,
             });
-            if !model.trim().is_empty() {
-                body["model"] = json!(model.trim());
+
+            // Giọng nằm trong model thì nó thay model đã cấu hình, và không gửi
+            // trường `voice` nữa — nhà cung cấp kiểu này không có trường đó.
+            let model_that = if giong_la_model(voice) { voice } else { model.trim() };
+            if !model_that.is_empty() {
+                body["model"] = json!(model_that);
+            }
+            if !voice.is_empty() && !giong_la_model(voice) {
+                body["voice"] = json!(voice);
+            }
+            if model_that.is_empty() && voice.is_empty() {
+                return Err(TtsError::Invalid(
+                    "chưa biết đọc bằng giọng nào: điền tên giọng, hoặc điền model cho nhà cung cấp".into(),
+                ));
             }
             Ok((format!("{b}/audio/speech"), "Authorization", String::new(), body))
         }
         ProviderKind::Elevenlabs => {
             // Giọng của ElevenLabs là voice_id, không phải tên người.
-            if !voice.chars().all(|c| c.is_ascii_alphanumeric()) {
+            if voice.is_empty() || !voice.chars().all(|c| c.is_ascii_alphanumeric()) {
                 return Err(TtsError::Invalid(
                     "ElevenLabs: giọng phải là voice_id (chỉ chữ và số)".into(),
                 ));
@@ -114,21 +146,34 @@ pub fn sinh(layout: &Layout, req: &YeuCau) -> Result<Vec<u8>, TtsError> {
     if text.is_empty() {
         return Err(TtsError::Invalid("không có câu nào để đọc".into()));
     }
-    if !ten_hop_le(&req.voice) {
+
+    // Gửi `voiceId` thì tra dàn giọng; gửi thẳng provider/voice thì dùng luôn.
+    let (nha, giong) = match (&req.provider, &req.voice) {
+        (Some(p), Some(v)) => (p.clone(), v.clone()),
+        _ => {
+            let cfg = crate::voice::read(layout);
+            let id = req.voice_id.clone().unwrap_or_default();
+            let Some(v) = cfg.tim(&id) else {
+                return Err(TtsError::Invalid(
+                    "dàn giọng còn trống — thêm một giọng trong trang quản lý".into(),
+                ));
+            };
+            (v.provider.clone(), v.voice.clone())
+        }
+    };
+
+    if !ten_hop_le(&giong) {
         return Err(TtsError::Invalid("tên giọng sai định dạng".into()));
     }
+    if nha.is_empty() {
+        return Err(TtsError::Invalid("giọng này chưa chọn nhà cung cấp".into()));
+    }
 
-    let Some(p) = secrets::get(layout, &req.provider) else {
-        return Err(TtsError::Invalid(format!(
-            "chưa cấu hình nhà cung cấp \"{}\"",
-            req.provider
-        )));
+    let Some(p) = secrets::get(layout, &nha) else {
+        return Err(TtsError::Invalid(format!("chưa cấu hình nhà cung cấp \"{nha}\"")));
     };
     if p.key.is_empty() {
-        return Err(TtsError::Invalid(format!(
-            "nhà cung cấp \"{}\" chưa có khoá API",
-            req.provider
-        )));
+        return Err(TtsError::Invalid(format!("nhà cung cấp \"{nha}\" chưa có khoá API")));
     }
 
     let speed = req.speed.unwrap_or(1.0).clamp(0.5, 2.0);
@@ -140,8 +185,7 @@ pub fn sinh(layout: &Layout, req: &YeuCau) -> Result<Vec<u8>, TtsError> {
         })?
     };
 
-    let (url, ten_header, _, body) =
-        dung_goi(p.kind, &base, &req.voice, &p.model, &text, speed)?;
+    let (url, ten_header, _, body) = dung_goi(p.kind, &base, &giong, &p.model, &text, speed)?;
     let gia_tri_header = match p.kind {
         ProviderKind::Openai => format!("Bearer {}", p.key),
         ProviderKind::Elevenlabs => p.key.clone(),
@@ -215,6 +259,54 @@ mod tests {
     }
 
     #[test]
+    fn giong_nam_trong_model_thi_khong_gui_truong_voice() {
+        // Đúng như curl của 9router: chỉ có model và input.
+        let (url, _, _, body) =
+            dung_goi(ProviderKind::Openai, "http://localhost:20128/v1", "google-tts/en", "", "Hello", 1.0)
+                .unwrap();
+        assert_eq!(url, "http://localhost:20128/v1/audio/speech");
+        assert_eq!(body["model"], json!("google-tts/en"));
+        assert!(body.get("voice").is_none(), "nhà kiểu này không có trường voice");
+        assert_eq!(body["input"], json!("Hello"));
+    }
+
+    #[test]
+    fn giong_trong_model_thay_cho_model_da_cau_hinh() {
+        let (_, _, _, body) = dung_goi(
+            ProviderKind::Openai,
+            "http://localhost:20128/v1",
+            "edge-tts/vi-VN-HoaiMyNeural",
+            "google-tts/vi",
+            "x",
+            1.0,
+        )
+        .unwrap();
+        assert_eq!(body["model"], json!("edge-tts/vi-VN-HoaiMyNeural"));
+    }
+
+    #[test]
+    fn de_trong_giong_thi_dung_model_da_cau_hinh() {
+        let (_, _, _, body) =
+            dung_goi(ProviderKind::Openai, "https://a.b/v1", "", "google-tts/vi", "x", 1.0).unwrap();
+        assert_eq!(body["model"], json!("google-tts/vi"));
+        assert!(body.get("voice").is_none());
+    }
+
+    #[test]
+    fn khong_co_giong_ma_cung_khong_co_model_thi_bao_ro() {
+        let kq = dung_goi(ProviderKind::Openai, "https://a.b/v1", "", "", "x", 1.0);
+        match kq {
+            Err(TtsError::Invalid(m)) => assert!(m.contains("giọng nào"), "{m}"),
+            x => panic!("phải nói rõ thiếu gì, nhận {x:?}"),
+        }
+    }
+
+    #[test]
+    fn elevenlabs_khong_cho_de_trong_giong() {
+        assert!(dung_goi(ProviderKind::Elevenlabs, "", "", "m", "x", 1.0).is_err());
+    }
+
+    #[test]
     fn openai_thieu_dia_chi_thi_bao_ngay() {
         let kq = dung_goi(ProviderKind::Openai, "", "An", "", "x", 1.0);
         assert!(matches!(kq, Err(TtsError::Invalid(_))));
@@ -262,7 +354,7 @@ mod tests {
     #[test]
     fn ten_giong_phai_sach() {
         assert!(ten_hop_le("Anh Khôi"));
-        assert!(!ten_hop_le(""));
+        assert!(ten_hop_le(""), "để trống được, vì có nhà đặt giọng trong model");
         assert!(!ten_hop_le("Anh\nKhôi"));
         assert!(!ten_hop_le(&"x".repeat(81)));
     }
@@ -274,10 +366,10 @@ mod tests {
         let kq = sinh(
             &l,
             &YeuCau {
-                provider: "vieneu".into(),
-                voice: "An".into(),
+                provider: Some("vieneu".into()),
+                voice: Some("An".into()),
                 text: "chào".into(),
-                speed: None,
+                ..YeuCau::default()
             },
         );
         match kq {
@@ -293,10 +385,10 @@ mod tests {
         let kq = sinh(
             &l,
             &YeuCau {
-                provider: "vieneu".into(),
-                voice: "An".into(),
+                provider: Some("vieneu".into()),
+                voice: Some("An".into()),
                 text: "   ".into(),
-                speed: None,
+                ..YeuCau::default()
             },
         );
         assert!(matches!(kq, Err(TtsError::Invalid(_))));

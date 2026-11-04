@@ -126,7 +126,7 @@ database/
 │     ├─ config.json              cấu hình mọi module cho thiết kế này
 │     ├─ settings.json            tên và link Studio do người vận hành đặt
 │     └─ session.json             bản chụp phiên, để mở lại không mất
-├─ voice.json                     không commit — cài đặt giọng, KHÔNG có bí mật
+├─ voice.json                     không commit — dàn giọng, KHÔNG có bí mật
 └─ secrets.json                   không commit — khoá API, chỉ backend đọc
 ```
 
@@ -164,7 +164,7 @@ Mọi khoá nằm ở `database/secrets.json`, **chỉ backend đọc**. Client 
 | `GET /api/secrets` | Trả **trạng thái**: nhà nào đã có khoá. Không bao giờ trả giá trị. |
 | `PUT /api/secrets/<provider>` | Đặt khoá. Khoá rỗng nghĩa là giữ khoá cũ. |
 | `DELETE /api/secrets/<provider>` | Xoá nhà cung cấp |
-| `GET` / `PUT /api/voice` | Cài đặt giọng: bật/tắt, nhà nào, giọng nào, nhanh chậm |
+| `GET` / `PUT /api/voice` | Dàn giọng: danh sách nhân vật, giọng mặc định, nhanh chậm |
 | `POST /api/tts` | Gọi hộ nhà cung cấp, trả bytes mp3 (trang quản lý dùng để nghe thử) |
 | `POST /api/ai/tick` | Backend gọi Claude, trả `RoomCommand[]` đã lọc — **chưa làm** |
 
@@ -172,21 +172,53 @@ Mọi khoá nằm ở `database/secrets.json`, **chỉ backend đọc**. Client 
 
 | Route | Việc |
 |---|---|
-| `GET /s/voice` | Cài đặt giọng, để sân khấu biết đọc bằng gì |
-| `POST /s/tts` | Sinh giọng cho một câu |
+| `GET /s/voice` | Dàn giọng, để sân khấu biết đọc bằng gì |
+| `POST /s/tts` | Sinh giọng cho một câu: `{ text, voiceId, speed? }` |
 
 Hai route này **không đòi token**, vì sân khấu chạy trong OBS và không có chỗ nào
 giữ token — giống `/d/*` và `/a/*`. Chúng vẫn đi qua lớp chặn `Host` và `Origin`,
 nên một trang web ngoài không gọi vào được.
 
-### Giọng đọc
+### Dàn giọng — mỗi nhân vật một giọng
 
-Hai kiểu giao thức, giữ nguyên của bản cũ để dùng lại được khoá đã có:
+Một phiên có nhiều nhân vật: MC dẫn chuyện, bé gái, cậu bé, người chào khách.
+Nên cài đặt giọng là một **danh sách**, không phải một giọng duy nhất:
+
+```jsonc
+// database/voice.json — không commit
+{
+  "enabled": true, "speed": 1, "volume": 1,
+  "default": "mc",
+  "cast": [
+    { "id": "mc",     "provider": "9router", "voice": "", "role": "MC dẫn chuyện" },
+    { "id": "be-gai", "provider": "9router", "voice": "edge-tts/vi-VN-HoaiMyNeural", "role": "bé gái" }
+  ]
+}
+```
+
+Module nói câu nào bằng giọng nào thì ghi id vào hiệu ứng:
+`{ kind: 'say', text: '…', voice: 'be-gai' }`. Không ghi thì dùng `default`.
+
+Sân khấu **chỉ gửi id**: `POST /s/tts { text, voiceId }`. Việc tra ra nhà cung
+cấp nào, giọng nào, khoá nào là của backend — sân khấu không cần biết dàn giọng
+được cấu hình ra sao, và đổi dàn giọng không phải build lại thiết kế.
+
+Id nhà cung cấp và id nhân vật được **bắt đầu bằng số** (lỏng hơn id module và
+thiết kế), vì có nhà cung cấp tên thật là `9router`.
+
+### Hai kiểu giao thức
+
+Giữ nguyên của bản cũ để dùng lại được khoá đã có:
 
 | Kiểu | Lời gọi | Khoá ở đâu |
 |---|---|---|
 | `openai` (VieNeu, OpenAI, 9router) | `POST {base}/audio/speech`, body `{input, voice, response_format:"mp3", speed, model?}` | `Authorization: Bearer` |
 | `elevenlabs` | `POST /text-to-speech/{voice_id}?output_format=mp3_44100_128` | `xi-api-key` |
+
+Có nhà đặt giọng vào `model` chứ không có trường `voice` riêng — 9router là một.
+Quy ước giữ của bản cũ: **tên giọng có dấu `/` thì chính nó là model**, ví dụ
+`google-tts/vi`, và khi đó không gửi trường `voice` nữa. Để trống tên giọng thì
+dùng model mặc định đã khai ở nhà cung cấp.
 
 Giới hạn: câu cắt ở 400 ký tự, audio tối đa 8 MiB, chờ tối đa 60 giây, không đi
 theo chuyển hướng. Địa chỉ nhà cung cấp phải là `https://`, trừ khi nó chạy ngay

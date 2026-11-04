@@ -75,21 +75,29 @@ export function playSfx(kind: SfxName, volume = 1): void {
 
 // ---- Giọng đọc ----
 
-export interface VoiceCfg {
-  enabled: boolean;
-  /** Rỗng nghĩa là dùng giọng máy của trình duyệt. */
+/** Một nhân vật trong dàn giọng. Một phiên có nhiều nhân vật, mỗi người một giọng. */
+export interface CastVoice {
+  id: string;
   provider: string;
   voice: string;
+  role: string;
+}
+
+export interface VoiceCfg {
+  enabled: boolean;
   speed: number;
   volume: number;
+  /** Id giọng dùng khi câu không nói rõ đọc bằng giọng nào. */
+  default: string;
+  cast: CastVoice[];
 }
 
 export const VOICE_MAC_DINH: VoiceCfg = {
   enabled: true,
-  provider: '',
-  voice: '',
   speed: 1,
   volume: 1,
+  default: '',
+  cast: [],
 };
 
 /** Dài hơn thì nhà cung cấp cắt, mà đọc xong khán giả cũng quên mất chuyện gì. */
@@ -100,6 +108,8 @@ const MAX_HANG = 4;
 interface Cho {
   text: string;
   priority: Priority;
+  /** Id giọng trong dàn. Rỗng thì backend dùng giọng mặc định. */
+  voiceId: string;
 }
 
 /** Bỏ emoji trước khi đưa cho máy đọc, nếu không nó đọc luôn cả tên emoji. */
@@ -125,16 +135,16 @@ export class HangGiong {
     if (!c.enabled) this.dung();
   }
 
-  noi(text: string, priority: Priority = 'normal'): void {
+  noi(text: string, priority: Priority = 'normal', voiceId = ''): void {
     const t = chuanHoa(text);
     if (t === '' || !this.cfg.enabled) return;
 
     if (priority === 'high') {
       // Câu quan trọng chen lên trước, nhưng không cắt ngang câu đang đọc —
       // cắt giữa chừng nghe như máy hỏng.
-      this.hang.unshift({ text: t, priority });
+      this.hang.unshift({ text: t, priority, voiceId });
     } else {
-      this.hang.push({ text: t, priority });
+      this.hang.push({ text: t, priority, voiceId });
     }
     while (this.hang.length > MAX_HANG) {
       // Bỏ câu thường cũ nhất; câu `high` được giữ.
@@ -168,17 +178,17 @@ export class HangGiong {
       while (this.hang.length > 0 && !this.dungLai && this.cfg.enabled) {
         const c = this.hang.shift();
         if (c === undefined) break;
-        await this.doc(c.text);
+        await this.doc(c.text, c.voiceId);
       }
     } finally {
       this.dangChay = false;
     }
   }
 
-  private async doc(text: string): Promise<void> {
-    if (this.cfg.provider !== '' && this.cfg.voice !== '') {
+  private async doc(text: string, voiceId: string): Promise<void> {
+    if (this.cfg.cast.length > 0) {
       try {
-        await this.docQuaApi(text);
+        await this.docQuaApi(text, voiceId);
         return;
       } catch (e) {
         // Nhà cung cấp hỏng thì vẫn phải đọc được, chứ không im bặt giữa live.
@@ -188,16 +198,13 @@ export class HangGiong {
     await this.docBangMay(text);
   }
 
-  private async docQuaApi(text: string): Promise<void> {
+  /** Chỉ gửi id giọng: việc tra ra nhà cung cấp nào, giọng nào là của backend.
+   *  Sân khấu không cần biết dàn giọng được cấu hình ra sao. */
+  private async docQuaApi(text: string, voiceId: string): Promise<void> {
     const res = await fetch('/s/tts', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        provider: this.cfg.provider,
-        voice: this.cfg.voice,
-        text,
-        speed: this.cfg.speed,
-      }),
+      body: JSON.stringify({ text, voiceId, speed: this.cfg.speed }),
     });
     if (!res.ok) {
       const j: unknown = await res.json().catch(() => null);
