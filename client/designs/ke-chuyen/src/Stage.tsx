@@ -15,7 +15,7 @@ import type { Huong } from './geometry';
 import { GHE_MAC_DINH, hallContentH, hallRowsFor } from './seats';
 import { dungGhe, HangGhe, TenKhan } from './parts/HangGhe';
 import { LoiDi } from './parts/LoiDi';
-import { AnUi, canhAnUi } from './parts/AnUi';
+import { AnUi, canhAnUi, khachXinOm } from './parts/AnUi';
 
 /** Lựa chọn của riêng phòng này, hiện thành thẻ "Khung phòng" ở bảng xem.
  *
@@ -85,6 +85,8 @@ export function Stage() {
   const loiMc = useLoiMc();
   /** Module sàn nhảy xin sáng slot `floor` suốt màn nhảy. */
   const sanSang = useSlotSang('floor');
+  /** Có tính năng nào đang chạy chữ ở dải trên hàng ghế không. */
+  const tickerSang = useSlotSang('ticker');
   const gio = useDongHo();
   // Đồng hồ cho lượt người ra vào ở lối đi: chỉ cần đủ mịn để bắt đầu và kết
   // thúc một lượt, phần chạy là của CSS.
@@ -92,7 +94,8 @@ export function Stage() {
   // Lượt an ủi đang diễn ra. Thuần theo đồng hồ nên hai cửa sổ xem cùng phòng
   // thấy cùng một lượt.
   const batAnUi = useThietKe()['anUi'] !== false;
-  const canh = batAnUi ? canhAnUi(nhip) : null;
+  // Khách gõ "ôm" thì chính họ chạy lên, và lượt đó đè lên lượt định kỳ.
+  const canh = batAnUi ? canhAnUi(nhip, khachXinOm(s.session.recentFeed, nhip)) : null;
   const beDuocOm = canh !== null && canh.nhanVat === 'be';
   // Khung dọc là mặc định; người vận hành gạt công tắc ở bảng xem thì đổi ngay,
   // không tải lại trang.
@@ -171,17 +174,25 @@ export function Stage() {
       {/* Dải chữ chạy: bồ đoàn bên trái, chữ chạy ở phần còn lại. Bồ đoàn là
           đồ đạc của phòng nên thiết kế tự vẽ — ai đang ngồi trên đó thì đọc từ
           phiên, y như hàng ghế. */}
-      <div className="stage-heading">
-        <div className={nhat === undefined ? 'stage-honor' : 'stage-honor has-top'} title={tenNhat}>
-          {nhat === undefined ? null : (
-            <span className="stage-honor-avatar" key={nhat.user}>
-              {nhat.avatar === undefined ? <i>?</i> : <img src={nhat.avatar} alt="" />}
-            </span>
-          )}
-          <img className="stage-lotus" src={asset(HOA_SEN)} alt="" />
+      {/* Dải chữ chạy chỉ hiện khi có gì để nói: có người đứng đầu bảng, hoặc
+          một tính năng đang chạy chữ ở slot `ticker`. Phòng im mà vẫn treo một
+          dải trống kèm đài sen thì nó chỉ là vết bẩn giữa màn. */}
+      {nhat === undefined && !tickerSang ? null : (
+        <div className="stage-heading">
+          <div
+            className={nhat === undefined ? 'stage-honor' : 'stage-honor has-top'}
+            title={tenNhat}
+          >
+            {nhat === undefined ? null : (
+              <span className="stage-honor-avatar" key={nhat.user}>
+                {nhat.avatar === undefined ? <i>?</i> : <img src={nhat.avatar} alt="" />}
+              </span>
+            )}
+            <img className="stage-lotus" src={asset(HOA_SEN)} alt="" />
+          </div>
+          <Slot name="ticker" />
         </div>
-        <Slot name="ticker" />
-      </div>
+      )}
 
       <section className="stage-tops">
         <Slot name="tops" />

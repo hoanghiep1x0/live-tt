@@ -26,7 +26,7 @@ import type { ChoNgoi } from './ghe';
 import { CHAY_MS, CHO_NHAN_VAT, CHO_OM, chonNguoiOm, OM_MS } from './an-ui';
 import type { Canh } from './an-ui';
 
-export { canhAnUi, chonNguoiOm, TONG_MS } from './an-ui';
+export { canhAnUi, chonNguoiOm, khachXinOm, TONG_MS, xinOm } from './an-ui';
 export type { Canh, NhanVat } from './an-ui';
 
 function NguoiOm({
@@ -80,7 +80,7 @@ export function AnUi({
 }) {
   if (canh === null) return null;
   const cho = CHO_OM[canh.nhanVat];
-  const nguoi = chonNguoiOm(ngoi, ghe, canh.k, cho.length);
+  const nguoi = chonNguoiOm(ngoi, ghe, canh.k, cho.length, canh.nguoiXin);
   if (nguoi.length === 0) return null;
   const tim = CHO_NHAN_VAT[canh.nhanVat];
   const dangOm = canh.t >= CHAY_MS && canh.t < CHAY_MS + OM_MS;

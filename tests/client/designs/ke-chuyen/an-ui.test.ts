@@ -7,7 +7,14 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Seat } from '@live/contracts';
-import { canhAnUi, chonNguoiOm, TONG_MS } from '../../../../client/designs/ke-chuyen/src/parts/an-ui';
+import {
+  canhAnUi,
+  chonNguoiOm,
+  khachXinOm,
+  TONG_MS,
+  xinOm,
+} from '../../../../client/designs/ke-chuyen/src/parts/an-ui';
+import type { FeedItem } from '@live/contracts';
 import type { ChoNgoi } from '../../../../client/designs/ke-chuyen/src/parts/ghe';
 
 const CHU_KY_MS = 60_000;
@@ -78,5 +85,55 @@ describe('chọn người ôm', () => {
       expect(typeof n.x).toBe('number');
       expect(typeof n.y).toBe('number');
     }
+  });
+});
+
+describe('khách gõ xin ôm', () => {
+  function chu(text: string, over: Partial<FeedItem> = {}): FeedItem {
+    return { id: 1, at: 1_000, kind: 'comment', name: 'Lan', text, user: 'lan', ...over };
+  }
+
+  it('nhận ra lời xin, không bắt nhầm chữ khác', () => {
+    expect(xinOm('ôm')).toBe(true);
+    expect(xinOm('cho mình ÔM bé với')).toBe(true);
+    expect(xinOm('an ủi bé đi')).toBe(true);
+    expect(xinOm('thương bé quá')).toBe(true);
+    expect(xinOm('hôm nay trời đẹp'), '"hôm" không phải "ôm"').toBe(false);
+    expect(xinOm('nghe hay quá')).toBe(false);
+  });
+
+  it('chỉ nhận lời của khách thật, không nhận của nhân vật ảo', () => {
+    expect(khachXinOm([chu('ôm')], 2_000)?.user).toBe('lan');
+    expect(khachXinOm([chu('ôm', { virtual: true })], 2_000)).toBeNull();
+  });
+
+  it('lời cũ quá thì thôi', () => {
+    expect(khachXinOm([chu('ôm')], 1_000 + TONG_MS + 1)).toBeNull();
+  });
+
+  it('lấy lời mới nhất', () => {
+    const ds = [chu('ôm', { id: 1, at: 1_000, user: 'a', name: 'A' }), chu('ôm', { id: 2, at: 2_000, user: 'b', name: 'B' })];
+    expect(khachXinOm(ds, 2_500)?.user).toBe('b');
+  });
+
+  it('lượt của khách đè lên lượt định kỳ, và nhắm vào bé', () => {
+    const c = canhAnUi(50_000, { at: 49_000, user: 'lan' });
+    expect(c?.nguoiXin).toBe('lan');
+    expect(c?.nhanVat).toBe('be');
+    expect(c?.t).toBe(1_000);
+  });
+
+  it('chính người xin phải là người chạy lên', () => {
+    const g = ghe(8);
+    const s = ngoi(8);
+    const ra = chonNguoiOm(s, g, 3, 2, 'u5');
+    expect(ra[0]?.user, 'người xin đứng đầu').toBe('u5');
+    expect(ra).toHaveLength(2);
+    expect(new Set(ra.map((x: { user: string }) => x.user)).size).toBe(2);
+  });
+
+  it('người xin đã rời ghế thì lượt vẫn chạy với người khác', () => {
+    const ra = chonNguoiOm(ngoi(4), ghe(8), 3, 2, 'khong-co-ai');
+    expect(ra).toHaveLength(2);
   });
 });

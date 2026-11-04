@@ -137,11 +137,28 @@ export function HangGhe({
           </div>
         );
       })}
-      {Array.from({ length: rows }, (_, r) => (
-        <span key={`nhan-${r}`} className="row-label" style={{ top: `${seatLayout(r, 0).y}cqw` }}>
-          {rowName(r)}
-        </span>
-      ))}
+      {/* Chữ hàng ghế bám theo GHẾ ĐẦU HÀNG, lùi ra ngoài một chút — hàng ghế
+          hình quạt nên mỗi hàng lùi một kiểu, xếp thành một đường cong theo mép
+          rạp. Bản cũ đặt đúng vậy (`first.x - 4,2 - min(r,5) × 0,2`); dồn hết
+          vào một cột sát mép trái thì nó thành một dãy chữ dựng đứng, chẳng
+          dính gì tới hàng nào. */}
+      {Array.from({ length: rows }, (_, r) => {
+        const dau = seatLayout(r, 0);
+        return (
+          <span
+            key={`nhan-${r}`}
+            className="row-label"
+            // Hàng cuối rộng gần hết màn, lùi thêm nữa là chữ rơi ra ngoài
+            // khung — kẹp lại ở mép trong.
+            style={{
+              top: `${dau.y}cqw`,
+              left: `${Math.max(1.8, dau.x - 4.2 - Math.min(r, 5) * 0.2)}%`,
+            }}
+          >
+            {rowName(r)}
+          </span>
+        );
+      })}
     </>
   );
 }

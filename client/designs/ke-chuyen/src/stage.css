@@ -529,13 +529,16 @@ body {
   position: relative;
   width: 100%;
 }
+/* Chuyển nguyên `.row-label` của bản cũ: chữ vàng nhạt, bóng đen cho nổi trên
+   nền thảm, canh giữa theo cả hai chiều quanh điểm được đặt. */
 .row-label {
   position: absolute;
-  left: 0.8cqw;
-  transform: translateY(-50%);
-  font-size: 1.8cqw;
+  transform: translate(-50%, -50%);
+  font-size: 2cqw;
   font-weight: 700;
-  color: rgba(255, 246, 228, 0.35);
+  color: rgba(255, 236, 200, 0.8);
+  text-shadow: 0 0 0.8cqw rgba(0, 0, 0, 0.9);
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
 }
 
 /* Một cái ghế = sofa mini: lưng (::before) + đệm (::after) */
