@@ -583,15 +583,27 @@ impl AppState {
         &self,
         design_id: &str,
         module_id: &str,
-        config: Value,
+        patch: Value,
     ) -> Result<(), AppError> {
-        if !config.is_object() {
+        let Value::Object(patch) = patch else {
             return Err(AppError::BadRequest("cấu hình phải là một object".into()));
-        }
+        };
         let mut modules = self.modules_of(design_id)?;
         let entry = modules
             .entry(module_id.to_string())
             .or_insert_with(|| json!({}));
+
+        // GỘP chứ không thay cả cục. Bảng xem gửi lên đúng MỘT ô vừa đổi: thay
+        // cả cục thì gạt một công tắc là xoá sạch mọi ô còn lại của module đó —
+        // tên truyện, đường dẫn video, cả bài truyện đã soạn.
+        let mut cfg = match entry.get("config") {
+            Some(Value::Object(m)) => m.clone(),
+            _ => Map::new(),
+        };
+        for (k, v) in patch {
+            cfg.insert(k, v);
+        }
+        let config = Value::Object(cfg);
         if let Some(obj) = entry.as_object_mut() {
             obj.insert("config".into(), config.clone());
         }
@@ -770,6 +782,27 @@ mod tests {
             s.set_design_config("ke-chuyen", json!("ngang")),
             Err(AppError::BadRequest(_))
         ));
+    }
+
+    #[test]
+    fn sua_mot_o_khong_xoa_cac_o_khac() {
+        // Bảng xem gửi lên đúng một ô vừa đổi. Thay cả cục thì gạt một công tắc
+        // là xoá sạch tên truyện, video và cả bài truyện đã soạn.
+        let d = tempfile::tempdir().unwrap();
+        dung(d.path(), "ke-chuyen");
+        let s = state(d.path());
+        s.set_config(
+            "ke-chuyen",
+            "story",
+            json!({ "title": "Sự tích cây vú sữa", "secPerPassage": 16 }),
+        )
+        .unwrap();
+        s.set_config("ke-chuyen", "story", json!({ "loop": true }))
+            .unwrap();
+        let c = s.module_state("ke-chuyen", "story").unwrap().config;
+        assert_eq!(c["title"], json!("Sự tích cây vú sữa"), "ô cũ phải còn");
+        assert_eq!(c["secPerPassage"], json!(16));
+        assert_eq!(c["loop"], json!(true));
     }
 
     #[test]
