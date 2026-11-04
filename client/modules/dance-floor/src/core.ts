@@ -6,25 +6,26 @@ import type { Config } from './manifest';
  *  `co` là cỡ người (xa thì nhỏ). Thiết kế nào có slot `floor` cũng đặt được,
  *  không phải đi sửa lại số cho từng bối cảnh.
  *
- *  Hai chỗ đầu nằm hẳn hai bên thẻ MC. Bản cũ cho ba người đứng giữa sàn
- *  (`DANCE_SPOTS` ở x 38 / 50 / 62), nhưng thẻ MC rộng 62cqw nằm chính giữa và
- *  vẽ đè lên đó mỗi lần MC nói — người xem chỉ thấy hai cái chân. Chỗ giữa vì
- *  vậy xếp cuối bảng, chỉ dùng khi người vận hành cho đông hẳn lên. */
+ *  Đúng chỗ của bản cũ (`FLOOR_SPOTS`): ba người đầu đứng giữa sàn, đông hơn
+ *  thì lan dần ra hai bên. Thẻ MC rộng 62cqw nằm đè lên chính chỗ đó, nên
+ *  thiết kế phải giấu thẻ trong lúc sàn đang nhảy — bản cũ cũng giấu. Hai mép
+ *  ngoài cùng chừa trống: thiết kế hay dựng ảnh người đứng hai bên sàn. */
 export const CHO_DUNG = [
-  { x: 10.5, chan: 9.4, co: 1 },
-  { x: 89.5, chan: 9.4, co: 1 },
-  { x: 17, chan: 7.2, co: 0.86 },
-  { x: 83, chan: 7.2, co: 0.86 },
-  { x: 3.5, chan: 8.3, co: 0.93 },
-  { x: 96.5, chan: 8.3, co: 0.93 },
-  { x: 50, chan: 9.8, co: 1.04 },
+  { x: 38, chan: 9.4, co: 1 },
+  { x: 62, chan: 9.4, co: 1 },
+  { x: 50, chan: 10.3, co: 1.06 },
+  { x: 26, chan: 10.3, co: 1.06 },
+  { x: 74, chan: 10.3, co: 1.06 },
+  { x: 16, chan: 9.4, co: 1 },
+  { x: 84, chan: 9.4, co: 1 },
 ] as const;
 
 /** Tối đa ngần này người trên sàn — hết chỗ đứng thì thôi. */
 export const TOI_DA = CHO_DUNG.length;
 
 /** Kiểu nhân vật cho từng chỗ. Ba chỗ đầu giữ nguyên bộ ba của bản cũ
- *  (`DANCE_VARIANTS = [5, 2, 1]`): nam mũ lưỡi trai · nữ tóc dài · nam tóc rối. */
+ *  (`DANCE_VARIANTS = [5, 2, 1]` xếp vào x 38 / 62 / 50): nam mũ lưỡi trai ·
+ *  nữ tóc dài · nam tóc rối. */
 const KIEU = [5, 2, 1, 4, 3, 6, 2] as const;
 
 /** Mỗi ngần này làm một động tác nghỉ, giữ trong `NGHI_LAU_MS`.

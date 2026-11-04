@@ -45,11 +45,10 @@ describe('chỗ đứng', () => {
     expect(s.nguoi.map((n) => n.x)).toEqual(CHO_DUNG.slice(0, 3).map((c) => c.x));
   });
 
-  it('hai chỗ đầu nằm hai bên thẻ MC, chỗ giữa xếp cuối cùng', () => {
-    // Thẻ MC rộng 62cqw ở giữa màn, tức chiếm x 19…81.
-    expect(CHO_DUNG[0]!.x).toBeLessThan(19);
-    expect(CHO_DUNG[1]!.x).toBeGreaterThan(81);
-    expect(CHO_DUNG[TOI_DA - 1]!.x).toBe(50);
+  it('ba chỗ đầu đứng giữa sàn như bản cũ, đông hơn thì lan ra hai bên', () => {
+    expect(CHO_DUNG.slice(0, 3).map((c) => c.x)).toEqual([38, 62, 50]);
+    // Hai mép ngoài để trống cho ảnh người đứng hai bên sàn của thiết kế.
+    expect(CHO_DUNG.every((c) => c.x >= 16 && c.x <= 84)).toBe(true);
   });
 
   it('xin đông hơn số chỗ thì chỉ xếp tới hết chỗ', () => {

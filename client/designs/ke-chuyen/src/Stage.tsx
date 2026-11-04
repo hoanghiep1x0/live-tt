@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Seat } from '@live/contracts';
-import { LOI_MC_MS, Slot, useAsset, useLoiMc, useStage } from '@live/stage-sdk';
+import { LOI_MC_MS, Slot, useAsset, useLoiMc, useSlotSang, useStage } from '@live/stage-sdk';
 import { bienCss } from './geometry';
 import type { Huong } from './geometry';
 import {
@@ -15,6 +15,8 @@ import {
 
 const NEN = 'bg/amitabha-stage.png';
 const HOA_SEN = 'fx/lotus.png';
+const CO_BE = 'nguoi/co-be.png';
+const CAU_BE = 'nguoi/cau-be.png';
 
 interface ChoNgoi {
   key: string;
@@ -115,6 +117,8 @@ export function Stage() {
   const s = useStage();
   const asset = useAsset();
   const loiMc = useLoiMc();
+  /** Module sàn nhảy xin sáng slot `floor` suốt màn nhảy. */
+  const sanSang = useSlotSang('floor');
   const [huong] = useState<Huong>('portrait');
   const khung = useRef<HTMLDivElement>(null);
 
@@ -221,12 +225,25 @@ export function Stage() {
       <div className="slot-floor">
         <Slot name="floor" />
       </div>
+
+      {/* Hai bạn nhỏ đứng hai bên sàn, như bản cũ. Đồ đạc của phòng nên thiết
+          kế tự vẽ, y như bồ đoàn: không có module nào bật cũng phải thấy các
+          em. Bản cũ cho module cảnh an ủi điều khiển động tác (cúi chào, vỗ
+          tay, lau nước mắt); ở đây mới chỉ thở nhẹ — làm module `comfort` thì
+          nối vào sau. */}
+      <div className="stage-kids" aria-hidden="true">
+        <img className="stage-kid kid-girl" src={asset(CO_BE)} alt="" draggable={false} />
+        <img className="stage-kid kid-boy" src={asset(CAU_BE)} alt="" draggable={false} />
+      </div>
       <div className="slot-chat">
         <Slot name="chat" />
       </div>
       {/* Lời MC: chào hỏi, cảm ơn quà. KHÔNG nằm trong khung chiếu — khung đó
-          dành cho nội dung truyện. */}
-      {loiMc === null ? null : (
+          dành cho nội dung truyện.
+
+          Sàn đang nhảy thì giấu thẻ đi: thẻ rộng 62cqw nằm đè đúng chỗ ba
+          người đứng giữa sàn. Bản cũ cũng giấu (`hostSay && !dancing`). */}
+      {loiMc === null || sanSang ? null : (
         <div className="stage-host" role="status" key={loiMc.at}>
           <p>{loiMc.text}</p>
           <span className="stage-host-bar" style={{ animationDuration: `${LOI_MC_MS}ms` }} />

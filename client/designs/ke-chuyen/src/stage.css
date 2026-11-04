@@ -623,6 +623,46 @@ body {
   z-index: 7;
   pointer-events: none;
 }
+/* ---- Hai bạn nhỏ đứng hai bên sàn ----
+   Ảnh của bản cũ (`KIDS` trong `comfort.ts`): bé gái ngồi thiền trên đài sen
+   bên trái, cậu bé quỳ bên phải. Đứng hẳn ra hai mép, nhường khoảng giữa cho
+   sàn nhảy và thẻ MC. `top` là chỗ bàn chân nên ảnh tự kéo lên trên chính nó.
+   Hoạt ảnh thở nằm ở đây chứ không phải trang trí: hai em đứng đó suốt buổi,
+   mà TikTok soi khung hình đứng yên lâu. */
+.stage-kids {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.stage-kid {
+  position: absolute;
+  top: calc(var(--hall-top) + 13cqw);
+  width: auto;
+  transform: translate(-50%, -100%);
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 0.6cqw 0.8cqw rgba(0, 0, 0, 0.45));
+  animation: be-tho 4s ease-in-out infinite alternate;
+}
+.kid-girl {
+  left: 6%;
+  height: 12cqw;
+}
+.kid-boy {
+  left: 94%;
+  height: 11.5cqw;
+  /* Lệch pha: hai em thở cùng nhịp thì lộ ra là hai tấm ảnh. */
+  animation-delay: -1.6s;
+}
+@keyframes be-tho {
+  from {
+    transform: translate(-50%, -100%) scale(1);
+  }
+  to {
+    transform: translate(-50%, calc(-100% - 0.35cqw)) scale(1.012);
+  }
+}
+
 .slot-chat {
   position: absolute;
   right: 3cqw;

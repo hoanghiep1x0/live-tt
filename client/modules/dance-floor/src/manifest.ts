@@ -36,7 +36,7 @@ export const manifest: ModuleManifest<Config> = {
       max: TOI_DA,
       step: 1,
       unit: 'người',
-      hint: 'Hai người đầu đứng hai bên thẻ MC; đông hơn thì lan dần vào giữa',
+      hint: 'Ba người đầu đứng giữa sàn; đông hơn thì lan dần ra hai bên',
     },
     {
       key: 'danceOnGift',
