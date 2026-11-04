@@ -988,10 +988,9 @@ body {
   position: absolute;
   left: 3cqw;
   right: 3cqw;
-  /* Bản cũ để 0,6cqw, nhưng rạp ghế ở đây kéo sát đáy hơn nên chữ dính vào
-     hàng cuối. Đẩy lên một chút và hắt một vệt tối phía sau cho chữ tách khỏi
-     tấm thảm. */
-  bottom: 1.4cqw;
+  /* Còn một dòng thì hạ về đúng mốc bản cũ. Vẫn giữ vệt tối phía sau cho chữ
+     tách khỏi tấm thảm. */
+  bottom: 0.6cqw;
   padding: 0.6cqw 0 0.2cqw;
   background: linear-gradient(0deg, rgba(10, 6, 3, 0.72), rgba(10, 6, 3, 0));
   text-align: center;
@@ -1007,10 +1006,7 @@ body {
   color: var(--gold);
   font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
 }
-.stage-honest {
-  font-size: 1.8cqw;
-  color: rgba(255, 255, 255, 0.55);
-}
+
 
 /* Mất kết nối máy chủ: nói rõ trên màn, vì OBS đang phát ra ngoài */
 .stage-offline {
@@ -1061,6 +1057,32 @@ body {
    đúng đường. Không cắt chéo qua ghế người khác. Chặng dọc lối dài nhất nên
    được nhiều thời gian nhất — chia đều theo phần trăm thì đoạn rẽ ngang ngắn
    ngủn lại chậm rì, nhìn giả ngay. Lúc ôm thì ngả người về phía nhân vật. */
+/* Hàng đầu: đi thẳng lên, không vòng ra lối. */
+.om-nguoi.thang {
+  animation-name: om-thang, loi-buoc;
+}
+@keyframes om-thang {
+  0% {
+    transform: translate(-50%, -100%) rotate(0deg);
+  }
+  33.3% {
+    transform: translate(calc(-50% + var(--om-x, 0cqw)), calc(-100% + var(--om-y, 0cqw)))
+      rotate(0deg);
+  }
+  38%,
+  62% {
+    transform: translate(calc(-50% + var(--om-x, 0cqw)), calc(-100% + var(--om-y, 0cqw)))
+      rotate(var(--om-nghieng, 0deg));
+  }
+  66.7% {
+    transform: translate(calc(-50% + var(--om-x, 0cqw)), calc(-100% + var(--om-y, 0cqw)))
+      rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -100%) rotate(0deg);
+  }
+}
+
 @keyframes om-di {
   0% {
     transform: translate(-50%, -100%) rotate(0deg);
@@ -1144,6 +1166,9 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .om-nguoi {
     animation: om-di 12.6s linear both;
+  }
+  .om-nguoi.thang {
+    animation: om-thang 12.6s linear both;
   }
   .om-tim span,
   .stage-kid.cui-chao {

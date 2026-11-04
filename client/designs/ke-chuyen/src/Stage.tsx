@@ -156,7 +156,9 @@ export function Stage() {
         {/* Lời minh bạch nằm ở DẢI TRÊN, không nằm trong khung chiếu: nó nói về
             cả phòng chứ không riêng cái đang chiếu, và để trong khung thì nó
             che mất hình. */}
-        <span className="chip stage-ai-label">Nội dung do AI đề xuất</span>
+        <span className="chip stage-ai-label">
+          Nội dung do AI đề xuất{s.bot.enabled ? ' · có nhân vật minh hoạ' : ''}
+        </span>
         <span className="stage-title">Phòng kể chuyện</span>
         <span className="chip">
           👥 {t.viewers} · ❤ {t.likes} · 🎁 {t.xu}
@@ -304,9 +306,10 @@ export function Stage() {
             Giữ đúng những thứ phòng này thật sự làm được hôm nay; có module
             nhận lệnh gõ thì trả lại đúng danh sách của bản cũ.
 
-            Dòng sau là lời minh bạch, chuyển nguyên `.stage-honest` của bản cũ,
-            kể cả cách nó chỉ nhắc "có nhân vật minh họa" khi đám đông ảo đang
-            bật — ghi lúc không có ai ảo là nói sai về chính phòng mình. */}
+            Lời minh bạch KHÔNG còn ở đây nữa mà nằm trên dải trên, cạnh chữ
+            LIVE: hai dòng chữ chen nhau ở đáy màn vừa chật vừa khó đọc. Phần
+            "có nhân vật minh hoạ" vẫn chỉ hiện khi đám đông ảo đang bật — ghi
+            lúc không có ai ảo là nói sai về chính phòng mình. */}
         {/* Dòng lệnh theo đúng lối bản cũ: "Gõ" rồi tới tên lệnh in đậm. Chỉ
             liệt kê lệnh THẬT SỰ chạy được — bản cũ còn `ghế B4`, `chỗ của
             tôi`, `#mã`, `gửi: …`, nhưng bản mới chưa module nào đọc lệnh gõ,
@@ -317,10 +320,6 @@ export function Stage() {
             Gõ <b>ôm</b> · <b>an ủi</b> · <b>thương bé</b> để chạy lên ôm bé
           </span>
         )}
-        <span className="stage-honest">
-          Phòng kể chuyện &amp; xem video{s.bot.enabled ? ' · có nhân vật minh họa' : ''} · MC &amp;
-          giọng đọc dùng AI
-        </span>
         <Slot name="bottom-bar" />
       </footer>
     </div>

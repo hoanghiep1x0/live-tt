@@ -19,7 +19,7 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { Seat } from '@live/contracts';
 import { HALL_TOP } from '../geometry';
-import { AISLES_X } from '../seats';
+import { AISLES_X, HALL_FIRST_Y, HALL_ROW_H } from '../seats';
 import { loiGan } from './di-lai';
 import { ANH_DUNG, anhCua, kieuChibi } from './ghe';
 import type { ChoNgoi } from './ghe';
@@ -48,9 +48,13 @@ function NguoiOm({
   // Độ trễ chốt một lần lúc gắn: sửa `animation-delay` của hoạt ảnh đang chạy
   // là nó giật về đầu.
   const [tre] = useState(() => -t);
+  // Hai hàng đầu đã ngồi ngay mép sàn: họ bước thẳng lên là tới. Bắt họ chạy
+  // ngang ra lối rồi mới vòng lên thì nhìn dị, vì chẳng có hàng ghế nào chắn
+  // đường cả. Từ hàng C trở vào mới phải men theo lối.
+  const hangTruoc = tu.y < HALL_FIRST_Y + HALL_ROW_H * 1.5;
   return (
     <img
-      className="om-nguoi"
+      className={hangTruoc ? 'om-nguoi thang' : 'om-nguoi'}
       src={asset(anhCua(ANH_DUNG, kieuChibi(user)))}
       alt=""
       style={
