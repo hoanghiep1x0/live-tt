@@ -200,6 +200,52 @@ dối người xem chứ không còn là trang trí. Chân màn chỉ ghi "có n
 Nhờ vậy làm một phòng mới là: một thư mục thiết kế, assets của nó, và một khối `defaults`.
 Không thêm một dòng nào vào module nào.
 
+### Đám đông cư xử khác nhau theo phòng — CHƯA LÀM
+
+Hôm nay mọi phòng chung **một** bộ máy đám đông (`backend/src/bot.rs`); khác nhau chỉ ở câu
+và tên. Nhịp (`NHIP_MS`) và tỉ lệ lời/tim còn viết cứng. Sớm muộn sẽ có phòng cần cư xử khác:
+sàn cần dày và nhiều tim, kể chuyện cần thưa và im khi MC đang kể, đám cưới muốn reo lên khi
+có quà.
+
+Cám dỗ là `if id == "san" { … }` trong `bot.rs` — đúng thứ [01 §6](01-quy-uoc.md) cấm. Rẽ
+nhánh theo id rải ở `bot.rs`, `session.rs`, `state.rs` là cách mã của các phòng dẫm lên nhau.
+Thay vào đó, theo hai mức, **làm mức 1 trước**:
+
+**Mức 1 — khác về con số thì là dữ liệu.** Đưa các hằng đang viết cứng thành trường của
+`crowd`, có mặc định bằng giá trị hôm nay để thiết kế cũ không phải sửa:
+
+```json
+{
+  "crowd": {
+    "lines": ["quẩy lên", "nhạc cháy quá"],
+    "nhipMs": 800,
+    "tiLeLoi": 25,
+    "phanUng": { "gift": ["chúc mừng!", "đẹp đôi quá"] }
+  }
+}
+```
+
+Vẫn một bộ máy; mỗi phòng một tính cách. Phần lớn nhu cầu dừng ở đây.
+
+**Mức 2 — khác về logic thì là module riêng.** Chỉ khi một phòng cần thứ con số không diễn
+tả được (ví dụ hô tên cô dâu chú rể lấy từ cấu hình phòng), tách `bot.rs` thành trait và mỗi
+kiểu một file:
+
+```
+backend/src/bot/mod.rs        ← trait HanhVi + vòng chạy chung, cờ virtual, vào/ra dần
+backend/src/bot/mac_dinh.rs   ← hành vi hôm nay
+backend/src/bot/rap_cuoi.rs   ← chỉ phòng nào khai kiểu này mới dùng
+```
+
+Thiết kế chọn kiểu bằng `"crowd": { "kieu": "rap_cuoi" }`, không phải backend dò id phòng.
+Không khai thì là `mac_dinh`. Sửa đám đông rap cưới chỉ chạm `rap_cuoi.rs`.
+
+Luật bất biến ở cả hai mức nằm trong vòng chạy chung, không kiểu nào được ghi đè: không tặng
+quà, sự kiện mang cờ `virtual`, tắt thì đi ra dần, đổi phòng hay mở phiên mới thì quên hết.
+
+Như phần phủ asset ở trên: chưa làm vì chưa phòng nào cần — làm khi phòng đầu tiên thật sự
+cần cư xử khác, đừng đoán trước.
+
 ## 7. Build và chạy
 
 ```bash
