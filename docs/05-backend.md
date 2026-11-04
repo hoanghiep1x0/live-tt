@@ -19,10 +19,14 @@ Tài liệu này mô tả đích đến. Phần đã dựng và phần còn lạ
 | Đổi tên thiết kế, link Studio, xoá dữ liệu phiên | **xong** |
 | Nạp cấu hình gợi ý của bối cảnh (`defaults` trong design.json) | **xong** |
 | Kiểm tra cấu hình theo schema zod của module | chưa — xem mục 4 |
-| Nguồn sự kiện TikTok | chưa |
+| Lõi phiên: tổng, ghế, top người tặng, feed | **xong** |
+| Nguồn `mau` — giả lập, để dựng phòng khi chưa lên sóng | **xong** |
+| Nguồn `bridge` — nhận sự kiện thật từ tiến trình đọc TikTok ngoài | **xong** |
+| Nguồn `webview` — tự đọc khung webcast | chưa — cần vỏ Tauri, xem mục 6 |
 | SQLite cho sổ quà | chưa — mới có `database/schema.sql` |
 | Khoá API, `/api/tts`, `/api/ai/tick` | chưa |
-| Vỏ Tauri, webview TikTok, `agent-port.json` | chưa |
+| Công bố cổng và token ra `.tmp/agent-port.json` | **xong** |
+| Vỏ Tauri và webview TikTok | chưa |
 
 Chạy thử khi phát triển, không cần Tauri:
 
@@ -33,7 +37,7 @@ cd backend && cargo run
 
 Cổng và token công bố ở `.tmp/agent-port.json` (`{ port, token, pid }`), xoá khi máy chủ
 dừng. Dev server của Vite đọc file đó rồi tự gắn header, nên **token không bao giờ nằm
-trong mã trang**. Test: `cd backend && cargo test` (56 unit + 25 tích hợp).
+trong mã trang**. Test: `cd backend && cargo test` (93 unit + 34 tích hợp).
 
 ## 1. Vì sao cần backend thật
 
@@ -90,7 +94,9 @@ và kiểm tra nằm trong thư mục gốc của thiết kế, chặn `..`.
 | `PUT /api/modules/<id>/config` | Ghi cấu hình, kiểm tra bằng schema |
 | `POST /api/modules/<id>/enabled` | Bật/tắt module |
 | `POST /api/modules/<id>/action` | Bấm nút trên thẻ, vd Quay thưởng |
-| `GET /api/session` | Bản tóm tắt phiên |
+| `GET /api/session` | Bản tóm tắt phiên, `null` khi chưa phát |
+| `GET /api/source` | Nguồn sự kiện hiện tại và trạng thái của nó |
+| `PUT /api/source` | Đổi nguồn: `{ "kind": "tat" \| "mau" \| "bridge", "url"?, "channel"? }` |
 | `POST /api/command` | Gửi `RoomCommand`, đi qua cổng duyệt |
 | `GET /api/ledger?from=&to=` | Sổ quà đối soát |
 
@@ -165,22 +171,64 @@ Nay cả hai cùng một đường.
 
 ## 6. Nguồn sự kiện TikTok
 
-Giữ nguyên cách đọc đã chạy được với live thật, chỉ đổi chỗ chạy từ client sang backend:
+Mọi nguồn trả đúng `LiveEvent`, nên phần còn lại của hệ thống không biết sự kiện
+đến từ đâu. Thêm nguồn mới chỉ là viết một mapper.
+
+| Nguồn | Việc | Trạng thái |
+|---|---|---|
+| `mau` | Giả lập, để dựng phòng và thử tính năng khi chưa lên sóng | **xong** |
+| `bridge` | Nối tới tiến trình đọc TikTok chạy ngoài, qua WebSocket | **xong** |
+| `webview` | Tự đọc khung webcast trong webview TikTok | chưa |
+
+### `bridge` — đường tới dữ liệu thật hôm nay
 
 ```
-webview TikTok  →  capture.js đọc khung webcast
-                →  Rust giải mã protobuf
-                →  chuẩn hoá thành LiveEvent
-                →  áp vào phiên, sinh FeedItem
-                →  broadcast WS
+tiến trình đọc TikTok  →  WebSocket JSON  →  backend  →  phiên  →  bus
 ```
 
-Ba nguồn, chọn trong cài đặt: `webview` (desktop, mặc định), `bridge` (WebSocket ngoài), `mau` (giả lập).
-Mọi nguồn đều phải trả `LiveEvent`; thêm nguồn mới chỉ cần viết mapper.
+Giao thức giữ nguyên của bản cũ, để dùng lại được cầu nối đã có (`tools/bridge`
+của dự án cũ, cổng 8787):
 
-Rủi ro đã biết, ghi lại để không quên: cách đọc này dựa vào trang web TikTok.
-Nếu TikTok chuyển WebSocket vào Web Worker hoặc đổi đường dẫn `/webcast/im/` thì
-`capture.js` mù hoàn toàn. Khi đó chuyển sang nguồn `bridge`.
+```jsonc
+// backend → cầu nối, ngay khi nối
+{ "type": "subscribe", "channel": "kechuyen.dem" }
+
+// cầu nối → backend: một tin, hoặc một mảng tin
+{ "kind": "gift", "user": "…", "name": "…", "gift": "Hoa sen",
+  "count": 3, "xuEach": 10, "ts": 1730000000000 }
+{ "type": "viewers", "count": 1234 }
+{ "type": "status", "state": "dang-live", "message": "…" }
+```
+
+Những chi tiết đã giữ đúng bản cũ: bỏ tin cũ hơn lúc nối 3 giây (không thì cảm ơn
+lại quà của phiên trước), tin hỏng thì bỏ chứ không làm sập nguồn, nối lại với
+thời gian chờ tăng dần 2 → 15 giây. Backend chỉ nhận `ws://` — cầu nối chạy trên
+chính máy này, không phải một máy chủ ngoài Internet.
+
+### `webview` — vì sao chưa làm
+
+Bản cũ **không** giải protobuf bằng Rust: `capture.js` bắt khung nhị phân trong
+webview, rồi renderer giải bằng thư viện npm `tiktok-live-proto`. Chuyển sang Rust
+cần schema protobuf riêng, và không có phiên live thật thì không kiểm chứng được.
+Làm cùng lúc dựng vỏ Tauri, khi đó mới có webview để bắt khung.
+
+Những chỗ phải giữ đúng khi làm, chép lại từ mã cũ để không mất:
+
+- Bỏ tin `isHistory` — đó là backlog, không phải sự kiện đang xảy ra.
+- Quà nhấn giữ (`gift.type == 1` hoặc `gift.combo`) bắn nhiều tin với `repeatCount`
+  tăng dần: **chỉ nhận tin có `repeatEnd == 1`**, nếu không một món quà bị đếm
+  nhiều lần.
+- Số lượng lấy `repeatCount`, xu mỗi món lấy `gift.diamondCount`.
+- Tổng tim lấy `max` với `totalLikeCount`, không cộng dồn mù.
+- Số người xem lấy `total`/`viewerCount`, **không** lấy `totalUser` — đó là tổng
+  lượt ghé, không phải người đang xem.
+- Một tin hỏng không được làm hỏng cả khung.
+
+### Rủi ro đã biết
+
+Cách đọc này dựa vào trang web của TikTok. Nếu TikTok chuyển WebSocket vào Web
+Worker hoặc đổi đường dẫn `/webcast/im/` thì `capture.js` mù hoàn toàn. Khi đó
+chuyển sang nguồn `bridge`.
 
 ## 7. Tauri command còn lại
 

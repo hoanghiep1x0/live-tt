@@ -45,6 +45,10 @@ export const designManifestSchema = z.object({
    *  khi thiết kế chưa có cấu hình; sau đó sửa của người vận hành được giữ.
    *  Nhờ khối này mà một bối cảnh mới không cần sửa module nào. */
   defaults: z.record(z.string().regex(ID_RE), z.record(z.string(), z.unknown())).default({}),
+  /** Số chỗ ngồi của phòng. Vị trí từng chỗ là việc của thiết kế. */
+  seats: z.number().int().positive().max(1_000_000).default(84),
+  /** Đổi xu TikTok sang điểm của phòng. Mỗi bối cảnh có thể khác nhau. */
+  pointRate: z.number().positive().max(1000).default(1),
   entry: z.string().default('dist/index.html'),
   quality: z
     .object({ auto: z.boolean().default(true), minFps: z.number().int().positive().default(24) })

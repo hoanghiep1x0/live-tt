@@ -215,7 +215,9 @@ export interface Ctx<C> {
 }
 ```
 
-`SessionView` là bản rút gọn chỉ đọc: tổng xu, tổng tim, số người xem, danh sách người đang trong phòng,
+`SessionView` là bản rút gọn chỉ đọc: tổng xu, tổng tim, số người xem, **chỗ ngồi đã có người**
+(`seats`, mỗi chỗ là `{ i, user, name }` — chỗ thứ `i` nằm ở đâu là việc của thiết kế),
+danh sách người đang trong phòng,
 mục feed gần đây. Module **không** thấy toàn bộ state, để không ai phụ thuộc vào chi tiết nội bộ.
 
 ## 9. Manifest thiết kế — `design.json`

@@ -48,8 +48,8 @@ nên nó gần như là một thiết kế độc lập sẵn rồi.
 
 | Phần | Về đâu |
 |---|---|
-| `tiktokMap.ts`, `tiktokFrames.ts`, `bridge.ts`, `desktopLive.ts`, `capture.js` | Backend — nguồn sự kiện |
-| `session.ts` reducer | `client/shared/runtime` — lõi phiên |
+| `tiktokMap.ts`, `tiktokFrames.ts`, `bridge.ts`, `desktopLive.ts`, `capture.js` | Backend — nguồn sự kiện (`bridge` **xong**, `webview` chờ Tauri) |
+| `session.ts` reducer | **Backend** (`backend/src/session.rs`) — phiên là nguồn sự thật chung, không thể nằm ở một trình duyệt |
 | `ledger.ts`, `exportData.ts` | Backend — sổ quà, SQLite |
 | `ops.ts`, `gateFor` | `client/shared/contracts` + backend — cổng lệnh |
 | `video.ts`, `caseMedia.ts`, `storyAudio.ts` | Backend — kho media |
@@ -78,13 +78,15 @@ trước `tich-phuoc`, vì đó là phòng **đã từng phát live thật**, n�
 | `client/shared/stage-sdk` — nối WS, slot, đường dẫn asset | **xong**, phần tối thiểu |
 | `client/modules/gift-thanks`, `welcome`, `likes-counter`, `follow-thanks` | **xong**, có test |
 | `client/designs/ke-chuyen` — bố cục và assets chuyển từ bản cũ | **xong** phần thiết kế vẽ |
-| Nguồn sự kiện TikTok | chưa — nên phiên còn rỗng |
+| Lõi phiên ở backend: tổng, ghế, top người tặng, feed | **xong** |
+| Nguồn `mau` (giả lập) và `bridge` (TikTok thật qua cầu nối ngoài) | **xong** |
+| Nguồn `webview` — tự đọc khung webcast | chưa — cần vỏ Tauri |
 
 Đã chứng minh được: bật phát từ trang quản lý → thẻ đổi trạng thái qua WebSocket, cấu hình
 gợi ý của bối cảnh tự nạp, và **đổi cấu hình đẩy xuống phòng đang phát ngay, không tải lại trang**.
 
-Còn thiếu để gọi là xong hẳn: nguồn sự kiện thật, và các module có phần vẽ (`stage.tsx`) để
-những slot đang rỗng có nội dung.
+Còn thiếu để gọi là xong hẳn: các module có phần vẽ (`stage.tsx`) để những slot đang rỗng
+có nội dung, và nguồn `webview` để không cần tiến trình cầu nối ngoài.
 
 ### GĐ 2 — Nhóm module nhẹ
 

@@ -43,6 +43,12 @@ pub struct DesignManifest {
     pub provides: Vec<String>,
     #[serde(default)]
     pub recommends: Vec<String>,
+    /// Số chỗ ngồi của phòng. Vị trí từng chỗ là việc của thiết kế.
+    #[serde(default = "ghe_mac_dinh")]
+    pub seats: usize,
+    /// Đổi xu TikTok sang điểm của phòng. Mỗi bối cảnh có thể khác nhau.
+    #[serde(default = "ti_le_mac_dinh", rename = "pointRate")]
+    pub point_rate: f64,
     /// Cấu hình gợi ý cho bối cảnh này, nạp một lần lúc thiết kế chưa có gì.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub defaults: BTreeMap<String, Value>,
@@ -56,6 +62,14 @@ fn mot_cham_khong() -> String {
 
 fn entry_mac_dinh() -> String {
     "dist/index.html".into()
+}
+
+fn ghe_mac_dinh() -> usize {
+    84
+}
+
+fn ti_le_mac_dinh() -> f64 {
+    1.0
 }
 
 fn icon_mac_dinh() -> String {
@@ -159,6 +173,8 @@ pub fn scan(layout: &Layout, port: u16, live: Option<&str>) -> Vec<DesignInfo> {
                     slots: Vec::new(),
                     provides: Vec::new(),
                     recommends: Vec::new(),
+                    seats: ghe_mac_dinh(),
+                    point_rate: ti_le_mac_dinh(),
                     defaults: BTreeMap::new(),
                     entry: entry_mac_dinh(),
                 },

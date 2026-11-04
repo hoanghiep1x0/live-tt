@@ -1,5 +1,6 @@
 //! Trạng thái chung của máy chủ: thiết kế đang phát, cấu hình module, bus phát xuống.
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 
 use serde::Serialize;
@@ -7,6 +8,9 @@ use serde_json::{json, Map, Value};
 use tokio::sync::broadcast;
 
 use crate::designs::{self, DesignInfo};
+use crate::events::LiveEvent;
+use crate::session::{Session, SessionView};
+use crate::source::{SourceCfg, SourceStatus};
 use crate::paths::Layout;
 use crate::settings::{self, Settings, SettingsError};
 use crate::store::{self, StoreError};
@@ -14,6 +18,15 @@ use crate::store::{self, StoreError};
 /// Sức chứa hàng chờ phát xuống. Client chậm quá mức này thì mất bớt tin cũ,
 /// chấp nhận được: tin mới quan trọng hơn tin cũ.
 const BUS_CAP: usize = 256;
+
+/// Giờ máy, mili-giây. Chỉ dùng ở biên; lõi phiên luôn nhận `now` truyền vào.
+pub fn bay_gio_ms() -> i64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
+}
 
 #[derive(Clone, Debug, Serialize)]
 pub struct ModuleState {
@@ -27,6 +40,13 @@ pub struct AppState {
     pub token: String,
     /// Chỉ một thiết kế chạy một lúc. Đây là chỗ giữ điều đó.
     live: RwLock<Option<String>>,
+    /// Phiên của thiết kế đang phát. Phiên nằm ở backend để mọi cửa sổ quản lý,
+    /// mọi sân khấu và OBS cùng thấy một sự thật.
+    phien: RwLock<Option<Session>>,
+    nguon: RwLock<SourceCfg>,
+    /// Đổi nguồn là tăng số này; tác vụ nguồn cũ thấy số khác thì tự thoát.
+    the_he_nguon: AtomicU64,
+    loi_nguon: RwLock<Option<String>>,
     tx: broadcast::Sender<Value>,
 }
 
@@ -58,7 +78,17 @@ impl From<SettingsError> for AppError {
 impl AppState {
     pub fn new(layout: Layout, port: u16, token: String) -> Arc<Self> {
         let (tx, _) = broadcast::channel(BUS_CAP);
-        Arc::new(Self { layout, port, token, live: RwLock::new(None), tx })
+        Arc::new(Self {
+            layout,
+            port,
+            token,
+            live: RwLock::new(None),
+            phien: RwLock::new(None),
+            nguon: RwLock::new(SourceCfg::default()),
+            the_he_nguon: AtomicU64::new(0),
+            loi_nguon: RwLock::new(None),
+            tx,
+        })
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<Value> {
@@ -100,6 +130,14 @@ impl AppState {
                 None => *cur = Some(id.to_string()),
             }
         }
+
+        // Số ghế và tỉ lệ đổi xu do thiết kế khai, vì mỗi bối cảnh một khác.
+        let (ghe, ti_le) = match designs::read_manifest(&self.layout.design_manifest(id), id) {
+            Ok(m) => (m.seats, m.point_rate),
+            Err(_) => (84, 1.0),
+        };
+        *self.phien.write().expect("khoá phiên hỏng") =
+            Some(Session::new(id, ghe, ti_le, bay_gio_ms()));
         self.broadcast(json!({ "t": "live", "designId": id }));
         Ok(())
     }
@@ -109,9 +147,91 @@ impl AppState {
             let mut cur = self.live.write().expect("khoá live hỏng");
             cur.take().is_some()
         };
+        *self.phien.write().expect("khoá phiên hỏng") = None;
         if da_doi {
             self.broadcast(json!({ "t": "live", "designId": Value::Null }));
         }
+    }
+
+    // ---- Phiên và nguồn sự kiện ----
+
+    pub fn session_view(&self) -> Option<SessionView> {
+        self.phien.read().expect("khoá phiên hỏng").as_ref().map(|p| p.view(60))
+    }
+
+    /// Áp một sự kiện vào phiên rồi phát mục feed xuống ngay.
+    ///
+    /// Chỉ phát mục feed, KHÔNG phát cả bản phiên: phòng đông thì mỗi giây có
+    /// hàng chục sự kiện, gửi kèm toàn bộ bảng top và danh sách ghế mỗi lần là
+    /// tự làm nghẽn. Bản phiên đi theo nhịp ở `nhip_phien`.
+    pub fn ap_su_kien(&self, ev: LiveEvent, ao: bool) {
+        let now = bay_gio_ms();
+        let items = {
+            let mut g = self.phien.write().expect("khoá phiên hỏng");
+            match g.as_mut() {
+                Some(p) => p.apply(&ev, now),
+                None => return,
+            }
+        };
+        if items.is_empty() {
+            return;
+        }
+        let mut items = items;
+        for it in &mut items {
+            // Nguồn giả lập đánh dấu rõ là nhân vật ảo, để module cảm ơn quà và
+            // bot chào hỏi bỏ qua — nếu không bot sẽ tự cảm ơn chính nó.
+            it.ao = if ao { Some(true) } else { None };
+        }
+        self.broadcast(json!({ "t": "feed", "items": items }));
+    }
+
+    pub fn dat_nguoi_xem(&self, n: u64) {
+        if let Some(p) = self.phien.write().expect("khoá phiên hỏng").as_mut() {
+            p.dat_nguoi_xem(n);
+        }
+    }
+
+    /// Nhịp đều: trả ghế của người đã vắng lâu, rồi phát bản phiên xuống.
+    pub fn nhip_phien(&self) {
+        let now = bay_gio_ms();
+        let view = {
+            let mut g = self.phien.write().expect("khoá phiên hỏng");
+            match g.as_mut() {
+                Some(p) => {
+                    p.thu_hoi_ghe(now);
+                    p.view(60)
+                }
+                None => return,
+            }
+        };
+        self.broadcast(json!({ "t": "session", "view": view }));
+    }
+
+    pub fn the_he_nguon(&self) -> u64 {
+        self.the_he_nguon.load(Ordering::SeqCst)
+    }
+
+    /// Seed cho nguồn giả lập. Theo thế hệ nên mở lại nguồn là ra phòng khác,
+    /// nhưng trong một lần chạy thì lặp lại được.
+    pub fn seed_gia_lap(&self) -> u64 {
+        self.the_he_nguon()
+    }
+
+    pub fn doi_nguon(&self, cfg: SourceCfg) -> u64 {
+        *self.nguon.write().expect("khoá nguồn hỏng") = cfg;
+        *self.loi_nguon.write().expect("khoá nguồn hỏng") = None;
+        self.the_he_nguon.fetch_add(1, Ordering::SeqCst) + 1
+    }
+
+    pub fn dat_loi_nguon(&self, loi: Option<String>) {
+        *self.loi_nguon.write().expect("khoá nguồn hỏng") = loi;
+    }
+
+    pub fn nguon(&self) -> SourceStatus {
+        let cfg = self.nguon.read().expect("khoá nguồn hỏng").clone();
+        let problem = self.loi_nguon.read().expect("khoá nguồn hỏng").clone();
+        let running = cfg.kind != crate::source::SourceKind::Tat && problem.is_none();
+        SourceStatus { cfg, running, problem }
     }
 
     // ---- Cài đặt người vận hành đặt cho thiết kế ----

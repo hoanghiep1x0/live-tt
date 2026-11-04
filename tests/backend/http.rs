@@ -475,3 +475,79 @@ async fn thiet_ke_khong_khai_goi_y_thi_khong_nap_gi() {
     let (_, j) = m.api("GET", "/api/designs/ke-chuyen/modules", None).await;
     assert_eq!(j["modules"], json!({}));
 }
+
+#[tokio::test]
+async fn chua_phat_thi_chua_co_phien() {
+    let m = moi();
+    let (ma, j) = m.api("GET", "/api/session", None).await;
+    assert_eq!(ma, StatusCode::OK);
+    assert_eq!(j["session"], Value::Null);
+}
+
+#[tokio::test]
+async fn bat_phat_thi_mo_phien_moi() {
+    let m = moi();
+    m.api("POST", "/api/live", Some(json!({ "designId": "ke-chuyen" }))).await;
+
+    let (_, j) = m.api("GET", "/api/session", None).await;
+    let s = &j["session"];
+    assert_eq!(s["designId"], json!("ke-chuyen"));
+    assert_eq!(s["totals"]["viewers"], json!(0));
+    assert_eq!(s["seats"], json!([]));
+    assert!(s["startedAt"].is_number());
+
+    // Tắt phát thì phiên đóng lại.
+    m.api("DELETE", "/api/live", None).await;
+    let (_, j) = m.api("GET", "/api/session", None).await;
+    assert_eq!(j["session"], Value::Null);
+}
+
+#[tokio::test]
+async fn nguon_mac_dinh_la_tat() {
+    let m = moi();
+    let (ma, j) = m.api("GET", "/api/source", None).await;
+    assert_eq!(ma, StatusCode::OK);
+    assert_eq!(j["source"]["kind"], json!("tat"));
+    assert_eq!(j["source"]["running"], json!(false));
+}
+
+#[tokio::test]
+async fn doi_duoc_sang_nguon_gia_lap() {
+    let m = moi();
+    let (ma, j) = m.api("PUT", "/api/source", Some(json!({ "kind": "mau", "nhip": 200 }))).await;
+    assert_eq!(ma, StatusCode::OK);
+    assert_eq!(j["source"]["kind"], json!("mau"));
+    assert_eq!(j["source"]["running"], json!(true));
+
+    let (_, j) = m.api("PUT", "/api/source", Some(json!({ "kind": "tat" }))).await;
+    assert_eq!(j["source"]["running"], json!(false));
+}
+
+#[tokio::test]
+async fn dia_chi_cau_noi_la_bi_tu_choi() {
+    let m = moi();
+    for u in ["https://ke-gian.example/ws", "ws-khong-dung"] {
+        let (ma, _) = m
+            .api("PUT", "/api/source", Some(json!({ "kind": "bridge", "url": u })))
+            .await;
+        assert_eq!(ma, StatusCode::BAD_REQUEST, "phải chặn {u}");
+    }
+}
+
+#[tokio::test]
+async fn nguon_gia_lap_lam_phong_song_len() {
+    let m = moi();
+    m.api("POST", "/api/live", Some(json!({ "designId": "ke-chuyen" }))).await;
+    m.api("PUT", "/api/source", Some(json!({ "kind": "mau", "nhip": 50 }))).await;
+
+    // Chờ nguồn sinh một ít sự kiện.
+    tokio::time::sleep(std::time::Duration::from_millis(700)).await;
+
+    let (_, j) = m.api("GET", "/api/session", None).await;
+    let s = &j["session"];
+    let ghe = s["seats"].as_array().expect("thiếu seats");
+    assert!(!ghe.is_empty(), "phải có người ngồi vào ghế: {s}");
+    assert!(s["recentFeed"].as_array().unwrap().len() > 1, "phải có mục feed");
+
+    m.api("PUT", "/api/source", Some(json!({ "kind": "tat" }))).await;
+}

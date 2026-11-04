@@ -5,7 +5,7 @@
  *  gắn. Nhờ vậy khoá không bao giờ lọt vào bundle của trang.
  */
 
-import type { DesignInfo, Json } from '@live/contracts';
+import type { DesignInfo, Json, SessionView } from '@live/contracts';
 
 export interface ModuleState {
   enabled: boolean;
@@ -15,6 +15,17 @@ export interface ModuleState {
 export interface DesignList {
   designs: DesignInfo[];
   live: string | null;
+}
+
+export type SourceKind = 'tat' | 'mau' | 'bridge';
+
+export interface SourceStatus {
+  kind: SourceKind;
+  url: string;
+  channel: string;
+  nhip: number;
+  running: boolean;
+  problem?: string;
 }
 
 export class ApiError extends Error {
@@ -70,6 +81,13 @@ export const api = {
 
   /** Xoá dữ liệu phiên. Trả về đúng những file đã xoá. */
   reset: (designId: string) => call<{ cleared: string[] }>(`/designs/${designId}/reset`, 'POST'),
+
+  session: () => call<{ session: SessionView | null }>('/session'),
+
+  source: () => call<{ source: SourceStatus }>('/source'),
+
+  setSource: (cfg: { kind: SourceKind; url?: string; channel?: string; nhip?: number }) =>
+    call<{ source: SourceStatus }>('/source', 'PUT', cfg),
 
   modules: (designId: string) =>
     call<{ modules: Record<string, ModuleState> }>(`/designs/${designId}/modules`),

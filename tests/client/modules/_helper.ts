@@ -13,6 +13,7 @@ export function phien(likes = 0): SessionView {
     startedAt: 0,
     totals: { viewers: 0, likes, gifts: 0, xu: 0, comments: 0 },
     topGivers: [],
+    seats: [],
     recentUsers: [],
     recentFeed: [],
   };

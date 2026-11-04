@@ -9,9 +9,12 @@
 
 pub mod api;
 pub mod designs;
+pub mod events;
 pub mod files;
 pub mod guard;
 pub mod paths;
+pub mod session;
+pub mod source;
 pub mod settings;
 pub mod state;
 pub mod store;
@@ -34,6 +37,8 @@ pub fn router(st: Arc<AppState>) -> Router {
     let api = Router::new()
         .route("/api/info", get(api::server_info))
         .route("/api/designs", get(api::list_designs))
+        .route("/api/session", get(api::get_session))
+        .route("/api/source", get(api::get_source).put(api::put_source))
         .route(
             "/api/live",
             get(api::get_live).post(api::post_live).delete(api::delete_live),

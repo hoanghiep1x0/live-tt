@@ -375,6 +375,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "tokio-tungstenite",
  "tower",
  "tracing",
  "tracing-subscriber",

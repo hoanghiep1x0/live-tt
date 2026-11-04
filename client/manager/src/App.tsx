@@ -31,6 +31,9 @@ export function App() {
         soModule={MODULES.length}
         wsSong={m.wsSong}
         tenLive={tenLive}
+        phien={m.phien}
+        nguon={m.nguon}
+        onNguon={m.doiNguon}
         browserTrigger={<BrowserDialog tenLive={tenLive} />}
       />
 

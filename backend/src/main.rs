@@ -36,6 +36,18 @@ async fn main() {
     tracing::info!("cổng và token: {}", cong_file.display());
     tracing::info!("thiết kế cho OBS: http://127.0.0.1:{cong}/d/<id>/");
 
+    // Nhịp phiên: trả ghế của người đã vắng lâu, rồi phát bản phiên xuống.
+    // Tách khỏi luồng sự kiện vì phòng đông thì mỗi giây hàng chục sự kiện, gửi
+    // kèm cả bảng top và danh sách ghế mỗi lần là tự làm nghẽn.
+    let nhip = st.clone();
+    tokio::spawn(async move {
+        let mut dong_ho = tokio::time::interval(std::time::Duration::from_millis(500));
+        loop {
+            dong_ho.tick().await;
+            nhip.nhip_phien();
+        }
+    });
+
     let kq = axum::serve(listener, router(st))
         .with_graceful_shutdown(async {
             let _ = tokio::signal::ctrl_c().await;

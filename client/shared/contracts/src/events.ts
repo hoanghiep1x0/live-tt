@@ -59,6 +59,15 @@ export interface FeedItem {
   story?: string;
 }
 
+/** Một chỗ đã có người. Chỗ thứ `i` nằm ở đâu là việc của thiết kế — phòng kể
+ *  chuyện xếp hình quạt, phòng đám cưới xếp bàn tròn. */
+export interface Seat {
+  i: number;
+  user: string;
+  name: string;
+  avatar?: string;
+}
+
 /** Bản rút gọn chỉ đọc của phiên mà module được phép thấy.
  *  Cố ý hẹp: không ai được phụ thuộc vào chi tiết nội bộ của phiên. */
 export interface SessionView {
@@ -72,6 +81,7 @@ export interface SessionView {
     comments: number;
   }>;
   readonly topGivers: readonly Giver[];
+  readonly seats: readonly Seat[];
   readonly recentUsers: readonly EventUser[];
   readonly recentFeed: readonly FeedItem[];
 }

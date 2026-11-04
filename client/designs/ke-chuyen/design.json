@@ -29,6 +29,8 @@
     "welcome": { "template": "Chào {ten} ghé phòng nghe truyện nha!" },
     "likes-counter": { "template": "Đã {phantram}% mục tiêu tim, cảm ơn cả phòng!" }
   },
+  "seats": 84,
+  "pointRate": 1,
   "entry": "dist/index.html",
   "quality": { "auto": true, "minFps": 24 }
 }

@@ -7,8 +7,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DesignInfo, Json } from '@live/contracts';
+import type { SessionView } from '@live/contracts';
 import { api, ApiError } from './api';
-import type { ModuleState } from './api';
+import type { ModuleState, SourceKind, SourceStatus } from './api';
 import { connect } from './ws';
 
 /** Chờ gõ xong rồi mới ghi. Gõ một câu cảm ơn mà mỗi ký tự một lần ghi đĩa
@@ -25,6 +26,9 @@ export interface Manager {
   designs: DesignInfo[];
   live: string | null;
   mods: Record<string, ModuleState>;
+  /** Phiên đang chạy, do backend giữ. `null` khi chưa phát phòng nào. */
+  phien: SessionView | null;
+  nguon: SourceStatus | null;
   dangTai: boolean;
   /** Lý do không nối được backend, `null` là đang nối được. */
   mat: string | null;
@@ -39,12 +43,15 @@ export interface Manager {
   resetData(id: string): void;
   batModule(moduleId: string, on: boolean): void;
   luuCauHinh(moduleId: string, config: Record<string, Json>): void;
+  doiNguon(kind: SourceKind): void;
 }
 
 export function useManager(): Manager {
   const [designs, setDesigns] = useState<DesignInfo[]>([]);
   const [live, setLive] = useState<string | null>(null);
   const [mods, setMods] = useState<Record<string, ModuleState>>({});
+  const [phien, setPhien] = useState<SessionView | null>(null);
+  const [nguon, setNguon] = useState<SourceStatus | null>(null);
   const [dangTai, setDangTai] = useState(true);
   const [mat, setMat] = useState<string | null>(null);
   const [wsSong, setWsSong] = useState(false);
@@ -83,6 +90,9 @@ export function useManager(): Manager {
         setDesigns(ds.designs);
         setLive(ds.live);
         await taiModule(ds.live);
+        const [p, n] = await Promise.all([api.session(), api.source()]);
+        setPhien(p.session);
+        setNguon(n.source);
         setMat(null);
       } catch (e) {
         bat(e);
@@ -130,6 +140,8 @@ export function useManager(): Manager {
               for (const k of d.enabled) ra[k] ??= { enabled: true, config: {} };
               return ra;
             });
+          } else if (d.t === 'session') {
+            setPhien(d.view);
           } else if (d.t === 'error') {
             noi(d.message, true);
           }
@@ -242,6 +254,21 @@ export function useManager(): Manager {
     [bat, taiModule],
   );
 
+  const doiNguon = useCallback(
+    (kind: SourceKind) => {
+      void (async () => {
+        try {
+          const { source } = await api.setSource({ kind });
+          setNguon(source);
+          noi(kind === 'tat' ? 'Đã tắt nguồn sự kiện' : 'Đã đổi nguồn sự kiện');
+        } catch (e) {
+          bat(e);
+        }
+      })();
+    },
+    [bat, noi],
+  );
+
   const luuCauHinh = useCallback(
     (moduleId: string, config: Record<string, Json>) => {
       const designId = liveRef.current;
@@ -279,6 +306,8 @@ export function useManager(): Manager {
     designs,
     live,
     mods,
+    phien,
+    nguon,
     dangTai,
     mat,
     wsSong,
@@ -292,5 +321,6 @@ export function useManager(): Manager {
     resetData,
     batModule,
     luuCauHinh,
+    doiNguon,
   };
 }

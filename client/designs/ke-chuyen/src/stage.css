@@ -391,6 +391,7 @@ body {
   transform: translate(-50%, -50%) scale(var(--seat-scale, 1));
 }
 .seat-label {
+  transition: opacity 1.5s ease-in-out;
   position: absolute;
   z-index: 1;
   top: 100%;
@@ -408,6 +409,11 @@ body {
   color: #fff;
   padding: 0 0.9cqw;
   border-radius: 1cqw;
+}
+
+/* Tên ghế chẵn / lẻ thay phiên: mờ dần rồi tắt, rồi hiện dần lại */
+.seat-tag.name-off .seat-label {
+  opacity: 0;
 }
 
 /* ---- Chỗ cắm cho tính năng ---- */

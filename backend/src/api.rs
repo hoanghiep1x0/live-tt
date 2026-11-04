@@ -145,6 +145,29 @@ pub async fn post_enabled(
     Ok(Json(json!({ "enabled": body.on })))
 }
 
+/// Bản tóm tắt phiên đang chạy, hoặc `null` khi chưa phát phòng nào.
+pub async fn get_session(State(st): State<Arc<AppState>>) -> Json<Value> {
+    Json(json!({ "session": st.session_view() }))
+}
+
+pub async fn get_source(State(st): State<Arc<AppState>>) -> Json<Value> {
+    Json(json!({ "source": st.nguon() }))
+}
+
+/// Đổi nguồn sự kiện. Nguồn cũ tự dừng.
+pub async fn put_source(
+    State(st): State<Arc<AppState>>,
+    Json(cfg): Json<crate::source::SourceCfg>,
+) -> Result<Json<Value>, AppError> {
+    if cfg.kind == crate::source::SourceKind::Bridge && !cfg.url.starts_with("ws://") {
+        // Cầu nối chạy trên chính máy này; nhận ws:// chứ không nhận địa chỉ lạ
+        // để không ai cấu hình nhầm thành một máy chủ ngoài Internet.
+        return Err(AppError::BadRequest("địa chỉ cầu nối phải bắt đầu bằng ws://".into()));
+    }
+    crate::source::mo(st.clone(), cfg);
+    Ok(Json(json!({ "source": st.nguon() })))
+}
+
 /// Trang quản lý hỏi cổng và token sau khi Tauri khởi động.
 pub async fn server_info(State(st): State<Arc<AppState>>) -> Json<Value> {
     Json(json!({ "port": st.port, "version": env!("CARGO_PKG_VERSION") }))

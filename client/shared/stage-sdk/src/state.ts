@@ -19,13 +19,14 @@ export interface StageState {
   noiDuoc: boolean;
 }
 
-/** Phiên rỗng. Nguồn sự kiện TikTok chưa dựng (docs/05-backend.md §0), nên đây
- *  là thứ sân khấu thấy khi chưa có ai trong phòng — và nó phải lên hình được. */
+/** Phiên rỗng: thứ sân khấu thấy khi chưa phát phòng nào, hoặc phòng chưa có ai.
+ *  Sân khấu phải lên hình đầy đủ ở trạng thái này. */
 export const PHIEN_RONG: SessionView = {
   designId: null,
   startedAt: null,
   totals: { viewers: 0, likes: 0, gifts: 0, xu: 0, comments: 0 },
   topGivers: [],
+  seats: [],
   recentUsers: [],
   recentFeed: [],
 };

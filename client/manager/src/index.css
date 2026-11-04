@@ -1263,3 +1263,20 @@ main {
 .mod-top .btn {
   pointer-events: auto;
 }
+
+/* Ô chọn nguồn sự kiện trên thanh trên */
+.conn.nguon {
+  gap: 7px;
+  cursor: pointer;
+  padding-right: 7px;
+}
+.conn.nguon .input-xs {
+  width: auto;
+  min-width: 86px;
+}
+.conn .dang-chay {
+  color: var(--ok);
+}
+.conn .canh-bao {
+  color: var(--warn);
+}

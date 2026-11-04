@@ -1,4 +1,12 @@
-export type { EventUser, LiveEvent, FeedKind, FeedItem, SessionView, Giver } from './events';
+export type {
+  EventUser,
+  LiveEvent,
+  FeedKind,
+  FeedItem,
+  Seat,
+  SessionView,
+  Giver,
+} from './events';
 
 export type {
   Json,
