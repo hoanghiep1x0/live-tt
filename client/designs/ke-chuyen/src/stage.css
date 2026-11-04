@@ -629,12 +629,20 @@ body {
   z-index: 7;
   pointer-events: none;
 }
-/* ---- Hai bạn nhỏ đứng hai bên sàn ----
-   Ảnh của bản cũ (`KIDS` trong `comfort.ts`): bé gái ngồi thiền trên đài sen
-   bên trái, cậu bé quỳ bên phải. Đứng hẳn ra hai mép, nhường khoảng giữa cho
-   sàn nhảy và thẻ MC. `top` là chỗ bàn chân nên ảnh tự kéo lên trên chính nó.
-   Hoạt ảnh thở nằm ở đây chứ không phải trang trí: hai em đứng đó suốt buổi,
-   mà TikTok soi khung hình đứng yên lâu. */
+/* ---- Hai bạn nhỏ đứng hai bên thanh tiến độ ----
+   Ảnh và CHỖ ĐỨNG của bản cũ (`KIDS` trong `comfort.ts`): bé gái ngồi thiền
+   trên đài sen ở đầu trái thanh tiến độ, cậu bé quỳ ở đầu phải. Hai em đứng
+   CAO hơn sàn nhảy, ngang tầm thanh tiến độ, không phải dưới hàng ghế — bản cũ
+   tính đó là lớp gần máy quay nhất.
+
+   Chỗ thứ ba của bản cũ (bé chibi khóc, `HERO_X`/`HERO_Y` = 11% · 117cqw,
+   ngay sau lưng bé gái) để trống: bé đó thuộc tính năng "ôm an ủi" chưa
+   chuyển sang bản mới, và nó là nhân vật biết khóc / được ôm nên phải là
+   module có lõi riêng, không phải ảnh trang trí của thiết kế.
+
+   `top` là chỗ bàn chân nên ảnh tự kéo lên trên chính nó. Hoạt ảnh thở nằm ở
+   đây chứ không phải trang trí: hai em đứng đó suốt buổi, mà TikTok soi khung
+   hình đứng yên lâu. */
 .stage-kids {
   position: absolute;
   inset: 0;
@@ -643,19 +651,23 @@ body {
 }
 .stage-kid {
   position: absolute;
-  top: calc(var(--hall-top) + 13cqw);
   width: auto;
   transform: translate(-50%, -100%);
   transform-origin: 50% 100%;
   filter: drop-shadow(0 0.6cqw 0.8cqw rgba(0, 0, 0, 0.45));
   animation: be-tho 4s ease-in-out infinite alternate;
 }
+/* Số của bản cũ: bàn chân ở 123cqw và 118cqw tính từ đỉnh màn, tức mốc phần
+   dưới cộng 27,9 và 22,9. Viết theo `--lower-top` để khung ngang nâng cả cụm
+   lên cùng `--group-lift` như hàng top và thanh tiến độ. */
 .kid-girl {
-  left: 6%;
+  left: 6.5%;
+  top: calc(var(--lower-top) + 27.9cqw - var(--group-lift));
   height: 12cqw;
 }
 .kid-boy {
-  left: 94%;
+  left: 91.5%;
+  top: calc(var(--lower-top) + 22.9cqw - var(--group-lift));
   height: 11.5cqw;
   /* Lệch pha: hai em thở cùng nhịp thì lộ ra là hai tấm ảnh. */
   animation-delay: -1.6s;
