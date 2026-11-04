@@ -14,7 +14,6 @@ export const manifest: ModuleManifest<Config> = {
   name: 'Cảm ơn theo dõi',
   icon: '⭐',
   summary: 'Chào khi có người theo dõi hoặc thành hội viên',
-  group: 'other',
   triggers: ['follow', 'subscribe'],
   configVersion: 1,
   schema,

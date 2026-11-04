@@ -20,8 +20,8 @@ export const manifest: ModuleManifest<Config> = {
   name: 'Kể chuyện',
   icon: '📖',
   summary: 'Tiêu đề và từng đoạn truyện hiện trong khung chiếu',
-  group: 'quick',
   // Chạy theo nhịp, không theo sự kiện của khán giả.
+  room: 'ke-chuyen',
   triggers: [],
   configVersion: 1,
   schema,

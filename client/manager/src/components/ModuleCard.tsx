@@ -43,7 +43,7 @@ export function ModuleCard({ r, st, disabled, onBat, onLuu }: Props) {
           />
         </div>
 
-        {ui.group === 'quick' && ui.triggers.length > 0 ? (
+        {ui.triggers.length > 0 ? (
           <div className="hooks">
             <span className="q-lbl">Chạy khi</span>
             {ui.triggers.map((t) => (

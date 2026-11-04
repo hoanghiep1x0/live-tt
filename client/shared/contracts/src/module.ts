@@ -51,6 +51,17 @@ export interface ModuleAction {
   op: string;
 }
 
+/** Loại phòng live. Mỗi loại có một nhúm tính năng của riêng nó. */
+export type RoomKind = 'ke-chuyen' | 'san-bar' | 'dam-cuoi';
+
+/** Loại phòng theo thứ tự hiện trên trang. Mở một dạng live mới = thêm một dòng
+ *  ở đây rồi gắn `room` cho các module của nó. */
+export const LOAI_PHONG: readonly { id: RoomKind; name: string }[] = [
+  { id: 'ke-chuyen', name: 'Live Kể Truyện' },
+  { id: 'san-bar', name: 'Live Sàn Bar' },
+  { id: 'dam-cuoi', name: 'Live Đám Cưới' },
+];
+
 /** Phần hiển thị của manifest. Trang quản lý chỉ cần đến đây, không cần schema —
  *  nhờ vậy nó không phải nạp zod của từng module chỉ để vẽ một cái thẻ. */
 export interface ModuleUi {
@@ -61,8 +72,12 @@ export interface ModuleUi {
   icon: string;
   /** Một dòng mô tả dưới tên. */
   summary: string;
-  /** 'quick' lên nhóm trên, có ô chỉnh nhanh; 'other' là thẻ gọn. */
-  group: 'quick' | 'other';
+  /** Loại phòng mà tính năng này CHỈ hợp. Thiếu nghĩa là dùng chung cho mọi
+   *  loại phòng, và nó lên mục "Chỉnh nhanh" ở trên cùng.
+   *
+   *  Đây là chỗ duy nhất khai đặc thù theo loại phòng. Phần còn lại của hệ —
+   *  hợp đồng, runtime, sân khấu — không biết "đám cưới" hay "sàn bar" là gì. */
+  room?: RoomKind;
   /** Sự kiện module này bắt, để trang quản lý nói được "Chạy khi: có quà".
    *  Phải khớp đúng các khoá trong `core.hooks` — có test giữ hai bên không lệch. */
   triggers: readonly FeedKind[];

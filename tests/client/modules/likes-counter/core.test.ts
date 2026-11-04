@@ -18,9 +18,9 @@ describe('manifest', () => {
     kiemModule(mod);
   });
 
-  it('chạy khi có tim, và là thẻ gọn', () => {
+  it('chạy khi có tim, và dùng chung cho mọi loại phòng', () => {
     expect(mod.manifest.triggers).toEqual(['like']);
-    expect(mod.manifest.group).toBe('other');
+    expect(mod.manifest.room).toBeUndefined();
   });
 });
 

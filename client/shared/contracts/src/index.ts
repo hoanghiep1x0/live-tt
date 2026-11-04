@@ -20,13 +20,14 @@ export type {
   CommandSource,
 } from './effects';
 
-export { ID_RE } from './module';
+export { ID_RE, LOAI_PHONG } from './module';
 export type {
   Capability,
   ConfigField,
   ConfigFieldType,
   ModuleAction,
   ModuleUi,
+  RoomKind,
   ModuleManifest,
   Ctx,
   FeedHook,

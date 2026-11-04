@@ -15,7 +15,6 @@ export const manifest: ModuleManifest<Config> = {
   name: 'Cảm ơn quà',
   icon: '🎁',
   summary: 'Đọc tên & tạo hiệu ứng khi có quà',
-  group: 'quick',
   triggers: ['gift'],
   configVersion: 1,
   schema,

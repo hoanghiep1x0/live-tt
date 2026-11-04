@@ -1,97 +1,427 @@
-/* Bảng xem thử. Nằm NGOÀI khung sân khấu, góc trên bên phải của trang.
+/* Bảng xem thử: một ngăn bên phải trang, NGOÀI khung sân khấu.
  *
- * Khi OBS cắt đúng tỉ lệ 9:16 thì vùng ngoài khung không tồn tại, nên bảng này
+ * Khi OBS cắt đúng tỉ lệ 9:16 thì vùng ngoài khung không tồn tại, nên ngăn này
  * không lọt vào sóng. Thêm một lớp nữa: component tự ẩn khi thấy `window.obsstudio`.
  *
  * Dùng px chứ không dùng cqw: nó không thuộc sân khấu, không co giãn theo khung.
  */
 
-.bang-xem {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
+.bx-nut,
+.bx-ngan,
+.bx-tam {
   font: 13px/1.45 ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
   color: #f4efe6;
 }
 
-.bang-xem-nut {
+.bx-nut {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 10001;
   width: 34px;
   height: 34px;
   border-radius: 10px;
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
-  color: #f4efe6;
   background: rgba(20, 16, 12, 0.82);
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
   opacity: 0.45;
   transition: opacity 0.15s;
 }
-.bang-xem-nut:hover,
-.bang-xem[data-mo='true'] .bang-xem-nut {
+.bx-nut:hover,
+.bx-nut[aria-expanded='true'] {
   opacity: 1;
 }
 
-.bang-xem-khung {
-  width: 230px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(20, 16, 12, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
+/* ── Ngăn phải ────────────────────────────────────────────────────────────── */
+
+.bx-ngan {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(16, 13, 10, 0.96);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: -18px 0 50px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  /* `position` để modal con `absolute` bám đúng vào ngăn này. */
+  isolation: isolate;
 }
 
-.bang-xem-dau {
-  margin: 0 0 10px;
-  font-weight: 700;
+.bx-ngan-dau {
+  flex: none;
+  padding: 14px 54px 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+.bx-ngan-dau b {
+  display: block;
   font-size: 12.5px;
 }
-.bang-xem-dau small {
+.bx-ngan-dau small {
   display: block;
-  font-weight: 500;
+  margin-top: 2px;
   font-size: 11.5px;
   color: #9b958a;
 }
 
-.bang-xem-ds {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+/* Danh sách thẻ kéo được: ngăn cao bằng trang, chỉ khúc giữa cuộn. */
+.bx-ngan-than {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-}
-.bang-xem-ds label {
-  display: flex;
-  align-items: center;
   gap: 8px;
-  padding: 4px 6px;
-  border-radius: 7px;
+}
+.bx-ngan-than::-webkit-scrollbar {
+  width: 9px;
+}
+.bx-ngan-than::-webkit-scrollbar-thumb {
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.bx-ngan-chan {
+  flex: none;
+  margin: 0;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  font-size: 11.5px;
+  color: #9b958a;
+}
+
+.bx-muc {
+  margin: 4px 2px 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9b958a;
+}
+.bx-muc-phong {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bx-muc-trong {
+  margin: 0 2px;
+  font-size: 11px;
+  color: #6f6a61;
+}
+
+/* ── Thẻ một tính năng ────────────────────────────────────────────────────── */
+
+.bx-the {
+  position: relative;
+  padding: 10px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+.bx-the[data-bat='true'] {
+  border-color: rgba(47, 158, 91, 0.5);
+  background: rgba(47, 158, 91, 0.08);
+}
+.bx-the:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Nút phủ kín mặt thẻ. Nằm DƯỚI các ô (z-index 0 so với 1) nên bấm trúng ô thì
+   chỉnh tại chỗ, bấm chỗ trống thì mở modal. */
+.bx-cham {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  border-radius: 11px;
+  background: none;
   cursor: pointer;
 }
-.bang-xem-ds label:hover {
-  background: rgba(255, 255, 255, 0.07);
+
+.bx-the-dau {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  pointer-events: none;
 }
-.bang-xem-ds input {
+.bx-the-dau .bx-cong {
+  pointer-events: auto;
+}
+
+.bx-icon {
+  flex: none;
+  font-size: 17px;
+  line-height: 1;
+}
+.bx-ten {
+  flex: 1;
+  min-width: 0;
+}
+.bx-ten b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.bx-ten small {
+  display: block;
+  font-size: 11px;
+  color: #9b958a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bx-cong {
+  flex: none;
   accent-color: #2f9e5b;
   cursor: pointer;
 }
-.bang-xem-ds input:disabled {
+.bx-cong:disabled {
   cursor: not-allowed;
-}
-.bang-xem-ds input:disabled + span {
-  opacity: 0.45;
+  opacity: 0.4;
 }
 
-.bang-xem-chan {
-  margin: 10px 0 0;
-  font-size: 11.5px;
+/* Hàng chỉnh nhanh: những ô hay sửa nhất, ngay trên thẻ, không phải mở modal. */
+.bx-the-nhanh {
+  position: relative;
+  z-index: 1;
+  margin-top: 9px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bx-q {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 7px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+.bx-q-nhan {
+  font-size: 10.5px;
   color: #9b958a;
+  white-space: nowrap;
+}
+.bx-q-range {
+  flex: 1;
+  min-width: 118px;
+}
+.bx-q-range input {
+  flex: 1;
+  min-width: 0;
+  accent-color: #f2c45a;
+}
+.bx-q-range output {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.bx-q input[type='checkbox'] {
+  accent-color: #2f9e5b;
+  cursor: pointer;
+}
+
+/* Hai lớp cho nặng hơn `.bx-o { width: 100% }` của modal — ô trên thẻ phải vừa
+   nội dung, không kéo dài hết hàng. */
+.bx-q .bx-o-nho {
+  width: 62px;
+  padding: 2px 5px;
+  font-size: 11.5px;
+}
+.bx-q-select .bx-o-nho,
+.bx-q-text .bx-o-nho,
+.bx-q-time .bx-o-nho {
+  width: auto;
+  max-width: 104px;
+}
+
+/* ── Modal cấu hình đầy đủ ────────────────────────────────────────────────── */
+
+/* Trượt lên che ngăn phải, KHÔNG che khung sân khấu.
+ *
+ * Đây là đường chặn thật: mọi thứ của người vận hành nằm gọn ngoài mép khung,
+ * nên dù quay bằng Display Capture hay Window Capture, phần lên sóng vẫn chỉ có
+ * sân khấu. Việc dò `window.obsstudio` chỉ là lớp thứ hai. */
+.bx-tam {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  padding: 8px;
+  background: rgba(10, 8, 6, 0.75);
+  backdrop-filter: blur(3px);
+}
+
+.bx-modal {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  background: #16120f;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.7);
+}
+
+.bx-dau2 {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+.bx-dau2 .bx-ten b {
+  font-size: 14px;
+}
+.bx-dau2 .bx-icon {
+  font-size: 19px;
+}
+
+.bx-x {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  cursor: pointer;
+  color: #cfc8bc;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 12px;
+  line-height: 1;
+}
+.bx-x:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bx-than {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+/* Hàng có công tắc: nhãn bên trái, công tắc bên phải. */
+.bx-dong {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.bx-dong > span {
+  flex: 1;
+  min-width: 0;
+}
+.bx-dong b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.bx-dong small {
+  display: block;
+  font-size: 11px;
+  color: #9b958a;
+}
+.bx-dong input {
+  flex: none;
+  accent-color: #2f9e5b;
+  cursor: pointer;
+}
+.bx-dong input:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* Công tắc chính của cả tính năng: tách khỏi các ô còn lại bằng một nền riêng. */
+.bx-dong-chinh {
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.bx-hang {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.bx-hang > label {
+  font-size: 11.5px;
+  color: #cfc8bc;
+}
+
+.bx-o {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 8px;
+  color: #f4efe6;
+  background: rgba(0, 0, 0, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font: inherit;
+  resize: vertical;
+}
+.bx-o:focus {
+  outline: 2px solid rgba(242, 196, 90, 0.55);
+  outline-offset: -1px;
+}
+.bx-o:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.bx-truot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bx-truot input {
+  flex: 1;
+  accent-color: #f2c45a;
+}
+.bx-truot output {
+  flex: none;
+  min-width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.bx-goi {
+  font-size: 11px;
+  color: #9b958a;
+}
+
+.bx-chan2 {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: 11px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.bx-xong {
+  padding: 7px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  color: #22190c;
+  background: #f2c45a;
+  border: 0;
+}
+.bx-xong:hover {
+  background: #f7d079;
 }

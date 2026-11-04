@@ -41,7 +41,9 @@ function sang(state: State, i: number, now: number, ds: string[]): Effect[] {
   // Hiện chữ là việc của phần vẽ; ở đây chỉ lo đọc to và nhấn khung chiếu lên.
   const ra: Effect[] = [{ kind: 'overlay', slot: 'screen', ttlMs: 2000 }];
   if (state.config.readAloud) {
-    ra.unshift({ kind: 'say', text: d, priority: 'normal' });
+    // `caption: false`: đoạn truyện đã nằm trên khung chiếu rồi, để thẻ MC
+    // nhắc lại nữa là màn ra hai lần cùng một câu.
+    ra.unshift({ kind: 'say', text: d, priority: 'normal', caption: false });
   }
   return ra;
 }

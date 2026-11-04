@@ -14,7 +14,6 @@ function manifest(triggers: ModuleManifest<Config>['triggers']): ModuleManifest<
     name: 'Thử nghiệm',
     icon: '🧪',
     summary: 'Chỉ dùng trong test',
-    group: 'other',
     triggers,
     configVersion: 1,
     // Schema thật không cần ở đây: runtime không bao giờ chạm vào nó.

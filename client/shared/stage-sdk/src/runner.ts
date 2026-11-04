@@ -60,8 +60,9 @@ export function useRunner(s: StageState): KetQuaChay {
   const nhan = useRef((ra: Effect[]) => {
     for (const e of ra) {
       if (e.kind === 'say') {
-        // Vừa đọc to vừa hiện chữ: người xem tắt tiếng vẫn theo được.
-        setLoiMc({ text: e.text, at: bayGio() });
+        // Vừa đọc to vừa hiện chữ: người xem tắt tiếng vẫn theo được. Trừ khi
+        // module đã tự vẽ câu đó lên màn rồi.
+        if (e.caption !== false) setLoiMc({ text: e.text, at: bayGio() });
         giong.current?.noi(e.text, e.priority ?? 'normal', e.voice ?? '');
       } else if (e.kind === 'sfx') {
         playSfx(e.sound, e.volume ?? 1);

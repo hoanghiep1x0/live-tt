@@ -15,7 +15,6 @@ export const manifest: ModuleManifest<Config> = {
   name: 'Chào mừng vào phòng',
   icon: '👋',
   summary: 'Gọi tên & chào khi có người vào phòng',
-  group: 'quick',
   triggers: ['join'],
   configVersion: 1,
   schema,

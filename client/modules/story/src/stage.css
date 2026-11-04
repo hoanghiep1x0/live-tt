@@ -35,6 +35,29 @@
   }
 }
 
+/* Nền tự trải khi khung chưa có ảnh hay video.
+ *
+ * Màu chạy một vòng 72 giây: chậm tới mức người xem chỉ thấy khung "ấm dần"
+ * rồi "nguội dần", nhưng pixel thì không khung nào giống khung nào. Xoay sắc
+ * trên một dải màu dựng sẵn cho ra chuyển màu mượt mà không cần mười chặng. */
+.mod-truyen-nen {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 80% at 50% 12%, rgba(255, 221, 160, 0.3) 0%, rgba(255, 221, 160, 0) 60%),
+    linear-gradient(165deg, #6d3b86 0%, #a8436a 38%, #d8713f 72%, #3a2246 100%);
+  animation: mod-truyen-mau 72s linear infinite;
+}
+
+@keyframes mod-truyen-mau {
+  from {
+    filter: hue-rotate(0deg);
+  }
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
 /* Dải sáng quét ngang, rất mờ. Giữ khung sống cả khi chiếu ảnh tĩnh. */
 .mod-truyen-quet {
   position: absolute;
@@ -71,23 +94,55 @@
   animation: mod-truyen-chu-vao 0.45s ease-out;
 }
 
-/* Có ảnh hoặc video: nằm dưới đáy như phụ đề, nền mờ dần để chữ nổi lên hình
-   mà không che mất hình. */
+/* Lớp nền của khối chữ, học cách các web xem phim đặt phụ đề: một dải tối
+   chuyển dần cộng một lớp làm mờ chính cái hình phía sau. Hình có sáng hay
+   rối đến đâu thì chữ vẫn nổi, mà phần hình phía trên không bị che.
+
+   Để ở `::before` chứ không đặt thẳng lên khối: lớp này bị cắt mềm bằng mask,
+   mà mask đặt lên khối thì cắt luôn cả chữ. */
+.mod-truyen-chu::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Có ảnh hoặc video: nằm dưới đáy như phụ đề. */
 .mod-truyen-chu.la-sub {
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 7cqw 2.4cqw 2.4cqw;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.75) 55%);
+  padding: 8cqw 2.8cqw 2.8cqw;
+}
+.mod-truyen-chu.la-sub::before {
+  background: linear-gradient(
+    180deg,
+    rgba(10, 6, 14, 0) 0%,
+    rgba(10, 6, 14, 0.55) 34%,
+    rgba(10, 6, 14, 0.88) 68%,
+    rgba(10, 6, 14, 0.96) 100%
+  );
+  backdrop-filter: blur(0.9cqw) saturate(0.82);
+  -webkit-backdrop-filter: blur(0.9cqw) saturate(0.82);
+  /* Mép trên tan dần vào hình, không thành một đường kẻ ngang. */
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, #000 40%);
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, #000 40%);
 }
 
 /* Không có hình: chữ là nội dung chính, đặt giữa khung cho cân bố cục. */
 .mod-truyen-chu.la-giua {
-  left: 0;
-  right: 0;
+  left: 2.6cqw;
+  right: 2.6cqw;
   top: 50%;
   transform: translateY(-50%);
-  padding: 0 4cqw;
+  padding: 3.4cqw 3.2cqw;
+}
+.mod-truyen-chu.la-giua::before {
+  background: rgba(10, 6, 14, 0.52);
+  border-radius: 1.6cqw;
+  backdrop-filter: blur(1.2cqw) saturate(0.8);
+  -webkit-backdrop-filter: blur(1.2cqw) saturate(0.8);
 }
 
 .mod-truyen-ten {
@@ -95,7 +150,7 @@
   font-size: 3.2cqw;
   font-weight: 700;
   color: var(--gold, #f2c45a);
-  text-shadow: 0 0.2cqw 0.6cqw rgba(0, 0, 0, 0.95);
+  text-shadow: 0 0.15cqw 0.5cqw rgba(0, 0, 0, 0.85);
 }
 .mod-truyen-chu.la-giua .mod-truyen-ten {
   font-size: 4cqw;
@@ -107,12 +162,11 @@
   font-size: 2.7cqw;
   line-height: 1.45;
   font-weight: 600;
-  text-shadow: 0 0.2cqw 0.6cqw rgba(0, 0, 0, 0.95), 0 0 1.2cqw rgba(0, 0, 0, 0.8);
+  text-shadow: 0 0.15cqw 0.5cqw rgba(0, 0, 0, 0.85);
 }
 .mod-truyen-chu.la-giua .mod-truyen-doan {
   font-size: 3.2cqw;
   line-height: 1.55;
-  text-shadow: 0 0.2cqw 0.6cqw rgba(0, 0, 0, 0.8);
 }
 
 @keyframes mod-truyen-chu-vao {

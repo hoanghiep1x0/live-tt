@@ -45,8 +45,12 @@ export type SlotName =
   | 'full';
 
 export type Effect =
-  /** Nói một câu. Đi qua hàng chờ giọng đọc; `high` chen lên trước. */
-  | { kind: 'say'; text: string; voice?: string; priority?: Priority }
+  /** Nói một câu. Đi qua hàng chờ giọng đọc; `high` chen lên trước.
+   *
+   *  `caption` mặc định bật: câu nói hiện luôn lên thẻ MC để người xem tắt
+   *  tiếng vẫn theo được. Module nào đã tự vẽ chính câu đó lên màn thì đặt
+   *  `false`, không màn sẽ ra hai lần một câu. */
+  | { kind: 'say'; text: string; voice?: string; priority?: Priority; caption?: boolean }
   | { kind: 'sfx'; sound: SfxName; volume?: number }
   /** Vẽ vào một slot. Thiết kế không có slot đó thì bỏ qua và ghi log, không lỗi. */
   | { kind: 'overlay'; slot: SlotName; ttlMs?: number }

@@ -14,7 +14,6 @@ export const manifest: ModuleManifest<Config> = {
   name: 'Top người tặng',
   icon: '🏆',
   summary: 'Bảng vinh danh người tặng nhiều nhất phiên',
-  group: 'quick',
   // Không bắt sự kiện nào: bảng đọc thẳng từ phiên, còn việc báo đổi ngôi làm
   // theo nhịp. Bắt từng món quà thì phải tự cộng lại bảng mà backend đã cộng rồi.
   triggers: [],

@@ -63,6 +63,10 @@ export function Stage({ config, modState }: StagePartProps<Config, State>) {
 
   return (
     <div className="mod-truyen" data-co-hinh={coHinh}>
+      {/* Chưa có ảnh hay video: tự trải một nền đổi màu theo chu kì. Để trống
+          thì lộ nền sảnh đứng im sau lưng — đúng thứ TikTok soi. */}
+      {coHinh ? null : <span className="mod-truyen-nen" aria-hidden />}
+
       {coHinh ? (
         LA_VIDEO.test(media) ? (
           <VideoKhongKet src={media} />

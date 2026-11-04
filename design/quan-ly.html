@@ -173,7 +173,8 @@
   .group-title { margin: 6px 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-text);
     display: flex; align-items: center; gap: 8px; }
   .group-title span { font-size: 11px; color: var(--muted); padding: 0 7px; border-radius: 99px; background: var(--line); letter-spacing: 0; }
-  .grid-mods + .group-title { margin-top: 26px; }
+  .grid-mods + .group-title, .group-trong + .group-title { margin-top: 26px; }
+  .group-trong { margin: 0 0 6px; color: var(--muted); font-size: 12.5px; }
   .mod-hit { position: absolute; inset: 0; z-index: 1; border-radius: inherit; cursor: pointer; }
   .mod-top { display: flex; align-items: center; gap: 12px; }
   .mod-top .switch, .mod-quick .q { position: relative; z-index: 2; }
@@ -218,8 +219,8 @@
 
   /* ---- Modal (mở bằng #id, không cần JS) ---- */
   .overlay { position: fixed; inset: 0; z-index: 50; display: none; place-items: center; padding: 16px; }
-  #r-m-browser:checked ~ #m-browser, #r-m-quick:checked ~ #m-quick, #r-mod-thanks:checked ~ #mod-thanks, #r-mod-greet:checked ~ #mod-greet, #r-mod-bot:checked ~ #mod-bot, #r-mod-tts:checked ~ #mod-tts, #r-mod-top:checked ~ #mod-top, #r-mod-chibi:checked ~ #mod-chibi, #r-mod-likes:checked ~ #mod-likes, #r-mod-goal:checked ~ #mod-goal, #r-mod-music:checked ~ #mod-music, #r-mod-fx:checked ~ #mod-fx, #r-mod-filter:checked ~ #mod-filter, #r-mod-approve:checked ~ #mod-approve, #r-mod-autopilot:checked ~ #mod-autopilot, #r-mod-schedule:checked ~ #mod-schedule, #r-mod-sfx:checked ~ #mod-sfx, #r-mod-poll:checked ~ #mod-poll, #r-mod-announce:checked ~ #mod-announce, #r-mod-raffle:checked ~ #mod-raffle, #r-mod-quiz:checked ~ #mod-quiz, #r-mod-follow:checked ~ #mod-follow { display: grid; animation: fade .18s ease-out; }
-  #r-m-browser:checked ~ #m-browser .modal, #r-m-quick:checked ~ #m-quick .modal, #r-mod-thanks:checked ~ #mod-thanks .modal, #r-mod-greet:checked ~ #mod-greet .modal, #r-mod-bot:checked ~ #mod-bot .modal, #r-mod-tts:checked ~ #mod-tts .modal, #r-mod-top:checked ~ #mod-top .modal, #r-mod-chibi:checked ~ #mod-chibi .modal, #r-mod-likes:checked ~ #mod-likes .modal, #r-mod-goal:checked ~ #mod-goal .modal, #r-mod-music:checked ~ #mod-music .modal, #r-mod-fx:checked ~ #mod-fx .modal, #r-mod-filter:checked ~ #mod-filter .modal, #r-mod-approve:checked ~ #mod-approve .modal, #r-mod-autopilot:checked ~ #mod-autopilot .modal, #r-mod-schedule:checked ~ #mod-schedule .modal, #r-mod-sfx:checked ~ #mod-sfx .modal, #r-mod-poll:checked ~ #mod-poll .modal, #r-mod-announce:checked ~ #mod-announce .modal, #r-mod-raffle:checked ~ #mod-raffle .modal, #r-mod-quiz:checked ~ #mod-quiz .modal, #r-mod-follow:checked ~ #mod-follow .modal { animation: pop .28s cubic-bezier(.2,.9,.25,1.15); }
+  #r-m-browser:checked ~ #m-browser, #r-m-quick:checked ~ #m-quick, #r-mod-thanks:checked ~ #mod-thanks, #r-mod-greet:checked ~ #mod-greet, #r-mod-bot:checked ~ #mod-bot, #r-mod-tts:checked ~ #mod-tts, #r-mod-top:checked ~ #mod-top, #r-mod-chibi:checked ~ #mod-chibi, #r-mod-likes:checked ~ #mod-likes, #r-mod-goal:checked ~ #mod-goal, #r-mod-music:checked ~ #mod-music, #r-mod-fx:checked ~ #mod-fx, #r-mod-filter:checked ~ #mod-filter, #r-mod-approve:checked ~ #mod-approve, #r-mod-autopilot:checked ~ #mod-autopilot, #r-mod-schedule:checked ~ #mod-schedule, #r-mod-sfx:checked ~ #mod-sfx, #r-mod-poll:checked ~ #mod-poll, #r-mod-announce:checked ~ #mod-announce, #r-mod-raffle:checked ~ #mod-raffle, #r-mod-quiz:checked ~ #mod-quiz, #r-mod-follow:checked ~ #mod-follow, #r-mod-story:checked ~ #mod-story, #r-mod-request:checked ~ #mod-request, #r-mod-dancefloor:checked ~ #mod-dancefloor, #r-mod-wishes:checked ~ #mod-wishes, #r-mod-ceremony:checked ~ #mod-ceremony { display: grid; animation: fade .18s ease-out; }
+  #r-m-browser:checked ~ #m-browser .modal, #r-m-quick:checked ~ #m-quick .modal, #r-mod-thanks:checked ~ #mod-thanks .modal, #r-mod-greet:checked ~ #mod-greet .modal, #r-mod-bot:checked ~ #mod-bot .modal, #r-mod-tts:checked ~ #mod-tts .modal, #r-mod-top:checked ~ #mod-top .modal, #r-mod-chibi:checked ~ #mod-chibi .modal, #r-mod-likes:checked ~ #mod-likes .modal, #r-mod-goal:checked ~ #mod-goal .modal, #r-mod-music:checked ~ #mod-music .modal, #r-mod-fx:checked ~ #mod-fx .modal, #r-mod-filter:checked ~ #mod-filter .modal, #r-mod-approve:checked ~ #mod-approve .modal, #r-mod-autopilot:checked ~ #mod-autopilot .modal, #r-mod-schedule:checked ~ #mod-schedule .modal, #r-mod-sfx:checked ~ #mod-sfx .modal, #r-mod-poll:checked ~ #mod-poll .modal, #r-mod-announce:checked ~ #mod-announce .modal, #r-mod-raffle:checked ~ #mod-raffle .modal, #r-mod-quiz:checked ~ #mod-quiz .modal, #r-mod-follow:checked ~ #mod-follow .modal, #r-mod-story:checked ~ #mod-story .modal, #r-mod-request:checked ~ #mod-request .modal, #r-mod-dancefloor:checked ~ #mod-dancefloor .modal, #r-mod-wishes:checked ~ #mod-wishes .modal, #r-mod-ceremony:checked ~ #mod-ceremony .modal { animation: pop .28s cubic-bezier(.2,.9,.25,1.15); }
   .backdrop { position: absolute; inset: 0; background: var(--overlay); backdrop-filter: blur(6px); }
   .modal { position: relative; width: 100%; max-height: calc(100vh - 32px); display: flex; flex-direction: column; border-radius: 18px;
     background: linear-gradient(180deg, var(--card-top), var(--card-bot)); border: 1px solid var(--line);
@@ -366,6 +367,11 @@
 <input class="sr" type="radio" name="modal" id="r-mod-raffle" tabindex="-1">
 <input class="sr" type="radio" name="modal" id="r-mod-quiz" tabindex="-1">
 <input class="sr" type="radio" name="modal" id="r-mod-follow" tabindex="-1">
+<input class="sr" type="radio" name="modal" id="r-mod-story" tabindex="-1">
+<input class="sr" type="radio" name="modal" id="r-mod-request" tabindex="-1">
+<input class="sr" type="radio" name="modal" id="r-mod-dancefloor" tabindex="-1">
+<input class="sr" type="radio" name="modal" id="r-mod-wishes" tabindex="-1">
+<input class="sr" type="radio" name="modal" id="r-mod-ceremony" tabindex="-1">
 
 <header class="topbar">
   <div class="topbar-in">
@@ -373,7 +379,7 @@
     <nav class="tabs" aria-label="Điều hướng">
       <label class="tab" for="r-m-browser"><svg class="i"><use href="#i-globe"/></svg>Trình duyệt</label>
       <label class="tab" for="t-designs"><svg class="i"><use href="#i-grid"/></svg>Thiết kế <span class="count">8</span></label>
-      <label class="tab" for="t-mods"><svg class="i"><use href="#i-puzzle"/></svg>Tính năng <span class="count" id="c-mods">9/20</span></label>
+      <label class="tab" for="t-mods"><svg class="i"><use href="#i-puzzle"/></svg>Tính năng <span class="count" id="c-mods">10/25</span></label>
     </nav>
     <div class="spacer"></div>
     <div class="conn raised"><span class="dot ok"></span>TikTok · <b>@kechuyen.dem</b></div>
@@ -606,7 +612,7 @@
         <div class="mod-quick" style="--n:2"><span class="q q-text" title="Nội dung"><span class="q-lbl">Nội dung</span><input class="input input-xs" type="text" data-sync="announce.text" aria-label="Nội dung" value="Thả tim để mở chương mới nha!"></span><span class="q q-toggle" title="Chữ chạy"><span class="q-lbl">Chạy chữ</span><input class="switch switch-sm" type="checkbox" data-sync="announce.marquee" aria-label="Chữ chạy" checked></span></div>
       </article>
       </div>
-      <h3 class="group-title">Module khác <span>8</span></h3>
+      <h3 class="group-title">Dùng chung, ít đụng tới <span>8</span></h3>
       <div class="grid-mods grid-compact">
       <article class="card mod" data-name="top người tặng">
         <label class="mod-hit" for="r-mod-top" title="Bấm để cấu hình Top người tặng"></label>
@@ -687,6 +693,65 @@
           <input class="switch" type="checkbox"  data-on="follow" data-card aria-label="Bật Cảm ơn theo dõi">
         </div>
 
+      </article>
+      </div>
+      <h3 class="group-title">Tính năng dành riêng cho “Live Kể Truyện” <span>1</span></h3>
+      <div class="grid-mods">
+      <article class="card mod" data-name="kể chuyện">
+        <label class="mod-hit" for="r-mod-story" title="Bấm để cấu hình Kể chuyện"></label>
+        <div class="mod-top">
+          <span class="mod-icon">📖</span>
+          <div class="mod-text"><b>Kể chuyện</b><span>Tiêu đề và từng đoạn truyện hiện trong khung chiếu</span></div>
+          <button class="btn mod-act" type="button" data-act="Kể chuyện">Đoạn sau</button>
+          <input class="switch" type="checkbox" checked data-on="story" data-card aria-label="Bật Kể chuyện">
+        </div>
+        <div class="mod-quick" style="--n:2"><span class="q q-number" title="Mỗi đoạn hiện (giây)"><span class="q-lbl">Mỗi đoạn (s)</span><input class="input input-xs" type="number" data-sync="story.secPerPassage" aria-label="Mỗi đoạn hiện (giây)" value="16"></span><span class="q q-toggle" title="Đọc to từng đoạn"><span class="q-lbl">Đọc to</span><input class="switch switch-sm" type="checkbox" data-sync="story.readAloud" aria-label="Đọc to từng đoạn" checked></span></div>
+      </article>
+      </div>
+      <h3 class="group-title">Tính năng dành riêng cho “Live Sàn Bar” <span>2</span></h3>
+      <div class="grid-mods">
+      <article class="card mod" data-name="bảng nhạc yêu cầu">
+        <label class="mod-hit" for="r-mod-request" title="Bấm để cấu hình Bảng nhạc yêu cầu"></label>
+        <div class="mod-top">
+          <span class="mod-icon">🎧</span>
+          <div class="mod-text"><b>Bảng nhạc yêu cầu</b><span>Khán giả gõ tên bài, xếp hàng chờ phát</span></div>
+          
+          <input class="switch" type="checkbox"  data-on="request" data-card aria-label="Bật Bảng nhạc yêu cầu">
+        </div>
+        <div class="mod-quick" style="--n:2"><span class="q q-text" title="Từ khoá đặt bài"><span class="q-lbl">Từ khoá</span><input class="input input-xs" type="text" data-sync="request.keyword" aria-label="Từ khoá đặt bài" value="yc"></span><span class="q q-number" title="Hàng chờ tối đa"><span class="q-lbl">Hàng chờ</span><input class="input input-xs" type="number" data-sync="request.maxQueue" aria-label="Hàng chờ tối đa" value="10"></span></div>
+      </article>
+      <article class="card mod" data-name="sàn nhảy">
+        <label class="mod-hit" for="r-mod-dancefloor" title="Bấm để cấu hình Sàn nhảy"></label>
+        <div class="mod-top">
+          <span class="mod-icon">🕺</span>
+          <div class="mod-text"><b>Sàn nhảy</b><span>Người xem lên sàn nhảy theo nhịp nhạc</span></div>
+          
+          <input class="switch" type="checkbox"  data-on="dancefloor" data-card aria-label="Bật Sàn nhảy">
+        </div>
+        <div class="mod-quick" style="--n:2"><span class="q q-number" title="Số người trên sàn"><span class="q-lbl">Số người</span><input class="input input-xs" type="number" data-sync="dancefloor.max" aria-label="Số người trên sàn" value="12"></span><span class="q q-number" title="Nhịp (BPM)"><span class="q-lbl">BPM</span><input class="input input-xs" type="number" data-sync="dancefloor.bpm" aria-label="Nhịp (BPM)" value="124"></span></div>
+      </article>
+      </div>
+      <h3 class="group-title">Tính năng dành riêng cho “Live Đám Cưới” <span>2</span></h3>
+      <div class="grid-mods">
+      <article class="card mod" data-name="sổ lưu bút">
+        <label class="mod-hit" for="r-mod-wishes" title="Bấm để cấu hình Sổ lưu bút"></label>
+        <div class="mod-top">
+          <span class="mod-icon">💌</span>
+          <div class="mod-text"><b>Sổ lưu bút</b><span>Gom lời chúc của khách thành bảng trên màn</span></div>
+          
+          <input class="switch" type="checkbox"  data-on="wishes" data-card aria-label="Bật Sổ lưu bút">
+        </div>
+        <div class="mod-quick" style="--n:2"><span class="q q-text" title="Từ khoá gửi lời chúc"><span class="q-lbl">Từ khoá</span><input class="input input-xs" type="text" data-sync="wishes.keyword" aria-label="Từ khoá gửi lời chúc" value="chuc"></span><span class="q q-number" title="Mỗi lời hiện (giây)"><span class="q-lbl">Hiện (s)</span><input class="input input-xs" type="number" data-sync="wishes.hold" aria-label="Mỗi lời hiện (giây)" value="8"></span></div>
+      </article>
+      <article class="card mod" data-name="nghi thức">
+        <label class="mod-hit" for="r-mod-ceremony" title="Bấm để cấu hình Nghi thức"></label>
+        <div class="mod-top">
+          <span class="mod-icon">💍</span>
+          <div class="mod-text"><b>Nghi thức</b><span>Chạy từng bước lễ, mỗi bước một cảnh</span></div>
+          <button class="btn mod-act" type="button" data-act="Nghi thức">Bước sau</button>
+          <input class="switch" type="checkbox"  data-on="ceremony" data-card aria-label="Bật Nghi thức">
+        </div>
+        <div class="mod-quick" style="--n:2"><span class="q q-select" title="Bước hiện tại"><span class="q-lbl">Bước hiện tại</span><select class="input input-xs" data-sync="ceremony.step" aria-label="Bước hiện tại"><option selected>Đón khách</option><option>Rước dâu</option><option>Trao nhẫn</option><option>Nâng ly</option><option>Tiễn khách</option></select></span><span class="q q-toggle" title="Tự sang bước sau"><span class="q-lbl">Tự chạy</span><input class="switch switch-sm" type="checkbox" data-sync="ceremony.auto" aria-label="Tự sang bước sau" ></span></div>
       </article>
       </div>
     </div>
@@ -964,6 +1029,50 @@
             <input class="switch" type="checkbox" data-on="follow"  aria-label="Bật Cảm ơn theo dõi"></div>
           <div class="form">
           <div class="form-row"><label for="q-follow-template">Câu cảm ơn</label><input class="input" id="q-follow-template" type="text" data-sync="follow.template" value="Cảm ơn {ten} đã theo dõi!"></div>
+          </div>
+        </section>
+        <section class="quick-sec">
+          <div class="quick-head"><span class="mod-icon">📖</span><b>Kể chuyện</b>
+            <input class="switch" type="checkbox" data-on="story" checked aria-label="Bật Kể chuyện"></div>
+          <div class="form">
+          <div class="form-row"><label for="q-story-title">Tên truyện</label><input class="input" id="q-story-title" type="text" data-sync="story.title" value="Sự tích cây vú sữa"></div>
+          <div class="form-row"><label for="q-story-secPerPassage">Mỗi đoạn hiện (giây)</label><input class="input" id="q-story-secPerPassage" type="number" data-sync="story.secPerPassage" value="16"></div>
+          <label class="form-inline" for="q-story-readAloud"><span><b>Đọc to từng đoạn</b></span>
+            <input class="switch" type="checkbox" id="q-story-readAloud" data-sync="story.readAloud" checked></label>
+          </div>
+        </section>
+        <section class="quick-sec">
+          <div class="quick-head"><span class="mod-icon">🎧</span><b>Bảng nhạc yêu cầu</b>
+            <input class="switch" type="checkbox" data-on="request"  aria-label="Bật Bảng nhạc yêu cầu"></div>
+          <div class="form">
+          <div class="form-row"><label for="q-request-keyword">Từ khoá đặt bài</label><input class="input" id="q-request-keyword" type="text" data-sync="request.keyword" value="yc"></div>
+          <div class="form-row"><label for="q-request-maxQueue">Hàng chờ tối đa</label><input class="input" id="q-request-maxQueue" type="number" data-sync="request.maxQueue" value="10"></div>
+          <div class="form-row"><label for="q-request-minCoins">Xu tối thiểu để chen hàng</label><input class="input" id="q-request-minCoins" type="number" data-sync="request.minCoins" value="50"><span class="hint">0 là ai cũng đặt được</span></div>
+          </div>
+        </section>
+        <section class="quick-sec">
+          <div class="quick-head"><span class="mod-icon">🕺</span><b>Sàn nhảy</b>
+            <input class="switch" type="checkbox" data-on="dancefloor"  aria-label="Bật Sàn nhảy"></div>
+          <div class="form">
+          <div class="form-row"><label for="q-dancefloor-max">Số người trên sàn</label><input class="input" id="q-dancefloor-max" type="number" data-sync="dancefloor.max" value="12"></div>
+          <div class="form-row"><label for="q-dancefloor-bpm">Nhịp (BPM)</label><input class="input" id="q-dancefloor-bpm" type="number" data-sync="dancefloor.bpm" value="124"></div>
+          </div>
+        </section>
+        <section class="quick-sec">
+          <div class="quick-head"><span class="mod-icon">💌</span><b>Sổ lưu bút</b>
+            <input class="switch" type="checkbox" data-on="wishes"  aria-label="Bật Sổ lưu bút"></div>
+          <div class="form">
+          <div class="form-row"><label for="q-wishes-keyword">Từ khoá gửi lời chúc</label><input class="input" id="q-wishes-keyword" type="text" data-sync="wishes.keyword" value="chuc"></div>
+          <div class="form-row"><label for="q-wishes-hold">Mỗi lời hiện (giây)</label><input class="input" id="q-wishes-hold" type="number" data-sync="wishes.hold" value="8"></div>
+          </div>
+        </section>
+        <section class="quick-sec">
+          <div class="quick-head"><span class="mod-icon">💍</span><b>Nghi thức</b>
+            <input class="switch" type="checkbox" data-on="ceremony"  aria-label="Bật Nghi thức"></div>
+          <div class="form">
+          <div class="form-row"><label for="q-ceremony-step">Bước hiện tại</label><select class="input" id="q-ceremony-step" data-sync="ceremony.step"><option selected>Đón khách</option><option>Rước dâu</option><option>Trao nhẫn</option><option>Nâng ly</option><option>Tiễn khách</option></select></div>
+          <label class="form-inline" for="q-ceremony-auto"><span><b>Tự sang bước sau</b></span>
+            <input class="switch" type="checkbox" id="q-ceremony-auto" data-sync="ceremony.auto" ></label>
           </div>
         </section>
       </div>
@@ -1471,6 +1580,120 @@
     <div class="modal-foot">
       <label class="btn" for="r-none">Huỷ</label>
       <label class="btn btn-gold" for="r-none" data-save="Cảm ơn theo dõi">Lưu và áp dụng</label>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="mod-story">
+  <label class="backdrop" for="r-none" aria-label="Đóng"></label>
+  <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="mt-story">
+    <div class="modal-head">
+      <span class="mod-icon">📖</span>
+      <div class="grow"><h2 id="mt-story">Kể chuyện</h2><p>Tiêu đề và từng đoạn truyện hiện trong khung chiếu</p></div>
+      <label class="btn btn-icon btn-ghost" for="r-none" aria-label="Đóng"><svg class="i"><use href="#i-x"/></svg></label>
+    </div>
+    <div class="modal-body">
+      <div class="form">
+          <label class="form-inline hl" for="on-story"><span><b>Bật module</b><small>Tắt thì thiết kế vẫn chạy bình thường, chỉ thiếu tính năng này</small></span>
+            <input class="switch" type="checkbox" id="on-story" data-on="story" checked></label>
+          <div class="form-row"><label for="f-story-title">Tên truyện</label><input class="input" id="f-story-title" type="text" data-sync="story.title" value="Sự tích cây vú sữa"></div>
+          <div class="form-row"><label for="f-story-secPerPassage">Mỗi đoạn hiện (giây)</label><input class="input" id="f-story-secPerPassage" type="number" data-sync="story.secPerPassage" value="16"></div>
+          <label class="form-inline" for="f-story-readAloud"><span><b>Đọc to từng đoạn</b></span>
+            <input class="switch" type="checkbox" id="f-story-readAloud" data-sync="story.readAloud" checked></label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <label class="btn" for="r-none">Huỷ</label>
+      <label class="btn btn-gold" for="r-none" data-save="Kể chuyện">Lưu và áp dụng</label>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="mod-request">
+  <label class="backdrop" for="r-none" aria-label="Đóng"></label>
+  <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="mt-request">
+    <div class="modal-head">
+      <span class="mod-icon">🎧</span>
+      <div class="grow"><h2 id="mt-request">Bảng nhạc yêu cầu</h2><p>Khán giả gõ tên bài, xếp hàng chờ phát</p></div>
+      <label class="btn btn-icon btn-ghost" for="r-none" aria-label="Đóng"><svg class="i"><use href="#i-x"/></svg></label>
+    </div>
+    <div class="modal-body">
+      <div class="form">
+          <label class="form-inline hl" for="on-request"><span><b>Bật module</b><small>Tắt thì thiết kế vẫn chạy bình thường, chỉ thiếu tính năng này</small></span>
+            <input class="switch" type="checkbox" id="on-request" data-on="request" ></label>
+          <div class="form-row"><label for="f-request-keyword">Từ khoá đặt bài</label><input class="input" id="f-request-keyword" type="text" data-sync="request.keyword" value="yc"></div>
+          <div class="form-row"><label for="f-request-maxQueue">Hàng chờ tối đa</label><input class="input" id="f-request-maxQueue" type="number" data-sync="request.maxQueue" value="10"></div>
+          <div class="form-row"><label for="f-request-minCoins">Xu tối thiểu để chen hàng</label><input class="input" id="f-request-minCoins" type="number" data-sync="request.minCoins" value="50"><span class="hint">0 là ai cũng đặt được</span></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <label class="btn" for="r-none">Huỷ</label>
+      <label class="btn btn-gold" for="r-none" data-save="Bảng nhạc yêu cầu">Lưu và áp dụng</label>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="mod-dancefloor">
+  <label class="backdrop" for="r-none" aria-label="Đóng"></label>
+  <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="mt-dancefloor">
+    <div class="modal-head">
+      <span class="mod-icon">🕺</span>
+      <div class="grow"><h2 id="mt-dancefloor">Sàn nhảy</h2><p>Người xem lên sàn nhảy theo nhịp nhạc</p></div>
+      <label class="btn btn-icon btn-ghost" for="r-none" aria-label="Đóng"><svg class="i"><use href="#i-x"/></svg></label>
+    </div>
+    <div class="modal-body">
+      <div class="form">
+          <label class="form-inline hl" for="on-dancefloor"><span><b>Bật module</b><small>Tắt thì thiết kế vẫn chạy bình thường, chỉ thiếu tính năng này</small></span>
+            <input class="switch" type="checkbox" id="on-dancefloor" data-on="dancefloor" ></label>
+          <div class="form-row"><label for="f-dancefloor-max">Số người trên sàn</label><input class="input" id="f-dancefloor-max" type="number" data-sync="dancefloor.max" value="12"></div>
+          <div class="form-row"><label for="f-dancefloor-bpm">Nhịp (BPM)</label><input class="input" id="f-dancefloor-bpm" type="number" data-sync="dancefloor.bpm" value="124"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <label class="btn" for="r-none">Huỷ</label>
+      <label class="btn btn-gold" for="r-none" data-save="Sàn nhảy">Lưu và áp dụng</label>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="mod-wishes">
+  <label class="backdrop" for="r-none" aria-label="Đóng"></label>
+  <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="mt-wishes">
+    <div class="modal-head">
+      <span class="mod-icon">💌</span>
+      <div class="grow"><h2 id="mt-wishes">Sổ lưu bút</h2><p>Gom lời chúc của khách thành bảng trên màn</p></div>
+      <label class="btn btn-icon btn-ghost" for="r-none" aria-label="Đóng"><svg class="i"><use href="#i-x"/></svg></label>
+    </div>
+    <div class="modal-body">
+      <div class="form">
+          <label class="form-inline hl" for="on-wishes"><span><b>Bật module</b><small>Tắt thì thiết kế vẫn chạy bình thường, chỉ thiếu tính năng này</small></span>
+            <input class="switch" type="checkbox" id="on-wishes" data-on="wishes" ></label>
+          <div class="form-row"><label for="f-wishes-keyword">Từ khoá gửi lời chúc</label><input class="input" id="f-wishes-keyword" type="text" data-sync="wishes.keyword" value="chuc"></div>
+          <div class="form-row"><label for="f-wishes-hold">Mỗi lời hiện (giây)</label><input class="input" id="f-wishes-hold" type="number" data-sync="wishes.hold" value="8"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <label class="btn" for="r-none">Huỷ</label>
+      <label class="btn btn-gold" for="r-none" data-save="Sổ lưu bút">Lưu và áp dụng</label>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="mod-ceremony">
+  <label class="backdrop" for="r-none" aria-label="Đóng"></label>
+  <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="mt-ceremony">
+    <div class="modal-head">
+      <span class="mod-icon">💍</span>
+      <div class="grow"><h2 id="mt-ceremony">Nghi thức</h2><p>Chạy từng bước lễ, mỗi bước một cảnh</p></div>
+      <label class="btn btn-icon btn-ghost" for="r-none" aria-label="Đóng"><svg class="i"><use href="#i-x"/></svg></label>
+    </div>
+    <div class="modal-body">
+      <div class="form">
+          <label class="form-inline hl" for="on-ceremony"><span><b>Bật module</b><small>Tắt thì thiết kế vẫn chạy bình thường, chỉ thiếu tính năng này</small></span>
+            <input class="switch" type="checkbox" id="on-ceremony" data-on="ceremony" ></label>
+          <div class="form-row"><label for="f-ceremony-step">Bước hiện tại</label><select class="input" id="f-ceremony-step" data-sync="ceremony.step"><option selected>Đón khách</option><option>Rước dâu</option><option>Trao nhẫn</option><option>Nâng ly</option><option>Tiễn khách</option></select></div>
+          <label class="form-inline" for="f-ceremony-auto"><span><b>Tự sang bước sau</b></span>
+            <input class="switch" type="checkbox" id="f-ceremony-auto" data-sync="ceremony.auto" ></label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <label class="btn" for="r-none">Huỷ</label>
+      <label class="btn btn-gold" for="r-none" data-save="Nghi thức">Lưu và áp dụng</label>
     </div>
   </div>
 </div>

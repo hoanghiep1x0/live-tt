@@ -14,7 +14,6 @@ export const manifest: ModuleManifest<Config> = {
   name: 'Bộ đếm tim',
   icon: '❤️',
   summary: 'Thanh tiến độ lượt thả tim',
-  group: 'other',
   triggers: ['like'],
   configVersion: 1,
   schema,

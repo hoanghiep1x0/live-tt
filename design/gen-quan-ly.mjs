@@ -118,6 +118,47 @@ const mods = [
     fields: [ { k: "time", label: "Thời gian mỗi câu (giây)", type: "number", v: 20 } ] },
   { id: "follow", icon: "⭐", name: "Cảm ơn theo dõi", sub: "Chào khi có người follow", on: false,
     fields: [ { k: "template", label: "Câu cảm ơn", type: "text", v: "Cảm ơn {ten} đã theo dõi!" } ] },
+
+  /* Từ đây là tính năng chỉ hợp MỘT loại phòng. `room` là chỗ duy nhất khai
+     điều đó; mục trên trang tự mọc theo `rooms` ở dưới. */
+  { id: "story", icon: "📖", name: "Kể chuyện", sub: "Tiêu đề và từng đoạn truyện hiện trong khung chiếu", on: true, room: "ke-chuyen", action: "Đoạn sau",
+    fields: [
+      { k: "title", label: "Tên truyện", type: "text", v: "Sự tích cây vú sữa" },
+      { k: "secPerPassage", label: "Mỗi đoạn hiện (giây)", q: "Mỗi đoạn (s)", type: "number", v: 16 },
+      { k: "readAloud", label: "Đọc to từng đoạn", q: "Đọc to", type: "toggle", v: true },
+    ], quick: ["secPerPassage", "readAloud"] },
+
+  { id: "request", icon: "🎧", name: "Bảng nhạc yêu cầu", sub: "Khán giả gõ tên bài, xếp hàng chờ phát", on: false, room: "san-bar",
+    fields: [
+      { k: "keyword", label: "Từ khoá đặt bài", q: "Từ khoá", type: "text", v: "yc" },
+      { k: "maxQueue", label: "Hàng chờ tối đa", q: "Hàng chờ", type: "number", v: 10 },
+      { k: "minCoins", label: "Xu tối thiểu để chen hàng", type: "number", v: 50, hint: "0 là ai cũng đặt được" },
+    ], quick: ["keyword", "maxQueue"] },
+  { id: "dancefloor", icon: "🕺", name: "Sàn nhảy", sub: "Người xem lên sàn nhảy theo nhịp nhạc", on: false, room: "san-bar",
+    fields: [
+      { k: "max", label: "Số người trên sàn", q: "Số người", type: "number", v: 12 },
+      { k: "bpm", label: "Nhịp (BPM)", q: "BPM", type: "number", v: 124 },
+    ], quick: ["max", "bpm"] },
+
+  { id: "wishes", icon: "💌", name: "Sổ lưu bút", sub: "Gom lời chúc của khách thành bảng trên màn", on: false, room: "dam-cuoi",
+    fields: [
+      { k: "keyword", label: "Từ khoá gửi lời chúc", q: "Từ khoá", type: "text", v: "chuc" },
+      { k: "hold", label: "Mỗi lời hiện (giây)", q: "Hiện (s)", type: "number", v: 8 },
+    ], quick: ["keyword", "hold"] },
+  { id: "ceremony", icon: "💍", name: "Nghi thức", sub: "Chạy từng bước lễ, mỗi bước một cảnh", on: false, room: "dam-cuoi", action: "Bước sau",
+    fields: [
+      { k: "step", label: "Bước hiện tại", type: "select", v: "Đón khách", opts: ["Đón khách", "Rước dâu", "Trao nhẫn", "Nâng ly", "Tiễn khách"] },
+      { k: "auto", label: "Tự sang bước sau", q: "Tự chạy", type: "toggle", v: false },
+    ], quick: ["step", "auto"] },
+];
+
+/* Loại phòng live, theo thứ tự hiện trên trang. Mở một dạng live mới = thêm một
+   dòng ở đây rồi gắn `room` cho các module của nó. Khớp `LOAI_PHONG` của
+   `client/shared/contracts`. */
+const rooms = [
+  { id: "ke-chuyen", name: "Live Kể Truyện" },
+  { id: "san-bar", name: "Live Sàn Bar" },
+  { id: "dam-cuoi", name: "Live Đám Cưới" },
 ];
 
 const sites = [
@@ -441,7 +482,8 @@ const html = `<!doctype html>
   .group-title { margin: 6px 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-text);
     display: flex; align-items: center; gap: 8px; }
   .group-title span { font-size: 11px; color: var(--muted); padding: 0 7px; border-radius: 99px; background: var(--line); letter-spacing: 0; }
-  .grid-mods + .group-title { margin-top: 26px; }
+  .grid-mods + .group-title, .group-trong + .group-title { margin-top: 26px; }
+  .group-trong { margin: 0 0 6px; color: var(--muted); font-size: 12.5px; }
   .mod-hit { position: absolute; inset: 0; z-index: 1; border-radius: inherit; cursor: pointer; }
   .mod-top { display: flex; align-items: center; gap: 12px; }
   .mod-top .switch, .mod-quick .q { position: relative; z-index: 2; }
@@ -650,12 +692,20 @@ ${MODALS.map(id => `<input class="sr" type="radio" name="modal" id="r-${id}" tab
       </div>
     </div>
     <div id="grid-mods">
-      <h3 class="group-title">Chỉnh nhanh <span>${mods.filter(m => m.quick).length}</span></h3>
-      <div class="grid-mods">${mods.filter(m => m.quick).map(modCard).join("")}
+      <h3 class="group-title">Chỉnh nhanh <span>${mods.filter(m => !m.room && m.quick).length}</span></h3>
+      <div class="grid-mods">${mods.filter(m => !m.room && m.quick).map(modCard).join("")}
       </div>
-      <h3 class="group-title">Module khác <span>${mods.filter(m => !m.quick).length}</span></h3>
-      <div class="grid-mods grid-compact">${mods.filter(m => !m.quick).map(modCard).join("")}
+      <h3 class="group-title">Dùng chung, ít đụng tới <span>${mods.filter(m => !m.room && !m.quick).length}</span></h3>
+      <div class="grid-mods grid-compact">${mods.filter(m => !m.room && !m.quick).map(modCard).join("")}
       </div>
+${rooms.map(r => {
+  const ds = mods.filter(m => m.room === r.id);
+  return `      <h3 class="group-title">Tính năng dành riêng cho “${esc(r.name)}” <span>${ds.length}</span></h3>
+      ${ds.length === 0
+        ? `<p class="group-trong">Chưa có tính năng nào riêng cho loại phòng này.</p>`
+        : `<div class="grid-mods">${ds.map(modCard).join("")}
+      </div>`}`;
+}).join("\n")}
     </div>
   </section>
 </main>

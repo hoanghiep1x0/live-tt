@@ -52,10 +52,6 @@ export function kiemModule<C extends object, S>(m: LiveModule<C, S>): void {
   for (const k of quick) {
     expect(keys, `ô chỉnh nhanh "${k}" không có trong fields`).toContain(k);
   }
-  if (man.group === 'other') {
-    expect(man.quick, 'thẻ gọn không có chỗ cho ô chỉnh nhanh').toBeUndefined();
-  }
-
   for (const f of man.fields) {
     if (f.type !== 'select') continue;
     expect(f.options?.length, `select "${f.key}" thiếu options`).toBeGreaterThan(0);

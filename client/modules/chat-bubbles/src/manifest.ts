@@ -14,7 +14,6 @@ export const manifest: ModuleManifest<Config> = {
   name: 'Bóng chat nổi',
   icon: '💬',
   summary: 'Bình luận hiện thành bóng nổi ở góc màn',
-  group: 'quick',
   triggers: ['comment', 'gift'],
   configVersion: 1,
   schema,

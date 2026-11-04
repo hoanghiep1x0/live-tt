@@ -1,0 +1,159 @@
+<!doctype html>
+<!--
+  Dựng video nền cho khung chiếu của phòng kể chuyện.
+
+  Cảnh vẽ hoàn toàn bằng canvas, không lấy ảnh từ đâu, và KHÔNG có chữ: tên
+  truyện với đoạn đang kể do module `story` vẽ đè lên. Video nào mang sẵn phụ đề
+  thì màn ra hai lớp chữ chồng nhau.
+
+  Mọi chuyển động là hàm tuần hoàn của `p = t / GIÂY`, nên khung đầu trùng khung
+  cuối — video lặp không thấy mối nối.
+
+  Cách chạy (cần backend đang chạy, vì trang phải ở cùng origin để canvas không
+  bị "bẩn"):
+    1. node scripts/nhan.mjs <đường-ra.webm>   (một máy chủ nhỏ nghe 127.0.0.1:47899)
+    2. cp scripts/ghi-nen.html dist/
+    3. mở http://127.0.0.1:47830/d/ke-chuyen/ghi-nen.html và để yên 20 giây
+       (thêm ?anh=1 để lấy một khung tĩnh xem thử)
+  Trang tự POST blob về máy chủ ở bước 1. Nhớ xoá file khỏi dist sau khi xong.
+-->
+<meta charset="utf-8" />
+<title>Dựng nền khung chiếu</title>
+<body style="background:#111;color:#eee;font:14px system-ui;margin:12px">
+<p id="tt">…</p>
+<canvas id="c" width="720" height="1280" style="width:200px"></canvas>
+<script>
+const W = 720, H = 1280, GIAY = 20, FPS = 24;
+const c = document.getElementById('c'), g = c.getContext('2d'), tt = document.getElementById('tt');
+
+// Ngẫu nhiên có hạt giống: sao và đom đóm đứng đúng chỗ mỗi khung, không nhảy.
+function hat(n) { return () => { n = (n * 1664525 + 1013904223) >>> 0; return n / 4294967296; }; }
+
+const SAO = (() => { const r = hat(7), a = []; for (let i = 0; i < 110; i++) a.push({ x: r() * W, y: r() * H * 0.52, s: 0.6 + r() * 1.5, f: r() }); return a; })();
+const DOM = (() => { const r = hat(31), a = []; for (let i = 0; i < 26; i++) a.push({ x: r(), y: 0.52 + r() * 0.4, b: r() * 40 + 18, f: r() }); return a; })();
+
+function tron(a, b, u) { return a.map((v, i) => Math.round(v + (b[i] - v) * u)); }
+function rgb(a) { return 'rgb(' + a[0] + ',' + a[1] + ',' + a[2] + ')'; }
+
+// Hai bảng màu trời, đi qua lại theo chu kì: chiều muộn sang đêm sâu rồi về.
+const TROI_A = [[26, 18, 56], [72, 38, 92], [186, 92, 86], [240, 158, 92]];
+const TROI_B = [[12, 14, 44], [40, 30, 86], [104, 54, 104], [190, 104, 92]];
+
+function ve(t) {
+  const p = (t / GIAY) % 1;
+  const u = (1 - Math.cos(2 * Math.PI * p)) / 2;
+  const troi = TROI_A.map((v, i) => tron(v, TROI_B[i], u));
+
+  const sky = g.createLinearGradient(0, 0, 0, H * 0.74);
+  sky.addColorStop(0, rgb(troi[0])); sky.addColorStop(0.42, rgb(troi[1]));
+  sky.addColorStop(0.76, rgb(troi[2])); sky.addColorStop(1, rgb(troi[3]));
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+
+  // Sao: rõ dần khi trời tối lại, lấp lánh rất chậm.
+  for (const s of SAO) {
+    const a = (0.25 + 0.75 * u) * (0.45 + 0.55 * Math.sin(2 * Math.PI * (p * 2 + s.f)));
+    if (a <= 0) continue;
+    g.fillStyle = 'rgba(255,246,222,' + (a * 0.85).toFixed(3) + ')';
+    g.beginPath(); g.arc(s.x, s.y, s.s, 0, 7); g.fill();
+  }
+
+  // Trăng kèm quầng thở.
+  const mx = W * 0.72, my = H * 0.17, mr = 46;
+  let q = g.createRadialGradient(mx, my, mr * 0.6, mx, my, mr * (5 + u));
+  q.addColorStop(0, 'rgba(255,242,208,' + (0.3 + 0.12 * u).toFixed(3) + ')');
+  q.addColorStop(1, 'rgba(255,242,208,0)');
+  g.fillStyle = q; g.beginPath(); g.arc(mx, my, mr * 6, 0, 7); g.fill();
+  g.fillStyle = 'rgba(255,248,226,0.96)'; g.beginPath(); g.arc(mx, my, mr, 0, 7); g.fill();
+
+  // Mây: dải mềm trôi ngang, vòng lại đúng một lượt trong chu kì.
+  for (let i = 0; i < 4; i++) {
+    const y = H * (0.2 + i * 0.1), h = 26 + i * 9;
+    const dx = ((p * (0.3 + i * 0.12)) % 1) * (W * 2);
+    g.fillStyle = 'rgba(255,214,186,' + (0.07 + i * 0.015).toFixed(3) + ')';
+    for (let k = -1; k < 3; k++) {
+      g.beginPath(); g.ellipse(k * W * 2 + dx, y, W * 0.52, h, 0, 0, 7); g.fill();
+    }
+  }
+
+  // Ba lớp đồi, xa nhạt gần đậm, trôi lệch nhau cho có chiều sâu.
+  const doi = [[0.6, 'rgba(58,38,78,0.85)', 0.5, 46], [0.68, 'rgba(38,24,58,0.92)', 0.9, 62], [0.76, 'rgba(22,13,36,1)', 1.4, 80]];
+  for (const [ty, mau, toc, bien] of doi) {
+    const dx = Math.sin(2 * Math.PI * p) * toc * 14;
+    g.fillStyle = mau; g.beginPath(); g.moveTo(-40, H);
+    for (let x = -40; x <= W + 40; x += 20) {
+      g.lineTo(x, H * ty - Math.sin((x + dx) * 0.0062) * bien - Math.sin((x + dx) * 0.0021) * bien * 0.6);
+    }
+    g.lineTo(W + 40, H); g.closePath(); g.fill();
+  }
+
+  // Cây lớn bên phải: thân, cành, tán. Tán đu rất nhẹ theo chu kì.
+  g.save(); g.translate(W * 0.84, H * 0.78); g.rotate(Math.sin(2 * Math.PI * p) * 0.016);
+  g.fillStyle = '#0d0718';
+  g.beginPath(); g.moveTo(-16, 0); g.quadraticCurveTo(-8, -150, -26, -300); g.lineTo(18, -306); g.quadraticCurveTo(14, -150, 20, 0); g.closePath(); g.fill();
+  for (const [ax, ay, bx, by] of [[-20, -250, -140, -330], [10, -280, 120, -340], [-14, -300, -70, -400]]) {
+    g.strokeStyle = '#0d0718'; g.lineWidth = 13; g.beginPath(); g.moveTo(ax, ay); g.quadraticCurveTo((ax + bx) / 2, by + 30, bx, by); g.stroke();
+  }
+  for (const [x, y, r] of [[-20, -380, 128], [-130, -340, 88], [100, -356, 96], [-60, -440, 92], [50, -430, 78]]) {
+    g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  }
+  g.restore();
+
+  // Nhà tranh nhỏ bên trái, đèn trong cửa sổ chập chờn chậm.
+  g.save(); g.translate(W * 0.2, H * 0.8);
+  g.fillStyle = '#0d0718';
+  g.beginPath(); g.moveTo(-82, 0); g.lineTo(-62, -58); g.lineTo(62, -58); g.lineTo(82, 0); g.closePath(); g.fill();
+  g.fillRect(-62, -58, 124, 58);
+  g.beginPath(); g.moveTo(-74, -58); g.lineTo(0, -116); g.lineTo(74, -58); g.closePath(); g.fill();
+  const den = 0.55 + 0.45 * Math.sin(2 * Math.PI * (p * 3 + 0.2));
+  q = g.createRadialGradient(18, -34, 2, 18, -34, 76);
+  q.addColorStop(0, 'rgba(255,196,96,' + (0.5 * den).toFixed(3) + ')'); q.addColorStop(1, 'rgba(255,196,96,0)');
+  g.fillStyle = q; g.fillRect(-70, -110, 170, 120);
+  g.fillStyle = 'rgba(255,206,120,' + (0.75 + 0.25 * den).toFixed(3) + ')'; g.fillRect(6, -46, 26, 24);
+  g.restore();
+
+  // Mặt đất.
+  g.fillStyle = '#0a0513'; g.beginPath(); g.moveTo(0, H);
+  for (let x = 0; x <= W; x += 24) g.lineTo(x, H * 0.8 + Math.sin(x * 0.01) * 10);
+  g.lineTo(W, H); g.closePath(); g.fill();
+
+  // Đom đóm.
+  for (const d of DOM) {
+    const a = 0.35 + 0.65 * Math.sin(2 * Math.PI * (p * 2 + d.f));
+    if (a <= 0) continue;
+    const x = d.x * W + Math.sin(2 * Math.PI * (p + d.f)) * d.b;
+    const y = d.y * H + Math.cos(2 * Math.PI * (p + d.f * 2)) * d.b * 0.6;
+    q = g.createRadialGradient(x, y, 0, x, y, 14);
+    q.addColorStop(0, 'rgba(255,226,130,' + (a * 0.8).toFixed(3) + ')'); q.addColorStop(1, 'rgba(255,226,130,0)');
+    g.fillStyle = q; g.beginPath(); g.arc(x, y, 14, 0, 7); g.fill();
+  }
+
+  // Viền tối: kéo mắt vào giữa, và dìm đáy xuống cho phụ đề dễ đọc.
+  q = g.createRadialGradient(W / 2, H * 0.45, W * 0.32, W / 2, H * 0.5, W * 1.05);
+  q.addColorStop(0, 'rgba(0,0,0,0)'); q.addColorStop(1, 'rgba(0,0,0,0.6)');
+  g.fillStyle = q; g.fillRect(0, 0, W, H);
+}
+
+async function gui(blob, nhan) {
+  tt.textContent = 'gui ' + nhan + ' ' + blob.size + ' byte…';
+  const r = await fetch('http://127.0.0.1:47899/', { method: 'POST', body: blob });
+  tt.textContent = r.ok ? 'XONG ' + nhan + ' ' + blob.size : 'LOI ' + r.status;
+}
+
+if (new URLSearchParams(location.search).get('anh') === '1') {
+  ve(Number(new URLSearchParams(location.search).get('t') || 5));
+  c.toBlob((b) => gui(b, 'anh'), 'image/png');
+} else {
+  const mr = new MediaRecorder(c.captureStream(FPS), { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 1100000 });
+  const mieng = [];
+  mr.ondataavailable = (e) => e.data.size && mieng.push(e.data);
+  mr.onstop = () => gui(new Blob(mieng, { type: 'video/webm' }), 'video');
+  const t0 = performance.now();
+  mr.start();
+  (function nhip() {
+    const t = (performance.now() - t0) / 1000;
+    if (t >= GIAY) { mr.stop(); return; }
+    ve(t); tt.textContent = 'ghi ' + t.toFixed(1) + 's / ' + GIAY;
+    requestAnimationFrame(nhip);
+  })();
+}
+</script>

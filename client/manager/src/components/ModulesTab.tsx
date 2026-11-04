@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LOAI_PHONG } from '@live/contracts';
 import { MODULES } from '../lib/registry';
 import type { Manager } from '../lib/store';
 import { ModuleCard } from './ModuleCard';
@@ -25,8 +26,13 @@ export function ModulesTab({ m, onSangThietKe }: Props) {
       r.ui.summary.toLowerCase().includes(q) ||
       r.ui.id.includes(q),
   );
-  const nhanh = loc.filter((r) => r.ui.group === 'quick');
-  const khac = loc.filter((r) => r.ui.group === 'other');
+  // Dùng chung lên trên; đặc thù từng loại phòng xuống dưới, mỗi loại một mục.
+  // Mở một dạng live mới thì thêm một dòng ở `LOAI_PHONG`, chỗ này không sửa.
+  const nhanh = loc.filter((r) => r.ui.room === undefined);
+  const theoPhong = LOAI_PHONG.map((p) => ({
+    ...p,
+    ds: loc.filter((r) => r.ui.room === p.id),
+  }));
 
   return (
     <section>
@@ -94,25 +100,29 @@ export function ModulesTab({ m, onSangThietKe }: Props) {
         </>
       ) : null}
 
-      {khac.length > 0 ? (
-        <>
+      {theoPhong.map((p) => (
+        <section key={p.id}>
           <h3 className="group-title">
-            Tính năng khác <span>{khac.length}</span>
+            Tính năng dành riêng cho “{p.name}” <span>{p.ds.length}</span>
           </h3>
-          <div className="grid-mods grid-compact">
-            {khac.map((r) => (
-              <ModuleCard
-                key={r.ui.id}
-                r={r}
-                st={m.mods[r.ui.id]}
-                disabled={khoa}
-                onBat={(on) => m.batModule(r.ui.id, on)}
-                onLuu={(c) => m.luuCauHinh(r.ui.id, c)}
-              />
-            ))}
-          </div>
-        </>
-      ) : null}
+          {p.ds.length === 0 ? (
+            <p className="group-trong">Chưa có tính năng nào riêng cho loại phòng này.</p>
+          ) : (
+            <div className="grid-mods">
+              {p.ds.map((r) => (
+                <ModuleCard
+                  key={r.ui.id}
+                  r={r}
+                  st={m.mods[r.ui.id]}
+                  disabled={khoa}
+                  onBat={(on) => m.batModule(r.ui.id, on)}
+                  onLuu={(c) => m.luuCauHinh(r.ui.id, c)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      ))}
 
       {loc.length === 0 ? (
         <div className="empty">

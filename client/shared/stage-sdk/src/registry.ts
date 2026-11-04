@@ -6,7 +6,15 @@
  */
 
 import type { ComponentType } from 'react';
-import type { Effect, FeedItem, Json, LiveModule, SessionView, SlotName } from '@live/contracts';
+import type {
+  Effect,
+  FeedItem,
+  Json,
+  LiveModule,
+  ModuleUi,
+  SessionView,
+  SlotName,
+} from '@live/contracts';
 import { runFeed, runTick } from '@live/runtime';
 
 import { moduleChatBubbles } from '@live/mod-chat-bubbles';
@@ -53,6 +61,9 @@ export interface TheSong {
 
 export interface DangKy {
   id: string;
+  /** Phần khai cho người: tên, icon, và các ô cấu hình. Bảng xem thử dựng form
+   *  từ đây, y như trang quản lý — không chỗ nào biết tên module cụ thể. */
+  ui: ModuleUi;
   slot?: SlotName;
   Part?: ComponentType<StagePartProps>;
   /** Cấu hình đầy đủ: mặc định của schema, phủ bằng thứ đã lưu.
@@ -75,6 +86,7 @@ function dangKy<C, S>(
 
   return {
     id: mod.manifest.id,
+    ui: mod.manifest,
     hopCauHinh,
     ...(part === undefined
       ? {}
