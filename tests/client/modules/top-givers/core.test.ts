@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Effect } from '@live/contracts';
-import { runTick } from '@live/runtime';
-import { core, hangDangSoi, moduleTopGivers as mod, schema } from '@live/mod-top-givers';
+import type { Effect, FeedItem } from '@live/contracts';
+import { runFeed, runTick } from '@live/runtime';
+import { core, dongDua, hangDangSoi, hienDua, moduleTopGivers as mod, schema } from '@live/mod-top-givers';
 import { ctx, kiemModule, nguoiTang } from '../_helper';
 
 const MAC_DINH = schema.parse({});
@@ -16,9 +16,83 @@ describe('manifest', () => {
     kiemModule(mod);
   });
 
-  it('không bắt sự kiện nào: bảng đọc thẳng từ phiên', () => {
-    expect(mod.manifest.triggers).toEqual([]);
+  it('chỉ bắt quà, để nhớ ai vừa tặng gì cho dòng đua', () => {
+    expect(mod.manifest.triggers).toEqual(['gift']);
     expect(mod.manifest.slots).toEqual(['tops']);
+  });
+});
+
+describe('dòng đua top', () => {
+  const an = nguoiTang('a', 'An', 900);
+  const binh = nguoiTang('b', 'Bình', 500);
+
+  function qua(over: { user?: string; name?: string; coins?: number } = {}): FeedItem {
+    return {
+      id: 1,
+      at: 0,
+      kind: 'gift',
+      name: over.name ?? 'An',
+      text: 'tặng Hoa hồng',
+      user: over.user ?? 'a',
+      gift: 'Hoa hồng',
+      count: 1,
+      coins: over.coins ?? 50,
+    };
+  }
+
+  it('hiện một lượt dài rồi nghỉ nửa phút, lượt sau dài hơn', () => {
+    expect(hienDua(0)).toBe(true);
+    expect(hienDua(119_000)).toBe(true);
+    expect(hienDua(121_000), 'hết hai phút thì nghỉ').toBe(false);
+    expect(hienDua(151_000), 'nghỉ xong hiện lượt hai (2,5 phút)').toBe(true);
+    expect(hienDua(302_000), 'hết lượt hai thì lại nghỉ').toBe(false);
+  });
+
+  it('lõi nhớ món quà cuối, phần vẽ không phải dò lại feed', () => {
+    const s = core.init(MAC_DINH);
+    runFeed(mod, s, qua(), ctx(MAC_DINH, 7_000, 0, [an]));
+    expect(s.quaCuoi).toEqual({ user: 'a', name: 'An', xu: 50, at: 7_000 });
+  });
+
+  it('bỏ qua quà của nhân vật minh hoạ', () => {
+    const s = core.init(MAC_DINH);
+    runFeed(mod, s, { ...qua(), virtual: true }, ctx(MAC_DINH, 0, 0, [an]));
+    expect(s.quaCuoi).toBeNull();
+  });
+
+  it('khoe quà của người đang có tên trong bảng', () => {
+    expect(dongDua([binh, an], { user: 'a', name: 'An', xu: 50, at: 1_000 }, 2_000, 0)).toEqual({
+      name: 'An',
+      xu: 50,
+      rank: 2,
+    });
+  });
+
+  it('người tặng không có trong bảng thì quay về báo người dẫn đầu', () => {
+    expect(dongDua([an], { user: 'z', name: 'Zét', xu: 5, at: 1_000 }, 2_000, 0)).toEqual({
+      name: 'An',
+      xu: 900,
+      rank: 1,
+      lead: true,
+    });
+  });
+
+  it('chưa ai tặng thì mời người xem lên top 1', () => {
+    expect(dongDua([], null, 0, 0)).toEqual({ name: '', xu: 0, rank: 1, lead: true });
+  });
+
+  it('tới lượt nghỉ thì không có dòng nào', () => {
+    expect(dongDua([an], { user: 'a', name: 'An', xu: 50, at: 0 }, 125_000, 0)).toBeNull();
+    expect(dongDua([an], null, 125_000, 0)).toBeNull();
+  });
+
+  it('nhịp ẩn hiện tính từ lúc tặng, không phải từ lúc mở phòng', () => {
+    const qua1 = { user: 'a', name: 'An', xu: 50, at: 125_000 };
+    expect(dongDua([an], qua1, 125_000, 0), 'mốc mở phòng đang nghỉ, quà mới vẫn hiện').toEqual({
+      name: 'An',
+      xu: 50,
+      rank: 1,
+    });
   });
 });
 

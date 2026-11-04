@@ -1,6 +1,7 @@
 import { moduleAssetUrl } from '@live/stage-sdk';
 import type { StagePartProps } from '@live/stage-sdk';
 import type { Config } from './manifest';
+import { dongDua } from './core';
 import type { State } from './core';
 import './stage.css';
 
@@ -28,11 +29,40 @@ export function tenNgan(name = ''): string {
 /** Bảng vinh danh: năm bồ đoàn dưới khung chiếu, ảnh tròn viền vàng trong vòng
  *  hào quang, ngồi trên hoa sen phát sáng. Bồ đoàn chưa có ai vẫn hiện, để
  *  người xem thấy còn chỗ cho mình. */
-export function Stage({ config, state, modState }: StagePartProps<Config, State>) {
+export function Stage({ config, state, modState, now }: StagePartProps<Config, State>) {
   const top = state.session.topGivers.slice(0, config.size);
+  const dua = config.race
+    ? dongDua(state.session.topGivers, modState.quaCuoi, now, modState.moc)
+    : null;
 
   return (
     <section className="mod-tops" aria-label="Top người tặng">
+      {dua === null ? null : (
+        <p
+          className={dua.lead === true ? 'mod-dua la-dau' : 'mod-dua'}
+          key={`${dua.lead === true ? 'dau' : 'qua'}:${dua.name}:${dua.rank}:${dua.xu}`}
+        >
+          <span className="dua-chu">
+            <span aria-hidden>🔥</span>{' '}
+            {dua.lead === true ? (
+              dua.name === '' ? (
+                <>
+                  <b>Top 1</b> đang chờ bạn · thả tim, bình luận để lên top nha!
+                </>
+              ) : (
+                <>
+                  <b>{dua.name}</b> đang dẫn đầu <b>Top 1</b> · cảm ơn bạn ❤
+                </>
+              )
+            ) : (
+              <>
+                <b>{dua.name}</b> đã tặng <b>+{dua.xu.toLocaleString('vi-VN')} điểm</b> · đang{' '}
+                <b>Top {dua.rank}</b> · cảm ơn bạn ❤
+              </>
+            )}
+          </span>
+        </p>
+      )}
       {THU_TU.filter((h) => h < config.size).map((hang) => {
         const ai = top[hang];
         const lop = [

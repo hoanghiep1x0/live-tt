@@ -194,3 +194,78 @@
     animation: none;
   }
 }
+
+/* ---- Dòng đua top ----
+ * Dải đỏ viền vàng nằm ngay TRÊN hàng bồ đoàn: ai vừa tặng gì, đang hạng mấy.
+ * Chuyển từ bản cũ (`.stage-race`, index.css dòng 489–548), bỏ bớt lớp tia
+ * conic xoay — một hình 70×70cqw xoay liên tục là thứ đắt nhất trên sân khấu,
+ * mà OBS còn phải ghép cả video truyện.
+ *
+ * Neo theo `bottom: 100%` của chính hàng bồ đoàn, nên thiết kế nào cắm module
+ * này vào slot `tops` cũng ra đúng chỗ, không phải đặt lại toạ độ.
+ */
+.mod-tops {
+  position: relative;
+}
+
+.mod-dua {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  max-width: 92cqw;
+  /* Sát hàng bồ đoàn, chừa khoảng hở cho viền dưới khung chiếu. */
+  margin: 0 0 0.2cqw;
+  padding: 0.5cqw 2.2cqw;
+  border-radius: 3cqw;
+  white-space: nowrap;
+  font-size: 2.5cqw;
+  line-height: 1.35;
+  color: #fff;
+  background: linear-gradient(90deg, rgba(150, 20, 40, 0.92), rgba(200, 60, 30, 0.92));
+  border: 0.2cqw solid #ffcf6a;
+  /* Hiện rồi nằm yên (lõi giữ dòng này hàng phút), viền thở nhẹ cho khỏi chết
+     cứng một chỗ. */
+  animation: dua-vao 0.6s ease both, dua-sang 3.2s ease-in-out 0.6s infinite;
+}
+.mod-dua b {
+  color: #ffe39a;
+}
+.mod-dua .dua-chu {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Chưa ai tặng: dòng vàng báo người đang dẫn đầu, dịu hơn dòng quà. */
+.mod-dua.la-dau {
+  background: linear-gradient(90deg, rgba(150, 100, 10, 0.94), rgba(210, 150, 30, 0.94));
+}
+
+@keyframes dua-vao {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 1.5cqw) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+@keyframes dua-sang {
+  0%,
+  100% {
+    transform: translateX(-50%);
+    box-shadow: 0 0 2cqw rgba(255, 120, 60, 0.55);
+  }
+  50% {
+    transform: translateX(-50%);
+    box-shadow: 0 0 3.6cqw rgba(255, 90, 60, 0.85);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mod-dua {
+    animation: none;
+    transform: translateX(-50%);
+    box-shadow: 0 0 2cqw rgba(255, 120, 60, 0.6);
+  }
+}
