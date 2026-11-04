@@ -85,17 +85,6 @@ export function useLoiMc(): LoiMc | null {
   return useContext(Ctx).chay.loiMc;
 }
 
-/** Có module nào đang bật vẽ vào slot này không.
- *
- *  Khác hẳn `useSlotSang`: "sáng" là module xin nhấn vùng đó lên trong giây
- *  lát, còn đây là "chỗ này có người ngồi hay không". Thiết kế cần nó để giấu
- *  cái khung bao quanh một slot rỗng — khung trống treo giữa màn thì chỉ là
- *  vết bẩn. */
-export function useSlotCo(slot: SlotName): boolean {
-  const { s } = useContext(Ctx);
-  return partsCho(slot, s.enabled).length > 0;
-}
-
 /** Slot nào đang được một module xin sáng. Thiết kế dùng để nhấn vùng đó lên. */
 export function useSlotSang(slot: SlotName): boolean {
   const { chay } = useContext(Ctx);

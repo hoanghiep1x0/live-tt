@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FeedItem } from '@live/contracts';
 import { runFeed, runTick } from '@live/runtime';
-import { chuHien, core, moduleTicker as mod, schema, thoiLuongMs } from '@live/mod-ticker';
+import { chuHien, core, moduleTicker as mod, NGHI_MS, schema, thoiLuongMs } from '@live/mod-ticker';
 import { ctx, kiemModule, nguoiTang } from '../_helper';
 
 const MAC_DINH = schema.parse({});
@@ -31,7 +31,7 @@ describe('manifest', () => {
 });
 
 describe('lời mời khi chưa ai nhắn', () => {
-  it('chạy lần lượt từng câu rồi quay vòng', () => {
+  it('chạy lần lượt từng câu rồi quay vòng, giữa hai câu có nghỉ', () => {
     const s = core.init(MAC_DINH);
     expect(dang(s, 0)).toBe(MOI[0]);
 
@@ -40,9 +40,34 @@ describe('lời mời khi chưa ai nhắn', () => {
 
     let t = s.ketThuc;
     for (const cau of [...MOI.slice(1), MOI[0]]) {
-      expect(dang(s, t)).toBe(cau);
+      // Hết câu là dải nghỉ, không nối ngay câu sau.
+      expect(dang(s, t), 'vừa hết câu thì dải trống').toBeNull();
+      expect(dang(s, t + NGHI_MS - 1), 'còn trong giờ nghỉ thì vẫn trống').toBeNull();
+      expect(dang(s, t + NGHI_MS)).toBe(cau);
       t = s.ketThuc;
     }
+  });
+
+  it('xin thiết kế giữ dải sáng trong lúc chữ còn trôi, nghỉ thì thôi', () => {
+    const s = core.init(MAC_DINH);
+    const sang = (now: number) =>
+      runTick(mod, s, now, ctx(s.config, now, 0, [HANH])).some(
+        (e) => e.kind === 'overlay' && e.slot === 'ticker',
+      );
+    expect(sang(0), 'bắt đầu chạy thì xin sáng').toBe(true);
+    expect(sang(500), 'đang chạy thì vẫn xin').toBe(true);
+    const t = s.ketThuc;
+    expect(sang(t), 'hết câu, vào giờ nghỉ thì thôi xin').toBe(false);
+    expect(sang(t + 1_000)).toBe(false);
+  });
+
+  it('khách nhắn thật thì cắt giờ nghỉ, chữ của họ lên ngay', () => {
+    const s = core.init(MAC_DINH);
+    dang(s, 0);
+    const t = s.ketThuc;
+    expect(dang(s, t)).toBeNull();
+    runFeed(mod, s, noi('hanh', 'Hạnh', 'nghe hay quá'), ctx(s.config, t, 0, [HANH]));
+    expect(dang(s, t + 1), 'không phải chờ hết nghỉ').toBe('Hạnh: nghe hay quá');
   });
 
   it('bỏ trống ô lời mời thì dải im hẳn, không chạy dòng rỗng', () => {

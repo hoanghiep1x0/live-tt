@@ -6,7 +6,7 @@ import type { Config } from './manifest';
 
 export const moduleTicker: LiveModule<Config, State> = { manifest, core };
 
-export { core, chuHien, thoiLuongMs } from './core';
+export { core, chuHien, NGHI_MS, thoiLuongMs } from './core';
 export { manifest, schema } from './manifest';
 // Phần vẽ lấy qua `@live/mod-ticker/stage` — xem ghi chú ở top-givers.
 export type { Loi, State } from './core';

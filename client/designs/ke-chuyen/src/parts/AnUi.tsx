@@ -94,7 +94,11 @@ export function AnUi({
   const dangOm = canh.t >= CHAY_MS && canh.t < CHAY_MS + OM_MS;
 
   return (
-    <div className="lop-an-ui" aria-hidden>
+    <>
+      {/* Người chạy ôm nằm DƯỚI các khối hiển thị (hàng bồ đoàn, thanh tiến độ,
+          dải chữ chạy): họ là người trong cảnh, mấy khối kia là bảng thông tin
+          dán lên trên. Người chạy đè lên bảng thì nhìn như dán ảnh. */}
+      <div className="lop-an-ui" aria-hidden>
       {nguoi.map((n, i) => (
         <NguoiOm
           key={`${canh.k}:${n.user}`}
@@ -107,8 +111,11 @@ export function AnUi({
           asset={asset}
         />
       ))}
+      </div>
+      {/* Tim thì NẰM TRÊN: nó là hiệu ứng bay lên, bị hàng bồ đoàn che mất thì
+          coi như không có. */}
       {!dangOm ? null : (
-        <div className="om-tim" style={{ left: `${tim.x}%`, top: `${tim.y - 11}cqw` }}>
+        <div className="om-tim" style={{ left: `${tim.x}%`, top: `${tim.y - 11}cqw` }} aria-hidden>
           {['💗', '🤍', '💖', '🤍', '💗'].map((h, i) => (
             <span key={i} style={{ '--i': i } as CSSProperties}>
               {h}
@@ -116,6 +123,6 @@ export function AnUi({
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }

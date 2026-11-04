@@ -1035,11 +1035,15 @@ body {
    Khán giả đứng dậy chạy lên ôm bé / cậu bé rồi chạy về. Lớp này nằm ở TẦNG
    SÂN KHẤU, không trong rạp ghế: chỗ đứng ôm neo vào bé và cậu bé, mà hai em
    đứng ngoài vùng cuộn của rạp. Xem `parts/AnUi.tsx`. */
+/* Lớp 0: dưới rạp ghế (1), dưới dải chữ chạy (1), dưới hàng bồ đoàn và thanh
+   tiến độ (2). Người chạy ôm là người trong cảnh, mấy khối kia là bảng thông
+   tin dán lên trên — người đè lên bảng thì nhìn như ảnh dán. Chạy lên tới nơi
+   thì họ khuất sau hàng bồ đoàn một phần, đúng như đứng sau nó thật. */
 .lop-an-ui {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 6;
+  z-index: 0;
 }
 .om-nguoi {
   position: absolute;
@@ -1121,6 +1125,8 @@ body {
 
 .om-tim {
   position: absolute;
+  /* Trên cùng cụm: tim bay mà bị hàng bồ đoàn che thì coi như không có. */
+  z-index: 6;
   transform: translateX(-50%);
   font-size: 3cqw;
   line-height: 1;

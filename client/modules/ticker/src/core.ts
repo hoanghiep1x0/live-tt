@@ -8,6 +8,13 @@ const DAI_CH = 36;
 /** Giữ nhiều hơn chừng này thì lời đầu hàng đã cũ tới mức chạy lên vô duyên. */
 const CHO_TOI_DA = 8;
 
+/** Hết lời nhắn thật thì dải nghỉ ngần này rồi mới chạy lời mời tiếp.
+ *
+ *  Không có quãng nghỉ thì lời mời nối nhau chạy suốt buổi, dải nằm chình ình
+ *  giữa màn và người xem thôi nhìn nó. Có người nhắn thật thì cắt nghỉ ngay —
+ *  chữ của khách không phải xếp hàng sau lời mời của máy. */
+export const NGHI_MS = 25_000;
+
 export interface Loi {
   /** Tăng dần. Phần vẽ dùng làm `key`, nhờ vậy dòng mới luôn chạy lại từ mép phải. */
   id: number;
@@ -28,6 +35,8 @@ export interface State {
    *  trùng nhau, và mở cửa sổ giữa chừng thì chữ vào đúng chỗ nó đang trôi. */
   batDau: number;
   ketThuc: number;
+  /** Đang nghỉ tới mốc này thì chưa chạy dòng mới. */
+  nghiDen: number;
   /** Lời mời kế tiếp sẽ chạy. */
   moi: number;
   dem: number;
@@ -72,7 +81,7 @@ function doiDong(state: State, now: number): void {
 
 export const core: ModuleCore<Config, State> = {
   init(config) {
-    return { config, cho: [], dang: null, batDau: 0, ketThuc: 0, moi: 0, dem: 0 };
+    return { config, cho: [], dang: null, batDau: 0, ketThuc: 0, nghiDen: 0, moi: 0, dem: 0 };
   },
 
   hooks: {
@@ -99,15 +108,32 @@ export const core: ModuleCore<Config, State> = {
         if (item.user !== undefined) loi.user = item.user;
         state.cho.push(loi);
         if (state.cho.length > CHO_TOI_DA) state.cho.shift();
+        // Khách vừa nhắn thì thôi nghỉ: chữ của họ lên ngay.
+        state.nghiDen = 0;
         return [];
       },
     },
   },
 
   onTick(state, now) {
-    if (state.dang !== null && now < state.ketThuc) return [];
+    // Đang chạy dở: xin thiết kế giữ dải sáng. Thiết kế dựa vào tin này để biết
+    // lúc nào nên vẽ dải, lúc nào cất đi — nó không được biết lõi của mình.
+    if (state.dang !== null && now < state.ketThuc) {
+      return [{ kind: 'overlay', slot: 'ticker', ttlMs: 1_000 }];
+    }
+
+    if (state.dang !== null) {
+      state.dang = null;
+      // Hết lời nhắn thật thì nghỉ một lúc cho dải biến mất khỏi màn.
+      if (state.cho.length === 0) {
+        state.nghiDen = now + NGHI_MS;
+        return [];
+      }
+    }
+    if (state.cho.length === 0 && now < state.nghiDen) return [];
+
     doiDong(state, now);
-    return [];
+    return state.dang === null ? [] : [{ kind: 'overlay', slot: 'ticker', ttlMs: 1_000 }];
   },
 
   onConfig(state, config) {

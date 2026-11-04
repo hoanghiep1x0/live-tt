@@ -5,7 +5,6 @@ import {
   Slot,
   useAsset,
   useLoiMc,
-  useSlotCo,
   useSlotSang,
   useStage,
   useThietKe,
@@ -99,10 +98,10 @@ export function Stage() {
   const loiMc = useLoiMc();
   /** Module sàn nhảy xin sáng slot `floor` suốt màn nhảy. */
   const sanSang = useSlotSang('floor');
-  /** Có tính năng nào đang vẽ chữ chạy không. Hỏi "có module nào ở slot này"
-   *  chứ không hỏi "slot có đang sáng": dải chữ chạy suốt buổi, nó không xin
-   *  nhấn sáng bao giờ, nên hỏi nhầm là giấu luôn cả tính năng. */
-  const tickerSang = useSlotCo('ticker');
+  /** Dải chữ chạy có đang có gì để nói không. Module xin sáng slot suốt lúc
+   *  chữ còn trôi, và thôi xin lúc nó nghỉ — nên dải tự ẩn đi giữa hai lượt,
+   *  không nằm chình ình giữa màn cả buổi. */
+  const tickerSang = useSlotSang('ticker');
   const gio = useDongHo();
   // Đồng hồ cho lượt người ra vào ở lối đi: chỉ cần đủ mịn để bắt đầu và kết
   // thúc một lượt, phần chạy là của CSS.
@@ -192,10 +191,10 @@ export function Stage() {
       {/* Dải chữ chạy: bồ đoàn bên trái, chữ chạy ở phần còn lại. Bồ đoàn là
           đồ đạc của phòng nên thiết kế tự vẽ — ai đang ngồi trên đó thì đọc từ
           phiên, y như hàng ghế. */}
-      {/* Dải chữ chạy chỉ hiện khi có gì để nói: có người đứng đầu bảng, hoặc
-          một tính năng đang chạy chữ ở slot `ticker`. Phòng im mà vẫn treo một
-          dải trống kèm đài sen thì nó chỉ là vết bẩn giữa màn. */}
-      {nhat === undefined && !tickerSang ? null : (
+      {/* Dải chữ chạy chỉ hiện khi đang có chữ trôi. Giữa hai lượt nó biến
+          mất hẳn — treo một dải kèm đài sen suốt buổi thì người xem thôi nhìn
+          nó, mà nó vẫn chiếm chỗ giữa màn. */}
+      {!tickerSang ? null : (
         <div className="stage-heading">
           <div
             className={nhat === undefined ? 'stage-honor' : 'stage-honor has-top'}
