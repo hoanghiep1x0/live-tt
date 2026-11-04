@@ -615,6 +615,22 @@ body {
     transform: translate(-50%, 0) scale(1);
   }
 }
+/* Đi ra: ngược đúng đường lúc vào — lùi về phía lối giữa rồi khuất xuống dưới.
+   Không để họ tắt phụt giữa rạp: tắt nhân vật ảo là tám người biến mất một lúc,
+   nhìn như lỗi phần mềm chứ không như khách ra về. */
+.seat-chibi.di-ra {
+  animation: ghe-ra 0.85s ease-in forwards;
+}
+@keyframes ghe-ra {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--vao-x, 0cqw)), 2.4cqw) scale(0.82);
+  }
+}
 @keyframes ghe-tho {
   from {
     transform: translate(-50%, 0) scale(1);
@@ -627,6 +643,9 @@ body {
   .seat-chibi {
     animation: none;
     transform: translateX(-50%);
+  }
+  .seat-chibi.di-ra {
+    animation: ghe-ra 0.85s linear forwards;
   }
 }
 

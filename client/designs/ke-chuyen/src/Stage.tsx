@@ -104,6 +104,10 @@ function dungGhe(rows: number): ChoNgoi[] {
 
 /** Hàng ghế. Ghế là đồ đạc của phòng nên thiết kế tự vẽ; ai ngồi đâu thì đọc
  *  từ phiên, và phiên nằm ở backend. */
+/** Người rời ghế được giữ lại ngần này để đi ra khỏi rạp. Phải khớp `ghe-ra`
+ *  trong stage.css. */
+const RA_MS = 850;
+
 function HangGhe({
   ghe,
   rows,
@@ -116,6 +120,35 @@ function HangGhe({
   /** Sáu đường dẫn ảnh chibi, dựng sẵn ở `Stage` để khỏi tính lại 84 lần. */
   anh: readonly string[];
 }) {
+  // Backend báo "ghế này trống" là React bỏ thẻ ảnh ngay, người biến mất giữa
+  // rạp. Giữ người vừa đứng dậy thêm `RA_MS` để họ đi ra, rồi mới bỏ thật.
+  const [diRa, setDiRa] = useState<ReadonlyMap<number, { user: string; at: number }>>(new Map());
+  const truoc = useRef<Map<number, string>>(new Map());
+
+  useEffect(() => {
+    const nay = new Map<number, string>();
+    for (const [i, ai] of ngoi) nay.set(i, ai.user);
+
+    const ra: [number, string][] = [];
+    for (const [i, u] of truoc.current) {
+      if (nay.get(i) !== u) ra.push([i, u]);
+    }
+    truoc.current = nay;
+
+    // Dọn theo MỐC THỜI GIAN, không hẹn giờ rồi huỷ: `ngoi` đổi mỗi nửa giây
+    // nên effect chạy lại liên tục, hẹn giờ nào cũng bị huỷ trước khi kêu —
+    // người đi ra sẽ đứng chết ở mép ghế mãi mãi.
+    const gio = Date.now();
+    setDiRa((m) => {
+      const x = new Map<number, { user: string; at: number }>();
+      for (const [i, v] of m) {
+        if (gio - v.at < RA_MS) x.set(i, v);
+      }
+      for (const [i, u] of ra) x.set(i, { user: u, at: gio });
+      return x.size === 0 && m.size === 0 ? m : x;
+    });
+  }, [ngoi]);
+
   return (
     <>
       {ghe.map((g) => {
@@ -144,7 +177,21 @@ function HangGhe({
             }}
             aria-hidden
           >
-            {ai === undefined ? null : (
+            {ai === undefined ? (
+              // Ghế vừa trống: người cũ còn đây một nhịp để đi ra. Chỉ vẽ khi
+              // ghế đang trống — có người mới ngồi xuống rồi thì thôi.
+              (() => {
+                const cu = diRa.get(g.flat);
+                return cu === undefined ? null : (
+                  <img
+                    key={`ra:${cu.user}:${cu.at}`}
+                    className="seat-chibi di-ra"
+                    src={anh[kieuChibi(cu.user)]}
+                    alt=""
+                  />
+                );
+              })()
+            ) : (
               // `key` theo nick: người này đứng lên người kia ngồi xuống thì
               // React dựng lại thẻ ảnh, nhờ vậy màn đi vào chạy lại từ đầu.
               <img key={ai.user} className="seat-chibi" src={anh[kieuChibi(ai.user)]} alt="" />
