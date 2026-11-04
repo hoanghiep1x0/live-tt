@@ -1,8 +1,17 @@
 import { z } from 'zod';
 import type { ModuleManifest } from '@live/contracts';
 
+/** Vài kiểu chào, dùng xoay vòng. Chào ba mươi người bằng đúng một câu thì
+ *  người thứ hai đã nghe ra là máy. */
+const CHAO = [
+  'Chào {ten} 👋',
+  'Chào mừng {ten} vào phòng 🙏',
+  '{ten} vào rồi kìa, chào bạn nha',
+  'Chào {ten}, ngồi nghe chuyện cùng cả nhà nhé',
+].join('\n');
+
 export const schema = z.object({
-  template: z.string().min(1).max(200).default('Chào {ten} ghé phòng nha!'),
+  templates: z.string().min(1).max(2_000).default(CHAO),
   gapSec: z.number().int().min(0).max(300).default(12),
   voice: z.boolean().default(true),
   skipDefault: z.boolean().default(true),
@@ -16,18 +25,18 @@ export const manifest: ModuleManifest<Config> = {
   icon: '👋',
   summary: 'Gọi tên & chào khi có người vào phòng',
   triggers: ['join'],
-  configVersion: 1,
+  configVersion: 2,
   schema,
   slots: ['ticker'],
   needs: ['tts', 'audio'],
   quick: ['gapSec', 'voice'],
   fields: [
     {
-      key: 'template',
+      key: 'templates',
       label: 'Câu chào',
       short: 'Câu chào',
-      type: 'text',
-      hint: 'Dùng {ten} cho tên người vào',
+      type: 'textarea',
+      hint: 'Mỗi dòng một câu, chào xoay vòng. Dùng {ten} cho tên người vào',
     },
     {
       key: 'gapSec',

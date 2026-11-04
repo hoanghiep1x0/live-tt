@@ -21,6 +21,7 @@ export default defineConfig({
       '@live/mod-chat-bubbles',
       '@live/mod-gift-thanks',
       '@live/mod-story',
+      '@live/mod-ticker',
       '@live/mod-top-givers',
       '@live/mod-welcome',
       '@live/mod-likes-counter',

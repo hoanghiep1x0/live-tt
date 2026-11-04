@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Seat } from '@live/contracts';
-import { Slot, useAsset, useLoiMc, useStage } from '@live/stage-sdk';
+import { LOI_MC_MS, Slot, useAsset, useLoiMc, useStage } from '@live/stage-sdk';
 import { bienCss } from './geometry';
 import type { Huong } from './geometry';
 import {
@@ -130,6 +130,13 @@ export function Stage() {
   // đủ khi tắt hết module (quy ước 04 §1) — đây là trạng thái đó.
   const t = s.session.totals;
 
+  // Người tặng nhiều nhất ngồi trên bồ đoàn ở dải chữ chạy.
+  const nhat = s.session.topGivers[0];
+  const tenNhat =
+    nhat === undefined
+      ? undefined
+      : `Top 1: ${nhat.name} · ${nhat.xu.toLocaleString('vi-VN')} điểm`;
+
   return (
     <div
       className="stage"
@@ -172,8 +179,16 @@ export function Stage() {
         </div>
       </section>
 
+      {/* Dải chữ chạy: bồ đoàn bên trái, chữ chạy ở phần còn lại. Bồ đoàn là
+          đồ đạc của phòng nên thiết kế tự vẽ — ai đang ngồi trên đó thì đọc từ
+          phiên, y như hàng ghế. */}
       <div className="stage-heading">
-        <div className="stage-honor">
+        <div className={nhat === undefined ? 'stage-honor' : 'stage-honor has-top'} title={tenNhat}>
+          {nhat === undefined ? null : (
+            <span className="stage-honor-avatar" key={nhat.user}>
+              {nhat.avatar === undefined ? <i>?</i> : <img src={nhat.avatar} alt="" />}
+            </span>
+          )}
           <img className="stage-lotus" src={asset(HOA_SEN)} alt="" />
         </div>
         <Slot name="ticker" />
@@ -212,9 +227,9 @@ export function Stage() {
       {/* Lời MC: chào hỏi, cảm ơn quà. KHÔNG nằm trong khung chiếu — khung đó
           dành cho nội dung truyện. */}
       {loiMc === null ? null : (
-        <div className="stage-host" role="status">
-          <span className="stage-host-ai">MC</span>
+        <div className="stage-host" role="status" key={loiMc.at}>
           <p>{loiMc.text}</p>
+          <span className="stage-host-bar" style={{ animationDuration: `${LOI_MC_MS}ms` }} />
         </div>
       )}
 

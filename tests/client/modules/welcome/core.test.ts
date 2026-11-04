@@ -28,9 +28,16 @@ describe('manifest', () => {
 describe('chào người vào', () => {
   it('gọi tên người vào', () => {
     const s = core.init(MAC_DINH);
-    expect(loiNoi(runFeed(mod, s, vao('Hạnh'), ctx(MAC_DINH, 1_000)))).toBe(
-      'Chào Hạnh ghé phòng nha!',
+    expect(loiNoi(runFeed(mod, s, vao('Hạnh'), ctx(MAC_DINH, 1_000)))).toContain('Hạnh');
+  });
+
+  it('chào xoay vòng qua từng câu rồi quay lại câu đầu', () => {
+    const c = { ...MAC_DINH, gapSec: 0, templates: 'một {ten}\nhai {ten}' };
+    const s = core.init(c);
+    const noi = ['An', 'Bình', 'Chi'].map((t) =>
+      loiNoi(runFeed(mod, s, vao(t, t), ctx(c, 1_000))),
     );
+    expect(noi).toEqual(['một An', 'hai Bình', 'một Chi']);
   });
 
   it('một người ra vào nhiều lần chỉ được chào một lần', () => {

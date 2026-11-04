@@ -171,16 +171,27 @@ body {
     rgba(18, 8, 3, 0.72) 86%,
     rgba(18, 8, 3, 0)
   );
+  /* Hai vạch vàng nhạt dần ra hai mép, không kẻ thẳng hết chiều ngang: dải
+     nổi lên mà không cắt đôi sân khấu. */
   border-width: 0.2cqw 0;
   border-style: solid;
-  border-color: rgba(242, 196, 90, 0.2);
+  border-image: linear-gradient(
+      90deg,
+      rgba(242, 196, 90, 0),
+      rgba(242, 196, 90, 0.6) 30%,
+      rgba(242, 196, 90, 0.6) 70%,
+      rgba(242, 196, 90, 0)
+    )
+    1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 1.4cqw;
+  justify-content: flex-start;
+  gap: 1.6cqw;
   white-space: nowrap;
   overflow: hidden;
 }
+/* Bồ đoàn: hoa sen phía trước, ảnh người tặng nhiều nhất ngồi trong lòng sen,
+   hào quang xoay chậm phía sau. Dải chỉ cao 5cqw nên cả cụm thu nhỏ lại. */
 .stage-honor {
   position: relative;
   flex: 0 0 auto;
@@ -191,10 +202,101 @@ body {
 }
 .stage-lotus {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: block;
+  width: 7cqw;
+  height: auto;
+  margin: 0 auto;
+  filter: drop-shadow(0 0 2cqw var(--stage-glow));
+  animation: lotus-glow 5s ease-in-out infinite;
+}
+@keyframes lotus-glow {
+  50% {
+    filter: drop-shadow(0 0 3.2cqw var(--stage-glow));
+  }
+}
+.stage-honor.has-top::before,
+.stage-honor.has-top::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 9cqw;
+  height: 9cqw;
+  margin-left: -4.5cqw;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.stage-honor.has-top::before {
+  background: repeating-conic-gradient(
+    rgba(255, 230, 160, 0.3) 0 5deg,
+    rgba(255, 230, 160, 0) 5deg 30deg
+  );
+  mask-image: radial-gradient(circle, #000 25%, transparent 68%);
+  animation: honor-rays 24s linear infinite;
+}
+.stage-honor.has-top::after {
+  background: radial-gradient(
+    circle,
+    rgba(255, 226, 150, 0.55) 0 26%,
+    rgba(255, 200, 110, 0.2) 44%,
+    rgba(255, 200, 110, 0) 66%
+  );
+  animation: honor-pulse 3.6s ease-in-out infinite;
+}
+@keyframes honor-rays {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes honor-pulse {
+  50% {
+    opacity: 0.6;
+    transform: scale(1.08);
+  }
+}
+.stage-honor-avatar {
+  position: absolute;
+  left: 50%;
+  bottom: 2.1cqw;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 4.4cqw;
+  height: 4.4cqw;
+  margin-left: -2.2cqw;
+  overflow: hidden;
+  border: 0.35cqw solid #ffe39a;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #fff4d2, #f2c45a);
+  box-shadow: 0 0 1.4cqw rgba(255, 220, 130, 0.95), 0 0 4cqw rgba(255, 190, 90, 0.6);
+  animation: honor-in 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.3), honor-float 5s ease-in-out 0.8s infinite;
+}
+.stage-honor-avatar img {
+  display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+}
+.stage-honor-avatar i {
+  font-style: normal;
+  font-weight: 800;
+  font-size: 2.4cqw;
+  color: rgba(120, 70, 20, 0.7);
+}
+@keyframes honor-in {
+  from {
+    opacity: 0;
+    transform: translateY(2cqw) scale(0.6);
+  }
+}
+@keyframes honor-float {
+  50% {
+    transform: translateY(-0.4cqw);
+  }
 }
 
 /* ---- Khung chiếu ---- */
@@ -287,41 +389,47 @@ body {
   left: 50%;
   /* Nằm ĐÈ LÊN hàng ghế, ngay dưới dải chữ chạy. Khoảng giữa khung chiếu và
      hàng ghế đã kín: hàng vinh danh rồi thanh tiến độ. */
-  top: calc(var(--hall-top) + 1.6cqw);
+  top: calc(var(--hall-top) + 1.4cqw);
   transform: translateX(-50%);
   z-index: 6;
-  max-width: 72cqw;
-  display: flex;
-  align-items: flex-start;
-  gap: 1.4cqw;
-  padding: 1.6cqw 2.4cqw;
-  border-radius: 2cqw;
-  background: linear-gradient(180deg, rgba(32, 16, 6, 0.92), rgba(18, 8, 3, 0.92));
-  border: 0.2cqw solid color-mix(in srgb, var(--gold2) 50%, transparent);
-  box-shadow: 0 1cqw 3cqw rgba(0, 0, 0, 0.6);
-  animation: mc-vao 0.3s ease-out;
+  width: 62cqw;
+  padding: 3cqw 3.4cqw 3.2cqw;
+  border-radius: 2.4cqw;
+  overflow: hidden;
+  background: linear-gradient(160deg, rgba(48, 24, 8, 0.96), rgba(24, 12, 4, 0.96));
+  border: 0.25cqw solid var(--gold);
+  box-shadow: 0 1cqw 4cqw rgba(0, 0, 0, 0.7), 0 0 3cqw rgba(242, 196, 90, 0.35);
+  animation: mc-vao 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
 .stage-host p {
   margin: 0;
-  font-size: 2.5cqw;
-  line-height: 1.4;
-  font-weight: 600;
-  color: #fff;
+  text-align: center;
+  font-size: 2.8cqw;
+  line-height: 1.5;
+  font-weight: 700;
+  color: #fff4dc;
 }
-.stage-host-ai {
-  flex: none;
-  font-size: 1.9cqw;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: var(--gold-fg);
-  background: linear-gradient(180deg, var(--gold1), var(--gold2));
-  padding: 0.1cqw 1cqw;
-  border-radius: 1cqw;
+/* Vạch vàng rút dần ở đáy thẻ: người xem thấy thẻ sắp hết chứ không bị tắt
+   ngang giữa câu. Chạy đúng bằng quãng SDK giữ câu trên màn. */
+.stage-host-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 0.5cqw;
+  background: var(--gold);
+  transform-origin: left;
+  animation: mc-vach linear forwards;
+}
+@keyframes mc-vach {
+  to {
+    transform: scaleX(0);
+  }
 }
 @keyframes mc-vao {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(1.4cqw);
+    transform: translateX(-50%) scale(0.85);
   }
 }
 

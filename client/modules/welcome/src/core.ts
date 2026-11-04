@@ -7,15 +7,30 @@ const TEN_MAC_DINH = /^user[0-9._]{3,}$/i;
 
 export interface State {
   config: Config;
+  /** Câu chào kế tiếp sẽ dùng. */
+  moi: number;
   /** Mốc lời chào gần nhất, để giữ giãn cách. */
   lastAt: number;
   /** Đã chào trong phiên này rồi thì không chào lại — người xem hay ra vào. */
   daChao: Set<string>;
 }
 
+/** Câu kế tiếp trong danh sách, quay vòng. Danh sách rỗng thì chào trống —
+ *  lõi không tự bịa câu thay người vận hành. */
+function cauChao(state: State): string {
+  const ds = state.config.templates
+    .split('\n')
+    .map((s) => s.trim())
+    .filter((s) => s !== '');
+  if (ds.length === 0) return '';
+  const cau = ds[state.moi % ds.length] as string;
+  state.moi = (state.moi + 1) % ds.length;
+  return cau;
+}
+
 export const core: ModuleCore<Config, State> = {
   init(config) {
-    return { config, lastAt: 0, daChao: new Set() };
+    return { config, moi: 0, lastAt: 0, daChao: new Set() };
   },
 
   hooks: {
@@ -32,7 +47,7 @@ export const core: ModuleCore<Config, State> = {
         state.daChao.add(key);
         state.lastAt = ctx.now;
 
-        const text = state.config.template.replaceAll('{ten}', item.name);
+        const text = cauChao(state).replaceAll('{ten}', item.name);
         const ra: Effect[] = state.config.voice
           ? [{ kind: 'say', text, priority: 'low' }]
           : [{ kind: 'sfx', sound: 'join' }];

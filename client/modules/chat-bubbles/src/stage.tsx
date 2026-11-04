@@ -16,8 +16,14 @@ export function Stage({ modState, now }: StagePartProps<Config, State>) {
         <p
           key={b.id}
           className={b.qua ? 'mod-chat-bong la-qua' : 'mod-chat-bong'}
-          // Bóng mới nhất nằm dưới cùng, cũ hơn đẩy dần lên.
-          style={{ '--nac': bong.length - 1 - i } as React.CSSProperties}
+          // Bóng mới nhất nằm dưới cùng, cũ hơn đẩy dần lên. Đời bóng do lõi
+          // quyết, nên hoạt hình mờ dần phải chạy đúng bằng ngần ấy giây.
+          style={
+            {
+              '--nac': bong.length - 1 - i,
+              animationDuration: `${modState.config.songSec}s`,
+            } as React.CSSProperties
+          }
         >
           <b>{b.name}</b>
           {b.text}

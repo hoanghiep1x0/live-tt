@@ -136,7 +136,7 @@ export interface ModuleManifest<C = Json> {
   name: string;                    // tên tiếng Việt trên thẻ
   icon: string;                    // emoji hoặc tên icon
   summary: string;                 // một dòng dưới tên
-  group: 'quick' | 'other';        // nhóm trên trang Tính năng
+  room?: RoomKind;                 // chỉ hợp một loại phòng; thiếu là dùng chung
   triggers: FeedKind[];            // chạy khi nào — khớp khoá trong core.hooks
   fields: ConfigField[];           // mô tả ô cấu hình, manager tự dựng form
   configVersion: number;

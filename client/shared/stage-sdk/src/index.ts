@@ -5,7 +5,7 @@ export { chuanHoa, playSfx, HangGiong, VOICE_MAC_DINH } from './audio';
 export type { CastVoice, VoiceCfg } from './audio';
 export { SO_MODULE, partsCho, timDangKy } from './registry';
 export type { CtxChung, DangKy, StagePartProps, TheSong } from './registry';
-export { useRunner } from './runner';
+export { useRunner, LOI_MC_MS } from './runner';
 export type { KetQuaChay, LoiMc } from './runner';
 export { BangXem } from './BangXem';
 export {

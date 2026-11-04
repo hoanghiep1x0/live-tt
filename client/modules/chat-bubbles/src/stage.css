@@ -12,40 +12,71 @@
   bottom: 0;
   max-width: 100%;
   margin: 0;
-  padding: 0.9cqw 1.6cqw;
-  border-radius: 2cqw 2cqw 0.4cqw 2cqw;
-  font-size: 2.2cqw;
-  line-height: 1.35;
+  padding: 1cqw 2.2cqw;
+  border-radius: 2.4cqw 2.4cqw 0.6cqw 2.4cqw;
+  font-size: 2.6cqw;
+  line-height: 1.3;
+  font-weight: 500;
   color: #fff;
-  background: var(--stage-name-bg, rgba(0, 0, 0, 0.72));
-  border: 0.15cqw solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 0.6cqw 1.6cqw rgba(0, 0, 0, 0.45);
+  background: var(--stage-bubble, linear-gradient(135deg, rgb(70, 38, 20), rgb(36, 18, 9)));
+  border: 0.25cqw solid var(--stage-ring, rgba(242, 196, 90, 0.75));
+  box-shadow: 0 0.6cqw 1.8cqw rgba(0, 0, 0, 0.45), 0 0 1.6cqw rgba(255, 200, 110, 0.18);
+  text-shadow: 0 0.2cqw 0.4cqw rgba(0, 0, 0, 0.6);
+  /* Câu dài thì cắt ở hai dòng: bóng cao quá là đè lên bóng phía trên, mà một
+     nấc chỉ có 8.4cqw. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   /* Mỗi nấc cao 8.4cqw: bóng mới đẩy bóng cũ lên trên, trượt chứ không nhảy. */
   transform: translateY(calc(var(--nac) * -8.4cqw));
   transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-  animation: mod-chat-vao 0.35s ease-out;
+  /* Thời lượng do phần vẽ đặt, đúng bằng quãng lõi còn giữ bóng. */
+  animation: mod-chat-song ease-out forwards;
 }
 
+/* Tên nằm CÙNG DÒNG với câu nói, không xuống dòng riêng: bóng thấp lại, một
+   nấc chứa đủ hai dòng chữ thật. */
 .mod-chat-bong b {
-  display: block;
-  font-size: 1.9cqw;
+  margin-right: 0.4cqw;
   font-weight: 700;
-  color: var(--stage-soft, #e6dccb);
+  color: var(--gold, #f2c45a);
 }
 
 .mod-chat-bong.la-qua {
-  color: var(--gold-fg, #2a1d08);
-  background: linear-gradient(180deg, var(--gold1, #e9c77e), var(--gold2, #b6873a));
-  border-color: rgba(120, 80, 20, 0.5);
+  padding: 0.5cqw 1.5cqw;
+  max-width: 30cqw;
+  font-size: 2cqw;
+  -webkit-line-clamp: 1;
+  color: var(--gold-fg, #3a1d00);
+  background: linear-gradient(135deg, #fff1b8, #f2c45a 60%, #e0a03a);
+  border-color: #fff3c4;
+  box-shadow: 0 0.6cqw 1.8cqw rgba(0, 0, 0, 0.45), 0 0 2.4cqw rgba(255, 200, 90, 0.7);
+  text-shadow: none;
 }
 .mod-chat-bong.la-qua b {
-  color: rgba(42, 29, 8, 0.75);
+  color: #8a2a00;
 }
 
-@keyframes mod-chat-vao {
-  from {
+/* Hiện lên, đứng yên gần hết đời, rồi trôi lên mờ dần — bóng không biến mất
+   đột ngột giữa lúc người ta đang đọc. */
+@keyframes mod-chat-song {
+  0% {
     opacity: 0;
-    transform: translateY(calc(var(--nac) * -8.4cqw + 2cqw));
+    transform: translateY(calc(var(--nac) * -8.4cqw + 3cqw)) scale(0.9);
+  }
+  8% {
+    opacity: 1;
+    transform: translateY(calc(var(--nac) * -8.4cqw)) scale(1);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(calc(var(--nac) * -8.4cqw));
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(calc(var(--nac) * -8.4cqw - 5cqw));
   }
 }
 

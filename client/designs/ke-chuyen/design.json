@@ -29,6 +29,7 @@
     "welcome",
     "chat-bubbles",
     "top-givers",
+    "ticker",
     "likes-counter",
     "follow-thanks"
   ],
@@ -39,8 +40,7 @@
       "passages": "Ngày xưa, có một cậu bé ham chơi. Một lần bị mẹ mắng, cậu giận dỗi bỏ nhà ra đi.\nCậu bé đi lang thang khắp nơi, chẳng nghĩ tới mẹ đang mỏi mắt chờ ở nhà.\nĐói và rét, cậu tìm về nhà nhưng không thấy mẹ đâu. Cậu ôm lấy cái cây mà khóc.\nCây xanh run rẩy. Từ các cành lá, những đài hoa bé tí trổ ra, nở trắng như mây.\nHoa tàn, quả xuất hiện, lớn nhanh, da căng mịn, xanh óng ánh.\nCây nghiêng cành, một quả to rơi vào tay cậu bé.\nCậu bé cắn một miếng thật to. Chát quá. Quả thứ hai rơi xuống, cậu cắn vào hạt. Cứng quá.\nQuả thứ ba rơi xuống. Cậu khẽ bóp quanh quả, lớp vỏ mềm dần rồi nứt ra một kẽ nhỏ.\nMột dòng sữa trắng sóng sánh trào ra, ngọt thơm như sữa mẹ.\nCậu ngước nhìn tán lá. Lá một mặt xanh bóng, mặt kia đỏ hoe như mắt mẹ khóc chờ con.\nCậu bé oà lên khóc. Cây xoà cành ôm cậu, như tay mẹ âu yếm vỗ về.",
       "secPerPassage": 16
     },
-    "gift-thanks": { "template": "Cảm ơn {ten} đã tặng {qua}!" },
-    "welcome": { "template": "Chào {ten} ghé phòng nghe truyện nha!" },
+    "welcome": { "templates": "Chào {ten} ghé phòng nghe truyện nha!\nChào mừng {ten}, mời bạn ngồi nghe chuyện cùng cả nhà 🙏\n{ten} vào rồi kìa, chào bạn nha 🌸\nChào {ten}, chuyện đang tới đoạn hay đó nghen" },
     "likes-counter": { "template": "Đã {phantram}% mục tiêu tim, cảm ơn cả phòng!" }
   },
   "seats": 84,

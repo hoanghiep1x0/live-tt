@@ -15,6 +15,7 @@
     "@live/mod-gift-thanks": "*",
     "@live/mod-likes-counter": "*",
     "@live/mod-story": "*",
+    "@live/mod-ticker": "*",
     "@live/mod-top-givers": "*",
     "@live/mod-welcome": "*",
     "@radix-ui/react-dialog": "1.3.1",

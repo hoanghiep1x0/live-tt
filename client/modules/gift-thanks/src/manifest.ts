@@ -1,9 +1,33 @@
 import { z } from 'zod';
 import type { ModuleManifest } from '@live/contracts';
 
+/** Năm câu cảm ơn cho một món quà, đọc lần lượt theo `OFFSET_S`. MC nói nhiều
+ *  kiểu thì người tặng mới thấy mình được nhắc tới thật, chứ nghe đúng một câu
+ *  lặp lại là biết ngay máy đọc. */
+const CAM_ON = [
+  'Ui, {ten} tặng {qua} cho MC nè, cảm ơn bạn nhiều nhiều nha 🥰',
+  '{ten} ơi, {qua} xinh xỉu luôn á, MC thương bạn ghê ❤',
+  'Cả phòng ơi, vỗ tay cảm ơn {ten} giùm MC nha 👏🌸',
+  'MC vẫn còn cười tủm tỉm vì {qua} của {ten} nè 😊',
+  'Thêm một lần cảm ơn {ten} nha, chúc bạn hôm nay toàn chuyện vui 🍀',
+].join('\n');
+
+/** Quà lớn thì MC phấn khích hẳn lên. */
+const CAM_ON_LON = [
+  'Trời ơi trời ơi! {ten} tặng {qua} luôn kìa cả nhà ơi! MC cảm ơn {ten} nhiều lắm lắm luôn 😍🎉',
+  'Ôi MC xúc động quá trời! {qua} của {ten} làm sáng rực cả phòng luôn á, thương {ten} ghê luôn 🥹❤',
+  'Cả phòng ơi vỗ tay thật to cho {ten} đi nè! Cảm ơn {ten} rối rít luôn á 👏👏🌸',
+  'MC vẫn còn run tay vì {qua} của {ten} đó nha, cảm ơn {ten} bao nhiêu cũng không đủ 😆💖',
+  'Thêm một lần nữa nè: cảm ơn {ten} siêu siêu nhiều! Chúc {ten} hôm nay vui ơi là vui, may mắn ngập tràn 🍀✨',
+].join('\n');
+
 export const schema = z.object({
   minCoins: z.number().int().min(0).max(100_000).default(1),
-  template: z.string().min(1).max(200).default('Cảm ơn {ten} đã tặng {qua}!'),
+  templates: z.string().min(1).max(4_000).default(CAM_ON),
+  bigTemplates: z.string().min(1).max(4_000).default(CAM_ON_LON),
+  bigCount: z.number().int().min(1).max(10_000).default(10),
+  bigCoins: z.number().int().min(1).max(100_000).default(100),
+  repeats: z.number().int().min(1).max(5).default(5),
   combo: z.boolean().default(true),
   comboSec: z.number().int().min(1).max(60).default(5),
 });
@@ -14,20 +38,49 @@ export const manifest: ModuleManifest<Config> = {
   id: 'gift-thanks',
   name: 'Cảm ơn quà',
   icon: '🎁',
-  summary: 'Đọc tên & tạo hiệu ứng khi có quà',
+  summary: 'Đọc tên & tạo hiệu ứng khi có quà, nhắc lại vài lần sau đó',
   triggers: ['gift'],
-  configVersion: 1,
+  configVersion: 2,
   schema,
   slots: ['ticker'],
   needs: ['tts', 'audio'],
-  quick: ['minCoins', 'combo'],
+  quick: ['minCoins', 'repeats', 'combo'],
   fields: [
     { key: 'minCoins', label: 'Quà tối thiểu (xu)', short: 'Từ (xu)', type: 'number', min: 0 },
     {
-      key: 'template',
+      key: 'repeats',
+      label: 'Cảm ơn mấy lần một món quà',
+      short: 'Số lần',
+      type: 'number',
+      min: 1,
+      max: 5,
+      hint: 'Các câu cách nhau 0 · 5 · 15 · 30 · 60 giây, mỗi lần một câu khác',
+    },
+    {
+      key: 'templates',
       label: 'Câu cảm ơn',
       type: 'textarea',
-      hint: 'Dùng {ten}, {qua}, {soluong}',
+      hint: 'Mỗi dòng một câu, đọc lần lượt. Dùng {ten}, {qua}, {soluong}',
+    },
+    {
+      key: 'bigTemplates',
+      label: 'Câu cảm ơn quà lớn',
+      type: 'textarea',
+      hint: 'Dùng khi món quà vượt ngưỡng dưới đây',
+    },
+    {
+      key: 'bigCount',
+      label: 'Quà lớn từ bao nhiêu món',
+      type: 'number',
+      unit: 'món',
+      min: 1,
+    },
+    {
+      key: 'bigCoins',
+      label: 'Hoặc từ bao nhiêu xu',
+      type: 'number',
+      unit: 'xu',
+      min: 1,
     },
     {
       key: 'combo',

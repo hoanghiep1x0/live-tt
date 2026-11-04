@@ -15,7 +15,7 @@ import type { StageState } from './state';
 /** Nhịp chạy `onTick` và nhịp vẽ lại phần hiển thị theo thời gian. */
 const NHIP_MS = 250;
 /** Lời MC hiện bao lâu rồi tắt, khi không có câu mới thay. */
-const LOI_MC_MS = 6_000;
+export const LOI_MC_MS = 6_000;
 
 export interface LoiMc {
   text: string;
