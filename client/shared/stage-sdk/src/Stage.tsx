@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { DesignOption, Json, SessionView, SlotName } from '@live/contracts';
+import type { DesignCard, DesignOption, Json, SessionView, SlotName } from '@live/contracts';
 import { connectStage, BAN_DAU } from './state';
 import type { StageState } from './state';
 import { partsCho } from './registry';
@@ -13,7 +13,7 @@ interface CtxValue {
   designId: string;
   /** Lựa chọn thiết kế tự khai. Bảng xem dựng form từ đây, và `useThietKe`
    *  lấy mặc định từ đây khi backend chưa lưu gì. */
-  luaChon: readonly DesignOption[];
+  luaChon: readonly DesignCard[];
   chay: KetQuaChay;
 }
 
@@ -24,7 +24,7 @@ const RONG: KetQuaChay = {
   now: 0,
 };
 
-const KHONG_CO: readonly DesignOption[] = [];
+const KHONG_CO: readonly DesignCard[] = [];
 
 const Ctx = createContext<CtxValue>({
   s: BAN_DAU,
@@ -42,7 +42,7 @@ export function StageProvider({
   designId: string;
   /** Lựa chọn của riêng thiết kế này — xem `DesignOption`. Thiết kế nào không
    *  có gì để chỉnh thì bỏ trống, bảng xem sẽ không dựng thẻ nào. */
-  luaChon?: readonly DesignOption[];
+  luaChon?: readonly DesignCard[];
   children: ReactNode;
 }) {
   const [s, setS] = useState<StageState>(BAN_DAU);
@@ -56,15 +56,18 @@ export function StageProvider({
 export function useThietKe(): Record<string, Json> {
   const { s, luaChon } = useContext(Ctx);
   const ra: Record<string, Json> = {};
-  for (const o of luaChon) ra[o.key] = o.value;
+  for (const the of luaChon) {
+    if (the.toggle !== undefined) ra[the.toggle.key] = the.toggle.value;
+    for (const o of the.fields) ra[o.key] = o.value;
+  }
   for (const [k, v] of Object.entries(s.design)) {
     if (k in ra) ra[k] = v;
   }
   return ra;
 }
 
-/** Danh sách lựa chọn thiết kế đã khai — bảng xem dùng để dựng form. */
-export function useLuaChonThietKe(): readonly DesignOption[] {
+/** Các thẻ lựa chọn thiết kế đã khai — bảng xem dùng để dựng form. */
+export function useLuaChonThietKe(): readonly DesignCard[] {
   return useContext(Ctx).luaChon;
 }
 
@@ -80,6 +83,17 @@ export function useSession(): SessionView {
  *  thì làm phụ đề, không có video thì đặt giữa khung. */
 export function useLoiMc(): LoiMc | null {
   return useContext(Ctx).chay.loiMc;
+}
+
+/** Có module nào đang bật vẽ vào slot này không.
+ *
+ *  Khác hẳn `useSlotSang`: "sáng" là module xin nhấn vùng đó lên trong giây
+ *  lát, còn đây là "chỗ này có người ngồi hay không". Thiết kế cần nó để giấu
+ *  cái khung bao quanh một slot rỗng — khung trống treo giữa màn thì chỉ là
+ *  vết bẩn. */
+export function useSlotCo(slot: SlotName): boolean {
+  const { s } = useContext(Ctx);
+  return partsCho(slot, s.enabled).length > 0;
 }
 
 /** Slot nào đang được một module xin sáng. Thiết kế dùng để nhấn vùng đó lên. */

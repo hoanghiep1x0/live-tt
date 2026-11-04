@@ -21,9 +21,15 @@ export const manifest: ModuleManifest<Config> = {
   configVersion: 1,
   schema,
   slots: ['floor'],
-  // Cố ý KHÔNG khai `room`: sàn nhảy hợp cả quán bar lẫn đám cưới, và chỗ đứng
-  // tính trong lòng slot `floor` chứ không theo toạ độ của phòng kể chuyện
-  // (xem `CHO_DUNG` trong core.ts), nên thiết kế nào có slot đó là chạy được.
+  // Khai `room` để bảng xem và trang quản lý xếp nó vào đúng mục: hôm nay chỉ
+  // phòng kể chuyện có slot `floor`, nên để nó ở mục dùng chung là nói với
+  // người vận hành rằng mọi phòng đều bật được — trong khi bật ở phòng khác
+  // thì nó im lặng không hiện gì.
+  //
+  // Phần MÃ vẫn không ràng vào phòng nào: chỗ đứng tính trong lòng slot `floor`
+  // chứ không theo toạ độ phòng kể chuyện (xem `CHO_DUNG` trong core.ts). Phòng
+  // mới có slot đó thì thêm id của nó vào đây là chạy, không phải sửa lõi.
+  room: 'ke-chuyen',
   needs: [],
   quick: ['count', 'danceOnGift', 'danceSec'],
   fields: [

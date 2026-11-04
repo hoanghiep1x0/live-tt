@@ -30,10 +30,13 @@ describe('manifest', () => {
     kiemModule(mod);
   });
 
-  it('chạy khi có quà, cần slot sàn, và dùng chung cho mọi loại phòng', () => {
+  it('chạy khi có quà, cần slot sàn, xếp vào phòng kể chuyện', () => {
     expect(mod.manifest.triggers).toEqual(['gift']);
     expect(mod.manifest.slots).toEqual(['floor']);
-    expect(mod.manifest.room).toBeUndefined();
+    // Hôm nay chỉ phòng kể chuyện có slot `floor`. Để ở mục dùng chung là nói
+    // với người vận hành rằng phòng nào cũng bật được, trong khi bật ở phòng
+    // khác thì nó im lặng không hiện gì. Phần mã vẫn không ràng vào phòng nào.
+    expect(mod.manifest.room).toBe('ke-chuyen');
   });
 });
 

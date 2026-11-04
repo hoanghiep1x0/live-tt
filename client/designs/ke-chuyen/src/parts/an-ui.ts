@@ -9,8 +9,10 @@ import type { ChoNgoi } from './ghe';
 /** Mỗi chu kỳ một lượt an ủi. Bản cũ chờ ngẫu nhiên 40–90 giây; ở đây chốt một
  *  con số để nhịp là hàm thuần của đồng hồ. */
 const CHU_KY_MS = 60_000;
-export const CHAY_MS = 1_600;
-export const OM_MS = 5_000;
+/** Lấy đúng nhịp của bản cũ: `RUN_MS` và `HOLD_MS` đều 4,2 giây. Chạy 1,6 giây
+ *  như bản đầu của em thì người lướt vèo qua rạp, nhìn không ra người chạy. */
+export const CHAY_MS = 4_200;
+export const OM_MS = 4_200;
 export const TONG_MS = CHAY_MS * 2 + OM_MS;
 
 export type NhanVat = 'be' | 'cau-be';

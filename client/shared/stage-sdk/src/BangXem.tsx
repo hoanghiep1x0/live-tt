@@ -209,30 +209,48 @@ function TheThietKe() {
   const s = useStage();
   const luaChon = useLuaChonThietKe();
   const cfg = useThietKe();
-  if (luaChon.length === 0) return null;
   const roi = s.live === null;
 
   return (
-    <article className="bx-the bx-the-thietke" data-bat="true">
-      <div className="bx-the-dau">
-        <span className="bx-icon">🖼</span>
-        <span className="bx-ten">
-          <b>Khung phòng</b>
-          <small>Lựa chọn của riêng thiết kế này, không phải tính năng</small>
-        </span>
-      </div>
-      <div className="bx-the-nhanh">
-        {luaChon.map((o) => (
-          <ONhanh
-            key={o.key}
-            field={o}
-            value={cfg[o.key] ?? null}
-            disabled={roi}
-            onChange={(v) => suaThietKe(o.key, v)}
-          />
-        ))}
-      </div>
-    </article>
+    <>
+      {luaChon.map((the) => {
+        const bat = the.toggle === undefined ? true : cfg[the.toggle.key] !== false;
+        return (
+          <article key={the.id} className="bx-the bx-the-thietke" data-bat={bat}>
+            <div className="bx-the-dau">
+              <span className="bx-icon">{the.icon}</span>
+              <span className="bx-ten">
+                <b>{the.name}</b>
+                <small>{the.summary}</small>
+              </span>
+              {the.toggle === undefined ? null : (
+                <input
+                  type="checkbox"
+                  className="bx-cong"
+                  checked={bat}
+                  disabled={roi}
+                  aria-label={the.toggle.label}
+                  onChange={(e) => suaThietKe(the.toggle?.key ?? '', e.target.checked)}
+                />
+              )}
+            </div>
+            {the.fields.length === 0 ? null : (
+              <div className="bx-the-nhanh">
+                {the.fields.map((o) => (
+                  <ONhanh
+                    key={o.key}
+                    field={o}
+                    value={cfg[o.key] ?? null}
+                    disabled={roi || !bat}
+                    onChange={(v) => suaThietKe(o.key, v)}
+                  />
+                ))}
+              </div>
+            )}
+          </article>
+        );
+      })}
+    </>
   );
 }
 

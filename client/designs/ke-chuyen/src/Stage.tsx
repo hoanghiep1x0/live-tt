@@ -5,11 +5,12 @@ import {
   Slot,
   useAsset,
   useLoiMc,
+  useSlotCo,
   useSlotSang,
   useStage,
   useThietKe,
 } from '@live/stage-sdk';
-import type { DesignOption } from '@live/contracts';
+import type { DesignCard } from '@live/contracts';
 import { bienCss } from './geometry';
 import type { Huong } from './geometry';
 import { GHE_MAC_DINH, hallContentH, hallRowsFor } from './seats';
@@ -22,22 +23,35 @@ import { AnUi, canhAnUi, khachXinOm } from './parts/AnUi';
  *  Bản cũ để khung dọc / ngang trong Cài đặt chung ("Khung mặc định khi mở
  *  trang"). Ở đây nó thuộc về thiết kế, vì chỉ thiết kế mới biết khung ngang
  *  trông ra sao — `screenGeometry('landscape')` trong `geometry.ts`. */
-export const LUA_CHON: readonly DesignOption[] = [
+export const LUA_CHON: readonly DesignCard[] = [
   {
-    key: 'khungNgang',
-    label: 'Xoay ngang khung chiếu',
-    short: 'Khung ngang',
-    type: 'toggle',
-    value: false,
-    hint: 'Tắt là khung dọc 9:16 như mặc định; bật thì khung nằm ngang 16:9 và cụm top nâng lên theo',
+    id: 'khung',
+    name: 'Khung phòng',
+    icon: '🖼',
+    summary: 'Bố cục của riêng phòng này, không phải tính năng',
+    fields: [
+      {
+        key: 'khungNgang',
+        label: 'Xoay ngang khung chiếu',
+        short: 'Khung ngang',
+        type: 'toggle',
+        value: false,
+        hint: 'Tắt là khung dọc 9:16 như mặc định; bật thì khung nằm ngang 16:9 và cụm top nâng lên theo',
+      },
+    ],
   },
   {
-    key: 'anUi',
-    label: 'Cảnh an ủi',
-    short: 'An ủi',
-    type: 'toggle',
-    value: true,
-    hint: 'Mỗi phút một lượt: hai khán giả đang ngồi chạy lên ôm bé và cậu bé, tim bay, rồi về chỗ',
+    id: 'an-ui',
+    name: 'Cảnh an ủi',
+    icon: '🫂',
+    summary: 'Khán giả chạy lên ôm bé và cậu bé; khách gõ “ôm” cũng gọi được một lượt',
+    toggle: {
+      key: 'anUi',
+      label: 'Bật cảnh an ủi',
+      type: 'toggle',
+      value: true,
+    },
+    fields: [],
   },
 ];
 
@@ -85,8 +99,10 @@ export function Stage() {
   const loiMc = useLoiMc();
   /** Module sàn nhảy xin sáng slot `floor` suốt màn nhảy. */
   const sanSang = useSlotSang('floor');
-  /** Có tính năng nào đang chạy chữ ở dải trên hàng ghế không. */
-  const tickerSang = useSlotSang('ticker');
+  /** Có tính năng nào đang vẽ chữ chạy không. Hỏi "có module nào ở slot này"
+   *  chứ không hỏi "slot có đang sáng": dải chữ chạy suốt buổi, nó không xin
+   *  nhấn sáng bao giờ, nên hỏi nhầm là giấu luôn cả tính năng. */
+  const tickerSang = useSlotCo('ticker');
   const gio = useDongHo();
   // Đồng hồ cho lượt người ra vào ở lối đi: chỉ cần đủ mịn để bắt đầu và kết
   // thúc một lượt, phần chạy là của CSS.
@@ -291,7 +307,16 @@ export function Stage() {
             Dòng sau là lời minh bạch, chuyển nguyên `.stage-honest` của bản cũ,
             kể cả cách nó chỉ nhắc "có nhân vật minh họa" khi đám đông ảo đang
             bật — ghi lúc không có ai ảo là nói sai về chính phòng mình. */}
-        <span>Thả tim · bình luận · tặng quà để cả phòng lên sàn nhảy</span>
+        {/* Dòng lệnh theo đúng lối bản cũ: "Gõ" rồi tới tên lệnh in đậm. Chỉ
+            liệt kê lệnh THẬT SỰ chạy được — bản cũ còn `ghế B4`, `chỗ của
+            tôi`, `#mã`, `gửi: …`, nhưng bản mới chưa module nào đọc lệnh gõ,
+            in lên sóng là bảo người xem làm một việc không chạy. Tắt cảnh an
+            ủi thì không còn lệnh nào, dòng này biến mất luôn. */}
+        {!batAnUi ? null : (
+          <span>
+            Gõ <b>ôm</b> · <b>an ủi</b> · <b>thương bé</b> để chạy lên ôm bé
+          </span>
+        )}
         <span className="stage-honest">
           Phòng kể chuyện &amp; xem video{s.bot.enabled ? ' · có nhân vật minh họa' : ''} · MC &amp;
           giọng đọc dùng AI

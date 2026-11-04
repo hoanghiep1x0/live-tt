@@ -23,6 +23,7 @@ export {
   useLoiMc,
   useLuaChonThietKe,
   useSession,
+  useSlotCo,
   useThietKe,
   useSlotSang,
   useStage,

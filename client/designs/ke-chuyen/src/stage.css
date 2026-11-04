@@ -980,22 +980,36 @@ body {
 }
 
 /* ---- Chân màn ---- */
+/* Chuyển nguyên `.stage-hints` của bản cũ: hai dòng sát đáy, dòng trên là cách
+   chơi, dòng dưới là lời minh bạch — nhạt hơn và nhỏ hơn hẳn, vì nó là ghi chú
+   chứ không phải lời mời. Tên lệnh in đậm màu vàng, chữ đều, để người xem nhận
+   ra ngay cái gì gõ được. */
 .stage-hints {
   position: absolute;
   left: 3cqw;
   right: 3cqw;
-  bottom: 0.6cqw;
+  /* Bản cũ để 0,6cqw, nhưng rạp ghế ở đây kéo sát đáy hơn nên chữ dính vào
+     hàng cuối. Đẩy lên một chút và hắt một vệt tối phía sau cho chữ tách khỏi
+     tấm thảm. */
+  bottom: 1.4cqw;
+  padding: 0.6cqw 0 0.2cqw;
+  background: linear-gradient(0deg, rgba(10, 6, 3, 0.72), rgba(10, 6, 3, 0));
   text-align: center;
   font-size: 2.2cqw;
+  line-height: 1.2;
   display: flex;
   flex-direction: column;
   gap: 0.2cqw;
   z-index: 4;
-  color: var(--stage-soft);
+  color: #d9cfbd;
+}
+.stage-hints b {
+  color: var(--gold);
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
 }
 .stage-honest {
-  opacity: 0.7;
-  font-size: 2cqw;
+  font-size: 1.8cqw;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 /* Mất kết nối máy chủ: nói rõ trên màn, vì OBS đang phát ra ngoài */
@@ -1034,40 +1048,52 @@ body {
 .om-nguoi {
   position: absolute;
   width: 6.4cqw;
-  /* Chạy thì nhanh chân hơn đi dạo. */
-  animation-timing-function: ease-in-out;
   height: auto;
   transform: translate(-50%, -100%);
   transform-origin: 50% 100%;
   filter: drop-shadow(0 0.3cqw 0.4cqw rgba(0, 0, 0, 0.55));
-  animation: om-di 8.2s ease-in-out both, loi-buoc 0.3s ease-in-out infinite;
+  animation: om-di 12.6s linear both, loi-buoc 0.46s ease-in-out infinite;
 }
-/* 1,6s chạy lên · 5s ôm · 1,6s chạy về, tức 19,5% · 80,5% của 8,2s.
+/* Nhịp của bản cũ: 4,2s chạy lên · 4,2s ôm · 4,2s chạy về, tức mốc 33,3% và
+   66,7% của 12,6s.
    Chạy theo ba chặng như người thật: ra lối gần nhất trong hàng của mình, chạy
    dọc lối lên đầu rạp, rồi mới vòng vào đứng cạnh nhân vật. Lúc về đi ngược
-   đúng đường. Không cắt chéo qua ghế người khác. */
+   đúng đường. Không cắt chéo qua ghế người khác. Chặng dọc lối dài nhất nên
+   được nhiều thời gian nhất — chia đều theo phần trăm thì đoạn rẽ ngang ngắn
+   ngủn lại chậm rì, nhìn giả ngay. Lúc ôm thì ngả người về phía nhân vật. */
 @keyframes om-di {
   0% {
-    transform: translate(-50%, -100%);
+    transform: translate(-50%, -100%) rotate(0deg);
   }
-  7% {
-    transform: translate(calc(-50% + var(--om-loi, 0cqw)), -100%);
+  9% {
+    transform: translate(calc(-50% + var(--om-loi, 0cqw)), -100%) rotate(0deg);
   }
-  14% {
-    transform: translate(calc(-50% + var(--om-loi, 0cqw)), calc(-100% + var(--om-len, 0cqw)));
+  26% {
+    transform: translate(calc(-50% + var(--om-loi, 0cqw)), calc(-100% + var(--om-len, 0cqw)))
+      rotate(0deg);
   }
-  19.5%,
-  80.5% {
-    transform: translate(calc(-50% + var(--om-x, 0cqw)), calc(-100% + var(--om-y, 0cqw)));
+  33.3% {
+    transform: translate(calc(-50% + var(--om-x, 0cqw)), calc(-100% + var(--om-y, 0cqw)))
+      rotate(0deg);
   }
-  86% {
-    transform: translate(calc(-50% + var(--om-loi, 0cqw)), calc(-100% + var(--om-len, 0cqw)));
+  38%,
+  62% {
+    transform: translate(calc(-50% + var(--om-x, 0cqw)), calc(-100% + var(--om-y, 0cqw)))
+      rotate(var(--om-nghieng, 0deg));
   }
-  93% {
-    transform: translate(calc(-50% + var(--om-loi, 0cqw)), -100%);
+  66.7% {
+    transform: translate(calc(-50% + var(--om-x, 0cqw)), calc(-100% + var(--om-y, 0cqw)))
+      rotate(0deg);
+  }
+  74% {
+    transform: translate(calc(-50% + var(--om-loi, 0cqw)), calc(-100% + var(--om-len, 0cqw)))
+      rotate(0deg);
+  }
+  91% {
+    transform: translate(calc(-50% + var(--om-loi, 0cqw)), -100%) rotate(0deg);
   }
   100% {
-    transform: translate(-50%, -100%);
+    transform: translate(-50%, -100%) rotate(0deg);
   }
 }
 
@@ -1117,7 +1143,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .om-nguoi {
-    animation: om-di 8.2s linear both;
+    animation: om-di 12.6s linear both;
   }
   .om-tim span,
   .stage-kid.cui-chao {

@@ -32,12 +32,15 @@ export type { Canh, NhanVat } from './an-ui';
 function NguoiOm({
   tu,
   den,
+  nghieng,
   user,
   t,
   asset,
 }: {
   tu: { x: number; y: number };
   den: { x: number; y: number };
+  /** Nghiêng về phía nhân vật lúc ôm: -1 là ngả sang trái, 1 sang phải. */
+  nghieng: -1 | 1;
   user: string;
   t: number;
   asset: (p: string) => string;
@@ -60,6 +63,7 @@ function NguoiOm({
           '--om-len': `${(HALL_TOP + 2 - (HALL_TOP + tu.y)).toFixed(1)}cqw`,
           '--om-x': `${(den.x - tu.x).toFixed(1)}cqw`,
           '--om-y': `${(den.y - (HALL_TOP + tu.y)).toFixed(1)}cqw`,
+          '--om-nghieng': `${nghieng * 7}deg`,
           animationDelay: `${tre}ms, ${tre}ms`,
         } as CSSProperties
       }
@@ -92,6 +96,8 @@ export function AnUi({
           key={`${canh.k}:${n.user}`}
           tu={n}
           den={cho[i] ?? cho[0] ?? { x: 50, y: 120 }}
+          // Ngả người về phía nhân vật: đứng bên phải thì ngả trái và ngược lại.
+          nghieng={(cho[i] ?? cho[0] ?? { x: 50 }).x >= tim.x ? -1 : 1}
           user={n.user}
           t={canh.t}
           asset={asset}

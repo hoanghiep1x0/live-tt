@@ -84,6 +84,27 @@ export interface DesignOption extends ConfigField {
   value: Json;
 }
 
+/** Một thẻ lựa chọn trên bảng xem. Thiết kế tự gom lựa chọn thành thẻ, vì chỉ
+ *  nó mới biết cái nào đi với cái nào: khung dọc / ngang là chuyện bố cục, cảnh
+ *  an ủi là chuyện nhân vật — nhét chung một thẻ thì người vận hành phải đọc cả
+ *  mớ mới tìm ra cái cần gạt.
+ *
+ *  Bảng xem dựng thẻ từ đây, không có `if` theo id thiết kế nào cả. */
+export interface DesignCard {
+  id: string;
+  name: string;
+  /** Emoji trên thẻ. */
+  icon: string;
+  summary: string;
+  /** Ô bật tắt chính, hiện ngay đầu thẻ như công tắc của module. Khai cả ô
+   *  chứ không chỉ khoá, để mặc định của nó cũng nằm một chỗ với các ô khác —
+   *  thiếu mặc định thì không ai biết thẻ bật hay tắt lúc chưa ai đụng vào.
+   *  Bỏ trống thì thẻ không có công tắc, chỉ có các ô chỉnh. */
+  toggle?: DesignOption;
+  /** Các ô còn lại, hiện trong thân thẻ. */
+  fields: readonly DesignOption[];
+}
+
 /** Trạng thái phát của một thiết kế, hiện trên thẻ ở trang quản lý. */
 export type DesignStatus = 'live' | 'off' | 'error';
 
