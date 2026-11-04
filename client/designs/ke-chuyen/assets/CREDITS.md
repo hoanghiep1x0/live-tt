@@ -12,17 +12,24 @@ Chuyển từ bản cũ ở `D:\Live\client\public\assets`. Mỗi thiết kế g
 | `video/mau-su-tich-cay-vu-sua.webm` | Video mẫu chiếu trong khung, 720×1280, 64 giây | Tự dựng, xem `video/CREDITS.md` |
 | `nguoi/co-be.png` | Bé gái ngồi thiền ở đầu trái thanh tiến độ | Bản cũ `charity/art/mascot@3x.png` |
 | `nguoi/cau-be.png` | Cậu bé quỳ ở đầu phải thanh tiến độ | Bản cũ `charity/art/boy@3x.png` |
-| `nguoi/be-chibi.svg` | Bé chibi ngồi ôm gối, sau lưng bé gái | Vẽ lại theo rig 3D `buildHero` của bản cũ |
+| `nguoi/be-chibi.png` | Bé chibi ngồi ôm gối, sau lưng bé gái, 399×640 | Chụp từ rig 3D `buildHero` của bản cũ |
 
 Ba nhân vật này là **đồ đạc của phòng**, không phải của module: bản cũ để cảnh
 an ủi điều khiển động tác (cúi chào, vỗ tay, lau nước mắt, bé khóc, khách chạy
 lên ôm), nhưng các em phải có mặt kể cả khi không bật module nào. Làm module
 `comfort` thì nó mang bản động riêng và thiết kế giấu bản tĩnh này đi.
 
-Bé chibi là bản VẼ LẠI, không phải ảnh mang sang: bản cũ dựng bé bằng three.js
-(`buildHero`), không có file ảnh nào để lấy. Muốn giống hệt bản cũ thì phải
-chụp lại khung hình từ bản cũ đang chạy, hoặc kéo three.js về — cả hai đều là
-việc riêng.
+Bé chibi đúng là bé của bản cũ, không phải vẽ lại. Bản cũ dựng bé bằng
+three.js (`buildHero` trong `D:\Live\client\src\lib\chibi3d.ts`) nên không
+có file ảnh nào để mang sang; ảnh này lấy bằng cách chạy lại chính hàm đó:
+
+    buildHero() + animateHero(hero, 0, 0, 0, true)   // mood 0 = đang buồn
+    HemisphereLight(0xfff4e0, 0x5a3a28, 1.6) + DirectionalLight(0xffe6c4, 1.8)
+    máy quay trực diện, ôm sát khối bé, nền trong
+
+Muốn chụp lại (đổi tâm trạng, đổi cỡ) thì dựng lại đoạn đó rồi chụp canvas.
+Không kéo three.js vào bản mới: 600KB sau nén chỉ để vẽ một bé ngồi yên là
+quá đắt cho trang mà OBS phải giữ 24 fps song song với video truyện.
 
 Không mang theo từ bản cũ:
 - `music/*.mp3` — thuộc module `music`.

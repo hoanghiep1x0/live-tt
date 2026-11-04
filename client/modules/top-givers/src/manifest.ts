@@ -6,6 +6,9 @@ export const schema = z.object({
   announce: z.boolean().default(true),
   template: z.string().min(1).max(200).default('{ten} vừa vươn lên dẫn đầu!'),
   race: z.boolean().default(true),
+  /** Hàng bồ đoàn. Tách khỏi `race` vì hai khối này là hai thứ khác nhau:
+   *  bảng ngồi dưới, dòng đua chạy trên, tắt cái nào cũng được. */
+  board: z.boolean().default(true),
 });
 
 export type Config = z.infer<typeof schema>;
@@ -19,12 +22,21 @@ export const manifest: ModuleManifest<Config> = {
   // và việc báo đổi ngôi làm theo nhịp. Bắt `gift` chỉ để nhớ ai vừa tặng gì
   // cho dòng đua top.
   triggers: ['gift'],
-  configVersion: 2,
+  configVersion: 3,
   schema,
   slots: ['tops'],
   needs: ['tts'],
-  quick: ['size', 'announce', 'race'],
+  // Hai công tắc khối đứng trước: đó là thứ người vận hành gạt nhiều nhất.
+  // `announce` lùi vào cấu hình đầy đủ — thẻ chỉ chứa được 3 ô chỉnh nhanh.
+  quick: ['board', 'race', 'size'],
   fields: [
+    {
+      key: 'board',
+      label: 'Hàng bồ đoàn',
+      short: 'Bảng top',
+      type: 'toggle',
+      hint: 'Khối dưới: năm tòa sen xếp hạng người tặng. Tắt riêng, dòng đua vẫn chạy',
+    },
     { key: 'size', label: 'Số người hiển thị', short: 'Số người', type: 'number', min: 1, max: 5 },
     {
       key: 'announce',
@@ -39,7 +51,7 @@ export const manifest: ModuleManifest<Config> = {
       label: 'Dòng đua top',
       short: 'Dòng đua',
       type: 'toggle',
-      hint: 'Dòng đỏ ngay trên bảng: ai vừa tặng gì và đang hạng mấy. Hiện một lúc lâu rồi nghỉ nửa phút',
+      hint: 'Khối trên: dòng đỏ báo ai vừa tặng gì và đang hạng mấy. Hiện một lúc lâu rồi nghỉ nửa phút',
     },
   ],
 };

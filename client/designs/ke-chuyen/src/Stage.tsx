@@ -20,9 +20,10 @@ const CAU_BE = 'nguoi/cau-be.png';
 /** Bé chibi ngồi sau lưng bé gái — nhân vật chính của cảnh an ủi bản cũ.
  *  KHÔNG dùng `chibi/chibi-2-sit.svg`: ảnh đó là khán giả chibi ngồi ghế, bản
  *  cũ chỉ lấy nó khi máy không chạy được WebGL. Bé thật của bản cũ là rig 3D
- *  (`buildHero` trong `chibi3d.ts`), nên đây là bản vẽ lại theo đúng mô tả của
- *  rig đó: áo xanh nhạt vá, quần nâu, tóc dài sẫm, ôm gối, mặt mếu. */
-const BE_CHIBI = 'nguoi/be-chibi.svg';
+ *  (`buildHero` trong `chibi3d.ts`), nên ảnh này là CHÍNH bé đó: chạy lại
+ *  `buildHero` + `animateHero(t=0, cry=0, mood=0)` với đúng đèn của bản cũ,
+ *  máy quay trực diện, rồi chụp ra PNG nền trong. Xem `assets/CREDITS.md`. */
+const BE_CHIBI = 'nguoi/be-chibi.png';
 
 /** Đồng hồ cho màn chờ. Nhịp 250ms của sân khấu không tới thiết kế, mà màn chờ
  *  chỉ cần tới giây, nên một nhịp một giây là đủ. Giờ máy chứ không phải giờ

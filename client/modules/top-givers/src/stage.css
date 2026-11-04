@@ -213,9 +213,9 @@
   left: 50%;
   bottom: 100%;
   max-width: 92cqw;
-  /* Sát hàng bồ đoàn, chừa khoảng hở cho viền dưới khung chiếu. */
-  /* Nhấc hẳn lên giữa khoảng hở giữa đáy khung chiếu và hàng bồ đoàn, thay vì
-     dính sát mép bảng. */
+  /* Nhấc lên giữa khoảng hở giữa đáy khung chiếu và hàng bồ đoàn, thay vì dính
+     sát mép bảng. Neo theo `.mod-tops` (cao 100% ô slot) nên tắt hàng bồ đoàn
+     thì dòng này vẫn nằm nguyên chỗ cũ. */
   margin: 0 0 2.2cqw;
   padding: 0.5cqw 2.2cqw;
   border-radius: 3cqw;

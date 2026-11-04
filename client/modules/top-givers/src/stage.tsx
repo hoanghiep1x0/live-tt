@@ -63,37 +63,41 @@ export function Stage({ config, state, modState, now }: StagePartProps<Config, S
           </span>
         </p>
       )}
-      {THU_TU.filter((h) => h < config.size).map((hang) => {
-        const ai = top[hang];
-        const lop = [
-          'top-seat',
-          `rank-${hang + 1}`,
-          ai === undefined ? 'empty' : '',
-          ai !== undefined && modState.dangSoi === hang ? 'spotlight' : '',
-        ]
-          .filter(Boolean)
-          .join(' ');
+      {/* Hai khối rời nhau: dòng đua ở trên, hàng bồ đoàn ở dưới. Tắt
+          riêng từng khối được, vì chúng nói hai chuyện khác nhau. */}
+      {!config.board
+        ? null
+        : THU_TU.filter((h) => h < config.size).map((hang) => {
+          const ai = top[hang];
+          const lop = [
+            'top-seat',
+            `rank-${hang + 1}`,
+            ai === undefined ? 'empty' : '',
+            ai !== undefined && modState.dangSoi === hang ? 'spotlight' : '',
+          ]
+            .filter(Boolean)
+            .join(' ');
 
-        return (
-          <div
-            key={hang}
-            className={lop}
-            title={
-              ai === undefined
-                ? `Hạng ${hang + 1} đang chờ người xem`
-                : `Hạng ${hang + 1}: ${ai.name} · ${ai.xu.toLocaleString('vi-VN')} điểm`
-            }
-          >
-            <img className="top-halo" src={HALO} alt="" aria-hidden />
-            <span className="top-photo">
-              {ai?.avatar === undefined ? <i>?</i> : <img src={ai.avatar} alt="" />}
-            </span>
-            <b className="top-rank">{hang + 1}</b>
-            <img className="top-lotus" src={LOTUS} alt="" aria-hidden />
-            <span className="top-name">{ai === undefined ? 'Chờ bạn' : tenNgan(ai.name)}</span>
-          </div>
-        );
-      })}
+          return (
+            <div
+              key={hang}
+              className={lop}
+              title={
+                ai === undefined
+                  ? `Hạng ${hang + 1} đang chờ người xem`
+                  : `Hạng ${hang + 1}: ${ai.name} · ${ai.xu.toLocaleString('vi-VN')} điểm`
+              }
+            >
+              <img className="top-halo" src={HALO} alt="" aria-hidden />
+              <span className="top-photo">
+                {ai?.avatar === undefined ? <i>?</i> : <img src={ai.avatar} alt="" />}
+              </span>
+              <b className="top-rank">{hang + 1}</b>
+              <img className="top-lotus" src={LOTUS} alt="" aria-hidden />
+              <span className="top-name">{ai === undefined ? 'Chờ bạn' : tenNgan(ai.name)}</span>
+            </div>
+          );
+          })}
     </section>
   );
 }
