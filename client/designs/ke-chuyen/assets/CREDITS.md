@@ -10,13 +10,19 @@ Chuyển từ bản cũ ở `D:\Live\client\public\assets`. Mỗi thiết kế g
 | `fx/halo.png` | Vòng hào quang sau bồ đoàn top | Tự dựng cho dự án |
 | `chibi/chibi-{1..6}-{sit,cheer}.svg` | Khán giả chibi bản 2D dự phòng, và ảnh thay khi thiếu avatar TikTok | Tự vẽ cho dự án |
 | `video/mau-su-tich-cay-vu-sua.webm` | Video mẫu chiếu trong khung, 720×1280, 64 giây | Tự dựng, xem `video/CREDITS.md` |
-| `nguoi/co-be.png` | Bé gái đứng bên trái sàn | Bản cũ `charity/art/mascot@3x.png` |
-| `nguoi/cau-be.png` | Cậu bé đứng bên phải sàn | Bản cũ `charity/art/boy@3x.png` |
+| `nguoi/co-be.png` | Bé gái ngồi thiền ở đầu trái thanh tiến độ | Bản cũ `charity/art/mascot@3x.png` |
+| `nguoi/cau-be.png` | Cậu bé quỳ ở đầu phải thanh tiến độ | Bản cũ `charity/art/boy@3x.png` |
+| `nguoi/be-chibi.svg` | Bé chibi ngồi ôm gối, sau lưng bé gái | Vẽ lại theo rig 3D `buildHero` của bản cũ |
 
-Hai bạn nhỏ là **đồ đạc của phòng**, không phải của module: bản cũ để cảnh an ủi
-điều khiển động tác (cúi chào, vỗ tay, lau nước mắt), nhưng các em phải có mặt
-kể cả khi không bật module nào. Làm module `comfort` thì nó mang bản động riêng
-và thiết kế giấu bản tĩnh này đi.
+Ba nhân vật này là **đồ đạc của phòng**, không phải của module: bản cũ để cảnh
+an ủi điều khiển động tác (cúi chào, vỗ tay, lau nước mắt, bé khóc, khách chạy
+lên ôm), nhưng các em phải có mặt kể cả khi không bật module nào. Làm module
+`comfort` thì nó mang bản động riêng và thiết kế giấu bản tĩnh này đi.
+
+Bé chibi là bản VẼ LẠI, không phải ảnh mang sang: bản cũ dựng bé bằng three.js
+(`buildHero`), không có file ảnh nào để lấy. Muốn giống hệt bản cũ thì phải
+chụp lại khung hình từ bản cũ đang chạy, hoặc kéo three.js về — cả hai đều là
+việc riêng.
 
 Không mang theo từ bản cũ:
 - `music/*.mp3` — thuộc module `music`.

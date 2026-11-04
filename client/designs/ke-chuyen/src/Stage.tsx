@@ -17,6 +17,25 @@ const NEN = 'bg/amitabha-stage.png';
 const HOA_SEN = 'fx/lotus.png';
 const CO_BE = 'nguoi/co-be.png';
 const CAU_BE = 'nguoi/cau-be.png';
+/** Bé chibi ngồi sau lưng bé gái — nhân vật chính của cảnh an ủi bản cũ.
+ *  KHÔNG dùng `chibi/chibi-2-sit.svg`: ảnh đó là khán giả chibi ngồi ghế, bản
+ *  cũ chỉ lấy nó khi máy không chạy được WebGL. Bé thật của bản cũ là rig 3D
+ *  (`buildHero` trong `chibi3d.ts`), nên đây là bản vẽ lại theo đúng mô tả của
+ *  rig đó: áo xanh nhạt vá, quần nâu, tóc dài sẫm, ôm gối, mặt mếu. */
+const BE_CHIBI = 'nguoi/be-chibi.svg';
+
+/** Đồng hồ cho màn chờ. Nhịp 250ms của sân khấu không tới thiết kế, mà màn chờ
+ *  chỉ cần tới giây, nên một nhịp một giây là đủ. Giờ máy chứ không phải giờ
+ *  phiên: người xem đọc nó như đồng hồ treo tường. */
+function useDongHo(): string {
+  const gioNay = (): string => new Date().toLocaleTimeString('vi-VN', { hour12: false });
+  const [gio, datGio] = useState(gioNay);
+  useEffect(() => {
+    const id = setInterval(() => datGio(gioNay()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return gio;
+}
 
 interface ChoNgoi {
   key: string;
@@ -119,6 +138,7 @@ export function Stage() {
   const loiMc = useLoiMc();
   /** Module sàn nhảy xin sáng slot `floor` suốt màn nhảy. */
   const sanSang = useSlotSang('floor');
+  const gio = useDongHo();
   const [huong] = useState<Huong>('portrait');
   const khung = useRef<HTMLDivElement>(null);
 
@@ -169,12 +189,17 @@ export function Stage() {
       <section className="stage-screen">
         <span className="stage-ai-label">Nội dung do AI</span>
         <div className="stage-screen-inner">
-          {/* Chưa bật module kể chuyện thì khung vẫn phải có gì đó, và vẫn phải
-              động — TikTok soi khung hình đứng yên lâu. */}
+          {/* Màn chờ của bản cũ: lời chào, đồng hồ lớn, một câu giữ chân. Không
+              có câu nào nhắc người vận hành bật module — màn này đang phát ra
+              ngoài, người xem đọc được. Người vận hành thấy module tắt ở bảng
+              xem. Và màn chờ phải động: khung đứng im là TikTok soi. */}
           <div className="stage-waiting">
             <span className="stage-waiting-sen" />
-            <b>Phòng kể chuyện</b>
-            Bật tính năng Kể chuyện để chiếu truyện lên đây
+            <p className="waiting-welcome">Chào cả nhà đến với Phòng kể chuyện</p>
+            <p className="waiting-clock">{gio}</p>
+            <p className="waiting-note">
+              Chuyện sắp bắt đầu rồi, cả nhà ngồi lại nghe cùng nhau nha ❤
+            </p>
           </div>
           <Slot name="screen" />
           <div className="slot-screen-overlay">
@@ -232,6 +257,9 @@ export function Stage() {
           tay, lau nước mắt); ở đây mới chỉ thở nhẹ — làm module `comfort` thì
           nối vào sau. */}
       <div className="stage-kids" aria-hidden="true">
+        {/* Vẽ TRƯỚC bé gái nên bị bé gái che một phần — đúng ý bản cũ: bé ngồi
+            xa hơn, lệch phải, trong tầm nhìn của bé gái. */}
+        <img className="stage-be" src={asset(BE_CHIBI)} alt="" draggable={false} />
         <img className="stage-kid kid-girl" src={asset(CO_BE)} alt="" draggable={false} />
         <img className="stage-kid kid-boy" src={asset(CAU_BE)} alt="" draggable={false} />
       </div>

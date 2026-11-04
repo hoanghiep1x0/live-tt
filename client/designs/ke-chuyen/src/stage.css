@@ -352,6 +352,12 @@ body {
   border-radius: 1cqw;
   white-space: nowrap;
 }
+/* ---- Màn chờ: lúc chưa module nào chiếu gì lên khung ----
+   Dựng theo màn chờ bản cũ (.stage-waiting / .waiting-* trong index.css): nền
+   loang ấm, lời chào vàng thở nhẹ, đồng hồ lớn, một câu giữ chân. Bản cũ còn có
+   đếm ngược tới giờ phát và lời nhắn tự đặt; phiên bản mới chưa có lịch phát
+   lẫn chỗ nhập lời chào trong `SessionView` nên chưa dựng, thêm được ngay khi
+   có. Đồng hồ cũng là thứ giữ cho khung không đứng im. */
 .stage-waiting {
   position: absolute;
   inset: 0;
@@ -359,15 +365,49 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1cqw;
+  gap: 4cqw;
   text-align: center;
-  padding: 4cqw;
+  padding: 6cqw 5cqw;
   color: var(--stage-soft);
   font-size: 2.6cqw;
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    hsl(var(--case-hue) 45% 24%),
+    hsl(calc(var(--case-hue) + 40) 40% 9%)
+  );
 }
-.stage-waiting b {
-  font-size: 3.6cqw;
+.stage-waiting p {
+  margin: 0;
+}
+.waiting-welcome {
+  max-width: 92%;
+  font-size: 3.4cqw;
+  font-weight: 800;
+  line-height: 1.4;
   color: var(--gold);
+  text-shadow: 0 0.3cqw 1cqw rgba(0, 0, 0, 0.7);
+  animation: cho-chao 5s ease-in-out infinite;
+}
+.waiting-clock {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 7.2cqw;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-shadow: 0 0 3cqw rgba(255, 210, 120, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+.waiting-note {
+  max-width: 86%;
+  font-size: 2.4cqw;
+  line-height: 1.55;
+  color: #f6eedf;
+}
+@keyframes cho-chao {
+  50% {
+    transform: translateY(-0.35cqw) scale(1.015);
+  }
 }
 /* Màn chờ cũng phải động: khung đứng im là TikTok soi. */
 .stage-waiting-sen {
@@ -648,6 +688,24 @@ body {
   inset: 0;
   z-index: 5;
   pointer-events: none;
+}
+/* Bé chibi ngồi sau lưng bé gái (bản cũ: HERO_X 11% · HERO_Y 117cqw, rộng
+   10cqw). Mới là bản TĨNH: ngồi đó cho khung hình có người. Bản cũ bé này biết
+   khóc, buồn vui theo thời gian và khách gõ "ôm" thì có người chạy ra ôm —
+   phần đó thuộc module `comfort` chưa chuyển, vì nó cần lõi riêng mới giữ được
+   hai cửa sổ xem thấy giống nhau. */
+.stage-be {
+  position: absolute;
+  left: 11%;
+  top: calc(var(--lower-top) + 21.9cqw - var(--group-lift));
+  width: 10cqw;
+  height: auto;
+  transform: translate(-50%, -100%);
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 0.5cqw 0.7cqw rgba(0, 0, 0, 0.5));
+  animation: be-tho 4s ease-in-out infinite alternate;
+  /* Lệch pha cả với bé gái lẫn cậu bé. */
+  animation-delay: -2.8s;
 }
 .stage-kid {
   position: absolute;
