@@ -13,7 +13,9 @@ export {
   StageProvider,
   useAsset,
   useLoiMc,
+  useLuaChonThietKe,
   useSession,
+  useThietKe,
   useSlotSang,
   useStage,
 } from './Stage';

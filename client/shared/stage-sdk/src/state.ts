@@ -18,6 +18,9 @@ export interface StageState {
   enabled: readonly string[];
   /** Cấu hình từng module, khoá là moduleId. */
   config: Readonly<Record<string, Json>>;
+  /** Lựa chọn của chính thiết kế (khung dọc / ngang…). Rỗng nghĩa là chưa ai
+   *  đụng tới — thiết kế lấy mặc định trong `DesignOption` của nó. */
+  design: Readonly<Record<string, Json>>;
   voice: VoiceCfg;
   noiDuoc: boolean;
 }
@@ -39,6 +42,7 @@ export const BAN_DAU: StageState = {
   session: PHIEN_RONG,
   enabled: [],
   config: {},
+  design: {},
   voice: VOICE_MAC_DINH,
   noiDuoc: false,
 };
@@ -59,6 +63,11 @@ export function apTin(s: StageState, d: Down): StageState {
     }
     case 'config':
       return { ...s, config: { ...s.config, [d.moduleId]: d.config } };
+    case 'design': {
+      const c = d.config;
+      if (typeof c !== 'object' || c === null || Array.isArray(c)) return s;
+      return { ...s, design: c as Record<string, Json> };
+    }
     case 'feed': {
       // Giữ một đoạn ngắn: sân khấu chỉ cần vài mục gần nhất để vẽ, không phải
       // cả phiên. Phiên đầy đủ là việc của backend.

@@ -119,11 +119,20 @@ export type RoomCommand =
   | { op: 'set-module'; moduleId: string; on: boolean }
   | { op: 'set-config'; moduleId: string; patch: Json }
   | { op: 'set-design'; designId: string }
+  | { op: 'set-design-config'; patch: Json }
   | { op: 'seed';       n: number }
   | { op: 'next-story' };
 
 export type Gate = 'lam' | 'goi-y' | 'bo';
 ```
+
+`set-design-config` là lựa chọn của chính thiết kế đang phát — khung dọc hay
+ngang, đồ đạc của phòng — chứ không thuộc module nào. Thiết kế khai danh sách
+lựa chọn bằng `DesignOption` (mặc định nằm ngay trong đó, vì thiết kế không có
+schema zod như module), truyền vào `StageProvider`; bảng xem tự dựng form, và
+backend lưu nó cạnh `modules` trong file cấu hình của thiết kế rồi phát xuống
+bằng tin `{ t: 'design', config }`. Áp nóng như mọi thứ khác: không tải lại
+trang.
 
 Người, luật tự động và AI dùng chung whitelist này, và chung cổng `gateFor`.
 Mã cũ đã làm đúng ở `ops.ts` + `autopilot.ts`; chuyển sang nguyên tắc nguyên vẹn.

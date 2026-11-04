@@ -67,7 +67,8 @@ async fn chay(socket: WebSocket, st: Arc<AppState>) {
 /// Lệnh đi lên bằng cửa này chứ không phải một route REST riêng, vì `RoomCommand`
 /// là whitelist dùng chung cho người, luật tự động và AI (hợp đồng 02 §6).
 ///
-/// Hiện mới nhận `set-module` và `set-config`, và chỉ khi nguồn là `nguoi`.
+/// Hiện mới nhận `set-module`, `set-config` và `set-design-config`, và chỉ khi
+/// nguồn là `nguoi`.
 /// Cổng duyệt đầy đủ — xét khác nhau theo nguồn, có mức "gợi ý cho người" —
 /// làm cùng lúc với module tự vận hành. Trước mắt thế này là đủ an toàn: `/ws`
 /// đã qua lớp chặn Host và Origin nên chỉ trang của chính app gọi được.
@@ -88,19 +89,21 @@ fn lam_lenh(st: &Arc<AppState>, v: &Value) -> Option<Value> {
     let op = c.get("op").and_then(Value::as_str).unwrap_or_default();
     // Kiểm whitelist TRƯỚC khi hỏi phòng nào đang phát: lệnh lạ thì phải bị từ
     // chối rõ ràng, kể cả lúc chưa phát phòng nào.
-    if op != "set-module" && op != "set-config" {
+    if op != "set-module" && op != "set-config" && op != "set-design-config" {
         return Some(json!({ "t": "error", "message": "lệnh này chưa nhận" }));
     }
 
     let design = st.live()?;
     let module_id = c.get("moduleId").and_then(Value::as_str).unwrap_or_default();
+    let patch = || c.get("patch").cloned().unwrap_or(Value::Null);
 
     let kq = if op == "set-module" {
         let on = c.get("on").and_then(Value::as_bool).unwrap_or(false);
         st.set_enabled(&design, module_id, on)
+    } else if op == "set-design-config" {
+        st.set_design_config(&design, patch())
     } else {
-        let patch = c.get("patch").cloned().unwrap_or(Value::Null);
-        st.set_config(&design, module_id, patch)
+        st.set_config(&design, module_id, patch())
     };
 
     match kq {

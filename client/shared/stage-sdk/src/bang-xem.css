@@ -474,3 +474,13 @@
 .bx-xong:hover {
   background: #f7d079;
 }
+
+/* Thẻ lựa chọn của chính thiết kế. Khác màu viền với thẻ tính năng, vì nó
+   không phải thứ bật tắt được — nó là hình hài của căn phòng. */
+.bx-the-thietke {
+  border-color: #3f4a63;
+  background: linear-gradient(160deg, rgba(28, 36, 54, 0.9), rgba(18, 20, 28, 0.9));
+}
+.bx-the-thietke .bx-the-nhanh {
+  margin-top: 8px;
+}

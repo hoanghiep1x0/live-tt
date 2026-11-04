@@ -306,7 +306,13 @@ body {
   top: var(--screen-top);
   width: var(--screen-w);
   height: var(--screen-h);
-  transition: top 0.5s ease, width 0.5s ease, height 0.5s ease;
+  /* KHÔNG transition ba số này.
+     Chúng là `var()` trả về đơn vị `cqw`, mà `.stage` vừa là khối chứa truy vấn
+     vừa là chỗ React đặt lại inline style mỗi nhịp 250ms. Đo trên máy: gạt công
+     tắc khung ngang thì biến CSS đổi đúng (91cqw) nhưng khung vẫn nằm ở số cũ
+     (49,2cqw) — transition bị dựng lại mỗi nhịp nên không bao giờ chạy tới nơi.
+     Bỏ transition là khung đổi ngay. Đổi khung là việc người vận hành chủ động
+     làm, không cần mượt. */
   transform: translateX(-50%);
   padding: var(--pad-screen);
   z-index: 3;
@@ -429,10 +435,12 @@ body {
 .stage-host {
   position: absolute;
   left: 50%;
-  /* Nằm ĐÈ LÊN hàng ghế, ngay dưới dải chữ chạy. Khoảng giữa khung chiếu và
-     hàng ghế đã kín: hàng vinh danh rồi thanh tiến độ. */
-  top: calc(var(--hall-top) + 1.4cqw);
-  transform: translateX(-50%);
+  /* Đáy thẻ nằm NGAY TRÊN đầu người đứng trên sàn, thẻ nở ngược lên trên.
+     Người trên sàn cao 8,1cqw, chân ở quãng 134,5cqw nên đỉnh đầu ở 126,4cqw —
+     neo đáy thẻ ở 125,6cqw là vừa hở. Trước đây thẻ neo bằng ĐỈNH ở
+     `--hall-top + 1,4cqw` nên nó trùm từ vai họ xuống. */
+  top: calc(var(--hall-top) - 1.5cqw);
+  transform: translate(-50%, -100%);
   /* Trên CẢ sàn nhảy (slot-floor, lớp 7): thẻ chỉ rộng 62cqw mà người trên sàn
      đứng ngay giữa, nên hai thứ luôn chồng nhau. Lời MC là chữ phải đọc được,
      còn chibi là nền vui mắt, nên chữ nằm trên. Lúc cả nhóm đang nhảy thì thẻ
@@ -445,6 +453,7 @@ body {
   background: linear-gradient(160deg, rgba(48, 24, 8, 0.96), rgba(24, 12, 4, 0.96));
   border: 0.25cqw solid var(--gold);
   box-shadow: 0 1cqw 4cqw rgba(0, 0, 0, 0.7), 0 0 3cqw rgba(242, 196, 90, 0.35);
+  transform-origin: 50% 100%;
   animation: mc-vao 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
 .stage-host p {
@@ -475,7 +484,10 @@ body {
 @keyframes mc-vao {
   from {
     opacity: 0;
-    transform: translateX(-50%) scale(0.85);
+    /* Phải lặp lại cả `-100%` của `.stage-host`: keyframe ghi đè nguyên thuộc
+       tính `transform`, thiếu nó là thẻ tụt xuống đè lên người trên sàn trong
+       nửa giây đầu. Gốc biến dạng ở đáy để thẻ nở lên chứ không nở xuống. */
+    transform: translate(-50%, -100%) scale(0.85);
   }
 }
 

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Json, SessionView, SlotName } from '@live/contracts';
+import type { DesignOption, Json, SessionView, SlotName } from '@live/contracts';
 import { connectStage, BAN_DAU } from './state';
 import type { StageState } from './state';
 import { partsCho } from './registry';
@@ -11,6 +11,9 @@ import { designAssetUrl } from './assets';
 interface CtxValue {
   s: StageState;
   designId: string;
+  /** Lựa chọn thiết kế tự khai. Bảng xem dựng form từ đây, và `useThietKe`
+   *  lấy mặc định từ đây khi backend chưa lưu gì. */
+  luaChon: readonly DesignOption[];
   chay: KetQuaChay;
 }
 
@@ -21,14 +24,48 @@ const RONG: KetQuaChay = {
   now: 0,
 };
 
-const Ctx = createContext<CtxValue>({ s: BAN_DAU, designId: '', chay: RONG });
+const KHONG_CO: readonly DesignOption[] = [];
+
+const Ctx = createContext<CtxValue>({
+  s: BAN_DAU,
+  designId: '',
+  luaChon: KHONG_CO,
+  chay: RONG,
+});
 
 /** Bọc quanh sân khấu. Giữ một WebSocket duy nhất và nuôi các lõi module. */
-export function StageProvider({ designId, children }: { designId: string; children: ReactNode }) {
+export function StageProvider({
+  designId,
+  luaChon = KHONG_CO,
+  children,
+}: {
+  designId: string;
+  /** Lựa chọn của riêng thiết kế này — xem `DesignOption`. Thiết kế nào không
+   *  có gì để chỉnh thì bỏ trống, bảng xem sẽ không dựng thẻ nào. */
+  luaChon?: readonly DesignOption[];
+  children: ReactNode;
+}) {
   const [s, setS] = useState<StageState>(BAN_DAU);
   useEffect(() => connectStage(setS), []);
   const chay = useRunner(s);
-  return <Ctx.Provider value={{ s, designId, chay }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ s, designId, luaChon, chay }}>{children}</Ctx.Provider>;
+}
+
+/** Lựa chọn của thiết kế đang có hiệu lực: mặc định đã khai, phủ bằng thứ
+ *  backend lưu. Đổi giữa lúc đang live là vẽ lại — không tải lại trang. */
+export function useThietKe(): Record<string, Json> {
+  const { s, luaChon } = useContext(Ctx);
+  const ra: Record<string, Json> = {};
+  for (const o of luaChon) ra[o.key] = o.value;
+  for (const [k, v] of Object.entries(s.design)) {
+    if (k in ra) ra[k] = v;
+  }
+  return ra;
+}
+
+/** Danh sách lựa chọn thiết kế đã khai — bảng xem dùng để dựng form. */
+export function useLuaChonThietKe(): readonly DesignOption[] {
+  return useContext(Ctx).luaChon;
 }
 
 export function useStage(): StageState {

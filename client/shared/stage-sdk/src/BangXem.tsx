@@ -4,7 +4,7 @@ import type { ConfigField, Json } from '@live/contracts';
 import { ONhanh, OConfig } from './OConfig';
 import { SO_MODULE, timDangKy } from './registry';
 import { guiLenh } from './state';
-import { useStage } from './Stage';
+import { useLuaChonThietKe, useStage, useThietKe } from './Stage';
 import './bang-xem.css';
 
 /** Trong OBS thì KHÔNG hiện.
@@ -39,6 +39,16 @@ function suaCauHinh(id: string, key: string, v: Json): void {
     command: { op: 'set-config', moduleId: id, patch: { [key]: v } as Json },
     by: 'nguoi',
     reason: 'sửa cấu hình từ bảng xem thử',
+  });
+  if (!duoc) console.warn('[xem thử] chưa nối được máy chủ');
+}
+
+function suaThietKe(key: string, v: Json): void {
+  const duoc = guiLenh({
+    t: 'command',
+    command: { op: 'set-design-config', patch: { [key]: v } as Json },
+    by: 'nguoi',
+    reason: 'sửa lựa chọn thiết kế từ bảng xem thử',
   });
   if (!duoc) console.warn('[xem thử] chưa nối được máy chủ');
 }
@@ -179,6 +189,42 @@ function The({ id, mo }: { id: string; mo: () => void }) {
   );
 }
 
+/** Thẻ lựa chọn của chính thiết kế — khung dọc hay ngang, đồ đạc của phòng.
+ *
+ *  Đứng riêng trên đầu, KHÔNG nằm lẫn với các thẻ tính năng: tắt một tính năng
+ *  thì phòng vẫn thế, còn đổi mấy ô này là đổi hình hài căn phòng. Thiết kế nào
+ *  không khai lựa chọn nào thì thẻ không hiện. */
+function TheThietKe() {
+  const s = useStage();
+  const luaChon = useLuaChonThietKe();
+  const cfg = useThietKe();
+  if (luaChon.length === 0) return null;
+  const roi = s.live === null;
+
+  return (
+    <article className="bx-the bx-the-thietke" data-bat="true">
+      <div className="bx-the-dau">
+        <span className="bx-icon">🖼</span>
+        <span className="bx-ten">
+          <b>Khung phòng</b>
+          <small>Lựa chọn của riêng thiết kế này, không phải tính năng</small>
+        </span>
+      </div>
+      <div className="bx-the-nhanh">
+        {luaChon.map((o) => (
+          <ONhanh
+            key={o.key}
+            field={o}
+            value={cfg[o.key] ?? null}
+            disabled={roi}
+            onChange={(v) => suaThietKe(o.key, v)}
+          />
+        ))}
+      </div>
+    </article>
+  );
+}
+
 /** Bảng xem thử: một ngăn bên phải, cuộn được, mỗi tính năng một thẻ.
  *
  *  Lệnh đi lên bằng kênh `RoomCommand` của hợp đồng, không phải một cửa REST
@@ -215,6 +261,8 @@ export function BangXem() {
             {/* Dùng chung lên trên, đặc thù từng loại phòng xuống dưới — cùng
                 cách xếp với trang quản lý, để người vận hành không phải học
                 hai bố cục. */}
+            <TheThietKe />
+
             <h3 className="bx-muc">Chỉnh nhanh</h3>
             {SO_MODULE.filter((m) => m.ui.room === undefined).map((m) => (
               <The key={m.id} id={m.id} mo={() => setSua(m.id)} />

@@ -37,7 +37,7 @@ export type {
 } from './module';
 
 export { designManifestSchema } from './design';
-export type { DesignManifest, DesignStatus, DesignInfo } from './design';
+export type { DesignManifest, DesignOption, DesignStatus, DesignInfo } from './design';
 
 export { WS_PATH, DEFAULT_PORT } from './wire';
 export type { Down, Up } from './wire';

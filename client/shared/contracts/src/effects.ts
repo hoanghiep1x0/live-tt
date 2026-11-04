@@ -67,6 +67,9 @@ export type RoomCommand =
   | { op: 'set-module'; moduleId: string; on: boolean }
   | { op: 'set-config'; moduleId: string; patch: Json }
   | { op: 'set-design'; designId: string }
+  /** Lựa chọn của chính thiết kế đang phát (khung dọc / ngang…), không thuộc
+   *  module nào. Gộp vào cấu hình cũ chứ không thay cả cục. */
+  | { op: 'set-design-config'; patch: Json }
   | { op: 'seed'; n: number }
   | { op: 'next-story' };
 

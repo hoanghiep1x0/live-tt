@@ -2,6 +2,8 @@
 
 import { z } from 'zod';
 import { ID_RE } from './module';
+import type { ConfigField } from './module';
+import type { Json } from './effects';
 
 /** Phải khớp `SlotName` ở effects.ts. */
 const slot = z.enum([
@@ -56,6 +58,17 @@ export const designManifestSchema = z.object({
 });
 
 export type DesignManifest = z.infer<typeof designManifestSchema>;
+
+/** Một lựa chọn của riêng thiết kế: khung dọc hay ngang, bật tắt đồ đạc của
+ *  phòng… KHÔNG thuộc module nào, vì nó đổi hình hài của chính căn phòng, mà
+ *  module thì phải cắm được vào mọi thiết kế.
+ *
+ *  Mặc định nằm ngay đây chứ không trong schema zod như module (quy ước 01 §7):
+ *  thiết kế không có schema, danh sách này chính là nguồn duy nhất. Thiết kế
+ *  khai nó khi dựng `StageProvider`, bảng xem tự dựng form từ đó. */
+export interface DesignOption extends ConfigField {
+  value: Json;
+}
 
 /** Trạng thái phát của một thiết kế, hiện trên thẻ ở trang quản lý. */
 export type DesignStatus = 'live' | 'off' | 'error';

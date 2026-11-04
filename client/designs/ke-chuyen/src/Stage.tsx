@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Seat } from '@live/contracts';
-import { LOI_MC_MS, Slot, useAsset, useLoiMc, useSlotSang, useStage } from '@live/stage-sdk';
+import {
+  LOI_MC_MS,
+  Slot,
+  useAsset,
+  useLoiMc,
+  useSlotSang,
+  useStage,
+  useThietKe,
+} from '@live/stage-sdk';
+import type { DesignOption } from '@live/contracts';
 import { bienCss } from './geometry';
 import type { Huong } from './geometry';
 import {
@@ -12,6 +21,22 @@ import {
   seatsInRow,
   tierOf,
 } from './seats';
+
+/** Lựa chọn của riêng phòng này, hiện thành thẻ "Khung phòng" ở bảng xem.
+ *
+ *  Bản cũ để khung dọc / ngang trong Cài đặt chung ("Khung mặc định khi mở
+ *  trang"). Ở đây nó thuộc về thiết kế, vì chỉ thiết kế mới biết khung ngang
+ *  trông ra sao — `screenGeometry('landscape')` trong `geometry.ts`. */
+export const LUA_CHON: readonly DesignOption[] = [
+  {
+    key: 'khungNgang',
+    label: 'Xoay ngang khung chiếu',
+    short: 'Khung ngang',
+    type: 'toggle',
+    value: false,
+    hint: 'Tắt là khung dọc 9:16 như mặc định; bật thì khung nằm ngang 16:9 và cụm top nâng lên theo',
+  },
+];
 
 const NEN = 'bg/amitabha-stage.png';
 const HOA_SEN = 'fx/lotus.png';
@@ -140,7 +165,9 @@ export function Stage() {
   /** Module sàn nhảy xin sáng slot `floor` suốt màn nhảy. */
   const sanSang = useSlotSang('floor');
   const gio = useDongHo();
-  const [huong] = useState<Huong>('portrait');
+  // Khung dọc là mặc định; người vận hành gạt công tắc ở bảng xem thì đổi ngay,
+  // không tải lại trang.
+  const huong: Huong = useThietKe()['khungNgang'] === true ? 'landscape' : 'portrait';
   const khung = useRef<HTMLDivElement>(null);
 
   const rows = hallRowsFor(GHE_MAC_DINH);
@@ -293,8 +320,17 @@ export function Stage() {
       </div>
 
       <footer className="stage-hints">
-        <span>Gõ số mã để chọn hoàn cảnh · gõ “ôm” để lên ôm · gõ “nhảy” để lên sàn</span>
-        <span className="stage-honest">Phòng có nhân vật minh hoạ do máy tạo</span>
+        {/* Dòng đầu KHÔNG chép nguyên bản cũ ("Gõ ghế B4 · chỗ của tôi · #mã ·
+            gửi: … · ôm"): bản mới chưa có module nào đọc lệnh gõ từ bình luận,
+            nên in mấy câu đó lên sóng là bảo người xem làm một việc không chạy.
+            Giữ đúng những thứ phòng này thật sự làm được hôm nay; có module
+            nhận lệnh gõ thì trả lại đúng danh sách của bản cũ.
+
+            Dòng sau là lời minh bạch, chuyển nguyên `.stage-honest` của bản cũ. */}
+        <span>Thả tim · bình luận · tặng quà để cả phòng lên sàn nhảy</span>
+        <span className="stage-honest">
+          Phòng kể chuyện &amp; xem video · có nhân vật minh họa · MC &amp; giọng đọc dùng AI
+        </span>
         <Slot name="bottom-bar" />
       </footer>
     </div>

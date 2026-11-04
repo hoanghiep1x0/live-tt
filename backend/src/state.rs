@@ -247,6 +247,9 @@ impl AppState {
                     }
                 }
             }
+            if let Ok(cfg) = self.design_config(id) {
+                ra.push(json!({ "t": "design", "config": Value::Object(cfg) }));
+            }
         }
 
         ra.push(json!({ "t": "voice", "cfg": crate::voice::read(&self.layout) }));
@@ -319,11 +322,49 @@ impl AppState {
         })
     }
 
+    /// Ghi lại `modules`, GIU NGUYEN cac khoa khac cua file (vi du `design`).
+    /// Ghi de ca file thi mot lan gat cong tac module se xoa mat lua chon khung
+    /// cua thiet ke.
     fn save_modules(&self, design_id: &str, modules: Map<String, Value>) -> Result<(), StoreError> {
-        store::write_json_atomic(
-            &self.layout.config_file(design_id),
-            &json!({ "modules": Value::Object(modules) }),
-        )
+        let path = self.layout.config_file(design_id);
+        let mut doc = store::read_object(&path)?;
+        doc.insert("modules".into(), Value::Object(modules));
+        store::write_json_atomic(&path, &Value::Object(doc))
+    }
+
+    /// Lua chon cua chinh thiet ke (khung doc / ngang...), khong thuoc module nao.
+    pub fn design_config(&self, design_id: &str) -> Result<Map<String, Value>, AppError> {
+        let doc = store::read_object(&self.layout.config_file(design_id))?;
+        Ok(match doc.get("design") {
+            Some(Value::Object(m)) => m.clone(),
+            _ => Map::new(),
+        })
+    }
+
+    /// Gop mot patch vao lua chon cua thiet ke roi phat xuong ngay. Gop chu
+    /// khong thay ca cuc: bang xem chi gui o vua doi.
+    pub fn set_design_config(&self, design_id: &str, patch: Value) -> Result<(), AppError> {
+        let Value::Object(patch) = patch else {
+            return Err(AppError::BadRequest(
+                "lựa chọn thiết kế phải là một object".into(),
+            ));
+        };
+        let path = self.layout.config_file(design_id);
+        let mut doc = store::read_object(&path)?;
+        let mut cfg = match doc.get("design") {
+            Some(Value::Object(m)) => m.clone(),
+            _ => Map::new(),
+        };
+        for (k, v) in patch {
+            cfg.insert(k, v);
+        }
+        doc.insert("design".into(), Value::Object(cfg.clone()));
+        store::write_json_atomic(&path, &Value::Object(doc))?;
+
+        if self.live().as_deref() == Some(design_id) {
+            self.broadcast(json!({ "t": "design", "config": Value::Object(cfg) }));
+        }
+        Ok(())
     }
 
     /// Nạp cấu hình gợi ý của bối cảnh, **chỉ khi** thiết kế chưa có cấu hình nào.
@@ -530,6 +571,65 @@ mod tests {
         let m = s.module_state("ke-chuyen", "gift-thanks").unwrap();
         assert!(m.enabled);
         assert_eq!(m.config["minCoins"], json!(10), "cấu hình phải còn nguyên");
+    }
+
+    #[test]
+    fn lua_chon_thiet_ke_ghi_roi_doc_lai_va_gop_chu_khong_thay() {
+        let d = tempfile::tempdir().unwrap();
+        dung(d.path(), "ke-chuyen");
+        let s = state(d.path());
+        s.set_design_config("ke-chuyen", json!({ "khungNgang": true }))
+            .unwrap();
+        s.set_design_config("ke-chuyen", json!({ "ghe": 120 })).unwrap();
+        let c = s.design_config("ke-chuyen").unwrap();
+        assert_eq!(c["khungNgang"], json!(true), "ô cũ phải còn");
+        assert_eq!(c["ghe"], json!(120));
+    }
+
+    #[test]
+    fn lua_chon_thiet_ke_va_cau_hinh_module_khong_de_len_nhau() {
+        let d = tempfile::tempdir().unwrap();
+        dung(d.path(), "ke-chuyen");
+        let s = state(d.path());
+        s.set_design_config("ke-chuyen", json!({ "khungNgang": true }))
+            .unwrap();
+        // Gạt một công tắc module: file cấu hình bị ghi lại, lựa chọn thiết kế
+        // phải còn nguyên.
+        s.set_enabled("ke-chuyen", "gift-thanks", true).unwrap();
+        s.set_config("ke-chuyen", "gift-thanks", json!({ "minCoins": 3 }))
+            .unwrap();
+        assert_eq!(
+            s.design_config("ke-chuyen").unwrap()["khungNgang"],
+            json!(true)
+        );
+        assert!(s.module_state("ke-chuyen", "gift-thanks").unwrap().enabled);
+    }
+
+    #[tokio::test]
+    async fn doi_lua_chon_cua_thiet_ke_dang_phat_thi_phat_xuong_ngay() {
+        let d = tempfile::tempdir().unwrap();
+        dung(d.path(), "ke-chuyen");
+        let s = state(d.path());
+        s.go_live("ke-chuyen").unwrap();
+        let mut rx = s.subscribe();
+
+        s.set_design_config("ke-chuyen", json!({ "khungNgang": true }))
+            .unwrap();
+
+        let msg = rx.recv().await.unwrap();
+        assert_eq!(msg["t"], json!("design"));
+        assert_eq!(msg["config"]["khungNgang"], json!(true));
+    }
+
+    #[test]
+    fn lua_chon_thiet_ke_khong_phai_object_bi_tu_choi() {
+        let d = tempfile::tempdir().unwrap();
+        dung(d.path(), "ke-chuyen");
+        let s = state(d.path());
+        assert!(matches!(
+            s.set_design_config("ke-chuyen", json!("ngang")),
+            Err(AppError::BadRequest(_))
+        ));
     }
 
     #[test]
