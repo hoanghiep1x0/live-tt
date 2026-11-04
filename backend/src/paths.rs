@@ -75,6 +75,11 @@ impl Layout {
             .join("session.json")
     }
 
+    /// Cài đặt giọng đọc. Không phải bí mật nên để riêng khỏi secrets.json.
+    pub fn voice_file(&self) -> PathBuf {
+        self.database_dir().join("voice.json")
+    }
+
     pub fn secrets_file(&self) -> PathBuf {
         self.database_dir().join("secrets.json")
     }

@@ -7,6 +7,8 @@
 
 import { WS_PATH } from '@live/contracts';
 import type { Down, Json, SessionView } from '@live/contracts';
+import { VOICE_MAC_DINH } from './audio';
+import type { VoiceCfg } from './audio';
 
 export interface StageState {
   /** Thiết kế đang phát theo backend. Khác id của mình thì mình chỉ là bản xem trước. */
@@ -16,6 +18,7 @@ export interface StageState {
   enabled: readonly string[];
   /** Cấu hình từng module, khoá là moduleId. */
   config: Readonly<Record<string, Json>>;
+  voice: VoiceCfg;
   noiDuoc: boolean;
 }
 
@@ -36,6 +39,7 @@ export const BAN_DAU: StageState = {
   session: PHIEN_RONG,
   enabled: [],
   config: {},
+  voice: VOICE_MAC_DINH,
   noiDuoc: false,
 };
 
@@ -48,6 +52,11 @@ export function apTin(s: StageState, d: Down): StageState {
       return { ...s, session: d.view };
     case 'modules':
       return { ...s, enabled: d.enabled };
+    case 'voice': {
+      const c = d.cfg;
+      if (typeof c !== 'object' || c === null || Array.isArray(c)) return s;
+      return { ...s, voice: { ...VOICE_MAC_DINH, ...(c as Partial<VoiceCfg>) } };
+    }
     case 'config':
       return { ...s, config: { ...s.config, [d.moduleId]: d.config } };
     case 'feed': {

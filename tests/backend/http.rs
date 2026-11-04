@@ -764,6 +764,8 @@ async fn san_khau_mo_giua_chung_van_biet_du_trang_thai() {
 async fn chua_phat_thi_loi_chao_chi_noi_la_chua_phat() {
     let m = moi();
     let chao = m.st.chao_ws();
-    assert_eq!(chao.len(), 1);
+    let loai: Vec<&str> = chao.iter().filter_map(|x| x["t"].as_str()).collect();
+    // Cài đặt giọng luôn đi kèm, vì sân khấu cần nó cả khi chưa phát.
+    assert_eq!(loai, vec!["live", "voice"], "{chao:?}");
     assert_eq!(chao[0], json!({ "t": "live", "designId": Value::Null }));
 }

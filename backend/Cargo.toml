@@ -27,6 +27,7 @@ mime_guess = "2.0.5"
 rand = "0.8.5"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+ureq = { version = "3.2.1", features = ["json", "rustls"] }
 
 # Test tích hợp nằm ở tests/backend/ theo quy ước dự án, không ở backend/tests/.
 [[test]]
@@ -36,6 +37,10 @@ path = "../tests/backend/http.rs"
 [[test]]
 name = "cau-noi"
 path = "../tests/backend/cau-noi.rs"
+
+[[test]]
+name = "giong-doc"
+path = "../tests/backend/giong-doc.rs"
 
 [dev-dependencies]
 tempfile = "3.14.0"

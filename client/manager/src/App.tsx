@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BrowserDialog } from './components/BrowserDialog';
+import { VoiceDialog } from './components/VoiceDialog';
 import { DesignsTab } from './components/DesignsTab';
 import { ModulesTab } from './components/ModulesTab';
 import { TopBar } from './components/TopBar';
@@ -35,6 +36,7 @@ export function App() {
         nguon={m.nguon}
         onNguon={m.doiNguon}
         browserTrigger={<BrowserDialog tenLive={tenLive} />}
+        voiceTrigger={<VoiceDialog onToast={noi} />}
       />
 
       <main>

@@ -24,7 +24,8 @@ Tài liệu này mô tả đích đến. Phần đã dựng và phần còn lạ
 | Nguồn `bridge` — nhận sự kiện thật từ tiến trình đọc TikTok ngoài | **xong** |
 | Nguồn `webview` — tự đọc khung webcast | chưa — cần vỏ Tauri, xem mục 6 |
 | SQLite cho sổ quà | chưa — mới có `database/schema.sql` |
-| Khoá API, `/api/tts`, `/api/ai/tick` | chưa |
+| Kho khoá API, `POST /api/tts` gọi hộ nhà cung cấp giọng đọc | **xong** |
+| `POST /api/ai/tick` (Claude) | chưa |
 | Công bố cổng và token ra `.tmp/agent-port.json` | **xong** |
 | Vỏ Tauri và webview TikTok | chưa |
 
@@ -125,6 +126,7 @@ database/
 │     ├─ config.json              cấu hình mọi module cho thiết kế này
 │     ├─ settings.json            tên và link Studio do người vận hành đặt
 │     └─ session.json             bản chụp phiên, để mở lại không mất
+├─ voice.json                     không commit — cài đặt giọng, KHÔNG có bí mật
 └─ secrets.json                   không commit — khoá API, chỉ backend đọc
 ```
 
@@ -159,11 +161,51 @@ Mọi khoá nằm ở `database/secrets.json`, **chỉ backend đọc**. Client 
 
 | Route | Việc |
 |---|---|
-| `GET /api/secrets` | Trả **trạng thái**: nhà cung cấp nào đã có khoá. Không trả giá trị. |
-| `PUT /api/secrets/<provider>` | Đặt khoá |
-| `DELETE /api/secrets/<provider>` | Xoá khoá |
-| `POST /api/tts` | Backend gọi API giọng đọc, trả audio |
-| `POST /api/ai/tick` | Backend gọi Claude, trả `RoomCommand[]` đã lọc |
+| `GET /api/secrets` | Trả **trạng thái**: nhà nào đã có khoá. Không bao giờ trả giá trị. |
+| `PUT /api/secrets/<provider>` | Đặt khoá. Khoá rỗng nghĩa là giữ khoá cũ. |
+| `DELETE /api/secrets/<provider>` | Xoá nhà cung cấp |
+| `GET` / `PUT /api/voice` | Cài đặt giọng: bật/tắt, nhà nào, giọng nào, nhanh chậm |
+| `POST /api/tts` | Gọi hộ nhà cung cấp, trả bytes mp3 (trang quản lý dùng để nghe thử) |
+| `POST /api/ai/tick` | Backend gọi Claude, trả `RoomCommand[]` đã lọc — **chưa làm** |
+
+### Lối `/s/` — dành cho sân khấu
+
+| Route | Việc |
+|---|---|
+| `GET /s/voice` | Cài đặt giọng, để sân khấu biết đọc bằng gì |
+| `POST /s/tts` | Sinh giọng cho một câu |
+
+Hai route này **không đòi token**, vì sân khấu chạy trong OBS và không có chỗ nào
+giữ token — giống `/d/*` và `/a/*`. Chúng vẫn đi qua lớp chặn `Host` và `Origin`,
+nên một trang web ngoài không gọi vào được.
+
+### Giọng đọc
+
+Hai kiểu giao thức, giữ nguyên của bản cũ để dùng lại được khoá đã có:
+
+| Kiểu | Lời gọi | Khoá ở đâu |
+|---|---|---|
+| `openai` (VieNeu, OpenAI, 9router) | `POST {base}/audio/speech`, body `{input, voice, response_format:"mp3", speed, model?}` | `Authorization: Bearer` |
+| `elevenlabs` | `POST /text-to-speech/{voice_id}?output_format=mp3_44100_128` | `xi-api-key` |
+
+Giới hạn: câu cắt ở 400 ký tự, audio tối đa 8 MiB, chờ tối đa 60 giây, không đi
+theo chuyển hướng. Địa chỉ nhà cung cấp phải là `https://`, trừ khi nó chạy ngay
+trên máy này — và không được chứa `user:pass@` hay tham số, vì cả hai đều là
+đường giấu một địa chỉ khác vào chỗ trông như hợp lệ.
+
+Lỗi được dịch ra tiếng người: 401 "khoá sai hoặc đã thu hồi", 402/403 "hết gói",
+429 "đang bị giới hạn". Nhà cung cấp hỏng thì sân khấu **không im bặt** — nó rơi
+về giọng máy của trình duyệt.
+
+Chưa làm: cache audio theo câu (bản cũ giữ 16 câu trong RAM), và điều tiết số
+lời gọi song song cho từng nhà.
+
+### Tiếng động
+
+Không có file âm thanh nào. Sân khấu **tổng hợp tại chỗ** bằng WebAudio, chuyển
+nguyên bốn tiếng của bản cũ (`gift`, `join`, `sad`, `comfort`) và thêm hai tiếng
+mà hợp đồng `Effect` có khai (`fanfare`, `tick`). Nhờ vậy không có file nào phải
+tải và đổi bối cảnh không phải đi kiếm bộ tiếng mới.
 
 Đây là thay đổi so với mã cũ: khoá Claude từng nằm trong `localStorage` và gọi thẳng
 từ renderer bằng `dangerouslyAllowBrowser: true`. Giọng đọc thì đã đi qua Rust rồi.

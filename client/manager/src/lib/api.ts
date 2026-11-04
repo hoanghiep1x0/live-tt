@@ -28,6 +28,25 @@ export interface SourceStatus {
   problem?: string;
 }
 
+export type ProviderKind = 'openai' | 'elevenlabs';
+
+export interface ProviderInfo {
+  id: string;
+  kind: ProviderKind;
+  baseUrl: string;
+  model: string;
+  /** Có khoá hay chưa. Giá trị khoá không bao giờ ra khỏi backend. */
+  hasKey: boolean;
+}
+
+export interface VoiceCfg {
+  enabled: boolean;
+  provider: string;
+  voice: string;
+  speed: number;
+  volume: number;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -62,6 +81,26 @@ async function call<T>(path: string, method = 'GET', body?: unknown): Promise<T>
   return than as T;
 }
 
+/** Nghe thử: trả về chính bytes mp3, không phải JSON. */
+export async function ttsThu(req: {
+  provider: string;
+  voice: string;
+  text: string;
+  speed?: number;
+}): Promise<Blob> {
+  const res = await fetch('/api/tts', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const j: unknown = await res.json().catch(() => null);
+    const o = (j ?? {}) as { error?: string };
+    throw new ApiError(o.error ?? `máy chủ trả lỗi ${res.status}`, res.status);
+  }
+  return res.blob();
+}
+
 export const api = {
   info: () => call<{ port: number; version: string }>('/info'),
 
@@ -88,6 +127,21 @@ export const api = {
 
   setSource: (cfg: { kind: SourceKind; url?: string; channel?: string; nhip?: number }) =>
     call<{ source: SourceStatus }>('/source', 'PUT', cfg),
+
+  secrets: () => call<{ providers: ProviderInfo[] }>('/secrets'),
+
+  /** Khoá rỗng nghĩa là giữ khoá cũ — trang quản lý không đọc được khoá nên
+   *  không gửi lại được, mà vẫn phải sửa được địa chỉ và model. */
+  setSecret: (
+    id: string,
+    v: { kind: ProviderKind; baseUrl?: string; key?: string; model?: string },
+  ) => call<{ provider: ProviderInfo }>(`/secrets/${id}`, 'PUT', v),
+
+  delSecret: (id: string) => call<{ removed: string }>(`/secrets/${id}`, 'DELETE'),
+
+  voice: () => call<{ voice: VoiceCfg }>('/voice'),
+
+  setVoice: (cfg: VoiceCfg) => call<{ voice: VoiceCfg }>('/voice', 'PUT', cfg),
 
   modules: (designId: string) =>
     call<{ modules: Record<string, ModuleState> }>(`/designs/${designId}/modules`),

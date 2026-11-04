@@ -1280,3 +1280,62 @@ main {
 .conn .canh-bao {
   color: var(--warn);
 }
+
+/* Danh sách nhà cung cấp giọng — chuyển từ bản mẫu design/quan-ly.html */
+.voice-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ctl);
+  border-radius: 2px;
+  background: var(--input-bg);
+}
+.voice-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px 7px 10px;
+}
+.voice-row + .voice-row {
+  border-top: 1px solid var(--line);
+}
+.v-ico {
+  width: 22px;
+  text-align: center;
+  flex: none;
+}
+.v-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+.v-name b {
+  font-weight: 600;
+  display: block;
+}
+.v-name small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 1px 8px;
+  border-radius: 99px;
+  background: var(--line);
+  white-space: nowrap;
+  flex: none;
+}
+.v-tag.v-clone {
+  color: var(--gold-text);
+  background: color-mix(in srgb, var(--gold1) 18%, transparent);
+}
+.voice-row .btn-icon {
+  width: 28px;
+  height: 28px;
+  flex: none;
+}

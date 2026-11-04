@@ -5,6 +5,7 @@
 //! - `/a/<id>/…`   assets riêng của thiết kế
 //! - `/m/<id>/…`   assets riêng của module, dùng được ở mọi thiết kế
 //! - `/api/…`      REST cho trang quản lý, đòi token
+//! - `/s/…`        lối cho sân khấu: giọng đọc, không đòi token
 //! - `/ws`         bus phát sự kiện và cấu hình xuống
 
 pub mod api;
@@ -13,11 +14,14 @@ pub mod events;
 pub mod files;
 pub mod guard;
 pub mod paths;
+pub mod secrets;
 pub mod session;
 pub mod settings;
 pub mod source;
 pub mod state;
 pub mod store;
+pub mod tts;
+pub mod voice;
 pub mod ws;
 
 use std::sync::Arc;
@@ -39,6 +43,14 @@ pub fn router(st: Arc<AppState>) -> Router {
         .route("/api/designs", get(api::list_designs))
         .route("/api/session", get(api::get_session))
         .route("/api/source", get(api::get_source).put(api::put_source))
+        .route("/api/secrets", get(api::list_secrets))
+        .route(
+            "/api/secrets/:provider",
+            put(api::put_secret).delete(api::delete_secret),
+        )
+        .route("/api/voice", get(api::get_voice).put(api::put_voice))
+        // Trang quản lý cũng gọi được, để bấm "Nghe thử" mà không phải mở sân khấu.
+        .route("/api/tts", post(api::post_tts))
         .route(
             "/api/live",
             get(api::get_live)
@@ -61,6 +73,13 @@ pub fn router(st: Arc<AppState>) -> Router {
             post(api::post_enabled),
         );
 
+    // Lối cho SÂN KHẤU: không đòi token, vì sân khấu chạy trong OBS và không có
+    // chỗ nào giữ token. Vẫn qua lớp chặn Host và Origin như mọi thứ khác, nên
+    // một trang web ngoài không gọi vào được.
+    let stage = Router::new()
+        .route("/s/voice", get(api::get_voice))
+        .route("/s/tts", post(api::post_tts));
+
     let files = Router::new()
         .route("/d/:id/", get(files::serve_root))
         .route("/d/:id/*rest", get(files::serve_dist))
@@ -70,7 +89,8 @@ pub fn router(st: Arc<AppState>) -> Router {
     // Lớp chặn giữ sẵn trạng thái trong closure thay vì `from_fn_with_state`:
     // cùng kết quả, nhưng không kéo theo suy luận kiểu rắc rối.
     let canh = st.clone();
-    api.merge(files)
+    api.merge(stage)
+        .merge(files)
         .route("/ws", get(ws::upgrade))
         .with_state(st)
         .layer(middleware::from_fn(move |req: Request, next: Next| {

@@ -25,6 +25,7 @@ impl IntoResponse for AppError {
                 }),
             ),
             Self::Internal(m) => (StatusCode::INTERNAL_SERVER_ERROR, json!({ "error": m })),
+            Self::Upstream(m) => (StatusCode::BAD_GATEWAY, json!({ "error": m })),
         };
         (ma, Json(than)).into_response()
     }
@@ -181,4 +182,73 @@ pub async fn put_source(
 /// Trang quản lý hỏi cổng và token sau khi Tauri khởi động.
 pub async fn server_info(State(st): State<Arc<AppState>>) -> Json<Value> {
     Json(json!({ "port": st.port, "version": env!("CARGO_PKG_VERSION") }))
+}
+
+// ---- Khoá API và giọng đọc ----
+
+pub async fn list_secrets(State(st): State<Arc<AppState>>) -> Json<Value> {
+    Json(json!({ "providers": crate::secrets::list(&st.layout) }))
+}
+
+pub async fn put_secret(
+    State(st): State<Arc<AppState>>,
+    Path(provider): Path<String>,
+    Json(than): Json<Value>,
+) -> Result<Json<Value>, AppError> {
+    let p = crate::secrets::set(&st.layout, &provider, &than)?;
+    Ok(Json(json!({ "provider": p })))
+}
+
+pub async fn delete_secret(
+    State(st): State<Arc<AppState>>,
+    Path(provider): Path<String>,
+) -> Result<Json<Value>, AppError> {
+    let co = crate::secrets::remove(&st.layout, &provider)?;
+    if !co {
+        return Err(AppError::NotFound(format!("không có nhà cung cấp \"{provider}\"")));
+    }
+    Ok(Json(json!({ "removed": provider })))
+}
+
+/// Sinh giọng đọc. Trả thẳng bytes mp3 cho sân khấu phát.
+///
+/// Gọi nhà cung cấp là việc chặn luồng và có thể mất vài giây, nên đẩy sang
+/// luồng riêng — không được giữ một luồng async để ngồi chờ mạng.
+pub async fn post_tts(
+    State(st): State<Arc<AppState>>,
+    Json(req): Json<crate::tts::YeuCau>,
+) -> Result<Response, AppError> {
+    let layout = st.layout.clone();
+    let kq = tokio::task::spawn_blocking(move || crate::tts::sinh(&layout, &req))
+        .await
+        .map_err(|e| AppError::Internal(format!("luồng giọng đọc hỏng: {e}")))?;
+
+    match kq {
+        Ok(bytes) => Ok((
+            [
+                (axum::http::header::CONTENT_TYPE, "audio/mpeg"),
+                (axum::http::header::CACHE_CONTROL, "no-store"),
+            ],
+            bytes,
+        )
+            .into_response()),
+        Err(crate::tts::TtsError::Invalid(m)) => Err(AppError::BadRequest(m)),
+        // Nhà cung cấp từ chối: lỗi của họ hoặc của khoá, không phải của người
+        // vừa bấm. 502 để trang quản lý phân biệt được với lỗi nhập liệu.
+        Err(crate::tts::TtsError::Provider(m)) => Err(AppError::Upstream(m)),
+    }
+}
+
+pub async fn get_voice(State(st): State<Arc<AppState>>) -> Json<Value> {
+    Json(json!({ "voice": crate::voice::read(&st.layout) }))
+}
+
+pub async fn put_voice(
+    State(st): State<Arc<AppState>>,
+    Json(cfg): Json<crate::voice::VoiceCfg>,
+) -> Result<Json<Value>, AppError> {
+    let c = crate::voice::write(&st.layout, cfg)?;
+    // Sân khấu đang live phải nghe thấy ngay, không ai đi tải lại trang giữa buổi.
+    st.broadcast(json!({ "t": "voice", "cfg": c }));
+    Ok(Json(json!({ "voice": c })))
 }

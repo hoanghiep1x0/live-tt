@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Effect, Json, SlotName } from '@live/contracts';
+import { HangGiong, playSfx } from './audio';
 import { SO_MODULE, timDangKy } from './registry';
 import type { TheSong } from './registry';
 import type { StageState } from './state';
@@ -48,6 +49,9 @@ export function useRunner(s: StageState): KetQuaChay {
   const idCuoi = useRef(0);
   const cauHinh = useRef(new Map<string, Json>());
 
+  const giong = useRef<HangGiong | null>(null);
+  giong.current ??= new HangGiong();
+
   const [now, setNow] = useState(bayGio);
   const [modState, setModState] = useState<ReadonlyMap<string, unknown>>(new Map());
   const [loiMc, setLoiMc] = useState<LoiMc | null>(null);
@@ -56,15 +60,23 @@ export function useRunner(s: StageState): KetQuaChay {
   const nhan = useRef((ra: Effect[]) => {
     for (const e of ra) {
       if (e.kind === 'say') {
+        // Vừa đọc to vừa hiện chữ: người xem tắt tiếng vẫn theo được.
         setLoiMc({ text: e.text, at: bayGio() });
+        giong.current?.noi(e.text, e.priority ?? 'normal');
+      } else if (e.kind === 'sfx') {
+        playSfx(e.sound, e.volume ?? 1);
       } else if (e.kind === 'overlay') {
         slotSang.current.set(e.slot, bayGio() + (e.ttlMs ?? 4000));
       }
-      // `sfx`, `spawn`, `record`, `command` chưa có nơi thực thi: tiếng động cần
-      // assets của module, còn `command` cần cổng duyệt. Bỏ im lặng ở đây còn
-      // hơn giả vờ đã làm.
+      // `spawn`, `record` và `command` chưa có nơi thực thi: `command` cần cổng
+      // duyệt. Bỏ im lặng ở đây còn hơn giả vờ đã làm.
     }
   });
+
+  // Cài đặt giọng đổi giữa lúc đang live: áp ngay, không tải lại trang.
+  useEffect(() => {
+    giong.current?.datCauHinh(s.voice);
+  }, [s.voice]);
 
   // Dựng và dọn lõi theo danh sách module đang bật.
   useEffect(() => {
@@ -132,10 +144,13 @@ export function useRunner(s: StageState): KetQuaChay {
     return () => clearInterval(h);
   }, [s.session]);
 
-  // Rời trang thì dọn, để module nào giữ tài nguyên cũng được trả lại.
+  // Rời trang thì dọn, để module nào giữ tài nguyên cũng được trả lại, và
+  // không còn câu nào đọc tiếp sau khi sân khấu đã tắt.
   useEffect(() => {
     const bang = song.current;
+    const g = giong.current;
     return () => {
+      g?.dung();
       for (const t of bang.values()) t.dispose();
       bang.clear();
     };

@@ -60,6 +60,17 @@ pub enum AppError {
         live: String,
     },
     Internal(String),
+    /// Nhà cung cấp bên ngoài từ chối. Không phải lỗi của người vừa bấm.
+    Upstream(String),
+}
+
+impl From<crate::secrets::SecretError> for AppError {
+    fn from(e: crate::secrets::SecretError) -> Self {
+        match e {
+            crate::secrets::SecretError::Invalid(m) => Self::BadRequest(m),
+            crate::secrets::SecretError::Store(e) => Self::Internal(e.to_string()),
+        }
+    }
 }
 
 impl From<StoreError> for AppError {
@@ -237,6 +248,8 @@ impl AppState {
                 }
             }
         }
+
+        ra.push(json!({ "t": "voice", "cfg": crate::voice::read(&self.layout) }));
 
         if let Some(v) = self.session_view() {
             ra.push(json!({ "t": "session", "view": v }));

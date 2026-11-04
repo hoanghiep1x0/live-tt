@@ -16,6 +16,7 @@ database/*.sqlite-wal
 database/*.sqlite-shm
 database/designs/
 database/secrets.json
+database/voice.json
 
 # Rust
 backend/target/

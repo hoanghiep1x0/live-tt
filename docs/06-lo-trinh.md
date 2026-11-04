@@ -87,10 +87,11 @@ gợi ý của bối cảnh tự nạp, và **đổi cấu hình đẩy xuống 
 
 | Module có phần vẽ: `top-givers`, `chat-bubbles`, `likes-counter` | **xong** |
 | Thực thi `Effect`: `say` thành phụ đề, `overlay` sáng slot | **xong** |
-| Thực thi `sfx` (cần assets module) và `command` (cần cổng duyệt) | chưa |
+| Thực thi `say` thành giọng đọc thật, `sfx` thành tiếng động | **xong** |
+| Thực thi `command` (cần cổng duyệt) | chưa |
 
-Còn thiếu để gọi là xong hẳn: giọng đọc thật cho `say`, tiếng động cho `sfx`, và nguồn
-`webview` để không cần tiến trình cầu nối ngoài.
+Còn thiếu để gọi là xong hẳn: nguồn `webview` để không cần tiến trình cầu nối ngoài, và
+cổng duyệt cho `command`.
 
 ### GĐ 2 — Nhóm module nhẹ
 

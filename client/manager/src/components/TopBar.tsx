@@ -17,6 +17,7 @@ interface Props {
   nguon: SourceStatus | null;
   onNguon(k: SourceKind): void;
   browserTrigger: ReactNode;
+  voiceTrigger: ReactNode;
 }
 
 const TEN_NGUON: Record<SourceKind, string> = {
@@ -37,6 +38,7 @@ export function TopBar({
   nguon,
   onNguon,
   browserTrigger,
+  voiceTrigger,
 }: Props) {
   return (
     <header className="topbar">
@@ -102,6 +104,8 @@ export function TopBar({
             ))}
           </select>
         </label>
+
+        {voiceTrigger}
 
         <div className="conn">
           <span className={wsSong ? 'dot ok' : 'dot'} />

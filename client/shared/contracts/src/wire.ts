@@ -10,6 +10,8 @@ export type Down =
   /** Cấu hình đổi giữa lúc đang chạy — áp nóng, KHÔNG tải lại trang. */
   | { t: 'config'; moduleId: string; config: Json }
   | { t: 'modules'; enabled: string[] }
+  /** Cài đặt giọng đọc đổi — áp nóng, KHÔNG tải lại trang. */
+  | { t: 'voice'; cfg: Json }
   | { t: 'live'; designId: string | null }
   | { t: 'error'; message: string };
 
