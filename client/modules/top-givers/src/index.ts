@@ -6,7 +6,7 @@ import type { Config } from './manifest';
 
 export const moduleTopGivers: LiveModule<Config, State> = { manifest, core };
 
-export { core } from './core';
+export { core, hangDangSoi } from './core';
 export { manifest, schema } from './manifest';
 // Phần vẽ KHÔNG xuất ở đây: `index.ts` phải nạp được ở Node (test, trang quản
 // lý) mà không kéo theo React và CSS. Lấy qua `@live/mod-top-givers/stage`.

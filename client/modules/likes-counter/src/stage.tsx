@@ -7,16 +7,20 @@ import './stage.css';
 export function Stage({ config, state }: StagePartProps<Config>) {
   const tim = state.session.totals.likes;
   const pct = Math.min(100, Math.floor((tim / config.goal) * 100));
-  const buoc = config.stepPercent;
+
   const moc: number[] = [];
-  for (let m = buoc; m < 100; m += buoc) moc.push(m);
+  for (let m = config.stepPercent; m < 100; m += config.stepPercent) moc.push(m);
 
   return (
     <div className="mod-tim">
       <div className="mod-tim-thanh">
         <span className="mod-tim-day" style={{ width: `${pct}%` }} />
         {moc.map((m) => (
-          <span key={m} className="mod-tim-moc" style={{ left: `${m}%` }} />
+          <span
+            key={m}
+            className={m <= pct ? 'mod-tim-moc da-qua' : 'mod-tim-moc'}
+            style={{ left: `${m}%` }}
+          />
         ))}
       </div>
       <p className="mod-tim-chu">

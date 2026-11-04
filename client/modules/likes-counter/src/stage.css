@@ -1,4 +1,8 @@
-/* Thanh tiến độ tim. Màu lấy từ biến của thiết kế kèm giá trị lui. */
+/* Thanh tiến độ tim.
+ *
+ * Chuyển từ bản cũ (D:\Live client/src/styles/index.css dòng 409–414). Màu lấy
+ * từ biến của thiết kế kèm giá trị lui, nên hợp mọi bối cảnh phòng.
+ */
 
 .mod-tim {
   width: 100%;
@@ -8,38 +12,36 @@
 .mod-tim-thanh {
   position: relative;
   height: 2cqw;
-  margin: 0 8cqw 0.8cqw;
+  margin: 1.2cqw 8cqw 0.8cqw;
   border-radius: 2cqw;
-  overflow: hidden;
   background: rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 0.2cqw 0.5cqw rgba(0, 0, 0, 0.45);
+  overflow: hidden;
 }
 
 .mod-tim-day {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  border-radius: 2cqw;
+  display: block;
+  height: 100%;
+  border-radius: inherit;
   background: linear-gradient(90deg, var(--accent, #e2536f), var(--gold, #f2c45a));
-  box-shadow: 0 0 1.4cqw var(--stage-screen-glow, rgba(255, 210, 120, 0.35));
-  transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: width 0.5s;
 }
 
 .mod-tim-moc {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 0.2cqw;
-  background: rgba(0, 0, 0, 0.45);
+  width: 0.3cqw;
+  background: rgba(255, 255, 255, 0.35);
+}
+/* Mốc đã đạt sáng hẳn lên, để nhìn một cái là biết đi được tới đâu. */
+.mod-tim-moc.da-qua {
+  background: #fff;
 }
 
 .mod-tim-chu {
   margin: 0;
-  font-size: 2.1cqw;
-  font-weight: 600;
-  color: #fff;
-  text-shadow: 0 0.2cqw 0.4cqw rgba(0, 0, 0, 0.8);
+  font-size: 2.3cqw;
+  color: var(--stage-soft, #e6dccb);
   font-variant-numeric: tabular-nums;
 }
 

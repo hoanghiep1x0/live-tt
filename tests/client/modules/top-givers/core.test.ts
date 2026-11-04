@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Effect } from '@live/contracts';
 import { runTick } from '@live/runtime';
-import { core, moduleTopGivers as mod, schema } from '@live/mod-top-givers';
+import { core, hangDangSoi, moduleTopGivers as mod, schema } from '@live/mod-top-givers';
 import { ctx, kiemModule, nguoiTang } from '../_helper';
 
 const MAC_DINH = schema.parse({});
@@ -19,6 +19,38 @@ describe('manifest', () => {
   it('không bắt sự kiện nào: bảng đọc thẳng từ phiên', () => {
     expect(mod.manifest.triggers).toEqual([]);
     expect(mod.manifest.slots).toEqual(['tops']);
+  });
+});
+
+describe('đèn soi', () => {
+  it('tắt khi chưa có ai trong top', () => {
+    expect(hangDangSoi(0, 0)).toBe(-1);
+  });
+
+  it('soi một lúc rồi nghỉ, chứ không sáng suốt buổi', () => {
+    expect(hangDangSoi(0, 3)).toBe(0);
+    expect(hangDangSoi(3_000, 3)).toBe(0);
+    expect(hangDangSoi(5_000, 3), 'quá 3,6 giây thì nghỉ').toBe(-1);
+  });
+
+  it('lần lượt chuyển sang người kế', () => {
+    expect(hangDangSoi(9_000, 3)).toBe(1);
+    expect(hangDangSoi(18_000, 3)).toBe(2);
+    expect(hangDangSoi(27_000, 3), 'hết vòng thì quay lại người đầu').toBe(0);
+  });
+
+  it('không soi quá số người đang có', () => {
+    for (let t = 0; t < 60_000; t += 500) {
+      expect(hangDangSoi(t, 2)).toBeLessThan(2);
+    }
+  });
+
+  it('lõi ghi lại hạng đang soi để phần vẽ dùng', () => {
+    const s = core.init(MAC_DINH);
+    runTick(mod, s, 0, ctx(MAC_DINH, 0, 0, [nguoiTang('a', 'An', 10)]));
+    expect(s.dangSoi).toBe(0);
+    runTick(mod, s, 5_000, ctx(MAC_DINH, 5_000, 0, [nguoiTang('a', 'An', 10)]));
+    expect(s.dangSoi).toBe(-1);
   });
 });
 

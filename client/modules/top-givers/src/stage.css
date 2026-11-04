@@ -1,8 +1,9 @@
-/* Bảng vinh danh.
+/* Bồ đoàn top người tặng: năm tòa sen dưới khung chiếu, hạng 1 ở giữa và to hơn;
+ * ảnh tròn viền vàng trong vòng hào quang, ngồi trên hoa sen phát sáng.
  *
- * Mọi màu đều lấy từ biến của thiết kế kèm giá trị lui, nên module cắm vào bối
- * cảnh nào cũng hợp màu bối cảnh đó mà không phải sửa một dòng nào.
- * Đơn vị cqw: khung sân khấu khai `container-type: inline-size`.
+ * Chuyển từ bản cũ (D:\Live client/src/styles/index.css dòng 556–587 và
+ * comfort.css dòng 44–53). Mọi luật nằm dưới `.mod-tops` để không đụng CSS của
+ * thiết kế; `--s` là hệ số cỡ của từng tòa.
  */
 
 .mod-tops {
@@ -10,78 +11,186 @@
   justify-content: center;
   align-items: flex-end;
   gap: 1.4cqw;
-  margin: 0;
-  padding: 0;
-  list-style: none;
   width: 100%;
   height: 100%;
+  pointer-events: none;
 }
 
-.mod-tops-o {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3cqw;
-  width: 15cqw;
-  min-width: 0;
+.mod-tops .top-seat {
+  --s: 1cqw;
+  position: relative;
+  flex: 0 0 auto;
+  width: calc(10 * var(--s));
+  height: 100%;
+}
+.mod-tops .top-seat.rank-1 {
+  --s: 1.15cqw;
+}
+.mod-tops .top-seat.rank-4,
+.mod-tops .top-seat.rank-5 {
+  --s: 0.9cqw;
 }
 
-.mod-tops-anh {
-  width: 7.4cqw;
-  height: 7.4cqw;
-  border-radius: 50%;
+.mod-tops .top-halo {
+  position: absolute;
+  left: 50%;
+  bottom: calc(2.9 * var(--s));
+  z-index: 0;
+  width: calc(8.6 * var(--s));
+  margin-left: calc(-4.3 * var(--s));
+  opacity: 0.95;
+  animation: mod-tops-xoay 14s linear infinite;
+}
+
+.mod-tops .top-photo {
+  position: absolute;
+  left: 50%;
+  bottom: calc(4.6 * var(--s));
+  z-index: 3;
+  width: calc(5.2 * var(--s));
+  height: calc(5.2 * var(--s));
+  margin-left: calc(-2.6 * var(--s));
   display: grid;
   place-items: center;
+  border-radius: 50%;
   overflow: hidden;
-  font-size: 3.4cqw;
-  background: var(--stage-chip-bg, rgba(0, 0, 0, 0.5));
-  border: 0.3cqw solid var(--stage-ring, #f2c45a);
-  box-shadow: 0 0 2cqw var(--stage-screen-glow, rgba(255, 210, 120, 0.35));
+  border: calc(0.35 * var(--s)) solid #ffe39a;
+  background: radial-gradient(circle at 50% 35%, #fff4d2, #f2c45a);
+  box-shadow:
+    0 0 calc(1.4 * var(--s)) rgba(255, 220, 130, 0.95),
+    0 0 calc(3 * var(--s)) rgba(255, 170, 200, 0.5);
+  animation: mod-tops-len 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.3);
 }
-.mod-tops-anh img {
+.mod-tops .top-photo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+}
+.mod-tops .top-photo i {
+  font-style: normal;
+  font-weight: 800;
+  font-size: calc(2.6 * var(--s));
+  color: rgba(120, 70, 20, 0.7);
 }
 
-/* Hạng nhất to hơn và sáng hơn — nhìn một cái là biết ai đang dẫn */
-.mod-tops-o[data-hang='1'] .mod-tops-anh {
-  width: 9cqw;
-  height: 9cqw;
-  box-shadow: 0 0 3cqw var(--stage-cheer-glow, #ffd27a);
-  animation: mod-tops-tho 3s ease-in-out infinite;
-}
-.mod-tops-o[data-hang='4'] .mod-tops-anh,
-.mod-tops-o[data-hang='5'] .mod-tops-anh {
-  width: 6.2cqw;
-  height: 6.2cqw;
-}
-@keyframes mod-tops-tho {
-  50% {
-    box-shadow: 0 0 4.4cqw var(--stage-cheer-glow, #ffd27a);
-  }
+.mod-tops .top-rank {
+  position: absolute;
+  left: 50%;
+  bottom: calc(8.9 * var(--s));
+  z-index: 4;
+  width: calc(2.4 * var(--s));
+  height: calc(2.4 * var(--s));
+  margin-left: calc(-1.2 * var(--s));
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: calc(1.5 * var(--s));
+  font-weight: 800;
+  color: #5a2a00;
+  background: radial-gradient(circle at 35% 30%, #fff6c8, #f2c45a 55%, #b9821f);
+  border: calc(0.25 * var(--s)) solid #ff7fb0;
+  box-shadow: 0 0 calc(1 * var(--s)) rgba(255, 127, 176, 0.8);
 }
 
-.mod-tops-ten {
-  max-width: 100%;
+.mod-tops .top-lotus {
+  position: absolute;
+  left: 50%;
+  bottom: calc(1.2 * var(--s));
+  z-index: 2;
+  width: calc(9 * var(--s));
+  margin-left: calc(-4.5 * var(--s));
+  filter: drop-shadow(0 0 calc(1.2 * var(--s)) rgba(255, 160, 200, 0.6));
+}
+
+.mod-tops .top-name {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  z-index: 4;
+  transform: translateX(-50%);
+  max-width: calc(11 * var(--s));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 1.9cqw;
-  font-weight: 600;
-  color: #fff;
-  text-shadow: 0 0.2cqw 0.4cqw rgba(0, 0, 0, 0.8);
+  font-size: calc(1.7 * var(--s));
+  font-weight: 700;
+  line-height: 1.3;
+  color: #ffe9b0;
+  background: rgba(24, 10, 4, 0.85);
+  border: 0.15cqw solid rgba(242, 196, 90, 0.6);
+  padding: 0 calc(1 * var(--s));
+  border-radius: 1cqw;
 }
 
-.mod-tops-xu {
-  font-size: 1.8cqw;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--gold, #f2c45a);
+/* Bồ đoàn chưa có ai: vẫn hiện, nhưng mờ đi — người xem thấy còn chỗ cho mình. */
+.mod-tops .top-seat.empty .top-halo {
+  opacity: 0.25;
+  animation: none;
+}
+.mod-tops .top-seat.empty .top-lotus {
+  opacity: 0.5;
+  filter: grayscale(0.4);
+}
+.mod-tops .top-seat.empty .top-photo {
+  background: rgba(255, 240, 210, 0.35);
+  border-color: rgba(255, 227, 154, 0.5);
+  box-shadow: none;
+}
+.mod-tops .top-seat.empty .top-name {
+  color: rgba(255, 233, 176, 0.6);
+}
+
+/* Đèn soi: luồng sáng ấm từ trên xuống, soi lần lượt từng người trong top. */
+.mod-tops .top-seat::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 18%;
+  width: calc(16 * var(--s));
+  height: 17cqw;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 236, 190, 0),
+    rgba(255, 226, 160, 0.5) 75%,
+    rgba(255, 226, 160, 0.15)
+  );
+  clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 1s ease;
+  pointer-events: none;
+}
+.mod-tops .top-seat.spotlight::before {
+  opacity: 1;
+}
+.mod-tops .top-seat .top-photo,
+.mod-tops .top-seat .top-name {
+  transition: filter 1s ease;
+}
+.mod-tops .top-seat.spotlight .top-photo {
+  filter: brightness(1.2) drop-shadow(0 0 1.8cqw rgba(255, 215, 120, 0.95));
+}
+.mod-tops .top-seat.spotlight .top-name {
+  filter: brightness(1.25);
+}
+
+@keyframes mod-tops-xoay {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes mod-tops-len {
+  from {
+    opacity: 0;
+    transform: translateY(2cqw) scale(0.6);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mod-tops-o[data-hang='1'] .mod-tops-anh {
+  .mod-tops .top-halo,
+  .mod-tops .top-photo {
     animation: none;
   }
 }
