@@ -26,6 +26,10 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use axum::extract::{Path as AxPath, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use axum::Json;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -308,6 +312,93 @@ fn goi(base: &str, key: &str, than: &Value) -> Result<String, String> {
         .unwrap_or_default())
 }
 
+/// Lời dặn thêm của người vận hành dài hơn ngần này là dán nhầm cả bài.
+const MAX_Y: usize = 600;
+/// Chữ trả về dài hơn ngần này thì cắt — ô cấu hình nào cũng có trần riêng, mà
+/// đây là trần chung để không ai nhét được một quyển sách vào cấu hình.
+const MAX_CHU_VIET: usize = 20_000;
+
+#[derive(Debug, Deserialize)]
+pub struct XinViet {
+    /// Lời dặn của ô, lấy từ `ConfigField.ai`.
+    pub what: String,
+    /// Ý thêm của người vận hành, ví dụ chủ đề truyện tối nay.
+    #[serde(default)]
+    pub extra: String,
+}
+
+/// Thân yêu cầu nhờ AI viết chữ cho một ô cấu hình. Hàm thuần.
+pub fn than_viet(model: &str, what: &str, extra: &str) -> Value {
+    let mut nhac = format!("Viết: {what}");
+    let y = extra.trim();
+    if !y.is_empty() {
+        nhac.push_str("\n\nÝ của người vận hành: ");
+        nhac.push_str(&y.chars().take(MAX_Y).collect::<String>());
+    }
+    json!({
+        "model": model,
+        "max_tokens": 4_000,
+        "system": "Bạn viết nội dung cho một phòng live kể chuyện của người Việt. Trả về ĐÚNG phần chữ cần điền, không rào ```, không lời dẫn, không giải thích, không nhắc lại yêu cầu. Giọng ấm áp, dễ nghe khi đọc to. Không nhắc tiền, không kêu gọi ủng hộ hay quyên góp.",
+        "messages": [{ "role": "user", "content": nhac }],
+    })
+}
+
+/// Dọn phần trả lời: gỡ rào ```, cắt theo trần.
+pub fn don_chu(tho: &str) -> String {
+    let t = tho.trim();
+    let t = t.strip_prefix("```").map_or(t, |x| {
+        // Gỡ cả nhãn ngôn ngữ ở dòng đầu, ví dụ ```text
+        x.split_once('\n').map_or(x, |(_, con)| con)
+    });
+    let t = t.strip_suffix("```").unwrap_or(t).trim();
+    t.chars().take(MAX_CHU_VIET).collect()
+}
+
+/// Nhờ AI viết chữ cho một ô cấu hình. Người vận hành xem rồi mới lưu — ở đây
+/// chỉ trả về chữ, KHÔNG tự ghi vào cấu hình của phòng đang live.
+pub async fn viet(
+    State(st): State<Arc<AppState>>,
+    AxPath(design_id): AxPath<String>,
+    Json(xin): Json<XinViet>,
+) -> Response {
+    if !crate::paths::valid_id(&design_id) {
+        return loi_json(StatusCode::BAD_REQUEST, "id thiết kế sai định dạng");
+    }
+    let what = xin.what.trim().to_string();
+    if what.is_empty() {
+        return loi_json(StatusCode::BAD_REQUEST, "ô này không nhờ AI viết được");
+    }
+    let Some(p) = secrets::get(&st.layout, NHA_CUNG_CAP) else {
+        return loi_json(
+            StatusCode::BAD_REQUEST,
+            "chưa có khoá cho nhà cung cấp \"mc\"",
+        );
+    };
+    if p.kind != ProviderKind::Anthropic || p.key.is_empty() {
+        return loi_json(StatusCode::BAD_REQUEST, "nhà cung cấp \"mc\" chưa có khoá Anthropic");
+    }
+
+    let cfg = st.ai_config(&design_id);
+    let than = than_viet(&cfg.model, &what, &xin.extra);
+    let base = p.base_url.clone();
+    let key = p.key.clone();
+    match tokio::task::spawn_blocking(move || goi(&base, &key, &than)).await {
+        Ok(Ok(chu)) => Json(json!({ "text": don_chu(&chu) })).into_response(),
+        Ok(Err(e)) => {
+            tracing::warn!("nhờ AI viết: {e}");
+            loi_json(StatusCode::BAD_GATEWAY, "không nhờ được AI viết")
+        }
+        Err(e) => {
+            tracing::warn!("nhờ AI viết: tác vụ hỏng: {e}");
+            loi_json(StatusCode::INTERNAL_SERVER_ERROR, "không nhờ được AI viết")
+        }
+    }
+}
+
+fn loi_json(ma: StatusCode, vi_sao: &str) -> Response {
+    (ma, Json(json!({ "error": vi_sao }))).into_response()
+}
+
 pub async fn chay(st: Arc<AppState>) {
     // Nhịp nhỏ, tự đếm tới lượt: người vận hành đổi `everySec` giữa chừng thì
     // lượt kế theo số mới ngay, không phải dựng lại tác vụ.
@@ -476,6 +567,39 @@ mod tests {
         // Đếm theo chuỗi liền chứ không đếm từng chữ: lời dặn gốc cũng có chữ x.
         assert!(dan.contains(&"x".repeat(MAX_DAN_THEM)));
         assert!(!dan.contains(&"x".repeat(MAX_DAN_THEM + 1)));
+    }
+
+    #[test]
+    fn nho_viet_ghep_y_cua_nguoi_van_hanh_va_cat_khi_qua_dai() {
+        let v = than_viet("claude-sonnet-5-5", "các đoạn truyện", "chuyện về lòng hiếu thảo");
+        let chu = v["messages"][0]["content"].as_str().unwrap();
+        assert!(chu.starts_with("Viết: các đoạn truyện"));
+        assert!(chu.contains("chuyện về lòng hiếu thảo"));
+        assert_eq!(v["model"], json!("claude-sonnet-5-5"));
+
+        let dai = than_viet("m", "x", &"y".repeat(MAX_Y + 200));
+        let chu = dai["messages"][0]["content"].as_str().unwrap();
+        assert_eq!(chu.matches('y').count(), MAX_Y);
+    }
+
+    #[test]
+    fn khong_co_y_them_thi_khong_ghep_doan_rong() {
+        let v = than_viet("m", "tên truyện", "   ");
+        assert_eq!(v["messages"][0]["content"], json!("Viết: tên truyện"));
+    }
+
+    #[test]
+    fn don_chu_go_rao_ba_dau_nguoc_va_nhan_ngon_ngu() {
+        assert_eq!(don_chu("```text
+một
+hai
+```"), "một
+hai");
+        assert_eq!(don_chu("```
+một
+```"), "một");
+        assert_eq!(don_chu("  một  "), "một");
+        assert_eq!(don_chu(&"a".repeat(MAX_CHU_VIET + 50)).chars().count(), MAX_CHU_VIET);
     }
 
     #[test]

@@ -54,8 +54,10 @@ function VideoKhongKet({ src }: { src: string }) {
 
 /** Khung chiếu của truyện: ảnh hoặc video, kèm tên truyện và đoạn đang kể.
  *
- *  Có hình thì chữ xuống đáy làm **phụ đề** để người xem nhìn vào hình; không
- *  có hình thì chữ là nội dung chính, đứng giữa khung cho cân bố cục. */
+ *  Chữ LUÔN nằm dưới đáy làm phụ đề, như mọi trang xem phim — kể cả khi chưa
+ *  có ảnh hay video. Trước đây lúc không có hình thì chữ đứng giữa khung; đổi
+ *  chỗ giữa chừng (vừa dán video vào là chữ nhảy xuống đáy) làm người xem mất
+ *  mạch, mà phụ đề dưới đáy thì ai cũng quen mắt rồi. */
 export function Stage({ config, modState }: StagePartProps<Config, State>) {
   const doan = doanHienTai(modState);
   const media = config.media.trim();
@@ -79,7 +81,7 @@ export function Stage({ config, modState }: StagePartProps<Config, State>) {
       <span className="mod-truyen-quet" aria-hidden />
 
       {config.title === '' && doan === null ? null : (
-        <div className={coHinh ? 'mod-truyen-chu la-sub' : 'mod-truyen-chu la-giua'}>
+        <div className="mod-truyen-chu">
           {config.title === '' ? null : <h2 className="mod-truyen-ten">{config.title}</h2>}
           {doan === null ? null : <p className="mod-truyen-doan">{doan}</p>}
         </div>

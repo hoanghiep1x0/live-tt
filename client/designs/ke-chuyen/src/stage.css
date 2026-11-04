@@ -158,7 +158,11 @@ body {
 /* ---- Dải chữ chạy, ngay trên hàng ghế A ---- */
 .stage-heading {
   position: absolute;
-  top: calc(var(--hall-top) - 4.4cqw);
+  /* Nâng cùng cụm dưới khi xoay ngang, y như hàng bồ đoàn và thanh tiến độ.
+     Bản cũ cũng trừ `--group-lift` ở đây (index.css dòng 501); thiếu nó thì
+     khung ngang ngắn lại mà dải chữ vẫn nằm nguyên chỗ cũ, tụt hẳn xuống gần
+     rạp ghế. Khung dọc thì `--group-lift` bằng 0 nên không đổi gì. */
+  top: calc(var(--hall-top) - 4.4cqw - var(--group-lift));
   height: 5cqw;
   left: 0;
   right: 0;

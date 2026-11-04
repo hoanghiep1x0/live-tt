@@ -85,7 +85,8 @@ pub fn router(st: Arc<AppState>) -> Router {
         // Bảng xem thử nằm ngay trong trang sân khấu, mà trang đó không giữ
         // token. Vẫn qua lớp chặn Host và Origin như mọi thứ khác.
         .route("/s/media/:design_id", post(media::nhan))
-        .route("/s/media/:design_id/ai", post(media::tao_anh));
+        .route("/s/media/:design_id/ai", post(media::tao_anh))
+        .route("/s/viet/:design_id", post(ai::viet));
 
     let files = Router::new()
         .route("/d/:id/", get(files::serve_root))

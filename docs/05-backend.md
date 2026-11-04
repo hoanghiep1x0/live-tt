@@ -95,6 +95,7 @@ trang đó. Mấy route này vì vậy miễn token, nhưng vẫn qua lớp ch�
 | `GET /s/voice`, `POST /s/tts` | Giọng đọc cho sân khấu |
 | `POST /s/media/<designId>?ext=png` | Nhận một file tải lên; thân yêu cầu là chính nội dung file |
 | `POST /s/media/<designId>/ai` | Nhờ AI vẽ một ảnh (`{ prompt }`), cất vào kho rồi trả đường dẫn |
+| `POST /s/viet/<designId>` | Nhờ AI viết chữ cho một ô cấu hình (`{ what, extra }`), trả `{ text }` |
 
 Đuôi file đi theo **danh sách cho phép** (ảnh và video thường gặp), không phải danh sách
 cấm: quên chặn một đuôi lạ thì thành lỗ hổng, còn quên cho phép một đuôi mới thì chỉ là

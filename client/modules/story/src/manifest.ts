@@ -30,11 +30,21 @@ export const manifest: ModuleManifest<Config> = {
   action: { label: 'Đoạn sau', op: 'next' },
   quick: ['secPerPassage', 'readAloud'],
   fields: [
-    { key: 'title', label: 'Tên truyện', type: 'text' },
+    {
+      key: 'title',
+      label: 'Tên truyện',
+      type: 'text',
+      ai: 'tên một truyện cổ tích hoặc truyện ngắn Việt Nam. Chỉ trả về đúng cái tên, không gì khác.',
+    },
     {
       key: 'passages',
       label: 'Các đoạn truyện',
       type: 'textarea',
+      ai:
+        'các đoạn của MỘT truyện cổ tích hoặc truyện ngắn Việt Nam, kể bằng lời của mình, ' +
+        'đúng cốt truyện gốc nếu là truyện quen thuộc. Mỗi dòng một đoạn, mỗi đoạn dưới 110 ' +
+        'ký tự, khoảng 12–18 đoạn, nối tiếp nhau thành một mạch. Chỉ trả về các dòng đó, ' +
+        'không đánh số, không tiêu đề.',
       hint: 'Mỗi dòng một đoạn. Đoạn nào dài quá thì tách ra cho dễ nghe.',
     },
     {

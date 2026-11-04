@@ -215,6 +215,28 @@ dangKy(moduleTopGivers, { slot: 'tops', Part: TopGiversStage }),
 
 Thiết kế **không** import module; nó chỉ đặt `<Slot name="tops" />`.
 
+## 7b. Ô cấu hình nhờ AI viết hộ
+
+Ô nào cần thì khai thêm một dòng `ai` trong `fields` — lời dặn viết CÁI GÌ:
+
+```ts
+{
+  key: 'passages',
+  label: 'Các đoạn truyện',
+  type: 'textarea',
+  ai: 'các đoạn của MỘT truyện cổ tích Việt Nam, mỗi dòng một đoạn dưới 110 ký tự…',
+}
+```
+
+Bảng xem mọc ra nút "AI viết" cạnh ô đó, kèm một chỗ để người vận hành thêm ý của mình.
+Backend ghép lời dặn với ý đó rồi hỏi model (nhà cung cấp `mc`), trả về chữ thuần.
+
+Chữ trả về chỉ **điền vào ô**, không tự lưu: người vận hành đọc, sửa, rồi mới quyết — máy
+viết hộ chứ không viết thay. Và không chỗ nào phải biết tên module nào (quy ước 01 §6).
+
+Ô ảnh / video thì khai `type: 'media'`: bảng xem cho dán đường dẫn, tải file lên, hoặc nhờ
+AI vẽ — cả ba cùng cho ra một chuỗi đường dẫn, module không cần biết nó tới từ đâu.
+
 ## 8. Module có nút bấm
 
 ```ts

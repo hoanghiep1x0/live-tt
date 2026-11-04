@@ -23,6 +23,77 @@ function chan(e: { stopPropagation(): void }): void {
   e.stopPropagation();
 }
 
+/** Nút "AI viết" cho những ô có khai `ai` trong manifest.
+ *
+ *  Chữ trả về chỉ ĐIỀN VÀO Ô, không tự lưu: người vận hành đọc rồi sửa rồi mới
+ *  quyết — máy viết hộ chứ không viết thay. */
+function NhoAiViet({
+  what,
+  disabled,
+  onText,
+}: {
+  what: string;
+  disabled: boolean;
+  onText(text: string): void;
+}) {
+  const designId = useDesignId();
+  const [mo, setMo] = useState(false);
+  const [y, setY] = useState('');
+  const [dangLam, setDangLam] = useState(false);
+  const [loi, setLoi] = useState('');
+
+  async function nho(): Promise<void> {
+    setLoi('');
+    setDangLam(true);
+    try {
+      const r = await fetch(`/s/viet/${designId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ what, extra: y }),
+      });
+      const j = (await r.json()) as { text?: string; error?: string };
+      if (!r.ok || j.text === undefined) throw new Error(j.error ?? 'không nhờ được AI viết');
+      onText(j.text);
+      setMo(false);
+    } catch (e) {
+      setLoi(e instanceof Error ? e.message : 'không nhờ được AI viết');
+    } finally {
+      setDangLam(false);
+    }
+  }
+
+  return (
+    <div className="bx-ai-viet">
+      <div className="bx-media-nut">
+        <button
+          type="button"
+          className="bx-nho"
+          disabled={disabled || dangLam}
+          onClick={() => setMo(!mo)}
+        >
+          {dangLam ? 'Đang viết…' : 'AI viết'}
+        </button>
+        {!mo ? null : (
+          <>
+            <input
+              className="bx-o"
+              type="text"
+              placeholder="Ý của anh, ví dụ: chuyện cổ tích về lòng hiếu thảo"
+              value={y}
+              disabled={dangLam}
+              onChange={(e) => setY(e.target.value)}
+            />
+            <button type="button" className="bx-nho" disabled={dangLam} onClick={() => void nho()}>
+              Viết
+            </button>
+          </>
+        )}
+      </div>
+      {loi === '' ? null : <span className="bx-media-loi">{loi}</span>}
+    </div>
+  );
+}
+
 /** Ô ảnh / video: dán đường dẫn, tải file lên, hoặc nhờ AI vẽ.
  *
  *  Ba đường cùng về MỘT chỗ: một chuỗi đường dẫn. File tải lên và ảnh AI vẽ
@@ -282,6 +353,9 @@ export function OConfig({ moduleId, field: f, value, disabled, onChange }: Props
     <div className="bx-hang">
       <label htmlFor={id}>{nhan}</label>
       {o}
+      {f.ai === undefined ? null : (
+        <NhoAiViet what={f.ai} disabled={disabled} onText={(t) => onChange(t)} />
+      )}
       {f.hint === undefined ? null : <span className="bx-goi">{f.hint}</span>}
     </div>
   );

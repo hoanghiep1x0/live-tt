@@ -46,6 +46,13 @@ export interface ConfigField {
   step?: number;
   /** Đơn vị hiện cạnh số, ví dụ "giây". */
   unit?: string;
+  /** Ô này nhờ AI viết hộ được. Chuỗi là lời dặn: viết CÁI GÌ, dài bao nhiêu,
+   *  theo khuôn nào — backend ghép nó vào lời nhắc rồi trả về chữ thuần.
+   *
+   *  Để ở mô tả ô chứ không làm một đường riêng cho từng module: ô nào cần thì
+   *  khai một dòng, bảng xem mọc ra cái nút, và không chỗ nào phải biết tên
+   *  module nào (quy ước 01 §6). */
+  ai?: string;
 }
 
 /** Nút bấm trên thẻ, ví dụ "Quay" của module quay thưởng. */
