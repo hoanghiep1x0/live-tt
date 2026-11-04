@@ -335,12 +335,14 @@ body {
   object-fit: cover;
   display: block;
 }
-/* Nhãn nằm NGOÀI mép trên khung: trong khung thì nó che mất hình, mà đây là
-   lời ghi chú về nguồn nội dung, không phải nội dung. */
+/* Nhãn nằm trong góc trên trái khung. Trước đây treo ngoài mép trên, nhưng chỗ
+   đó là khoảng hẹp giữa dải tiêu đề và khung — nhường lại để nhấc cả khung lên,
+   lấy khoảng trống cho hàng top ở dưới. Nền tối mờ nên vẫn đọc được trên mọi
+   cảnh, và góc trên trái của khung 9:16 hiếm khi có chi tiết quan trọng. */
 .stage-ai-label {
   position: absolute;
-  top: -3.6cqw;
-  left: 0;
+  top: calc(var(--pad-screen) + 1cqw);
+  left: calc(var(--pad-screen) + 1cqw);
   z-index: 2;
   font-size: 2cqw;
   line-height: 1.5;
@@ -391,7 +393,11 @@ body {
      hàng ghế đã kín: hàng vinh danh rồi thanh tiến độ. */
   top: calc(var(--hall-top) + 1.4cqw);
   transform: translateX(-50%);
-  z-index: 6;
+  /* Trên CẢ sàn nhảy (slot-floor, lớp 7): thẻ chỉ rộng 62cqw mà người trên sàn
+     đứng ngay giữa, nên hai thứ luôn chồng nhau. Lời MC là chữ phải đọc được,
+     còn chibi là nền vui mắt, nên chữ nằm trên. Lúc cả nhóm đang nhảy thì thẻ
+     tự ẩn (xem useSlotSang trong Stage.tsx), không che màn nhảy. */
+  z-index: 8;
   width: 62cqw;
   padding: 3cqw 3.4cqw 3.2cqw;
   border-radius: 2.4cqw;
@@ -729,7 +735,8 @@ body {
   position: absolute;
   top: 2.4cqw;
   right: 3cqw;
-  z-index: 8;
+  /* Trên cùng: báo mất kết nối phải thấy được dù có gì đè lên. */
+  z-index: 9;
   background: var(--live);
   padding: 0.3cqw 1.2cqw;
   border-radius: 1.2cqw;

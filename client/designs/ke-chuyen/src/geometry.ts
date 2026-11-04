@@ -15,18 +15,19 @@ export const STAGE_H = (100 * 16) / 9;
 /** Đáy khung chiếu cách đỉnh màn 53,5% chiều cao. */
 export const SCREEN_BOTTOM_RATIO = 0.535;
 export const LANDSCAPE_W = 91;
-/** Khung dọc kéo xuống dưới mốc phần dưới chừng này, bớt khoảng hở với hàng top. */
-export const PORTRAIT_EXTEND = 2.2;
+/** Đáy khung dọc dừng TRÊN mốc phần dưới chừng này, chừa khoảng trống cho dòng
+ *  đua top và hàng bồ đoàn thở. Trước đây khung kéo xuống quá mốc 2,2cqw nên
+ *  dòng đua dính sát mép khung. */
+export const PORTRAIT_BOTTOM_GAP = 1;
 /** Mốc phần dưới — chung cho cả hai hướng, nên phần dưới đứng yên khi đổi hướng. */
 export const LOWER_TOP = SCREEN_BOTTOM_RATIO * STAGE_H;
 export const HALL_TOP = LOWER_TOP + 32;
 export const HALL_H = 172 - HALL_TOP;
-/** Đỉnh khung dọc, ngay dưới dải tiêu đề. Đáy khung neo cố định trên hàng bồ
- *  đoàn, nên khung cao thêm bằng cách kéo đỉnh lên — 4,2cqw ≈ 20px ở khung
- *  rộng 480px. Nhãn "Nội dung do AI" nằm ở -3,6cqw phía trên đỉnh khung, vừa
- *  lọt dưới dải trên (kết thúc quãng 5,9cqw); hạ số này thêm nữa là nhãn đè
- *  lên dải trên. */
-export const OVERLAY_TOP = 9.8;
+/** Đỉnh khung dọc, ngay dưới dải tiêu đề (dải đó kết thúc quãng 5,9cqw). Cả
+ *  khung nhấc lên sát đây để đáy khung chừa được khoảng trống cho hàng top và
+ *  dải chữ ở dưới; chiều cao khung giữ nguyên. Nhãn "Nội dung do AI" vì vậy
+ *  dời vào trong khung — ngoài khung thì nó chiếm đúng chỗ vừa lấy được. */
+export const OVERLAY_TOP = 6.6;
 /** Khung ngang nâng cao hơn mốc phần dưới một đoạn, cho cân đối. */
 export const LANDSCAPE_LIFT = 14.3;
 /** Khung ngang: cụm top / tiến độ / dải chữ nâng lên cùng khung. */
@@ -45,7 +46,7 @@ export function screenGeometry(huong: Huong): KhungChieu {
     const top = LOWER_TOP - LANDSCAPE_LIFT - height;
     return { top, height, width: LANDSCAPE_W, bottom: top + height };
   }
-  const bottom = LOWER_TOP + PORTRAIT_EXTEND;
+  const bottom = LOWER_TOP - PORTRAIT_BOTTOM_GAP;
   const height = bottom - OVERLAY_TOP;
   // Khung dọc chiếu nội dung 9:16, nên bề rộng suy ra từ chiều cao.
   return { top: OVERLAY_TOP, height, width: (height * 9) / 16, bottom };
