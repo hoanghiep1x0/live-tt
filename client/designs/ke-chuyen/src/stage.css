@@ -599,36 +599,60 @@ body {
   width: 5.8cqw;
   height: auto;
   pointer-events: none;
+  transform: translateX(-50%);
   transform-origin: 50% 100%;
   filter: drop-shadow(0 0.25cqw 0.3cqw rgba(0, 0, 0, 0.5));
-  animation: ghe-vao 0.75s cubic-bezier(0.2, 0.9, 0.3, 1.2) both,
-    ghe-tho 3.4s ease-in-out 0.75s infinite alternate;
-  animation-delay: 0s, var(--tho-tre, 0s);
+  animation: ghe-tho 3.4s ease-in-out infinite alternate;
+  animation-delay: var(--tho-tre, 0s);
 }
-@keyframes ghe-vao {
+
+/* ---- Đi vào và đi ra ----
+   Bản cũ cho khách ĐI: dáng đứng có chân, đi từ cuối lối giữa lên tới ghế rồi
+   mới ngồi (`buildChibi(v, { standing })` + `walk` trong ChibiLayer). Ở đây
+   dáng đứng là ảnh riêng, quãng đường do React tính ra `--di-x` / `--di-y`:
+   từ giữa rạp ở cuối hàng ghế đi thẳng tới ghế của mình. Người cao hơn một
+   chút lúc đang đứng, tới nơi hạ xuống đúng cỡ ngồi — đó là lúc đổi sang ảnh
+   ngồi. Nhún nhẹ theo bước chân cho ra dáng đi, không phải trượt. */
+.seat-chibi.dang-di {
+  animation: ghe-di 1.5s ease-in-out both, ghe-buoc 0.42s ease-in-out infinite;
+  z-index: 2;
+}
+@keyframes ghe-di {
   from {
     opacity: 0;
-    transform: translate(calc(-50% + var(--vao-x, 0cqw)), 2.4cqw) scale(0.82);
+    transform: translate(calc(-50% + var(--di-x, 0cqw)), var(--di-y, 6cqw)) scale(1.18);
+  }
+  12% {
+    opacity: 1;
   }
   to {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
+  }
+}
+@keyframes ghe-buoc {
+  50% {
+    margin-bottom: 0.32cqw;
   }
 }
 /* Đi ra: ngược đúng đường lúc vào — lùi về phía lối giữa rồi khuất xuống dưới.
    Không để họ tắt phụt giữa rạp: tắt nhân vật ảo là tám người biến mất một lúc,
    nhìn như lỗi phần mềm chứ không như khách ra về. */
 .seat-chibi.di-ra {
-  animation: ghe-ra 0.85s ease-in forwards;
+  animation: ghe-ra 1.5s ease-in-out forwards, ghe-buoc 0.42s ease-in-out infinite;
+  z-index: 2;
 }
 @keyframes ghe-ra {
   from {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
   }
+  88% {
+    opacity: 1;
+  }
   to {
     opacity: 0;
-    transform: translate(calc(-50% + var(--vao-x, 0cqw)), 2.4cqw) scale(0.82);
+    transform: translate(calc(-50% + var(--di-x, 0cqw)), var(--di-y, 6cqw)) scale(1.18);
   }
 }
 @keyframes ghe-tho {
@@ -644,8 +668,11 @@ body {
     animation: none;
     transform: translateX(-50%);
   }
+  .seat-chibi.dang-di {
+    animation: ghe-di 1.5s linear both;
+  }
   .seat-chibi.di-ra {
-    animation: ghe-ra 0.85s linear forwards;
+    animation: ghe-ra 1.5s linear forwards;
   }
 }
 

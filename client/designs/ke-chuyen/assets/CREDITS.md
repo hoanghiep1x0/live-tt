@@ -8,7 +8,8 @@ Chuyển từ bản cũ ở `D:\Live\client\public\assets`. Mỗi thiết kế g
 | `bg/amitabha-stage.png` | Nền sân khấu (chánh điện), 941×1672 | Tự dựng cho dự án |
 | `fx/lotus.png` | Hoa sen phát sáng dưới avatar top | Tự dựng cho dự án |
 | `fx/halo.png` | Vòng hào quang sau bồ đoàn top | Tự dựng cho dự án |
-| `chibi/khan-{1..6}.png` | Khán giả chibi ngồi ghế, 6 kiểu, cao 320px | Chụp từ rig 3D `buildChibi` của bản cũ |
+| `chibi/khan-{1..6}.png` | Khán giả chibi dáng NGỒI, 6 kiểu, cao 320px | Chụp từ rig 3D `buildChibi` của bản cũ |
+| `chibi/dung-{1..6}.png` | Cũng sáu người đó, dáng ĐỨNG — lúc đi vào và đi ra | Chụp từ `buildChibi(v, { standing: true })` |
 | `chibi/chibi-{1..6}-{sit,cheer}.svg` | Ảnh thay khi thiếu avatar TikTok | Tự vẽ cho dự án |
 | `video/mau-su-tich-cay-vu-sua.webm` | Video mẫu chiếu trong khung, 720×1280, 64 giây | Tự dựng, xem `video/CREDITS.md` |
 | `nguoi/co-be.png` | Bé gái ngồi thiền ở đầu trái thanh tiến độ | Bản cũ `charity/art/mascot@3x.png` |
@@ -29,7 +30,18 @@ có file ảnh nào để mang sang; ảnh này lấy bằng cách chạy lại 
     máy quay trực diện, ôm sát khối bé, nền trong
 
 Sáu khán giả chibi cũng vậy: `buildChibi(0..5)` + `animateChibi(rig, 0, false)`
-với cùng bộ đèn, máy quay trực diện ôm sát từng người.
+với cùng bộ đèn, máy quay trực diện ôm sát từng người; bộ `dung-*` thì thêm
+`{ standing: true }`. Phải có hai dáng vì bản cũ cho khách ĐI vào chỗ: người
+ngồi mà trôi ngang qua rạp thì nhìn ra ngay là ảnh dán.
+
+**Vì sao ảnh nhân vật lại nằm ở assets của thiết kế**, dù docs/04 §6 xếp
+"sprite nhân vật" về phía module: lý do của luật đó là sprite của một module
+phải đi theo module để cùng tính năng chạy được ở mọi phòng. Ở đây không có
+module nào vẽ người ngồi ghế, và cũng chưa thể có — slot `seats` không mang
+theo toạ độ ghế, mà toạ độ ghế là của riêng thiết kế (docs/04 §6 xếp "ghế" về
+phía thiết kế). Người ngồi ghế là một phần của khung cảnh rạp, không phải của
+một tính năng. Ngày nào hợp đồng cho module biết chỗ ngồi thì tách ra, và ảnh
+đi theo module.
 
 Muốn chụp lại (đổi tâm trạng, đổi cỡ) thì dựng lại đoạn đó rồi chụp canvas.
 Không kéo three.js vào bản mới: 600KB sau nén chỉ để vẽ một bé ngồi yên là
