@@ -91,6 +91,12 @@ export function useSlotSang(slot: SlotName): boolean {
   return chay.slotSang.has(slot);
 }
 
+/** Id thiết kế đang vẽ. Bảng xem cần nó để gửi file tải lên đúng kho của
+ *  phòng này. */
+export function useDesignId(): string {
+  return useContext(Ctx).designId;
+}
+
 /** Đường dẫn tới một asset của thiết kế này. */
 export function useAsset(): (path: string) => string {
   const { designId } = useContext(Ctx);

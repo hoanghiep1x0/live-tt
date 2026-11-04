@@ -59,6 +59,16 @@ impl Layout {
             .join("config.json")
     }
 
+    /// Ảnh và video người vận hành tải lên cho thiết kế này. Ở `database` chứ
+    /// không ở `client/designs/<id>/assets`: assets là mã nguồn, cái này là dữ
+    /// liệu của người dùng.
+    pub fn media_dir(&self, design_id: &str) -> PathBuf {
+        self.database_dir()
+            .join("designs")
+            .join(design_id)
+            .join("media")
+    }
+
     /// Cài đặt người vận hành đặt cho thiết kế: tên hiện trên thẻ, link Studio.
     pub fn settings_file(&self, design_id: &str) -> PathBuf {
         self.database_dir()

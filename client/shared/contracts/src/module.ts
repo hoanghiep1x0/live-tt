@@ -18,7 +18,10 @@ export type ConfigFieldType =
   | 'toggle'
   | 'select'
   | 'range'
-  | 'time';
+  | 'time'
+  /** Ảnh hoặc video: dán đường dẫn, tải file lên, hoặc nhờ AI vẽ. Giá trị vẫn
+   *  là một chuỗi đường dẫn — module không cần biết nó tới từ đâu. */
+  | 'media';
 
 /** Mô tả một khoá cấu hình để trang quản lý tự dựng form.
  *

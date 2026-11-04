@@ -1,4 +1,6 @@
+import { useRef, useState } from 'react';
 import type { ConfigField, Json } from '@live/contracts';
+import { useDesignId } from './Stage';
 
 interface Props {
   field: ConfigField;
@@ -19,6 +21,153 @@ function chuHoac(v: Json): string {
  *  — không bấm vào ô lại mở modal. */
 function chan(e: { stopPropagation(): void }): void {
   e.stopPropagation();
+}
+
+/** Ô ảnh / video: dán đường dẫn, tải file lên, hoặc nhờ AI vẽ.
+ *
+ *  Ba đường cùng về MỘT chỗ: một chuỗi đường dẫn. File tải lên và ảnh AI vẽ
+ *  được cất ở kho của phòng (`database/designs/<id>/media`) rồi trả về đường
+ *  dẫn `/u/…`, nên module chỉ thấy một đường dẫn như mọi đường dẫn khác và
+ *  không cần biết nó tới từ đâu.
+ *
+ *  Gửi thẳng tới backend chứ không qua kênh lệnh: lệnh đi bằng WebSocket dạng
+ *  JSON, nhét một file video mấy chục MB vào đó là nghẽn cả đường tin của
+ *  phòng đang live. */
+function OMedia({
+  id,
+  value,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  value: Json;
+  disabled: boolean;
+  onChange(v: Json): void;
+}) {
+  const designId = useDesignId();
+  const chonFile = useRef<HTMLInputElement>(null);
+  const [dangLam, setDangLam] = useState('');
+  const [loi, setLoi] = useState('');
+  const [taAnh, setTaAnh] = useState<string | null>(null);
+
+  async function guiFile(f: File): Promise<void> {
+    setLoi('');
+    setDangLam('Đang tải lên…');
+    try {
+      const ext = f.name.split('.').pop() ?? '';
+      const r = await fetch(`/s/media/${designId}?ext=${encodeURIComponent(ext)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': f.type || 'application/octet-stream' },
+        body: f,
+      });
+      const j = (await r.json()) as { url?: string; error?: string };
+      if (!r.ok || j.url === undefined) throw new Error(j.error ?? 'không tải lên được');
+      onChange(j.url);
+    } catch (e) {
+      setLoi(e instanceof Error ? e.message : 'không tải lên được');
+    } finally {
+      setDangLam('');
+    }
+  }
+
+  async function nhoVe(ta: string): Promise<void> {
+    setLoi('');
+    setDangLam('Đang vẽ…');
+    try {
+      const r = await fetch(`/s/media/${designId}/ai`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: ta }),
+      });
+      const j = (await r.json()) as { url?: string; error?: string };
+      if (!r.ok || j.url === undefined) throw new Error(j.error ?? 'không vẽ được');
+      onChange(j.url);
+      setTaAnh(null);
+    } catch (e) {
+      setLoi(e instanceof Error ? e.message : 'không vẽ được');
+    } finally {
+      setDangLam('');
+    }
+  }
+
+  const duong = chuHoac(value);
+  return (
+    <div className="bx-media">
+      <input
+        className="bx-o"
+        type="text"
+        id={id}
+        placeholder="Dán đường dẫn, hoặc tải lên / nhờ AI vẽ"
+        value={duong}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <div className="bx-media-nut">
+        <input
+          ref={chonFile}
+          type="file"
+          accept="image/*,video/*"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (f !== undefined) void guiFile(f);
+          }}
+        />
+        <button
+          type="button"
+          className="bx-nho"
+          disabled={disabled || dangLam !== ''}
+          onClick={() => chonFile.current?.click()}
+        >
+          Tải lên
+        </button>
+        <button
+          type="button"
+          className="bx-nho"
+          disabled={disabled || dangLam !== ''}
+          onClick={() => setTaAnh(taAnh === null ? '' : null)}
+        >
+          AI vẽ ảnh
+        </button>
+        {duong === '' ? null : (
+          <button
+            type="button"
+            className="bx-nho"
+            disabled={disabled || dangLam !== ''}
+            onClick={() => onChange('')}
+          >
+            Bỏ
+          </button>
+        )}
+        {dangLam === '' ? null : <span className="bx-media-trang">{dangLam}</span>}
+      </div>
+
+      {taAnh === null ? null : (
+        <div className="bx-media-nut">
+          <input
+            className="bx-o"
+            type="text"
+            placeholder="Tả cảnh cần vẽ, ví dụ: cây vú sữa trong vườn quê lúc hoàng hôn"
+            value={taAnh}
+            disabled={disabled || dangLam !== ''}
+            onChange={(e) => setTaAnh(e.target.value)}
+          />
+          <button
+            type="button"
+            className="bx-nho"
+            disabled={disabled || dangLam !== '' || taAnh.trim() === ''}
+            onClick={() => void nhoVe(taAnh)}
+          >
+            Vẽ
+          </button>
+        </div>
+      )}
+
+      {loi === '' ? null : <span className="bx-media-loi">{loi}</span>}
+      {duong === '' ? null : <span className="bx-media-xem">{duong}</span>}
+    </div>
+  );
 }
 
 /** Ô cấu hình, dựng theo mô tả `fields` của manifest.
@@ -114,6 +263,8 @@ export function OConfig({ moduleId, field: f, value, disabled, onChange }: Props
         }}
       />
     );
+  } else if (f.type === 'media') {
+    o = <OMedia id={id} value={value} disabled={disabled} onChange={onChange} />;
   } else {
     o = (
       <input

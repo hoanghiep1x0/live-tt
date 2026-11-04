@@ -20,6 +20,7 @@ export {
   Slot,
   StageProvider,
   useAsset,
+  useDesignId,
   useLoiMc,
   useLuaChonThietKe,
   useSession,

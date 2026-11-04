@@ -28,6 +28,8 @@ rand = "0.8.5"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 ureq = { version = "3.2.1", features = ["json", "rustls"] }
+# Ảnh do AI tạo trả về dạng base64; giải mã bằng thư viện chứ không tự viết.
+base64 = "0.22.1"
 
 # Test tích hợp nằm ở tests/backend/ theo quy ước dự án, không ở backend/tests/.
 [[test]]

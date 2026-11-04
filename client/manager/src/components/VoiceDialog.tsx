@@ -64,6 +64,16 @@ const MAU: readonly Mau[] = [
     goiY: 'Giọng là voice_id, chỉ chữ và số.',
   },
   {
+    ten: 'AI vẽ ảnh (OpenAI)',
+    id: 'anh',
+    kind: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-image-1',
+    goiY:
+      'Khoá để nhờ AI vẽ ảnh cho khung chiếu. Tên ngắn phải đúng là "anh". ' +
+      'Nhà nào theo kiểu OpenAI (POST /images/generations) đều dùng được.',
+  },
+  {
     ten: 'MC do AI dẫn (Anthropic)',
     id: 'mc',
     kind: 'anthropic',

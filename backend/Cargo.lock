@@ -609,6 +609,7 @@ name = "live-backend"
 version = "0.2.0"
 dependencies = [
  "axum",
+ "base64 0.22.1",
  "futures-util",
  "mime_guess",
  "rand",

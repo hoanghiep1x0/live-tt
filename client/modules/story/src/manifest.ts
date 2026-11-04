@@ -6,7 +6,7 @@ export const schema = z.object({
   /** Mỗi dòng một đoạn. Dòng trống bị bỏ qua. */
   passages: z.string().max(20_000).default(''),
   /** Ảnh hoặc video chiếu trong khung. Để trống thì khung chỉ có chữ. */
-  media: z.string().max(400).default(''),
+  media: z.string().max(600).default(''),
   secPerPassage: z.number().int().min(3).max(300).default(18),
   readAloud: z.boolean().default(true),
   /** Hết đoạn cuối thì quay lại từ đầu. Phòng live chạy liên tục nên mặc định bật. */
@@ -40,8 +40,8 @@ export const manifest: ModuleManifest<Config> = {
     {
       key: 'media',
       label: 'Ảnh hoặc video',
-      type: 'text',
-      hint: 'Để trống thì khung chỉ có chữ, và chữ sẽ nằm giữa khung cho cân.',
+      type: 'media',
+      hint: 'Dán đường dẫn, tải file lên, hoặc nhờ AI vẽ. Để trống thì khung chỉ có chữ, và chữ sẽ nằm giữa khung cho cân.',
     },
     {
       key: 'secPerPassage',

@@ -504,3 +504,47 @@
   border-color: #3f4a63;
   background: linear-gradient(160deg, rgba(28, 36, 54, 0.9), rgba(18, 20, 28, 0.9));
 }
+
+/* Ô ảnh / video: một dòng đường dẫn, dưới là mấy nút. */
+.bx-media {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bx-media-nut {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bx-media-nut .bx-o {
+  flex: 1;
+  min-width: 0;
+}
+.bx-nho {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid #3a352c;
+  background: #1b1813;
+  color: #f4efe6;
+  font: inherit;
+  cursor: pointer;
+}
+.bx-nho:hover:not(:disabled) {
+  border-color: #6b6354;
+}
+.bx-nho:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.bx-media-trang {
+  color: #c9c1b2;
+}
+.bx-media-loi {
+  color: #ff9c8a;
+}
+.bx-media-xem {
+  color: #9aa3b5;
+  font-size: 11px;
+  word-break: break-all;
+}

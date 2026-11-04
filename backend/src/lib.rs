@@ -14,6 +14,7 @@ pub mod bot;
 pub mod designs;
 pub mod events;
 pub mod files;
+pub mod media;
 pub mod guard;
 pub mod paths;
 pub mod secrets;
@@ -80,13 +81,18 @@ pub fn router(st: Arc<AppState>) -> Router {
     // một trang web ngoài không gọi vào được.
     let stage = Router::new()
         .route("/s/voice", get(api::get_voice))
-        .route("/s/tts", post(api::post_tts));
+        .route("/s/tts", post(api::post_tts))
+        // Bảng xem thử nằm ngay trong trang sân khấu, mà trang đó không giữ
+        // token. Vẫn qua lớp chặn Host và Origin như mọi thứ khác.
+        .route("/s/media/:design_id", post(media::nhan))
+        .route("/s/media/:design_id/ai", post(media::tao_anh));
 
     let files = Router::new()
         .route("/d/:id/", get(files::serve_root))
         .route("/d/:id/*rest", get(files::serve_dist))
         .route("/a/:id/*rest", get(files::serve_assets))
-        .route("/m/:id/*rest", get(files::serve_module_assets));
+        .route("/m/:id/*rest", get(files::serve_module_assets))
+        .route("/u/:design_id/:ten", get(media::phuc_vu));
 
     // Lớp chặn giữ sẵn trạng thái trong closure thay vì `from_fn_with_state`:
     // cùng kết quả, nhưng không kéo theo suy luận kiểu rắc rối.

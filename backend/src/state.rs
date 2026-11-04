@@ -47,6 +47,8 @@ pub struct AppState {
     /// Đổi nguồn là tăng số này; tác vụ nguồn cũ thấy số khác thì tự thoát.
     the_he_nguon: AtomicU64,
     loi_nguon: RwLock<Option<String>>,
+    /// Đếm file tải lên, để hai file trong cùng một mili-giây không đè nhau.
+    media_dem: AtomicU64,
     /// Một lượt gọi MC đang bay. Gọi chồng lên nhau là MC nói hai câu cùng lúc
     /// và hoá đơn API nhân đôi.
     ai_ban: std::sync::atomic::AtomicBool,
@@ -103,6 +105,7 @@ impl AppState {
             nguon: RwLock::new(SourceCfg::default()),
             the_he_nguon: AtomicU64::new(0),
             loi_nguon: RwLock::new(None),
+            media_dem: AtomicU64::new(0),
             ai_ban: std::sync::atomic::AtomicBool::new(false),
             tx,
         })
@@ -406,6 +409,12 @@ impl AppState {
     }
 
     /// Co ban cua MC: mot luot goi AI dang bay, khong goi chong len.
+    /// Số đếm kế tiếp cho tên file tải lên.
+    pub fn media_dem(&self) -> u64 {
+        self.media_dem
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    }
+
     pub fn ai_dang_chay(&self) -> bool {
         self.ai_ban.load(std::sync::atomic::Ordering::Relaxed)
     }

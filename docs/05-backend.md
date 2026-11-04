@@ -76,9 +76,29 @@ Quy tắc kiểm tra request, giữ nguyên tinh thần `local_port.rs` của m�
 | `GET /d/<designId>/<đường dẫn>` | File trong `client/designs/<id>/dist/` |
 | `GET /a/<designId>/<đường dẫn>` | File trong `client/designs/<id>/assets/` |
 | `GET /m/<moduleId>/<đường dẫn>` | File trong `client/modules/<id>/assets/` — dùng được ở mọi thiết kế |
+| `GET /u/<designId>/<tên file>` | Ảnh, video người vận hành tải lên, ở `database/designs/<id>/media/` |
 
 Hai `designId` khác nhau không bao giờ đọc được file của nhau. Đường dẫn bị chuẩn hoá
 và kiểm tra nằm trong thư mục gốc của thiết kế, chặn `..`.
+
+File tải lên nằm ở `database/` chứ **không** ở `client/designs/<id>/assets/`: assets là mã
+nguồn của bản thiết kế và được commit, còn ảnh video người vận hành đưa vào là dữ liệu của
+họ. Xoá cả thư mục `database` là về máy sạch mà mã nguồn không mất gì.
+
+### Lối cho sân khấu — không token
+
+Trang sân khấu chạy trong OBS nên không giữ được token, mà bảng xem thử lại nằm ngay trong
+trang đó. Mấy route này vì vậy miễn token, nhưng vẫn qua lớp chặn `Host` và `Origin`:
+
+| Route | Việc |
+|---|---|
+| `GET /s/voice`, `POST /s/tts` | Giọng đọc cho sân khấu |
+| `POST /s/media/<designId>?ext=png` | Nhận một file tải lên; thân yêu cầu là chính nội dung file |
+| `POST /s/media/<designId>/ai` | Nhờ AI vẽ một ảnh (`{ prompt }`), cất vào kho rồi trả đường dẫn |
+
+Đuôi file đi theo **danh sách cho phép** (ảnh và video thường gặp), không phải danh sách
+cấm: quên chặn một đuôi lạ thì thành lỗ hổng, còn quên cho phép một đuôi mới thì chỉ là
+thiếu tiện. `svg` không nhận vì nó chạy được script.
 
 ### REST
 
