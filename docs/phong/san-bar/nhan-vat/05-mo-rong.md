@@ -48,6 +48,7 @@ Thứ tự: hình khối → soi đất sét → chấm điểm + chẩn đoán 
 |---|---|---|---|
 | Đầu gốc theo nhóm | `D:\Assets\base\<nhóm>\` | `base_head.py render` + điểm mốc | `base_head.py wrap` |
 | Dáng mắt (lưới gốc) | `parts\eyeshape\<tên>.json` (trọng số thanh trượt mắt MakeHuman) | `base_head.py eye-fit` | `wrap --eye-targets <file>` |
+| Dáng mắt — bộ mẫu ChatGPT + Blender | `parts\eyeshape\<tên>\part.json` (`targets` `eyes/l-…` + `eyes/r-…` soi gương, `dinh`) + ảnh như mũi | §6a + skill `chatgpt-bo-phan-3d` (mục Mắt): `bo_phan.py khop-mat`, `mat-buoc.sh` | như mũi: `bo_phan chup --part <part.json>` |
 | Kiểu mi (lưới gốc) | thẻ mi MPFB `eyelashes01..04` | — | `bake_to_base.py --lashes <tên>` |
 | Bộ mi riêng | `parts\lashes\<tên>\` (.mhclo/.obj/.mhmat + .png) | `lash_style.py` | `bake_to_base.py --lashes <thư mục>` |
 | Tròng mắt | `parts\eyes\<tên>\iris_{l,r}.png` | `build_eyes.py --save-iris <thư mục>` | `--iris-tex <png>`; lưới gốc: `bake_to_base.py --iris <png> --iris-scale` |
@@ -103,6 +104,35 @@ mép không bắt được lưới gập), + duyệt mắt. Phần Blender từn
 
 Hếch, tẹt, gồ, dài rủ khác nhau rõ; thẳng, cao, nhỏ thon, đầu tròn còn gần nhau khi nhìn nghiêng — muốn đa dạng hơn thì tả
 đặc điểm mạnh hơn trong lời nhắc (skill, bảng mô tả kiểu).
+
+**Bộ mẫu dáng mắt (2026-11-05)**, `D:\Assets\parts\eyeshape\<tên>\`, bảng `_tong\bang.json`, ảnh `_tong\bo-mau.jpg`. Đo **khe mở
+mí** (skill, mục Mắt); thứ tự chính diện → 45° → nghiêng (nghiêng chỉ báo cáo: ChatGPT luôn vẽ khe nghiêng sâu hơn khối 3D).
+
+| Kiểu | Chính diện | 45° | Nghiêng (duyệt) | Mặt lật | Đạt |
+|---|---|---|---|---|---|
+| `xech` xếch | 0,14 | 0,15 | 0,68 | 0 | ✅ |
+| `hanh-nhan` hạnh nhân | 0,18 | 0,22 | 0,91 | 0 | ✅ |
+| `cup` cụp | 0,18 | 0,24 | 0,85 | 0 (gập 2) | ✅ |
+| `mot-mi` một mí | 0,19 | 0,26 | 0,29 | 0 | ✅ |
+| `nho` nhỏ | 0,17 | 0,26 | 0,48 | 0 | ✅ |
+| `hep-dai` hẹp dài | 0,29 | 0,32 | 0,22 | 0 | gần (45° > 0,3) |
+| `phuong` phượng | 0,25 | 0,34 | 0,40 | 0 | gần (45° > 0,3) |
+| `tron-to` tròn to | 0,26 | 0,29 | 0,94 | 0 | ✅ lần 2 — lần 1 (`cu-1/`) ChatGPT mở khe quá nhãn cầu (0,61 · 0,64, mí trên lởm chởm); lời nhắc vừa phải hơn + 2 vòng 45° |
+
+**Phân loại nam / nữ** (2026-11-05) — `D:\Assets\parts\phan-loai.json` (danh sách `nu`, `nam` theo loại + lý do), trường
+`"gioi"` trong từng `part.json`, ảnh `D:\Assets\parts\phan-loai.jpg`. Nhân vật nữ chọn trong `nu`, nam trong `nam`; kiểu
+"cả hai" có ở cả hai danh sách.
+
+| | Chỉ nữ | Cả hai | Chỉ nam |
+|---|---|---|---|
+| Mũi | hếch, nhỏ thon | thẳng, cao, tẹt, đầu tròn | gồ, dài rủ |
+| Mắt | xếch, tròn to, phượng | hạnh nhân, cụp, một mí | hẹp dài, nhỏ |
+
+Bộ mẫu dựng trên **đầu chuẩn nữ**; thanh trượt và `dinh` dùng chung topo MakeHuman nên áp được lên đầu nam, nhưng **chưa duyệt
+trên đầu nam** — khi có nhóm đầu nam (`gender 1`), chụp lại `mat/` các kiểu trong danh sách `nam` để duyệt bằng mắt.
+
+Mắt khó hơn mũi ở ba chỗ đã sửa: thanh trượt kéo quá 1 làm mí sụp gập (→ phạt mặt gập trong hàm sai số); thanh dừng ở
+0,3–0,8 mm (→ nắn đỉnh mép mí theo hai góc chính); gỡ gập co mạnh xoá mất phần nắn (→ gỡ nhẹ tay).
 
 **Đã thử và bỏ** (2026-11-05, chi tiết [08 §7, §9](08-chatgpt-blender.md)):
 - ChatGPT sửa mũi trên ảnh **cả đầu** (`khop`): khớp pixel nhưng kèm cả mặt; nhìn thẳng không bắt được lỗ mũi.

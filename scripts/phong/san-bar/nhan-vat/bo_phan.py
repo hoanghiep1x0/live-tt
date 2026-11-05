@@ -109,6 +109,18 @@ def gpu_cycles(scene, samples):
     scene.cycles.samples = samples; scene.cycles.use_denoising = True
 
 
+def render_anh():
+    """Render ảnh tĩnh; GPU hết bộ nhớ (session khác đang chạy Hunyuan3D…) → chuyển Cycles sang CPU rồi render lại."""
+    try:
+        bpy.ops.render.render(write_still=True)
+    except RuntimeError as e:
+        if "CUDA" not in str(e) and "memory" not in str(e):
+            raise
+        print("GPU_HET_BO_NHO: render bằng CPU")
+        bpy.context.scene.cycles.device = "CPU"
+        bpy.ops.render.render(write_still=True)
+
+
 def chup(outdir, angles, R, samples):
     """Khung đầu cố định: rộng 1,45 × cao đầu, tâm ở 55% từ đỉnh xuống — giống base_head.render_views để dùng chung mốc."""
     body = bpy.data.objects["Body"]
@@ -142,7 +154,7 @@ def chup(outdir, angles, R, samples):
         cam.location = center + Vector(tuple(d * 3)); cam.data.ortho_scale = sc
         cam.rotation_euler = (-Vector(tuple(d))).to_track_quat("-Z", "Y").to_euler()
         scene.render.filepath = os.path.join(outdir, f"view_{a}.png")
-        bpy.ops.render.render(write_still=True)
+        render_anh()
         meta[f"view_{a}.png"] = {"angle": a, "right": right.tolist(), "cu": cu, "cv": cv, "scale": sc, "R": R}
     json.dump(meta, open(os.path.join(outdir, "cam.json"), "w"), indent=1)
     print("CHUP", outdir, list(meta))
@@ -525,15 +537,366 @@ def nose_alpha(body, chuan, vung=0.2):
     # thanh mũi kéo theo một ít má, nếp mũi–má: cắt ngang ngoài cánh mũi + 1 mm, cắt sâu sau chân cánh mũi
     xw = float(np.abs(P0[core, 0]).max()) + 0.001; yb = float(P0[core, 1].max())
     alpha *= (1 - ramp(np.abs(P0[:, 0]), xw, xw + 0.004)) * (1 - ramp(P0[:, 1], yb, yb + 0.004))
-    # làm mượt trên lưới (mức dời của thanh lổn nhổn theo đỉnh → mép răng cưa)
+    return P0, names, D, _tron(body, alpha)
+
+
+def _tron(body, alpha, n=4):
+    """Làm mượt alpha trên lưới (mức dời của thanh lổn nhổn theo đỉnh → mép răng cưa), rồi mờ về 0 TRƯỚC mép mặt lưới."""
     E = np.array([e.vertices[:] for e in body.data.edges])
-    E = E[(E < len(P0)).all(1)]                       # lưới phụ (helper) nằm sau 13380 đỉnh thân, modifier đã ẩn
-    for _ in range(4):
+    E = E[(E < len(alpha)).all(1)]                    # lưới phụ (helper) nằm sau 13380 đỉnh thân, modifier đã ẩn
+    for _ in range(n):
         acc = np.zeros_like(alpha); cnt = np.zeros_like(alpha)
         np.add.at(acc, E[:, 0], alpha[E[:, 1]]); np.add.at(acc, E[:, 1], alpha[E[:, 0]])
         np.add.at(cnt, E[:, 0], 1); np.add.at(cnt, E[:, 1], 1)
         alpha = 0.5 * alpha + 0.5 * acc / np.maximum(cnt, 1)
-    return P0, names, D, ramp(alpha, 0.15, 0.6)                   # mờ về 0 TRƯỚC mép mặt lưới (khỏi viền răng cưa)
+    ramp = lambda x, a, b: np.clip((x - a) / (b - a), 0, 1)
+    return ramp(alpha, 0.15, 0.6)
+
+
+# ------------------------------------------------------------------------------------------------------------------ mắt
+# Mắt: một bên (mắt +X = bên phải ảnh chính diện, bên gần camera góc 45/90), đối xứng sang bên kia. Dáng mắt nằm ở KHE
+# MỞ MÍ (lòng trắng + tròng lộ ra giữa hai mí), không ở mép bóng vùng như mũi: Blender tính khe = chỗ nhãn cầu không bị
+# mí che (tô có chiều sâu); ảnh ChatGPT tách khe theo màu (lòng trắng/tròng khác da), học màu trên chính khuôn Blender.
+def eye_alpha(body, chuan, vung=0.2):
+    """Độ đặc từng đỉnh vùng mắt +X: theo mức dời của thanh mắt l-eye-* (bỏ trans-, scale- — dời cả vùng)."""
+    P0, names, D = target_deltas(body, "eyes")
+    sel = [i for i, n in enumerate(names) if n.startswith("l-") and "trans-" not in n and "scale-" not in n]
+    mv = np.linalg.norm(D[sel], axis=2).max(0); mv = mv / mv.max()
+    ramp = lambda x, a, b: np.clip((x - a) / (b - a), 0, 1)
+    alpha = ramp(mv, 0.5 * vung, vung) * (P0[:, 0] > 0); alpha[13380:] = 0      # lưới phụ helper quanh mắt: không phải da
+    # thanh túi mắt kéo theo cả má, thanh khoé trong kéo sườn mũi → cắt elip quanh tâm nhãn cầu (ngang 25 mm, trên 17, dưới
+    # 15 — đủ rộng để da che kín nhãn cầu, chỉ lộ khe mí)
+    V = nhan_cau(body)[0]; c = V.mean(0)
+    dz = P0[:, 2] - c[2]; e = np.hypot((P0[:, 0] - c[0]) / 0.025, dz / np.where(dz > 0, 0.017, 0.015))
+    alpha *= 1 - ramp(e, 0.85, 1.0)
+    # mặt trong hốc mắt (sau nhãn cầu): thanh mắt kéo theo nhưng không phải da nhìn thấy — góc 45/90 lộ ra thành mảng đỏ (da
+    # mỏng bị đèn xuyên). Bỏ đỉnh KHÔNG nhìn thấy từ hướng nào phía trước (tia tới camera vướng da hoặc nhãn cầu)
+    from mathutils.bvhtree import BVHTree
+    dg = bpy.context.evaluated_depsgraph_get(); Vs, Ps = [], []
+    for o in (body, next(o for o in bpy.data.objects if o.name.startswith("Body.") and "high-poly" in o.name)):
+        ev = o.evaluated_get(dg); m = ev.to_mesh(); base = len(Vs)
+        Vs += [o.matrix_world @ v.co for v in m.vertices]
+        Ps += [[base + i for i in p.vertices] for p in m.polygons if o is not body or max(p.vertices) < 13380]
+        ev.to_mesh_clear()
+    bvh = BVHTree.FromPolygons(Vs, Ps)
+    huong = []
+    for a_, tilt in ((0, 0), (45, 0), (90, 0), (0, 25), (0, -25), (45, 25), (45, -25), (20, 0), (70, 0)):
+        r, t = math.radians(a_), math.radians(tilt)
+        huong.append(Vector((math.sin(r) * math.cos(t), -math.cos(r) * math.cos(t), math.sin(t))))
+    trong = np.zeros(len(P0), bool)
+    for v in np.where(alpha > 0)[0]:
+        p = Vector(tuple(P0[v]))
+        trong[v] = all(bvh.ray_cast(p + h * 2e-4, h, 0.5)[0] is not None for h in huong)
+    alpha[trong] = 0
+    print("HOC_MAT bỏ", int(trong.sum()), "đỉnh mặt trong")
+    return P0, names, D, _tron(body, alpha)
+
+
+def nhan_cau(body, k=None, goc=("0", "45", "90")):
+    """Nhãn cầu +X (proxy high-poly đã khớp theo thân): đỉnh thế giới, tam giác, chỉ số mặt giữ lại, + đỉnh helper quanh nó
+    (để dời theo thanh). Có khuôn k: bỏ mặt nhãn cầu lọt ra NGOÀI bóng da vùng mắt ở bất kỳ góc nào (vùng da chỉ là một mảng
+    mỏng, không che hông/sau nhãn cầu) — phần còn lại chỉ lộ qua khe mí."""
+    ob = next(o for o in bpy.data.objects if o.name.startswith("Body.") and "high-poly" in o.name)
+    dg = bpy.context.evaluated_depsgraph_get(); ev = ob.evaluated_get(dg); m = ev.to_mesh()
+    V = np.array([ob.matrix_world @ v.co for v in m.vertices])
+    cy = V[V[:, 0] > 0, 1].mean()                                     # nửa trước
+    polys = [(p.index, list(p.vertices)) for p in m.polygons]
+    ev.to_mesh_clear()
+    polys = [(i, vs) for i, vs in polys if all(V[v, 0] > 0 and V[v, 1] < cy for v in vs)]
+    if k is not None:
+        P = body_coords(body); al = dict(zip(k["vung"], k["alpha"])); Rt = 256
+        T = np.array([t for t in vung_tris_any(body, k["vung"]) if max(al.get(v, 0) for v in t) >= 0.5])
+        A3 = np.array([[al.get(int(v), 0.0) for v in t] for t in T])
+        for g in goc:
+            sil = _lon_nhat(raster(khuon_px(P, k, g, Rt)[T], Rt, A3))
+            ok = []
+            for i, vs in polys:                                       # MỌI đỉnh của mặt trong bóng da (tâm mặt thì sót mẩu lòi ra)
+                X = khuon_px(V[vs], k, g, Rt).astype(int)
+                if ((X >= 0) & (X < Rt)).all() and sil[X[:, 1], X[:, 0]].all():
+                    ok.append((i, vs))
+            polys = ok
+    F = []
+    for _, vs in polys:
+        F += [(vs[0], vs[i], vs[i + 1]) for i in range(1, len(vs) - 1)]
+    Vx = V[V[:, 0] > 0]; c = (Vx.min(0) + Vx.max(0)) / 2; r = float(np.ptp(Vx, 0).max()) / 2   # tâm, bán kính cả nhãn cầu
+    F = np.array(F); keep = np.unique(F); V = V[keep]; F = np.searchsorted(keep, F)
+    P = body_coords(body)
+    H = np.where((np.arange(len(P)) >= 13380) & (np.linalg.norm(P - c, axis=1) < 1.5 * r))[0]
+    print("NHAN_CAU", len(V), "đỉnh", len(F), "tam giác, helper", len(H))
+    return V, F, H, {i for i, _ in polys}
+
+
+def afin(A, B):
+    """M (3×4) bình phương tối thiểu sao cho [A 1] @ M.T ≈ B."""
+    X = np.hstack([A, np.ones((len(A), 1))])
+    return np.linalg.lstsq(X, B, rcond=None)[0].T
+
+
+def raster_z(T2, Z3, R, A3=None):
+    """Như raster nhưng giữ độ sâu gần nhất (Z: (P - tâm)·hướng nhìn, nhỏ = gần) → bản đồ sâu R×R (inf: trống)."""
+    zb = np.full((R, R), np.inf)
+    for n_, t in enumerate(T2):
+        x0, y0 = np.floor(t.min(0)).astype(int); x1, y1 = np.ceil(t.max(0)).astype(int)
+        x0, y0 = max(x0, 0), max(y0, 0); x1, y1 = min(x1, R - 1), min(y1, R - 1)
+        if x1 < x0 or y1 < y0:
+            continue
+        yy, xx = np.mgrid[y0:y1 + 1, x0:x1 + 1] + 0.5
+        (ax, ay), (bx, by), (cx, cy) = t
+        d = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy)
+        if abs(d) < 1e-9:
+            continue
+        l1 = ((by - cy) * (xx - cx) + (cx - bx) * (yy - cy)) / d
+        l2 = ((cy - ay) * (xx - cx) + (ax - cx) * (yy - cy)) / d
+        l3 = 1 - l1 - l2; ins = (l1 >= 0) & (l2 >= 0) & (l3 >= 0)
+        if A3 is not None:
+            a = A3[n_]; ins &= (l1 * a[0] + l2 * a[1] + l3 * a[2]) >= 0.5
+        z = l1 * Z3[n_, 0] + l2 * Z3[n_, 1] + l3 * Z3[n_, 2]
+        sub = zb[y0:y1 + 1, x0:x1 + 1]; w = ins & (z < sub); sub[w] = z[w]
+    return zb
+
+
+def khe_mo(Pb, Tl, A3, Ve, Fe, k, g, R):
+    """Khe mở mí ở góc g: điểm ảnh nhãn cầu gần camera hơn da vùng mắt."""
+    fwd = khuon_truc(g)[0]; c = np.array(k["tam"])
+    zb = raster_z(khuon_px(Pb, k, g, R)[Tl], ((Pb - c) @ fwd)[Tl], R, A3)
+    ze = raster_z(khuon_px(Ve, k, g, R)[Fe], ((Ve - c) @ fwd)[Fe], R)
+    return ze < zb
+
+
+def _lon_nhat(m):
+    """Giữ mảng liền lớn nhất (4 hướng) rồi lấp lỗ (đốm sáng trên tròng, đồng tử)."""
+    H, W = m.shape; lab = np.zeros((H, W), int); best, bn = 0, 0; cur = 0
+    for y0, x0 in zip(*np.where(m)):
+        if lab[y0, x0]:
+            continue
+        cur += 1; st = [(y0, x0)]; lab[y0, x0] = cur; n = 0
+        while st:
+            y, x = st.pop(); n += 1
+            for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= yy < H and 0 <= xx < W and m[yy, xx] and not lab[yy, xx]:
+                    lab[yy, xx] = cur; st.append((yy, xx))
+        if n > bn:
+            best, bn = cur, n
+    m = lab == best if best else m
+    out = np.zeros((H + 2, W + 2), bool); st = [(0, 0)]; out[0, 0] = True; mp = np.pad(m, 1)
+    while st:                                                         # loang nền từ viền; chỗ không loang tới = trong khe
+        y, x = st.pop()
+        for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+            if 0 <= yy < H + 2 and 0 <= xx < W + 2 and not out[yy, xx] and not mp[yy, xx]:
+                out[yy, xx] = True; st.append((yy, xx))
+    return ~out[1:-1, 1:-1]
+
+
+def _dac_trung(A):
+    r, g, b = A[..., 0], A[..., 1], A[..., 2]
+    mx, mn = np.maximum(np.maximum(r, g), b), np.minimum(np.minimum(r, g), b)
+    return np.stack([np.ones_like(r), r, g, b, r * r, g * g, b * b, r * g, r * b, g * b, mx - mn, (mx - mn) / (mx + 1e-3),
+                     r - g, g - b], -1)
+
+
+def hoc_mau(imgs, labs):
+    """Hồi quy logistic (đặc trưng màu bậc 2) phân biệt khe mắt / da, học trên ảnh khuôn Blender + khe tính từ lưới."""
+    X = np.concatenate([_dac_trung(A[A[..., 3] > 0.5]) for A in imgs])
+    y = np.concatenate([l[A[..., 3] > 0.5] for A, l in zip(imgs, labs)]).astype(float)
+    mu, sd = X.mean(0), X.std(0) + 1e-6; mu[0], sd[0] = 0, 1; Xn = (X - mu) / sd
+    w = np.zeros(X.shape[1]); wt = np.where(y > 0, 0.5 / max(y.mean(), 1e-3), 0.5 / max(1 - y.mean(), 1e-3))
+    for _ in range(1500):
+        p = 1 / (1 + np.exp(-Xn @ w)); w -= 0.5 * (Xn.T @ ((p - y) * wt)) / len(y)
+    acc = float(((1 / (1 + np.exp(-Xn @ w)) > 0.5) == (y > 0)).mean())
+    print("HOC_MAU dung", round(acc, 4), "ti_le_khe", round(float(y.mean()), 3))
+    return mu, sd, w
+
+
+def tach_khe(A, mau):
+    mu, sd, w = mau
+    p = 1 / (1 + np.exp(-((_dac_trung(A) - mu) / sd) @ w))
+    return _lon_nhat((p > 0.5) & (A[..., 3] > 0.5))
+
+
+def bien_khe(m):
+    """Mép khe mở mí: mí trên + mí dưới theo từng cột (khoé mắt hiện ra ở cột đầu/cuối có khe). Thêm mép trái/phải theo
+    hàng đã thử: số đo nhiễu hơn ở hai khoé, không giúp khớp góc nghiêng."""
+    t, b = _mep(m.T)
+    return np.concatenate([t, b])
+
+
+def khop_mat(pdir, refs, kjson, lam, vong, R, tu_part=None, gioi_han=1.5, tu_do=0, mu=1.0):
+    """Khớp thanh mắt (một bên, đối xứng) theo ảnh ChatGPT sửa trên khuôn mắt → <pdir>/part.json + so-sanh-khuon.png."""
+    k = json.load(open(kjson)); kdir = os.path.dirname(kjson)
+    body = make_head()
+    for md in body.modifiers:                                         # hiện lưới phụ helper (nhãn cầu bám theo helper mắt)
+        if md.type == "MASK":
+            md.show_viewport = False
+    P0, names, D = target_deltas(body, "eyes")
+    Ve0, Fe, H, _ = nhan_cau(body, k)
+    al = dict(zip(k["vung"], k["alpha"]))
+    T = np.array([t for t in vung_tris_any(body, k["vung"]) if max(al.get(v, 0) for v in t) >= 0.5])
+    used = np.unique(T); Tl = np.searchsorted(used, T)
+    A3 = np.array([[al.get(int(v), 0.0) for v in t] for t in T])
+    li = [i for i, n in enumerate(names) if n.startswith("l-") and "trans-" not in n]
+    ln = [names[i][2:] for i in li]
+    axes = []
+    for n in ln:
+        for a_, b_ in CAP:
+            if n.endswith("-" + a_) and n[: -len(a_)] + b_ in ln:
+                axes.append((n[: -len(a_)].rstrip("-"), li[ln.index(n)], li[ln.index(n[: -len(a_)] + b_)]))
+    axes += [(names[i][2:], i, None) for i in li if not any(i in (a[1], a[2]) for a in axes)]
+    Pu0, Du, Ph0, Dh = P0[used], D[:, used], P0[H], D[:, H]
+
+    def weights(s):
+        w = np.zeros(len(names))
+        for (_, i, j), v in zip(axes, s):
+            if v >= 0:
+                w[i] = v
+            elif j is not None:
+                w[j] = -v
+        return w
+
+    dd = np.zeros((len(used), 3))                                     # tinh chỉnh từng đỉnh (đã có từ --tu-part + vừa nắn)
+
+    def hinh(s):
+        w = weights(s)
+        M = afin(Ph0, Ph0 + np.tensordot(w, Dh, 1))
+        return Pu0 + np.tensordot(w, Du, 1) + dd, np.hstack([Ve0, np.ones((len(Ve0), 1))]) @ M.T
+
+    def khe(s, goc):
+        Pb, Ve = hinh(s)
+        return {g: khe_mo(Pb, Tl, A3, Ve, Fe, k, g, R) for g in goc}
+
+    def thu(A, n):
+        Hh, W = A.shape[:2]
+        return A[(np.arange(n) * Hh / n).astype(int)][:, (np.arange(n) * W / n).astype(int)].copy()
+    # học màu khe/da trên khuôn Blender của đầu chuẩn
+    GK = [g for g in KHUON_GOC_MAT if os.path.exists(os.path.join(kdir, f"{g}.png"))]
+    lab0 = khe(np.zeros(len(axes)), GK)
+    img0 = {g: thu(load_rgba(os.path.join(kdir, f"{g}.png")), R) for g in GK}
+    mau = hoc_mau([img0[g] for g in GK], [lab0[g] for g in GK])
+    # chênh hệ thống ảnh render ↔ tô lưới (mép alpha, khử nhiễu, tách màu): đo trên chính khuôn, trừ khỏi mép ảnh mẫu
+    lech0 = {}
+    for g in GK:
+        d0_ = bien_khe(tach_khe(img0[g], mau)) - bien_khe(lab0[g])
+        lech0[g] = np.where(np.isfinite(d0_), d0_, 0.0)
+        print("LECH_KHUON", g, round(float(np.abs(lech0[g]).mean()), 2), "px")
+    ref, ref_a = {}, {}
+    for g, p in (x.split("=", 1) for x in refs.split(",")):
+        A = thu(load_rgba(p), R)
+        if A[..., 3].min() > 0.99:                                    # mất alpha: tách nền theo màu 4 góc
+            bg = np.median(np.concatenate([A[:4, :4, :3].reshape(-1, 3), A[-4:, -4:, :3].reshape(-1, 3),
+                                           A[:4, -4:, :3].reshape(-1, 3), A[-4:, :4, :3].reshape(-1, 3)]), 0)
+            A[..., 3] = (np.linalg.norm(A[..., :3] - bg, axis=2) > 0.08).astype(np.float32)
+            print("KHONG_ALPHA: tách nền theo màu góc", np.round(bg, 2))
+        ref[g] = tach_khe(A, mau); ref_a[g] = A[..., 3] > 0.5
+    GOC = tuple(ref); ref_b = {g: bien_khe(ref[g]) - lech0.get(g, 0.0) for g in GOC}
+
+    def _nt(Q):
+        n = np.cross(Q[Tl[:, 1]] - Q[Tl[:, 0]], Q[Tl[:, 2]] - Q[Tl[:, 0]])
+        return n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+    n0 = _nt(Pu0)
+
+    def loss(s):
+        e = 0.0
+        for g, m in khe(s, GOC).items():
+            b, r = bien_khe(m), ref_b[g]
+            both = np.isfinite(b) & np.isfinite(r); one = np.isfinite(b) ^ np.isfinite(r)
+            e += float(np.sum((b[both] - r[both]) ** 2) + one.sum() * 64) / max(1, both.sum() + one.sum())
+        gap = int(((n0 * _nt(hinh(s)[0])).sum(1) < 0.5).sum())        # mí sụp gập khi kéo thanh quá xa → phạt nặng
+        return e / len(GOC) + lam * float(np.sum(np.asarray(s) ** 2)) + 30.0 * gap
+
+    s = np.zeros(len(axes))
+    if tu_part:
+        tp = json.load(open(tu_part, encoding="utf-8")); tg = tp["targets"]
+        ui = {int(v): n for n, v in enumerate(used)}
+        for v, off in tp.get("dinh", {}).items():                     # chỉ bên +X (bên kia là bản soi gương)
+            if int(v) in ui:
+                dd[ui[int(v)]] = off
+        for kx, (_, i, j) in enumerate(axes):
+            if f"eyes/{names[i]}" in tg:
+                s[kx] = tg[f"eyes/{names[i]}"]
+            elif j is not None and f"eyes/{names[j]}" in tg:
+                s[kx] = -tg[f"eyes/{names[j]}"]
+    # cổng lệch khung: bóng vùng ảnh mẫu so với bóng vùng bản dựng đang có (= ảnh đã gửi)
+    cong = {}
+    Pb, _ = hinh(s)
+    for g in GOC:
+        m = raster(khuon_px(Pb, k, g, R)[Tl], R, A3); rr = ref_a[g]
+        ys_m, ys_r = np.where(m.any(1))[0], np.where(rr.any(1))[0]; h = max(1, ys_m.max() - ys_m.min())
+        cong[g] = {"iou": round(float((m & rr).sum() / max((m | rr).sum(), 1)), 3),
+                   "lech_tren_%": round(100 * float(ys_r.min() - ys_m.min()) / h, 1),
+                   "lech_duoi_%": round(100 * float(ys_r.max() - ys_m.max()) / h, 1)}
+        cong[g]["dat"] = bool(cong[g]["iou"] >= 0.75 and abs(cong[g]["lech_tren_%"]) <= 4 and abs(cong[g]["lech_duoi_%"]) <= 8)
+    print("CONG", json.dumps(cong))
+    best = loss(s)
+    print("BAT_DAU", round(best, 3), "px²", "truc", len(axes), [a[0] for a in axes], "goc", GOC)
+    for vg, step in zip(range(vong), (0.1, 0.05, 0.025, 0.025)):
+        grid = np.round(np.arange(-gioi_han, gioi_han + 1e-4, step), 3)   # > 1: ngoại suy thanh (mắt xếch/to hơn thanh gốc)
+        for kx in range(len(axes)):
+            for v in grid:
+                t = s.copy(); t[kx] = v; e = loss(t)
+                if e < best - 1e-9:
+                    best, s = e, t
+        print("VONG", vg, round(best, 3))
+    if tu_do:                                                         # nắn từng đỉnh mép mí theo khe (thanh không tạo được dáng)
+        Pc0, Ve_s = hinh(s)
+
+        def bien_fn(Pc, g):                                           # cùng thứ tự với bien_khe: mí trên, mí dưới theo cột
+            t, b = _mep(khe_mo(Pc, Tl, A3, Ve_s, Fe, k, g, R).T); n = np.arange(R)
+            return np.concatenate([t, b]), np.concatenate([np.stack([n, t], 1), np.stack([n, b], 1)]), np.ones(2 * R, int)
+        dd += tinh_chinh(Pc0, used, Tl, A3, al, body, k, ref_b, None, GOC, R, tu_do, mu, bien_fn=bien_fn, doi_xung=False)
+    if np.abs(dd).max() > 0:                                          # gỡ gập (như mũi): làm trơn độ dời quanh tam giác gập,
+        nbu = [set() for _ in used]                                   # kéo dần về hình thanh trượt
+        for t in Tl:
+            for i in t:
+                nbu[i].update(int(j) for j in t if j != i)
+        for vg in range(150):                                         # nhẹ tay: chỉ quanh chỗ gập; 15 vòng đầu chỉ làm trơn,
+            bad = np.where((n0 * _nt(hinh(s)[0])).sum(1) < 0.5)[0]   # sau đó mới co dần độ dời (co mạnh = mất phần nắn)
+            if not len(bad):
+                break
+            vs = set(int(i) for i in Tl[bad].ravel())
+            co = 1.0 if vg < 15 else 0.92 if vg < 60 else 0.8
+            for i in vs:
+                if nbu[i]:
+                    dd[i] = co * (0.5 * dd[i] + 0.5 * dd[list(nbu[i])].mean(0))
+        print("GO_GAP", vg, "vòng, còn", int(((n0 * _nt(hinh(s)[0])).sum(1) < 0.5).sum()))
+    Pe, _ = hinh(s)
+
+    def _n(Q):
+        n = np.cross(Q[Tl[:, 1]] - Q[Tl[:, 0]], Q[Tl[:, 2]] - Q[Tl[:, 0]])
+        return n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+    cos = (_n(Pu0) * _n(Pe)).sum(1)
+    lat = {"lat": int((cos < 0).sum()), "gap": int((cos < 0.5).sum()), "dat": bool((cos < 0).sum() == 0 and (cos < 0.5).sum() <= 2)}
+    print("MAT_LAT", json.dumps(lat))
+    mm = khe(s, GOC); sai = {}; sc_mm = k["S"] / R * 1000
+    for g in GOC:
+        b, r = bien_khe(mm[g]), ref_b[g]; both = np.isfinite(b) & np.isfinite(r)
+        e_px = float(np.mean(np.abs(b[both] - r[both]))) if both.any() else 99.0
+        sai[g] = {"lech_mep_px": round(e_px, 2), "lech_mep_mm": round(e_px * sc_mm, 2),
+                  "iou": round(float((mm[g] & ref[g]).sum() / max((mm[g] | ref[g]).sum(), 1)), 3)}
+    w = weights(s); tg = {}
+    for n, x in zip(names, w):
+        if x > 0.02:
+            tg[f"eyes/{n}"] = round(float(x), 3); tg[f"eyes/r-{n[2:]}"] = round(float(x), 3)   # đối xứng sang mắt -X
+    res = {"loai": "mat", "kieu_khop": "khe", "khung_px": R, "targets": tg, "sai_so": sai, "cong_khung": cong,
+           "mat_lat": lat, "nguon": refs}
+    if np.abs(dd).max() > 2e-6:                                       # + bản soi gương sang mắt -X (đỉnh gần (-x, y, z) nhất)
+        Pt = P0[:13380]; dinh = {}
+        for v, dv in zip(used, dd):
+            if np.abs(dv).max() > 2e-6:
+                q = P0[v] * np.array([-1, 1, 1]); vm = int(np.argmin(np.linalg.norm(Pt - q, axis=1)))
+                dinh[str(int(v))] = [round(float(c), 6) for c in dv]
+                dinh[str(vm)] = [round(float(-dv[0]), 6), round(float(dv[1]), 6), round(float(dv[2]), 6)]
+        res["dinh"] = dinh
+    json.dump(res, open(os.path.join(pdir, "part.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+    img = np.zeros((R, R * len(GOC), 4), np.float32); img[..., 3] = 1
+    for n, g in enumerate(GOC):
+        o = img[:, n * R:(n + 1) * R]
+        o[ref_a[g], :3] = 0.25; o[ref[g], :3] = 0.6                  # vùng mẫu: xám tối; khe mẫu: xám sáng; khe dựng: viền đỏ
+        m = mm[g]; edge = m & ~(np.roll(m, 1, 0) & np.roll(m, -1, 0) & np.roll(m, 1, 1) & np.roll(m, -1, 1))
+        o[edge, :3] = (1, 0.15, 0.1)
+    save_rgba(img, os.path.join(pdir, "so-sanh-khuon.png"))
+    print("KHOP", json.dumps(res, ensure_ascii=False))
+
+
+KHUON_GOC_MAT = ("0", "45", "90")
 
 
 def vung_tris(body, vung):
@@ -585,7 +948,7 @@ def raster(T2, R, A3=None):
     return m
 
 
-def khuon(outdir, chuan, kjson, R, goc=KHUON_GOC, tung=False, sac=False):
+def khuon(outdir, chuan, kjson, R, goc=KHUON_GOC, tung=False, sac=False, loai="nose"):
     """Chụp tấm khuôn 2×2 của riêng vùng mũi (nền trong suốt) → <ra>/khuon.png (+ khuon.json nếu là đầu chuẩn).
     tung: mỗi góc một ảnh <ra>/<góc>.png R×R (quy trình sửa từng góc, 08 §2). sac: mép sắc ở alpha 0,5 (không mờ) —
     ChatGPT nhận ảnh mép mờ hay phóng to cả vùng; mép sắc trùng đúng định nghĩa bóng lúc khớp."""
@@ -593,12 +956,13 @@ def khuon(outdir, chuan, kjson, R, goc=KHUON_GOC, tung=False, sac=False):
     if kjson:                                                         # chụp lại theo đúng khuôn đã có (vùng, tâm, cỡ)
         k = json.load(open(kjson))
     else:                                                             # đầu chuẩn: tính vùng, tâm, cỡ khung rồi ghi lại
-        P0, _, _, alpha = nose_alpha(body, chuan)
+        P0, _, _, alpha = (eye_alpha if loai == "eyes" else nose_alpha)(body, chuan)
         vung = [int(v) for v in np.where(alpha > 0)[0]]               # cả phần mờ (để vẽ); bóng khớp = alpha ≥ 0,5
         Pv = P0[alpha > 0.1]; c = (Pv.min(0) + Pv.max(0)) / 2
-        ext = max(float(np.ptp((Pv - c) @ ax)) for g in KHUON_GOC for ax in khuon_truc(g)[1:])
-        k = {"vung": vung, "alpha": [round(float(alpha[v]), 3) for v in vung], "tam": c.tolist(),
+        ext = max(float(np.ptp((Pv - c) @ ax)) for g in goc for ax in khuon_truc(g)[1:])
+        k = {"loai": loai, "vung": vung, "alpha": [round(float(alpha[v]), 3) for v in vung], "tam": c.tolist(),
              "S": round(ext * 1.15, 5), "R": R, "o": KHUON_O}
+    loai = k.get("loai", "nose")
     # vật mới = lưới đã tính shape key, chỉ giữ mặt trong vùng; mọi vật khác ẩn
     dg = bpy.context.evaluated_depsgraph_get()
     me = bpy.data.meshes.new_from_object(body.evaluated_get(dg))
@@ -630,9 +994,38 @@ def khuon(outdir, chuan, kjson, R, goc=KHUON_GOC, tung=False, sac=False):
         nt.links.new(fac, mix.inputs[0]); nt.links.new(tr.outputs[0], mix.inputs[1])
         nt.links.new(src, mix.inputs[2]); nt.links.new(mix.outputs[0], out.inputs["Surface"])
         print("ALPHA_MAT", mat.name)
-    bpy.context.scene.collection.objects.link(ob)
+    bpy.context.scene.collection.objects.link(ob); giu = {ob}
+    if loai == "eyes":                                                # + nhãn cầu bên +X (mi, mày: thư viện riêng — ẩn)
+        eo = next(o for o in bpy.data.objects if o.name.startswith("Body.") and "high-poly" in o.name)
+        me2 = bpy.data.meshes.new_from_object(eo.evaluated_get(dg)); bm = bmesh.new(); bm.from_mesh(me2)
+        Mw = eo.matrix_world; giu_mat = nhan_cau(body, k)[3]; bm.faces.ensure_lookup_table()
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in giu_mat], context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        bm.to_mesh(me2); bm.free()
+        ob2 = bpy.data.objects.new("NhanCau", me2); ob2.matrix_world = Mw
+        bpy.context.scene.collection.objects.link(ob2); giu.add(ob2)
+        # nhãn cầu màu khuôn: lòng trắng, tròng XANH LAM, con ngươi đen — khác hẳn da và bóng nâu khoé mắt, để tách khe trên
+        # ảnh ChatGPT theo màu (màu tròng thật là thư viện riêng parts/eyes). Tròng = góc quanh trục nhìn (-Y) < 30°
+        Ve = np.array([Mw @ v.co for v in eo.evaluated_get(dg).data.vertices]); Vx = Ve[Ve[:, 0] > 0]
+        ce = (Vx.min(0) + Vx.max(0)) / 2
+        mt = bpy.data.materials.new("khuon_nhan_cau"); mt.use_nodes = True; nt = mt.node_tree
+        bsdf = nt.nodes["Principled BSDF"]; bsdf.inputs["Roughness"].default_value = 0.35
+        geo = nt.nodes.new("ShaderNodeNewGeometry")
+        sub = nt.nodes.new("ShaderNodeVectorMath"); sub.operation = "SUBTRACT"; sub.inputs[1].default_value = tuple(ce)
+        nor = nt.nodes.new("ShaderNodeVectorMath"); nor.operation = "NORMALIZE"
+        dot = nt.nodes.new("ShaderNodeVectorMath"); dot.operation = "DOT_PRODUCT"; dot.inputs[1].default_value = (0, -1, 0)
+        ramp = nt.nodes.new("ShaderNodeValToRGB"); cr = ramp.color_ramp; cr.interpolation = "CONSTANT"
+        cr.elements[0].position = 0.0; cr.elements[0].color = (0.85, 0.85, 0.85, 1)
+        cr.elements[1].position = math.cos(math.radians(30)); cr.elements[1].color = (0.05, 0.25, 0.9, 1)
+        e3 = cr.elements.new(math.cos(math.radians(13))); e3.color = (0.01, 0.01, 0.01, 1)
+        nt.links.new(geo.outputs["Position"], sub.inputs[0]); nt.links.new(sub.outputs[0], nor.inputs[0])
+        nt.links.new(nor.outputs[0], dot.inputs[0]); nt.links.new(dot.outputs["Value"], ramp.inputs[0])
+        nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+        me2.materials.clear(); me2.materials.append(mt)
+        for p in me2.polygons:
+            p.material_index = 0
     for o in bpy.context.scene.objects:
-        if o is not ob and o.type == "MESH":
+        if o not in giu and o.type == "MESH":
             o.hide_render = True
     scene = bpy.context.scene
     gpu_cycles(scene, 64)
@@ -661,7 +1054,7 @@ def khuon(outdir, chuan, kjson, R, goc=KHUON_GOC, tung=False, sac=False):
             lo.rotation_euler = Vector(tuple(c - pos)).to_track_quat("-Z", "Y").to_euler()
         os.makedirs(outdir, exist_ok=True)
         p = os.path.join(outdir if tung else tmp, f"{g}.png" if tung else f"khuon_{g}.png"); scene.render.filepath = p
-        bpy.ops.render.render(write_still=True)
+        render_anh()
         if not tung:
             r0, c0_ = KHUON_O[g]
             tam[r0 * R:(r0 + 1) * R, c0_ * R:(c0_ + 1) * R] = load_rgba(p)
@@ -718,7 +1111,7 @@ def bien_mask(m, goc, rows):
     return np.concatenate([t, l[rows], r[rows]])
 
 
-def tinh_chinh(P, used, Tl, A3, al, body, k, ref_b, rows, chi, R, vong, mu, nu=0.05):
+def tinh_chinh(P, used, Tl, A3, al, body, k, ref_b, rows, chi, R, vong, mu, nu=0.05, bien_fn=None, doi_xung=True):
     """Nắn từng đỉnh vùng mũi (alpha ≥ 0,3) cho mép bóng mọi góc trùng ảnh mẫu — Gauss–Newton:
     mỗi mẫu mép gán cho đỉnh lưới gần nhất (≤ 4 px) → phương trình (độ dời đỉnh · trục ảnh) = lệch px; cộng ràng buộc trơn
     Laplace (mu) và kìm độ dời (nu), giải bình phương tối thiểu, lặp `vong` lần. Mép vùng (alpha < 0,3) đứng yên."""
@@ -732,8 +1125,10 @@ def tinh_chinh(P, used, Tl, A3, al, body, k, ref_b, rows, chi, R, vong, mu, nu=0
         if a in gi and b in gi:
             nb[gi[a]].append(gi[b]); nb[gi[b]].append(gi[a])
     # đối xứng: đỉnh ↔ đỉnh soi gương qua mặt phẳng giữa mặt (x → -x) — góc 45° chỉ thấy một bên, không ép thì mũi lệch
-    Pm = P.copy(); Pm[:, 0] *= -1
-    gu = np.array([int(np.argmin(np.linalg.norm(P - q, axis=1))) for q in Pm])
+    # (bien_fn: mép do hàm ngoài tính — mắt: khe mở mí; doi_xung=False: vùng một bên, soi gương lúc ghi ra)
+    if doi_xung:
+        Pm = P.copy(); Pm[:, 0] *= -1
+        gu = np.array([int(np.argmin(np.linalg.norm(P - q, axis=1))) for q in Pm])
     Mx = np.array([-1.0, 1.0, 1.0])
     d = np.zeros((len(used), 3)); best_e, best_d = np.inf, d.copy()
     for it in range(vong):
@@ -741,8 +1136,12 @@ def tinh_chinh(P, used, Tl, A3, al, body, k, ref_b, rows, chi, R, vong, mu, nu=0
         tot = 0.0; cnt = 0
         for g in chi:
             fwd, up, right = khuon_truc(g)
-            X = khuon_px(Pc, k, g, R); m = raster(X[Tl], R, A3)
-            vals, pos, ax = bien_diem(m, g, rows[g]); r = ref_b[g]
+            X = khuon_px(Pc, k, g, R)
+            if bien_fn:
+                vals, pos, ax = bien_fn(Pc, g)
+            else:
+                vals, pos, ax = bien_diem(raster(X[Tl], R, A3), g, rows[g])
+            r = ref_b[g]
             ok = np.isfinite(vals) & np.isfinite(r)
             Xm = X[mov]
             for i in np.where(ok)[0]:
@@ -774,7 +1173,8 @@ def tinh_chinh(P, used, Tl, A3, al, body, k, ref_b, rows, chi, R, vong, mu, nu=0
             best_e, best_d = e_now, d.copy()
         x = np.linalg.lstsq(np.array(rows_A), np.array(rhs), rcond=None)[0].reshape(nm, 3)
         d[mov] += 0.5 * x                                             # nửa bước: mép chọn lại đỉnh mỗi vòng → bước đủ dễ vọt
-        d = 0.5 * (d + d[gu] * Mx)                                    # ép đối xứng trái–phải
+        if doi_xung:
+            d = 0.5 * (d + d[gu] * Mx)                                # ép đối xứng trái–phải
         print("TU_DO", it, "lech_mep_tb", round(e_now, 2), "px", "doi_max_mm", round(float(np.abs(d).max()) * 1000, 2))
     print("TU_DO tot_nhat", round(best_e, 2), "px")
     return best_d
@@ -957,10 +1357,14 @@ elif MODE == "khop-tach":
 elif MODE == "khuon":
     make_head([argv[i + 1] for i, x in enumerate(argv) if x == "--part"])
     khuon(argv[1], opt("--chuan", "assets/parts/_dau-chuan/v1"), opt("--khuon", None), int(opt("--R", 512)),
-          tuple(opt("--goc", ",".join(KHUON_GOC)).split(",")), "--tung" in argv, "--sac" in argv)
+          tuple(opt("--goc", ",".join(KHUON_GOC)).split(",")), "--tung" in argv, "--sac" in argv, opt("--loai", "nose"))
+elif MODE == "khop-mat":
+    khop_mat(argv[1], argv[2], opt("--khuon", "assets/parts/eyeshape/_khuon/khuon.json"), float(opt("--lam", 0.5)),
+             int(opt("--vong", 3)), int(opt("--R", 192)), opt("--tu-part", None), float(opt("--gioi-han", 1.5)),
+             int(opt("--tu-do", 0)), float(opt("--mu", 1.0)))
 elif MODE == "khop-khuon":
     khop_khuon(argv[1], argv[2], opt("--khuon", "assets/parts/nose/_khuon/khuon.json"), float(opt("--lam", 0.5)),
                int(opt("--vong", 3)), int(opt("--R", 192)), tuple(x for x in opt("--chi", "").split(",") if x),
                opt("--tu-part", None), int(opt("--tu-do", 0)), float(opt("--mu", 2.0)))
 else:
-    sys.exit(f"Không có chế độ '{MODE}' (chup | khop | khop-tach | khuon | khop-khuon)")
+    sys.exit(f"Không có chế độ '{MODE}' (chup | khop | khop-tach | khuon | khop-khuon | khop-mat)")
