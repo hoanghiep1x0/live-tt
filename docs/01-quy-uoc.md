@@ -178,3 +178,30 @@ Module cảm ơn quà: gộp quà dồn trong 5 giây thành một lời cảm �
 | Tải lại trang để áp cấu hình | `onConfig` áp nóng |
 | Assets dùng chung giữa các thiết kế | Mỗi thiết kế một thư mục `assets/` |
 | Sửa migration đã commit | Thêm migration mới |
+
+## 12. Phân loại phòng: loại → kiểu
+
+Sẽ có nhiều **loại phòng** (`cate`: sàn bar, kể chuyện, đám cưới, chùa…), mỗi loại có nhiều **kiểu phòng**
+(`style`: sàn bar có hộp đêm, bãi biển…). Mọi thứ của một loại nằm dưới **cùng một tên loại**, mọi thứ của một kiểu
+dưới **cùng một tên kiểu** — thêm loại hay kiểu mới là thêm thư mục, không sửa thư mục của loại khác.
+
+| Thứ | Chung cho cả loại | Riêng của một kiểu |
+|---|---|---|
+| Thiết kế (gói chạy được, 1 lúc 1 cái) | — | `client/designs/<cate>-<style>/` |
+| `design.json` | `"category": "<cate>"` | `"id": "<cate>-<style>"`, `"style": "<style>"` |
+| Tài liệu | `docs/phong/<cate>/README.md`, `docs/phong/<cate>/<mảng>/` | `docs/phong/<cate>/<style>.md` |
+| Script | `scripts/phong/<cate>/` | `scripts/phong/<cate>/<style>/` |
+| Test | `tests/client/designs/<cate>-<style>/` | (cùng chỗ) |
+| Assets | — (không có kho chung: **sao chép** vào từng kiểu, quy ước 04 §6) | `client/designs/<cate>-<style>/assets/` |
+
+- `cate`, `style`: kebab-case tiếng Việt không dấu (`san-bar`, `hop-dem`). Id thiết kế ghép `<cate>-<style>` vì id nằm
+  trong URL (`/d/<id>/`, `/a/<id>/`) và trong `database/designs/<id>/` — **không** dùng `/` trong id.
+- Loại mới chỉ có một kiểu vẫn đặt tên kiểu (`<cate>-mac-dinh` hoặc tên thật). Ngoại lệ đã có trước quy ước này:
+  `ke-chuyen` (loại `ke-chuyen`, kiểu mặc định) giữ id cũ.
+- **Mảng dùng chung trong loại** (vd quy trình dựng nhân vật 3D của sàn bar) là `docs/phong/<cate>/<mảng>/` +
+  `scripts/phong/<cate>/<mảng>/`. Thứ dùng chung **giữa các loại** thì không nằm trong `phong/`: tính năng là module,
+  mã chung là `client/shared/`.
+- Code chung giữa các kiểu của một loại (vd lõi dựng cảnh 3D) **sao chép** vào từng thiết kế như assets: đổi kiểu này
+  không được làm vỡ kiểu kia. Khi đủ ba kiểu cùng dùng một đoạn mã thì mới tính chuyện tách gói.
+- Mục lục các loại: [phong/README.md](phong/README.md).
+

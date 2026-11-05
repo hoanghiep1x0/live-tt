@@ -6,9 +6,44 @@
 import type { FeedItem, Seat } from '@live/contracts';
 import type { ChoNgoi } from './ghe';
 
-/** Mỗi chu kỳ một lượt an ủi. Bản cũ chờ ngẫu nhiên 40–90 giây; ở đây chốt một
- *  con số để nhịp là hàm thuần của đồng hồ. */
-const CHU_KY_MS = 60_000;
+/** Người vận hành chỉnh ở thẻ "Cảnh an ủi" của bảng xem (`LUA_CHON` trong
+ *  `Stage.tsx`). Mặc định ở đây trùng mặc định của thẻ. */
+export interface CauHinhAnUi {
+  /** Mỗi lượt tự động cách nhau bao nhiêu giây. Bản cũ chờ ngẫu nhiên 40–90
+   *  giây; ở đây là một con số để nhịp là hàm thuần của đồng hồ — hai cửa sổ
+   *  xem cùng phòng thấy cùng một lượt. */
+  chuKyGiay: number;
+  /** Mỗi lượt tự động mấy người lên: lúc một lúc hai, luôn một, luôn hai. */
+  soNguoi: 'xen' | 'don' | 'doi';
+  /** Ai được ôm: luân phiên bé và cậu bé, hay chỉ một trong hai. */
+  ai: 'luan-phien' | NhanVat;
+  /** Khách gõ "ôm" thì chính họ chạy lên — một mình họ, như bản cũ. */
+  khachGoi: boolean;
+}
+
+export const AN_UI_MAC_DINH: CauHinhAnUi = {
+  chuKyGiay: 60,
+  soNguoi: 'xen',
+  ai: 'luan-phien',
+  khachGoi: true,
+};
+
+/** Chu kỳ ngắn nhất: phải dài hơn một lượt, không thì lượt sau chen vào lượt
+ *  trước khi người ôm chưa kịp về chỗ. */
+const CHU_KY_TOI_THIEU_MS = 20_000;
+
+/** Đọc lựa chọn thiết kế (giá trị lưu có thể sai kiểu) thành cấu hình chắc chắn. */
+export function docCauHinhAnUi(o: Record<string, unknown>): CauHinhAnUi {
+  const giay = Number(o['anUiGiay']);
+  const so = o['anUiSoNguoi'];
+  const ai = o['anUiAi'];
+  return {
+    chuKyGiay: Number.isFinite(giay) && giay > 0 ? giay : AN_UI_MAC_DINH.chuKyGiay,
+    soNguoi: so === 'don' || so === 'doi' || so === 'xen' ? so : AN_UI_MAC_DINH.soNguoi,
+    ai: ai === 'be' || ai === 'cau-be' || ai === 'luan-phien' ? ai : AN_UI_MAC_DINH.ai,
+    khachGoi: o['anUiKhach'] !== false,
+  };
+}
 /** Lấy đúng nhịp của bản cũ: `RUN_MS` và `HOLD_MS` đều 4,2 giây. Chạy 1,6 giây
  *  như bản đầu của em thì người lướt vèo qua rạp, nhìn không ra người chạy. */
 export const CHAY_MS = 4_200;
@@ -71,25 +106,43 @@ export interface Canh {
   t: number;
   /** Khách tự gõ xin ôm: chính họ phải là người chạy lên. */
   nguoiXin?: string;
+  /** Mấy người chạy lên lượt này. */
+  soNguoi: 1 | 2;
+}
+
+/** Lượt `k` mấy người. "Xen" thì băm từ `k` — thuần, nên hai cửa sổ thấy như
+ *  nhau, mà không đều đặn một-hai-một-hai nhìn ra là máy. */
+function soNguoiLuot(k: number, che: CauHinhAnUi['soNguoi']): 1 | 2 {
+  if (che === 'don') return 1;
+  if (che === 'doi') return 2;
+  return (Math.imul(k, 2654435761) >>> 0) % 5 < 2 ? 1 : 2;
 }
 
 /** Lượt an ủi đang diễn ra, hoặc `null`. Hàm thuần.
  *
  *  Khách gõ "ôm" thì lượt của họ ĐÈ lên lượt định kỳ: người xem vừa ngỏ lời mà
  *  phải chờ hết phút mới thấy gì thì chẳng ai gõ nữa. */
-export function canhAnUi(now: number, xin: { at: number; user: string } | null = null): Canh | null {
-  if (xin !== null && now - xin.at < TONG_MS) {
+export function canhAnUi(
+  now: number,
+  xin: { at: number; user: string } | null = null,
+  cfg: CauHinhAnUi = AN_UI_MAC_DINH,
+): Canh | null {
+  if (cfg.khachGoi && xin !== null && now - xin.at < TONG_MS) {
+    // Khách tự gọi: một mình họ chạy lên, như bản cũ.
     return {
       k: Math.floor(xin.at / 1000),
-      nhanVat: 'be',
+      nhanVat: cfg.ai === 'cau-be' ? 'cau-be' : 'be',
       t: now - xin.at,
       nguoiXin: xin.user,
+      soNguoi: 1,
     };
   }
-  const k = Math.floor(now / CHU_KY_MS);
-  const t = now % CHU_KY_MS;
+  const chuKy = Math.max(CHU_KY_TOI_THIEU_MS, cfg.chuKyGiay * 1000);
+  const k = Math.floor(now / chuKy);
+  const t = now % chuKy;
   if (t >= TONG_MS) return null;
-  return { k, nhanVat: k % 2 === 0 ? 'be' : 'cau-be', t };
+  const nhanVat: NhanVat = cfg.ai === 'luan-phien' ? (k % 2 === 0 ? 'be' : 'cau-be') : cfg.ai;
+  return { k, nhanVat, t, soNguoi: soNguoiLuot(k, cfg.soNguoi) };
 }
 
 /** Chọn người ôm từ những ai đang ngồi. Thuần theo `k` nên hai cửa sổ chọn

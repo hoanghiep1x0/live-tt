@@ -2,7 +2,13 @@ import { useState } from 'react';
 import type { Manager } from '../lib/store';
 import { DesignCard } from './DesignCard';
 
-export function DesignsTab({ m, onToast }: { m: Manager; onToast(t: string, loi?: boolean): void }) {
+interface Props {
+  m: Manager;
+  onToast(t: string, loi?: boolean): void;
+  onSangTinhNang(): void;
+}
+
+export function DesignsTab({ m, onToast, onSangTinhNang }: Props) {
   const [tim, setTim] = useState('');
   const q = tim.trim().toLowerCase();
   const hien = m.designs.filter(
@@ -54,6 +60,7 @@ export function DesignsTab({ m, onToast }: { m: Manager; onToast(t: string, loi?
               onDatStudio={m.datStudio}
               onReset={m.resetData}
               onToast={onToast}
+              onSangTinhNang={onSangTinhNang}
             />
           ))}
         </div>

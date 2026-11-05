@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { boVai } from '@live/contracts';
 import type { StagePartProps } from '@live/stage-sdk';
 import type { Config } from './manifest';
 import type { State } from './core';
@@ -60,14 +61,16 @@ function VideoKhongKet({ src }: { src: string }) {
  *  mạch, mà phụ đề dưới đáy thì ai cũng quen mắt rồi. */
 export function Stage({ config, modState }: StagePartProps<Config, State>) {
   const doan = doanHienTai(modState);
-  const media = config.media.trim();
+  const trongSuot = config.transparentBg;
+  const media = trongSuot ? '' : config.media.trim();
   const coHinh = media !== '';
 
   return (
-    <div className="mod-truyen" data-co-hinh={coHinh}>
+    <div className="mod-truyen" data-co-hinh={coHinh} data-trong-suot={trongSuot}>
       {/* Chưa có ảnh hay video: tự trải một nền đổi màu theo chu kì. Để trống
-          thì lộ nền sảnh đứng im sau lưng — đúng thứ TikTok soi. */}
-      {coHinh ? null : <span className="mod-truyen-nen" aria-hidden />}
+          thì lộ nền sảnh đứng im sau lưng — đúng thứ TikTok soi. Trừ khi người
+          vận hành chủ động bật nền trong suốt: lúc đó họ đã được dặn ở gợi ý. */}
+      {coHinh || trongSuot ? null : <span className="mod-truyen-nen" aria-hidden />}
 
       {coHinh ? (
         LA_VIDEO.test(media) ? (
@@ -83,7 +86,7 @@ export function Stage({ config, modState }: StagePartProps<Config, State>) {
       {config.title === '' && doan === null ? null : (
         <div className="mod-truyen-chu">
           {config.title === '' ? null : <h2 className="mod-truyen-ten">{config.title}</h2>}
-          {doan === null ? null : <p className="mod-truyen-doan">{doan}</p>}
+          {doan === null ? null : <p className="mod-truyen-doan">{boVai(doan)}</p>}
         </div>
       )}
     </div>

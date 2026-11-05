@@ -24,9 +24,9 @@ describe('manifest', () => {
     kiemModule(mod);
   });
 
-  it('chạy khi có bình luận, và dùng chung cho mọi loại phòng', () => {
+  it('chạy khi có bình luận, và chỉ thuộc phòng kể chuyện', () => {
     expect(mod.manifest.triggers).toEqual(['comment']);
-    expect(mod.manifest.room).toBeUndefined();
+    expect(mod.manifest.room).toBe('ke-chuyen');
   });
 });
 

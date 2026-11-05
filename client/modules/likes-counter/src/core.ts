@@ -29,7 +29,14 @@ export const core: ModuleCore<Config, State> = {
         if (m <= state.mocDaBao) return [];
         state.mocDaBao = m;
         return [
-          { kind: 'say', text: state.config.template.replaceAll('{phantram}', String(m)) },
+          ...(state.config.voice
+            ? [
+                {
+                  kind: 'say' as const,
+                  text: state.config.template.replaceAll('{phantram}', String(m)),
+                },
+              ]
+            : []),
           { kind: 'overlay', slot: 'top-bar', ttlMs: 6000 },
           { kind: 'sfx', sound: 'fanfare' },
         ];

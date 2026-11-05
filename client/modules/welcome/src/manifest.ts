@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TAB_GIONG } from '@live/contracts';
 import type { ModuleManifest } from '@live/contracts';
 
 /** Vài kiểu chào, dùng xoay vòng. Chào ba mươi người bằng đúng một câu thì
@@ -11,6 +12,7 @@ const CHAO = [
 ].join('\n');
 
 export const schema = z.object({
+  voiceId: z.string().max(60).default(''),
   templates: z.string().min(1).max(2_000).default(CHAO),
   gapSec: z.number().int().min(0).max(300).default(12),
   voice: z.boolean().default(true),
@@ -24,6 +26,7 @@ export const manifest: ModuleManifest<Config> = {
   name: 'Chào mừng vào phòng',
   icon: '👋',
   summary: 'Gọi tên & chào khi có người vào phòng',
+  room: 'ke-chuyen',
   triggers: ['join'],
   configVersion: 2,
   schema,
@@ -48,12 +51,20 @@ export const manifest: ModuleManifest<Config> = {
       max: 300,
       hint: 'Phòng đông người vào liên tục: chào quá dày sẽ lấn bình luận thật',
     },
-    { key: 'voice', label: 'Đọc to lời chào', short: 'Đọc to', type: 'toggle' },
+    { key: 'voice', label: 'Đọc to lời chào', short: 'Đọc to', type: 'toggle', tab: TAB_GIONG },
     {
       key: 'skipDefault',
       label: 'Bỏ qua tên mặc định',
       type: 'toggle',
       hint: 'Không gọi tên kiểu "user123…"',
+    },
+    {
+      key: 'voiceId',
+      label: 'Giọng chính',
+      short: 'Giọng',
+      type: 'voice',
+      tab: TAB_GIONG,
+      hint: 'Chỉ dùng khi phòng bật Đa giọng (trang quản lý, nút Giọng đọc). Trong câu, [id-giọng] đổi giọng, [-] quay về giọng chính.',
     },
   ],
 };

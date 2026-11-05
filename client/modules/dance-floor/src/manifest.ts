@@ -31,6 +31,7 @@ export const manifest: ModuleManifest<Config> = {
   // mới có slot đó thì thêm id của nó vào đây là chạy, không phải sửa lõi.
   room: 'ke-chuyen',
   needs: [],
+  actions: [{ label: 'Nhảy ngay', op: 'nhay', icon: '🕺' }],
   quick: ['count', 'danceOnGift', 'danceSec'],
   fields: [
     {

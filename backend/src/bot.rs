@@ -20,6 +20,7 @@
 //! không có thật lên bảng vinh danh là nói dối người xem, chứ không còn là
 //! trang trí cho đỡ trống.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -32,6 +33,15 @@ use crate::state::AppState;
 
 /// Nhiều hơn mức này thì ghế toàn người máy, phòng nhìn là biết giả.
 pub const TOI_DA: u32 = 60;
+
+/// Cơ hội (phần trăm) một nhịp có người ra khi đang thừa người. Nhịp 1,5 giây
+/// nên trung bình chừng năm giây một người — mười hai người vãn trong khoảng
+/// một phút, thay vì hai chục giây là hết sạch.
+const PHAN_RA: u32 = 30;
+
+/// Cơ hội (phần trăm) một nhịp có người nói, khi đã đủ người. Còn lại là thả
+/// tim. Trung bình chừng mười giây một câu, như bản cũ.
+const PHAN_LOI: u32 = 15;
 
 /// Tắt bật và số lượng — phần người vận hành chỉnh. Lưu theo từng thiết kế.
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -132,7 +142,11 @@ impl DamDong {
             });
         }
 
-        if self.trong_phong.len() > muc_tieu {
+        // Ra THƯA, không ào một lượt: mỗi nhịp chỉ một phần cơ hội có người
+        // đứng dậy, ai chưa đi thì vẫn ngồi thả tim, bình luận như thường. Bản
+        // cũ cũng vậy — tắt nhân vật ảo là phòng vãn dần, không phải cả rạp
+        // đồng loạt kéo nhau về.
+        if self.trong_phong.len() > muc_tieu && self.rng.gen_range(0..100) < PHAN_RA {
             // Ra theo thứ tự vào: người ngồi lâu nhất nhường chỗ trước, nhìn tự
             // nhiên hơn là bốc ngẫu nhiên giữa phòng.
             let ra = self.trong_phong.remove(0);
@@ -149,7 +163,9 @@ impl DamDong {
         let i = self.rng.gen_range(0..self.trong_phong.len());
         let who = self.trong_phong[i].clone();
         // Tim nhiều hơn lời: phòng thật cũng vậy, và lời thì dễ lặp hơn tim.
-        let what = if self.rng.gen_range(0..100) < 40 {
+        // Bản cũ chỉ cho ~1/4 số nhịp 2,6 giây là lời — chừng mười giây một
+        // câu, bóng chat có nhịp thong thả. Nhịp ở đây 1,5 giây nên lấy 15%.
+        let what = if self.rng.gen_range(0..100) < PHAN_LOI {
             Payload::Comment {
                 text: lines[self.rng.gen_range(0..lines.len())].clone(),
             }
@@ -197,6 +213,36 @@ pub async fn chay(st: Arc<AppState>) {
         let (lines, ten_rieng) = st.crowd_cua(&id);
         if let Some(ev) = dam.buoc(cfg.muc_tieu(), &lines, &ten_rieng) {
             st.ap_su_kien(ev, true);
+        }
+    }
+}
+
+/// Nhân vật ảo của các phòng đang XEM THỬ. Mỗi phòng một đám đông riêng, nhớ
+/// theo mốc mở phiên y như phòng đang phát: phiên xem thử dựng lại (thôi phát
+/// rồi về xem thử) là ghế trống, phải cho người vào lại từ đầu.
+pub async fn chay_xem_thu(st: Arc<AppState>) {
+    let mut cac: HashMap<String, (i64, DamDong)> = HashMap::new();
+    let mut hat = st.seed_gia_lap() ^ 0x7874;
+    let mut dong_ho = tokio::time::interval(Duration::from_millis(NHIP_MS));
+
+    loop {
+        dong_ho.tick().await;
+        let ds = st.cac_xem_thu();
+        cac.retain(|id, _| ds.iter().any(|(k, _)| k == id));
+        for (id, moc) in ds {
+            let (m, dam) = cac.entry(id.clone()).or_insert_with(|| {
+                hat = hat.wrapping_add(1);
+                (moc, DamDong::new(hat))
+            });
+            if *m != moc {
+                *m = moc;
+                dam.quen_het();
+            }
+            let cfg = st.bot_config(&id);
+            let (lines, ten_rieng) = st.crowd_cua(&id);
+            if let Some(ev) = dam.buoc(cfg.muc_tieu(), &lines, &ten_rieng) {
+                st.ap_su_kien_xem_thu(&id, ev, true);
+            }
         }
     }
 }
@@ -260,11 +306,21 @@ mod tests {
         }
         assert_eq!(d.so_nguoi(), 4);
 
-        for con in (0..4).rev() {
-            let ev = d.buoc(0, &c, &[]).unwrap();
-            assert!(matches!(ev.what, Payload::Leave));
-            assert_eq!(d.so_nguoi(), con);
+        // Ra thưa: phải mất nhiều nhịp, và giữa hai lượt ra người còn lại vẫn
+        // thả tim, bình luận.
+        let mut nhip = 0;
+        let mut ra = 0;
+        let mut con_noi = 0;
+        while d.so_nguoi() > 0 {
+            nhip += 1;
+            assert!(nhip < 200, "tắt rồi mà mãi không ai ra");
+            match d.buoc(0, &c, &[]).unwrap().what {
+                Payload::Leave => ra += 1,
+                _ => con_noi += 1,
+            }
         }
+        assert_eq!(ra, 4);
+        assert!(con_noi > 0, "không được ra liền một mạch, nhịp nào cũng có người đi");
         assert!(d.buoc(0, &c, &[]).is_none(), "hết người thì im");
     }
 

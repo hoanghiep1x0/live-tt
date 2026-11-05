@@ -111,6 +111,27 @@ vẽ được ở mọi bối cảnh mà không cần biết mình đang ở ph�
 Manager đối chiếu hai danh sách và báo cho người dùng biết module nào chưa hiển thị được
 trên thiết kế đang chạy. Đây là chỗ thay cho bảng `ROOM_MODULES` cũ, nhưng tự động.
 
+### 5b. Slot `stage-3d` — module nói với cảnh 3D
+
+Cảnh 3D (renderer, đèn, camera, chỗ đứng) là của thiết kế; nhân vật và lựa chọn của nó (bộ đồ,
+điệu) là của module. Phần vẽ của module **không đụng WebGL**: nó đặt trong slot một phần tử có
+thuộc tính `data-canh3d` = JSON của `VuCong3D` (`client/shared/contracts/src/canh3d.ts`):
+
+```ts
+export const CANH3D_ATTR = 'data-canh3d';
+export interface VuCong3D {
+  model: string;             // GLB có xương + điệu, thường là asset của module (/m/<id>/…)
+  trangPhuc: string | null;  // id bộ đồ trong GLB (extras.outfits); null = bộ đầu
+  dieu: string | null;       // điệu mọi vũ công cùng nhảy; null = thiết kế tự đổi điệu
+}
+```
+
+Thiết kế khai `provides: ['stage-3d']` thì theo dõi slot (MutationObserver), đọc bằng
+`docVuCong3D()` và dựng: đổi GLB thì nạp lại người, đổi `trangPhuc` / `dieu` thì áp ngay, không
+dựng lại cảnh. Không có phần tử nào = không có module vũ công = sàn trống. Vì sao không cho module
+tự vẽ canvas: vũ công phải đứng trong đèn, bóng đổ, màn chiếu của chính phòng; và module không phải
+kéo three.js theo. Mẫu: module `vu-cong-3d`, thiết kế `san-bar-*` (`src/Stage.tsx`, `src/canh.ts`).
+
 ## 6. Lệnh có kiểm soát — `RoomCommand`
 
 ```ts
@@ -141,10 +162,16 @@ là của thiết kế (`crowd` trong design.json, xem docs/04 §6), nên cùng 
 bối cảnh cho ra hai đám đông khác hẳn. Backend giữ đám đông ở đúng số đó bằng sự kiện mang
 cờ `virtual`, và phát xuống bằng tin `{ t: 'bot', cfg }`.
 
-`set-ai` chỉnh MC do AI dẫn: `{ enabled, everySec, model, extra }`. **Khoá API không đi qua
-đây và không bao giờ rời backend** — nó nằm ở kho khoá, nhà cung cấp `mc` (kind `anthropic`,
-`baseUrl` rỗng thì gọi `https://api.anthropic.com`). Bản cũ để khoá trong `localStorage` của
-trang đang live, đúng cái trang OBS đang thu.
+`set-ai` chỉnh phần AI của phòng: `{ enabled, everySec, provider, model, extra, anhProvider,
+anhModel }`. `provider` / `anhProvider` là **tên ngắn** của nhà cung cấp trong kho khoá — phần
+chữ (MC nói, nhờ AI viết) và phần vẽ ảnh chọn nhà riêng, để trống thì lấy nhà mặc định `mc`
+và `anh`. Model lần theo thứ tự: ô này → `model` của nhà → mặc định của giao thức, nên không
+chỗ nào ghi cứng tên một nhà cụ thể.
+
+**Khoá API không đi qua đây và không bao giờ rời backend** — chỉ tên ngắn đi qua. Khoá nằm ở
+kho khoá. Cắm khoá được từ bảng xem thử (`PUT /s/secrets/<id>`, một chiều) hoặc ở trang
+quản lý (`/api/secrets`, đòi token); xoá thì chỉ ở trang quản lý — xem docs/05-backend.md §5. Bản cũ để khoá trong `localStorage`
+của trang đang live, đúng cái trang OBS đang thu.
 
 Mỗi `everySec` giây backend chụp một bản tóm tắt phòng (ai đang chờ được đáp, MC đã nói gì,
 tin mới) rồi hỏi model một lượt. Câu trả về đi vào phiên thành mục feed `kind: 'host'`, sân
@@ -165,7 +192,7 @@ export interface ModuleManifest<C = Json> {
   name: string;                    // tên tiếng Việt trên thẻ
   icon: string;                    // emoji hoặc tên icon
   summary: string;                 // một dòng dưới tên
-  room?: RoomKind;                 // chỉ hợp một loại phòng; thiếu là dùng chung
+  room?: RoomKind | readonly RoomKind[]; // chỉ hợp các loại phòng này; thiếu là dùng chung
   triggers: FeedKind[];            // chạy khi nào — khớp khoá trong core.hooks
   fields: ConfigField[];           // mô tả ô cấu hình, manager tự dựng form
   configVersion: number;
@@ -180,10 +207,11 @@ export interface ModuleManifest<C = Json> {
 export interface ConfigField {
   key: string;        // khoá trong config
   label: string;      // nhãn đầy đủ trong modal
-  type: 'text' | 'textarea' | 'number' | 'toggle' | 'select' | 'range' | 'time';
+  type: 'text' | 'textarea' | 'number' | 'toggle' | 'select' | 'range' | 'time'
+      | 'media' | 'voice' | 'gallery';
   short?: string;     // nhãn ngắn khi ô này hiện trên thẻ, vd "Số bot"
   hint?: string;
-  options?: { value: string; label: string }[];   // bắt buộc với 'select'
+  options?: { value: string; label: string; img?: string }[];   // bắt buộc với 'select', 'gallery'
   min?: number; max?: number; step?: number; unit?: string;
 }
 
@@ -279,15 +307,32 @@ mục feed gần đây. Module **không** thấy toàn bộ state, để không 
 type Down =
   | { t: 'feed';    items: FeedItem[] }
   | { t: 'session'; view: SessionView }
-  | { t: 'config';  moduleId: string; config: Json }
-  | { t: 'modules'; enabled: string[] }
+  | { t: 'config';  moduleId: string; config: Json; designId?: string }
+  | { t: 'modules'; enabled: string[]; designId?: string }
   | { t: 'live';    designId: string | null };
+  // … cùng `design`, `bot`, `ai` (đều có `designId?`), `voice`, `error` — mã: contracts/src/wire.ts
 
-// Manager → backend
+// Manager / thiết kế → backend
 type Up =
-  | { t: 'command'; command: RoomCommand; by: 'nguoi' | 'luat' | 'ai' }
+  | { t: 'command'; command: RoomCommand; by: 'nguoi' | 'luat' | 'ai'; designId?: string }
+  | { t: 'xem'; designId: string }
   | { t: 'ping' };
 ```
 
 Thiết kế chỉ nhận, không gửi lệnh lên. Muốn tác động thì qua `Effect` dạng `command`,
 do runtime trong thiết kế gửi lên kèm nhãn nguồn.
+
+**Xem thử khi chưa phát.** Bảng xem thử trên trang `/d/<id>/` chỉnh được chính phòng đó
+cả khi nó chưa phát (bật tắt tính năng, sửa cấu hình trước khi lên sóng):
+
+- Lúc nối, trang khai mình bằng `{ t: 'xem', designId }`. Phòng đó chưa phát thì backend trả
+  riêng cho trang ấy trạng thái của phòng (modules, config, design, bot, ai), mỗi tin gắn
+  `designId`.
+- Lệnh từ trang thiết kế luôn kèm `designId` (stage-sdk `guiLenh` tự gắn): áp vào **chính**
+  phòng đó, không phải phòng đang phát. Phòng đó đang phát thì phát cho mọi client như cũ;
+  chưa phát thì chỉ trả riêng trạng thái mới cho trang vừa gửi. Trang quản lý không gửi
+  `designId` → áp vào phòng đang phát.
+- Trang chỉ nhận tin trạng thái của đúng phòng mình: tin gắn `designId` khác, hay tin phát
+  chung khi đang phát phòng khác, đều bỏ qua (`apTin`, `cuaMinh`). Nhờ vậy mở bảng xem thử
+  của phòng B lúc đang live phòng A không sửa nhầm phòng A.
+- Backend chỉ nhận `designId` là id hợp lệ (`[a-z0-9-]`, ≤ 32) của một thiết kế có thật.

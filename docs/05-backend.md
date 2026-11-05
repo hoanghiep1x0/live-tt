@@ -170,21 +170,56 @@ giữ lâu dài để đối soát. Cấu hình thì ít và cần đọc đư�
 
 Mọi khoá nằm ở `database/secrets.json`, **chỉ backend đọc**. Client không bao giờ thấy giá trị thật.
 
+Một kết nối là **một dòng**: tên ngắn, giao thức, địa chỉ, khoá — nhập một lần. Nó dùng
+được cho nhiều **loại việc** (`uses`: `chat`, `tts`, `image`, `video`), mỗi loại một model
+mặc định (`models`). Một khoá OpenAI vừa chat vừa vẽ ảnh thì là một dòng, không phải hai.
+
 ```jsonc
 {
-  "anthropic": { "key": "sk-ant-…" },
-  "tts": {
-    "vieneu":  { "baseUrl": "https://api.vieneu.io/api/v1", "key": "…" },
-    "9router": { "baseUrl": "http://localhost:20128/v1" }
-  }
+  "openai":  { "kind": "openai", "baseUrl": "https://api.openai.com/v1", "key": "…",
+               "uses": ["chat", "image"], "models": { "chat": "gpt-4o-mini", "image": "gpt-image-1" } },
+  "9router": { "kind": "openai", "baseUrl": "http://localhost:20128/v1", "model": "google-tts/vi", "key": "…" },
+  "mc":      { "kind": "anthropic", "model": "claude-sonnet-5-5", "key": "sk-ant-…" }
 }
 ```
+
+Kho cũ chưa có `uses` thì backend **đoán theo giao thức** (`anthropic` → chat,
+`elevenlabs` → tts, `openai` → chat + tts + ảnh) và loại nào chưa có model riêng thì dùng
+`model` chung — nâng cấp xong mọi thứ chạy y như cũ, không phải sửa file tay.
+
+Trang quản lý sửa kho ở nút **Kết nối AI**: tab Chat | Ảnh | Giọng đọc | Video, mỗi tab là
+một bảng sửa tại chỗ. Thêm một kết nối đã có khoá vào tab khác là "dùng chung" — không
+nhập lại khoá. Tab Video khai được nhưng chưa tính năng nào gọi.
+
+`kind` là **giao thức**, không phải hãng:
+
+| `kind` | Nói chuyện kiểu | Làm được |
+|---|---|---|
+| `openai` | `POST {base}/chat/completions`, `/audio/speech`, `/images/generations`; khoá ở `Authorization: Bearer` | giọng đọc, viết chữ, vẽ ảnh |
+| `anthropic` | `POST {base}/v1/messages`; khoá ở `x-api-key` | viết chữ |
+| `elevenlabs` | khoá ở `xi-api-key`, giọng nằm trong đường dẫn | giọng đọc |
+
+Tính năng **chọn** kết nối theo tên, rồi tự giữ model và tham số của riêng nó trong cấu hình
+AI của phòng — không chỗ nào chép khoá:
+
+| Tính năng | Bật/tắt | Kết nối (loại) | Tham số riêng |
+|---|---|---|---|
+| MC do AI dẫn, nhờ AI viết | `enabled` | `provider` (chat) | `model`, `temperature` (0–1, `null` = theo nhà), `maxTokens` (100–4000), `extra`, `everySec` |
+| Vẽ ảnh khung chiếu | `anhEnabled` | `anhProvider` (image) | `anhModel`, `anhSize` (`<số>x<số>`, sai thì về 1024×1024) |
+| Giọng đọc | `enabled` ở `/api/voice` | `provider` của từng nhân vật (tts) | `voice`, `speed`, `volume` |
+
+Model lần theo thứ tự: ô của tính năng → model của kết nối cho đúng loại → `model` chung →
+mặc định của giao thức. Bảng xem trên sân khấu chỉ liệt kê kết nối có đúng loại; kết nối
+đang chọn mà đã bị xoá khỏi kho thì vẫn hiện, ghi "không có trong kho", chứ không lặng lẽ
+nhảy sang nhà khác. Cắm OpenRouter, Groq, DeepSeek hay một cổng trung chuyển chạy trên máy
+đều chạy, miễn nó nói đúng một trong ba giao thức trên.
 
 | Route | Việc |
 |---|---|
 | `GET /api/secrets` | Trả **trạng thái**: nhà nào đã có khoá. Không bao giờ trả giá trị. |
 | `PUT /api/secrets/<provider>` | Đặt khoá. Khoá rỗng nghĩa là giữ khoá cũ. |
 | `DELETE /api/secrets/<provider>` | Xoá nhà cung cấp |
+| `GET /s/providers` | Kho cho bảng xem trên sân khấu: tên, loại, model — không địa chỉ, không khoá |
 | `GET` / `PUT /api/voice` | Dàn giọng: danh sách nhân vật, giọng mặc định, nhanh chậm |
 | `POST /api/tts` | Gọi hộ nhà cung cấp, trả bytes mp3 (trang quản lý dùng để nghe thử) |
 | `POST /api/ai/tick` | Backend gọi Claude, trả `RoomCommand[]` đã lọc — **chưa làm** |
@@ -196,9 +231,31 @@ Mọi khoá nằm ở `database/secrets.json`, **chỉ backend đọc**. Client 
 | `GET /s/voice` | Dàn giọng, để sân khấu biết đọc bằng gì |
 | `POST /s/tts` | Sinh giọng cho một câu: `{ text, voiceId, speed? }` |
 
-Hai route này **không đòi token**, vì sân khấu chạy trong OBS và không có chỗ nào
-giữ token — giống `/d/*` và `/a/*`. Chúng vẫn đi qua lớp chặn `Host` và `Origin`,
-nên một trang web ngoài không gọi vào được.
+### Kho khoá ở lối `/s/`: chỉ ghi, không đọc
+
+| Route | Việc | Vì sao được |
+|---|---|---|
+| `GET /s/providers` | Tên kết nối + `hasKey` + loại việc. **Không** địa chỉ, **không** khoá | Bảng xem thử phải vẽ được ô chọn kết nối |
+| `PUT /s/secrets/<id>` | Cắm hoặc thay khoá | Người vận hành cắm ngay giữa lúc live, khỏi mở trang quản lý |
+
+Không có `DELETE` ở lối `/s/`: xoá nhầm một kết nối giữa lúc live là tắt tính năng mà
+không ai thấy. Xoá vẫn chỉ ở `/api/secrets/<id>`.
+
+**Đánh đổi, ghi rõ để sau này đọc lại còn biết đã cân nhắc gì.** Lối này một chiều: đã
+cắm rồi thì không trang nào đọc lại được giá trị, kể cả trang vừa gửi nó đi — nên nó
+không làm lộ khoá đang có. Cái mất là thứ gì gọi được `/s/` trên máy này cũng **ghi đè**
+được một kết nối, ví dụ trỏ `mc` sang một máy chủ lạ. Chấp nhận vì cùng mức tin cậy với
+`/s/viet` và `/s/media` — hai lối đã tiêu được tiền API — và vì lớp chặn `Host` +
+`Origin` vẫn nguyên, nên một trang web ngoài không gọi vào được. Test giữ đúng ranh giới
+này nằm ở `tests/backend/http.rs`: `san_khau_khong_bao_gio_doc_lai_duoc_gia_tri_khoa`,
+`trang_ngoai_khong_cam_duoc_khoa`, `san_khau_khong_xoa_duoc_ket_noi`.
+
+Khác hẳn bản cũ: bản cũ để **giá trị khoá** trong `localStorage` của trang đang live, ai
+mở DevTools trên máy đang phát cũng đọc được. Ở đây khoá đi một chiều vào máy chủ.
+
+Mọi route `/s/` đều **không đòi token**, vì sân khấu chạy trong OBS và không có chỗ nào
+giữ token — giống `/d/*` và `/a/*`. Chúng vẫn đi qua lớp chặn `Host` và `Origin`, nên
+một trang web ngoài không gọi vào được.
 
 ### Dàn giọng — mỗi nhân vật một giọng
 

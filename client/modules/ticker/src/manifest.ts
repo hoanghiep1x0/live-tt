@@ -23,6 +23,7 @@ export const manifest: ModuleManifest<Config> = {
   name: 'Dải chữ chạy',
   icon: '📜',
   summary: 'Lời nhắn người xem chạy ngang, chưa ai nhắn thì chạy lời mời',
+  room: 'ke-chuyen',
   triggers: ['comment'],
   configVersion: 1,
   schema,

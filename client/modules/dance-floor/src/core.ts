@@ -89,6 +89,16 @@ export function xepSan(config: Config, now: number, nhayTu: number, nhayDen: num
   });
 }
 
+/** Mở một màn nhảy từ `now`. */
+function batDauNhay(state: State, now: number): Effect[] {
+  state.nhayTu = now;
+  state.nhayDen = now + state.config.danceSec * 1_000;
+  state.nguoi = xepSan(state.config, now, state.nhayTu, state.nhayDen);
+  // Xin sáng slot sàn suốt màn nhảy: thiết kế nào muốn hắt thêm đèn xuống sàn,
+  // hay cho khán giả hô "Tung hoa!", thì đọc `useSlotSang('floor')`.
+  return [{ kind: 'overlay', slot: 'floor', ttlMs: state.config.danceSec * 1_000 }];
+}
+
 export const core: ModuleCore<Config, State> = {
   init(config) {
     return { config, nhayTu: 0, nhayDen: 0, nguoi: xepSan(config, 0, 0, 0) };
@@ -102,14 +112,17 @@ export const core: ModuleCore<Config, State> = {
         // chỉ làm cả nhóm giật về tư thế cũ giữa chừng.
         if (state.nhayDen > 0 && ctx.now < state.nhayDen + NGHI_GIUA_MAN_MS) return [];
 
-        state.nhayTu = ctx.now;
-        state.nhayDen = ctx.now + state.config.danceSec * 1_000;
-        state.nguoi = xepSan(state.config, ctx.now, state.nhayTu, state.nhayDen);
-        // Xin sáng slot sàn suốt màn nhảy: thiết kế nào muốn hắt thêm đèn
-        // xuống sàn thì đọc `useSlotSang('floor')`, không thì bỏ qua.
-        return [{ kind: 'overlay', slot: 'floor', ttlMs: state.config.danceSec * 1_000 }];
+        return batDauNhay(state, ctx.now);
       },
     },
+  },
+
+  // Người vận hành bấm "Nhảy ngay": như "Quà ảo: cho 3 chibi lên nhảy" của
+  // bản cũ. Không chờ quãng nghỉ giữa hai màn và không cần bật "nhảy khi có
+  // quà" — người bấm là người quyết.
+  onAction(state, op, ctx) {
+    if (op !== 'nhay') return [];
+    return batDauNhay(state, ctx.now);
   },
 
   onTick(state, now) {

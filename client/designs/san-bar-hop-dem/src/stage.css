@@ -1,0 +1,80 @@
+/* Sàn bar · Hộp đêm — bố cục khung. Cảnh 3D vẽ bằng WebGL (canh.ts) phủ kín; slot module đè lên.
+ *
+ * Khung rộng min(100vw, 100vh×9/16), cao theo aspect-ratio (như phòng kể chuyện); đơn vị cqw = 1% bề rộng khung.
+ */
+
+:root {
+  --bar-nen: #05040a;
+  --bar-hong: #ff2d95;
+  --bar-tim: #7a3cff;
+  --bar-xanh: #18d6ff;
+  --bar-cam: #ffb02e;
+  --bar-chu: #f4ecff;
+  /* Ngăn xem thử rộng hơn mặc định: tab Vai chính, Đám đông, Trang phục là lưới ảnh. */
+  --bx-ngan-rong: 560px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bar-nen);
+  overflow: hidden;
+  color: var(--bar-chu);
+  font-family: system-ui, sans-serif;
+}
+
+#san-khau {
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+
+.stage {
+  position: relative;
+  width: min(100vw, calc(100vh * 9 / 16));
+  aspect-ratio: 9 / 16;
+  container-type: inline-size;
+  overflow: hidden;
+  background: var(--bar-nen);
+}
+
+.canh,
+.lop-3d {
+  position: absolute;
+  inset: 0;
+}
+
+.canh canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Kéo để xoay 360°, cuộn để phóng: trình duyệt không được ăn cử chỉ chạm thành cuộn trang. */
+  touch-action: none;
+  cursor: grab;
+}
+
+.canh canvas:active {
+  cursor: grabbing;
+}
+
+/* Lớp slot của vũ công chỉ chứa khai báo ẩn: để chuột đi xuyên xuống cảnh, kéo ở đâu trên khung cũng
+ * xoay được. */
+.lop-3d {
+  pointer-events: none;
+}
+
+.loi-canh {
+  position: absolute;
+  inset: auto 4cqw 45% 4cqw;
+  padding: 2cqw 3cqw;
+  border-radius: 2cqw;
+  background: rgba(0, 0, 0, 0.7);
+  font-size: 3cqw;
+  text-align: center;
+}
+

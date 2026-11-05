@@ -690,32 +690,25 @@ main {
 .mod[data-bat='true'] {
   border-color: color-mix(in srgb, var(--ok) 55%, var(--line));
 }
+/* Hàng chỉnh nhanh: ô nào không đủ chỗ thì xuống dòng. Ép cả hàng lên một
+   dòng thì thẻ hẹp (lưới 4 cột) bị ô đè chữ và tràn ra ngoài mép. */
 .mod-quick {
-  display: grid;
-  grid-template-columns: repeat(var(--n), auto);
-  justify-content: space-between;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 8px 16px;
   min-height: 30px;
   padding-top: 10px;
   border-top: 1px solid var(--line);
 }
 .q {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   min-width: 0;
   cursor: default;
-  padding: 0 12px;
-}
-.q:first-child {
-  padding-left: 0;
-}
-.q:last-child {
-  padding-right: 0;
-}
-.q + .q {
-  border-left: 1px solid var(--line);
 }
 .q-lbl {
   font-size: 11.5px;
@@ -1253,6 +1246,7 @@ main {
 }
 .mod-top,
 .mod-quick,
+.mod-nut,
 .hooks {
   position: relative;
   z-index: 2;
@@ -1260,8 +1254,19 @@ main {
 }
 .mod-top .switch,
 .mod-quick .q,
-.mod-top .btn {
+.mod-top .btn,
+.mod-nut .btn {
   pointer-events: auto;
+}
+/* Nút bấm tức thời của module (`ui.actions`), dưới hàng chỉnh nhanh */
+.mod-nut {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+}
+.mod-nut .btn {
+  gap: 6px;
 }
 
 /* Ô chọn nguồn sự kiện trên thanh trên */
@@ -1351,4 +1356,210 @@ main {
 }
 .voice-row select.input-xs {
   width: 110px;
+}
+
+/* Dải tab kiểu viên thuốc — hộp tính năng và nhóm tính năng dùng chung. */
+.ai-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: var(--line);
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.ai-tab {
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ai-tab:hover {
+  color: var(--fg);
+}
+.ai-tab[data-chon='true'] {
+  color: var(--fg);
+  background: linear-gradient(180deg, var(--card-top), var(--card-bot));
+  box-shadow: inset 0 1px 0 var(--hi), 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.ai-tab .count {
+  font-size: 11px;
+  padding: 0 7px;
+  border-radius: 99px;
+  background: var(--line);
+}
+
+/* ---- Kho kết nối AI ----
+ * Cùng cơ chế với modal trên sân khấu: bảng (số thứ tự, tên, nút sửa), form
+ * chỉ mở khi bấm Sửa hoặc Thêm kết nối. */
+.ai-dau {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ai-bang-cuon {
+  margin: 10px 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ai-bang {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.ai-bang th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--line);
+}
+.ai-bang td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.ai-bang tr:last-child td {
+  border-bottom: 0;
+}
+.ai-bang tr[data-dang='true'] td {
+  background: var(--line);
+}
+.ai-stt {
+  width: 1%;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.ai-nut {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+.ai-trong {
+  color: var(--muted);
+  text-align: center;
+  padding: 16px !important;
+}
+.ai-form {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.ai-o {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.ai-o > span:first-child {
+  color: var(--muted);
+}
+.ai-o:has(.ai-viec) {
+  align-items: start;
+}
+.ai-o:has(.ai-viec) > span:first-child {
+  padding-top: 6px;
+}
+.ai-khoa {
+  display: flex;
+  gap: 6px;
+}
+.ai-khoa .input {
+  flex: 1;
+}
+.ai-viec {
+  display: grid;
+  gap: 4px;
+}
+.ai-viec-dong {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+.ai-tick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.ai-tick input {
+  accent-color: var(--gold-text);
+}
+.ai-tick[data-tat='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ai-khong {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ai-bao {
+  color: var(--warn);
+  font-size: 12.5px;
+}
+.ai-nut-form {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Ô lưới ảnh (`gallery`, `select` có ảnh): mỗi mục một ảnh nhỏ, bấm để bật / chọn. */
+.luoi-anh {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+.luoi-anh-o {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 2px solid var(--line);
+  background: var(--input-bg);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.luoi-anh-o img {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 7px;
+}
+.luoi-anh-o[aria-pressed='true'] {
+  opacity: 1;
+  color: var(--fg);
+  border-color: var(--gold2);
+}
+.luoi-anh-o:disabled {
+  cursor: default;
+}
+
+/* Tab nhóm tính năng trên đầu trang Tính năng. */
+.nhom-tabs {
+  margin: 4px 0 16px;
 }

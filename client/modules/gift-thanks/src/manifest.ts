@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TAB_GIONG } from '@live/contracts';
 import type { ModuleManifest } from '@live/contracts';
 
 /** Năm câu cảm ơn cho một món quà, đọc lần lượt theo `OFFSET_S`. MC nói nhiều
@@ -22,6 +23,8 @@ const CAM_ON_LON = [
 ].join('\n');
 
 export const schema = z.object({
+  voice: z.boolean().default(true),
+  voiceId: z.string().max(60).default(''),
   minCoins: z.number().int().min(0).max(100_000).default(1),
   templates: z.string().min(1).max(4_000).default(CAM_ON),
   bigTemplates: z.string().min(1).max(4_000).default(CAM_ON_LON),
@@ -39,6 +42,7 @@ export const manifest: ModuleManifest<Config> = {
   name: 'Cảm ơn quà',
   icon: '🎁',
   summary: 'Đọc tên & tạo hiệu ứng khi có quà, nhắc lại vài lần sau đó',
+  room: 'ke-chuyen',
   triggers: ['gift'],
   configVersion: 2,
   schema,
@@ -97,6 +101,15 @@ export const manifest: ModuleManifest<Config> = {
       min: 1,
       max: 60,
       hint: 'Hết khoảng này không thấy quà mới thì đọc lời cảm ơn',
+    },
+    { key: 'voice', label: 'Đọc to lời cảm ơn', short: 'Đọc to', type: 'toggle', tab: TAB_GIONG },
+    {
+      key: 'voiceId',
+      label: 'Giọng chính',
+      short: 'Giọng',
+      type: 'voice',
+      tab: TAB_GIONG,
+      hint: 'Chỉ dùng khi phòng bật Đa giọng (trang quản lý, nút Giọng đọc). Trong câu, [id-giọng] đổi giọng, [-] quay về giọng chính.',
     },
   ],
 };

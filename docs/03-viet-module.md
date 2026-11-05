@@ -20,7 +20,11 @@ client/modules/<module-id>/
 ```
 
 Test nằm ở `tests/client/modules/<module-id>/core.test.ts` — **không** cạnh mã nguồn
-(quy ước 01 §3). Rồi thêm một dòng vào `client/manager/src/lib/registry.ts`.
+(quy ước 01 §3). Rồi thêm một dòng vào `client/shared/stage-sdk/src/danh-sach.ts`
+(`DANH_SACH_MODULE`) — chỗ DUY NHẤT liệt kê module. Trang quản lý, bảng xem và sân khấu
+cùng đọc mảng này; `tests/client/shared/danh-sach-module.test.ts` đỏ nếu mảng thiếu hay thừa
+so với thư mục `client/modules/`. Nhớ thêm `"@live/mod-<id>": "*"` vào dependencies của
+`client/shared/stage-sdk/package.json` rồi chạy `npm install` để có liên kết workspace.
 
 Module không có test cho `core.ts` thì không được thêm vào sổ.
 
@@ -67,10 +71,10 @@ dựng theo. Không viết một dòng JSX nào cho phần cấu hình.
 | Khoá | Việc |
 |---|---|
 | `triggers` | Sự kiện module bắt. Trang quản lý hiện thành nhãn "Chạy khi: có quà". |
-| `fields` | Mô tả ô cấu hình: `text`, `textarea`, `number`, `toggle`, `select`, `range`, `time`. |
+| `fields` | Mô tả ô cấu hình: `text`, `textarea`, `number`, `toggle`, `select`, `range`, `time`, `media`, `voice`, `gallery`. |
 | `short` | Nhãn ngắn khi ô đó hiện trên thẻ. Thiếu thì dùng `label`. |
 | `quick` | Danh sách **khoá**, trỏ tới `fields`. Tối đa 3, nhiều hơn thì thẻ chật. |
-| `room` | Loại phòng mà tính năng chỉ hợp (`ke-chuyen`, `san-bar`, `dam-cuoi`). Thiếu là dùng chung, lên mục "Chỉnh nhanh". |
+| `room` | Loại phòng mà tính năng chỉ hợp (`ke-chuyen`, `san-bar`, `dam-cuoi`), hoặc danh sách khi nhiều loại cùng dùng. Chỉ khai loại có thiết kế gợi ý nó. Dùng chung chỉ còn Kết nối AI, nên module mới phải khai `room`. |
 | `slots` | Slot cần có để module vẽ được. Thiết kế thiếu slot thì module im lặng không hiện. |
 | `needs` | Khả năng cần: `tts`, `audio`, `stage-3d`, `net`, `storage`. |
 
@@ -177,7 +181,8 @@ không thuộc module. Xem [04 — Viết thiết kế](04-viet-thiet-ke.md) §5
 Chỉ khi module phải **vẽ**. Cảm ơn quà không cần — nó trả `say`, thiết kế lo đọc và hiện chữ.
 
 Có rồi: `top-givers` (bảng vinh danh), `ticker` (dải chữ chạy), `chat-bubbles` (bóng chat nổi), `likes-counter`
-(thanh tiến độ). Sẽ cần: Thông báo ghim, Nhân vật chibi, Nhân vật hip hop.
+(thanh tiến độ), `vu-cong-3d` (vũ công 3D — slot `stage-3d`, không vẽ DOM mà khai yêu cầu cho cảnh
+3D của thiết kế, docs/02 §5b). Sẽ cần: Thông báo ghim, Nhân vật chibi.
 
 ```tsx
 import type { StagePartProps } from '@live/stage-sdk';
@@ -207,10 +212,11 @@ Ba luật:
    phòng kể chuyện, phòng đám cưới và quán bar mà không phải sửa dòng nào. Đơn vị dùng `cqw`
    — khung sân khấu khai `container-type: inline-size`.
 
-Rồi thêm một dòng vào `client/shared/stage-sdk/src/registry.ts`:
+Rồi khai phần vẽ trong `PHAN_VE` ở `client/shared/stage-sdk/src/registry.ts` (module thì đã có
+ở `danh-sach.ts`, đây chỉ ghép slot với Part):
 
 ```ts
-dangKy(moduleTopGivers, { slot: 'tops', Part: TopGiversStage }),
+phan(moduleTopGivers, { slot: 'tops', Part: TopGiversStage }),
 ```
 
 Thiết kế **không** import module; nó chỉ đặt `<Slot name="tops" />`.
@@ -236,6 +242,51 @@ viết hộ chứ không viết thay. Và không chỗ nào phải biết tên m
 
 Ô ảnh / video thì khai `type: 'media'`: bảng xem cho dán đường dẫn, tải file lên, hoặc nhờ
 AI vẽ — cả ba cùng cho ra một chuỗi đường dẫn, module không cần biết nó tới từ đâu.
+
+Chọn bằng ảnh (bộ trang phục, nhân vật…): mỗi mục `options` khai thêm `img` (ảnh nhỏ, thường là
+asset của chính module, `/m/<id>/…`). `type: 'gallery'` hiện lưới ảnh bấm để bật / tắt từng mục,
+giá trị là mảng `value` đang bật (schema: `z.array(z.string())`); `type: 'select'` mà mục nào cũng
+có `img` thì hiện lưới ảnh bấm chọn một. Mẫu: `client/modules/vu-cong-3d/src/manifest.ts`.
+
+## 7c. Module đọc to — tab Giọng đọc
+
+Module nào có câu `say` thì khai hai ô vào tab `TAB_GIONG`: công tắc đọc to và ô chọn giọng.
+
+```ts
+import { TAB_GIONG } from '@live/contracts';
+
+// schema
+voice: z.boolean().default(true),
+voiceId: z.string().max(60).default(''),
+
+// fields
+{ key: 'voice', label: 'Đọc to lời cảm ơn', short: 'Đọc to', type: 'toggle', tab: TAB_GIONG },
+{ key: 'voiceId', label: 'Đọc bằng giọng', short: 'Giọng', type: 'voice', tab: TAB_GIONG },
+```
+
+- `type: 'voice'` — bảng xem và trang quản lý tự đổ dàn giọng của phòng vào thành ô chọn.
+  Rỗng là giọng mặc định. Giọng đã gỡ khỏi dàn vẫn hiện, ghi "không còn trong dàn".
+- **Lõi không đụng tới giọng.** Runtime (`registry.ts`, `ganGiong`) gắn giọng đã chọn vào mọi
+  câu `say` chưa tự nói rõ `voice`. Lõi chỉ phải tôn trọng công tắc: `voice` tắt thì không
+  sinh câu `say`.
+- `tab` dùng cho mọi ô, không riêng giọng: modal chia tab khi có ô khai `tab`, ô không khai về
+  tab đầu "Cài đặt". Module ngắn không khai gì vẫn là một trang.
+
+**Đơn giọng / đa giọng** là công tắc của cả phòng (`multi` trong cài đặt giọng, hộp thoại
+Giọng đọc ở trang quản lý):
+
+- Đơn giọng (mặc định): cả phòng đọc bằng giọng mặc định của dàn. `voiceId` của tính năng và
+  dấu vai trong câu bị bỏ qua.
+- Đa giọng: ô `voice` là **giọng chính** của tính năng. Trong nội dung, `[id-giọng]` đổi sang
+  giọng đó tới dấu kế tiếp, `[-]` quay về giọng chính:
+  `Ông lão gọi: [ong-lao] Con ơi về đi! [-] Cô bé chạy về.`
+
+Hàng đọc (`HangGiong`, hàm thuần `tachVai`) đọc lần lượt từng đoạn của một câu; cả câu là một
+mục trong hàng chờ nên không bao giờ bị cắt giữa lời thoại. Phụ đề và chữ trên khung chiếu đi
+qua `boVai`, nên khán giả không thấy dấu `[ong-lao]`. Module không phải làm gì thêm.
+
+Câu MC chọn giọng ở tab Giọng đọc của thẻ MC (`voiceId` trong cấu hình AI của phòng); backend
+gắn giọng đó vào câu MC trước khi đẩy xuống sân khấu.
 
 ## 8. Module có nút bấm
 
@@ -268,4 +319,5 @@ onAction(state, op, ctx) {
 - [ ] Nhóm `other` thì không khai `quick`
 - [ ] Test gọi qua `runFeed`/`runTick`, mở đầu bằng `kiemModule`
 - [ ] Assets riêng của module nằm trong `client/modules/<id>/assets/`
-- [ ] Không sửa file nào ngoài thư mục module, trừ một dòng trong `client/manager/src/lib/registry.ts`
+- [ ] Không sửa file nào ngoài thư mục module, trừ một dòng trong `client/shared/stage-sdk/src/danh-sach.ts`
+      (một dòng `phan(...)` trong `registry.ts` nếu có phần vẽ, một dependency trong `package.json` của stage-sdk)

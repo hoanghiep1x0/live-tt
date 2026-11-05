@@ -13,6 +13,7 @@ Chuyển từ mã cũ sang kiến trúc mới, theo thứ tự. Mỗi giai đo�
 | `kieu-2` Sân chơi 3D | `san-choi-3d` | `PlaygroundPage.tsx`, `Playground3D.tsx`, `playground.ts` |
 | `kieu-3` Sảnh Tích Phước | `tich-phuoc` | `SanhPage.tsx`, `components/charity/` (21 file) |
 | — (mới) | `hip-hop` | dựng mới, dùng module `hiphop-dancer` |
+| — (mới) | `san-bar-hop-dem`, `san-bar-bai-bien` (loại `san-bar`, [phong/san-bar](phong/san-bar/README.md)) | `D:\Live-bar` nhánh `phong-kieu-4-bar`: `client/public/bar/` |
 
 `tich-phuoc` chuyển trước tiên trong nhóm thiết kế: `components/charity/` đã **không import gì** từ `lib/`,
 nên nó gần như là một thiết kế độc lập sẵn rồi.
@@ -89,6 +90,10 @@ gợi ý của bối cảnh tự nạp, và **đổi cấu hình đẩy xuống 
 | Thực thi `Effect`: `say` thành phụ đề, `overlay` sáng slot | **xong** |
 | Thực thi `say` thành giọng đọc thật, `sfx` thành tiếng động | **xong** |
 | Thực thi `command` (cần cổng duyệt) | chưa |
+| Sổ module một nguồn: `stage-sdk/src/danh-sach.ts`, quản lý và sân khấu cùng đọc, có test chống lệch | **xong** |
+
+Danh sách module đã cài không chép ở tài liệu này (chép là sớm muộn lệch): xem
+`client/shared/stage-sdk/src/danh-sach.ts`.
 
 Còn thiếu để gọi là xong hẳn: nguồn `webview` để không cần tiến trình cầu nối ngoài, và
 cổng duyệt cho `command`.

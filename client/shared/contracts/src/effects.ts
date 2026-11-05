@@ -76,6 +76,9 @@ export type RoomCommand =
   /** MC do AI dẫn: bật tắt, nhịp xem lại phòng, model, lời dặn thêm. Khoá API
    *  KHÔNG đi qua đây — nó nằm ở kho khoá của backend. */
   | { op: 'set-ai'; patch: Json }
+  /** Bấm một nút `actions` của module. Không lưu gì: backend chỉ chuyển xuống sân
+   *  khấu thành tin `action`, lõi module tự xử trong `onAction`. */
+  | { op: 'module-action'; moduleId: string; action: string }
   | { op: 'seed'; n: number }
   | { op: 'next-story' };
 

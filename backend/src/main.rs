@@ -51,6 +51,7 @@ async fn main() {
     // Nhân vật ảo: giữ đám đông minh hoạ ở đúng số người vận hành đặt. Tác vụ
     // sống suốt đời máy chủ, tự im khi chưa phát phòng nào hoặc đang tắt.
     tokio::spawn(live_backend::bot::chay(st.clone()));
+    tokio::spawn(live_backend::bot::chay_xem_thu(st.clone()));
 
     // MC do AI dẫn. Cũng sống suốt đời máy chủ, tự im khi tắt hoặc chưa có khoá.
     tokio::spawn(live_backend::ai::chay(st.clone()));

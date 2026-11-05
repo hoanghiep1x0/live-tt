@@ -124,7 +124,15 @@ export const core: ModuleCore<Config, State> = {
     if (!state.config.announce) return [];
 
     return [
-      { kind: 'say', text: state.config.template.replaceAll('{ten}', nhat.name), priority: 'high' },
+      ...(state.config.voice
+        ? [
+            {
+              kind: 'say' as const,
+              text: state.config.template.replaceAll('{ten}', nhat.name),
+              priority: 'high' as const,
+            },
+          ]
+        : []),
       { kind: 'sfx', sound: 'fanfare' },
       { kind: 'overlay', slot: 'tops', ttlMs: 5000 },
     ];

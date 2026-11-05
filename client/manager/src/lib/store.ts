@@ -43,6 +43,8 @@ export interface Manager {
   resetData(id: string): void;
   batModule(moduleId: string, on: boolean): void;
   luuCauHinh(moduleId: string, config: Record<string, Json>): void;
+  /** Bấm nút trên thẻ module, áp vào thiết kế đang phát. */
+  bamNut(moduleId: string, op: string): void;
   doiNguon(kind: SourceKind): void;
 }
 
@@ -122,6 +124,10 @@ export function useManager(): Manager {
                 // Mất mạng thì lớp hiện trạng đã báo, không cần toast thêm.
               }
             })();
+          } else if ('designId' in d && d.designId !== undefined) {
+            // Tin của một phòng đang xem thử (chưa phát): của cửa sổ xem thử,
+            // không phải của phòng đang phát mà trang này đang hiện.
+            return;
           } else if (d.t === 'config') {
             // Đang chờ ghi của chính mình thì bỏ qua tin dội lại, nếu không ô
             // đang gõ bị nhảy về giá trị cũ.
@@ -302,6 +308,21 @@ export function useManager(): Manager {
     [bat, taiModule],
   );
 
+  const bamNut = useCallback(
+    (moduleId: string, op: string) => {
+      const designId = liveRef.current;
+      if (designId === null) return;
+      void (async () => {
+        try {
+          await api.bamNut(designId, moduleId, op);
+        } catch (e) {
+          bat(e);
+        }
+      })();
+    },
+    [bat],
+  );
+
   return {
     designs,
     live,
@@ -321,6 +342,7 @@ export function useManager(): Manager {
     resetData,
     batModule,
     luuCauHinh,
+    bamNut,
     doiNguon,
   };
 }

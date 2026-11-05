@@ -7,7 +7,7 @@ import type { Config } from './manifest';
 export const moduleStory: LiveModule<Config, State> = { manifest, core };
 
 export { core, catDoan, doanHienTai } from './core';
-export { manifest, schema } from './manifest';
+export { manifest, schema, trongSuot } from './manifest';
 // Phần vẽ lấy qua `@live/mod-story/stage` — xem ghi chú ở top-givers.
 export type { State } from './core';
 export type { Config } from './manifest';

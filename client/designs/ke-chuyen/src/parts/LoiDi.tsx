@@ -65,9 +65,9 @@ function MotNguoi({
       }
     >
       <img className="loi-anh" src={asset(anhCua(ANH_DUNG, luot.kieu))} alt="" />
-      <b className="loi-ten">
-        {luot.ten} {luot.vao ? 'vào phòng' : 'rời phòng 👋'}
-      </b>
+      <span className="loi-ten">
+        <b>{luot.ten}</b> {luot.vao ? 'vào phòng' : 'rời phòng 👋'}
+      </span>
     </span>
   );
 }

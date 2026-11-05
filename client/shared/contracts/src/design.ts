@@ -1,8 +1,8 @@
 /** Manifest của một thiết kế — nội dung design.json. Xem docs/04-viet-thiet-ke.md. */
 
 import { z } from 'zod';
-import { ID_RE } from './module';
-import type { ConfigField } from './module';
+import { ID_RE, laLoaiPhong } from './module';
+import type { ConfigField, RoomKind } from './module';
 import type { Json } from './effects';
 
 /** Phải khớp `SlotName` ở effects.ts. */
@@ -28,6 +28,17 @@ const capability = z.enum(['tts', 'audio', 'stage-3d', 'net', 'storage']);
 
 export const designManifestSchema = z.object({
   id: z.string().regex(ID_RE, 'id phải là kebab-case, bắt đầu bằng chữ'),
+  /** Loại phòng (quy ước 01 §12) — một id trong `LOAI_PHONG`. Quyết thiết kế
+   *  này dùng được những tính năng riêng nào (`hopPhong`). Thiếu thì chỉ có
+   *  tính năng chung. */
+  category: z
+    .custom<RoomKind>(laLoaiPhong, { message: 'category phải là một loại phòng trong LOAI_PHONG' })
+    .optional(),
+  /** Kiểu phòng trong loại, ví dụ `hop-dem`. Chỉ để đặt tên và tìm tài liệu. */
+  style: z
+    .string()
+    .regex(/^[a-z][a-z0-9-]{0,31}$/)
+    .optional(),
   name: z.string().min(1),
   /** Emoji hiện trong ô vuông nổi trên thẻ. Thiết kế tự khai, để trang quản lý
    *  không phải giữ một bảng ánh xạ theo id — quy ước 01 §6. */

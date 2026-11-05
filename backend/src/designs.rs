@@ -41,6 +41,14 @@ pub struct Crowd {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DesignManifest {
     pub id: String,
+    /// Loại phòng (quy ước 01 §12), ví dụ `san-bar`. Backend chỉ chuyển tiếp
+    /// cho trang quản lý; loại nào dùng tính năng nào là việc của `hopPhong`
+    /// phía client, nơi giữ manifest của module.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
+    /// Kiểu phòng trong loại, ví dụ `hop-dem`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub style: Option<String>,
     pub name: String,
     #[serde(default = "icon_mac_dinh")]
     pub icon: String,
@@ -187,6 +195,8 @@ pub fn scan(layout: &Layout, port: u16, live: Option<&str>) -> Vec<DesignInfo> {
             Err(ly_do) => out.push(DesignInfo {
                 manifest: DesignManifest {
                     id: name.clone(),
+                    category: None,
+                    style: None,
                     name: name.clone(),
                     icon: icon_mac_dinh(),
                     summary: String::new(),
@@ -250,6 +260,28 @@ mod tests {
         );
         assert_eq!(m.entry, "dist/index.html");
         assert!(m.slots.is_empty());
+    }
+
+    #[test]
+    fn loai_phong_doc_ra_va_gui_ve_trang_quan_ly() {
+        let d = tempfile::tempdir().unwrap();
+        dung_thiet_ke(
+            d.path(),
+            "san-bar-hop-dem",
+            r#"{"id":"san-bar-hop-dem","category":"san-bar","style":"hop-dem","name":"x"}"#,
+            true,
+        );
+        let l = Layout::new(d.path());
+        let m = read_manifest(&l.design_manifest("san-bar-hop-dem"), "san-bar-hop-dem").unwrap();
+        assert_eq!(m.category.as_deref(), Some("san-bar"));
+        let v = serde_json::to_value(&m).unwrap();
+        assert_eq!(v["category"], "san-bar", "trang quản lý lọc tính năng theo trường này");
+        assert_eq!(v["style"], "hop-dem");
+
+        dung_thiet_ke(d.path(), "cu", r#"{"id":"cu","name":"x"}"#, true);
+        let cu = read_manifest(&l.design_manifest("cu"), "cu").unwrap();
+        let v = serde_json::to_value(&cu).unwrap();
+        assert!(v.get("category").is_none(), "thiết kế cũ không khai thì không bịa ra loại");
     }
 
     #[test]

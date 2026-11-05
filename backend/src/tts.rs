@@ -158,9 +158,25 @@ pub fn sinh(layout: &Layout, req: &YeuCau) -> Result<Vec<u8>, TtsError> {
         _ => {
             let cfg = crate::voice::read(layout);
             let id = req.voice_id.clone().unwrap_or_default();
-            let Some(v) = cfg.tim(&id) else {
+            if cfg.cast.is_empty() {
                 return Err(TtsError::Invalid(
-                    "dàn giọng còn trống — thêm một giọng trong trang quản lý".into(),
+                    "dàn giọng còn trống — thêm một giọng ở thẻ Giọng đọc".into(),
+                ));
+            }
+            // Như chuỗi giọng của bản cũ: giọng được gọi → giọng mặc định → giọng
+            // đọc được đầu tiên trong dàn. Giọng nào thiếu tên, mất kết nối, hết
+            // khoá thì bỏ qua — gọi nó chỉ nhận lỗi, rồi sân khấu im hoặc đọc
+            // bằng giọng máy sai thứ tiếng.
+            let dung = crate::ai::giong_doc_duoc(layout);
+            let co = |x: &str| !x.is_empty() && dung.iter().any(|(g, _)| g == x);
+            let chon = [id.as_str(), cfg.mac_dinh.as_str()]
+                .into_iter()
+                .find(|x| co(x))
+                .map(str::to_string)
+                .or_else(|| dung.first().map(|(g, _)| g.clone()));
+            let Some(v) = chon.as_deref().and_then(|g| cfg.cast.iter().find(|v| v.id == g)) else {
+                return Err(TtsError::Invalid(
+                    "chưa có giọng nào đọc được — sửa ở thẻ Giọng đọc".into(),
                 ));
             };
             (v.provider.clone(), v.voice.clone())
@@ -190,7 +206,7 @@ pub fn sinh(layout: &Layout, req: &YeuCau) -> Result<Vec<u8>, TtsError> {
         })?
     };
 
-    let (url, ten_header, _, body) = dung_goi(p.kind, &base, &giong, &p.model, &text, speed)?;
+    let (url, ten_header, _, body) = dung_goi(p.kind, &base, &giong, p.model_cho(secrets::Use::Tts), &text, speed)?;
     let gia_tri_header = match p.kind {
         ProviderKind::Openai => format!("Bearer {}", p.key),
         ProviderKind::Elevenlabs | ProviderKind::Anthropic => p.key.clone(),

@@ -66,7 +66,7 @@ function quaLon(config: Config, count: number, coins: number): boolean {
 function hieuUng(config: Config, l: Luot): Effect[] {
   const text = loiCamOn(config, l);
   if (text === '') return [];
-  const ra: Effect[] = [{ kind: 'say', text, priority: 'normal' }];
+  const ra: Effect[] = config.voice ? [{ kind: 'say', text, priority: 'normal' }] : [];
   if (l.i === 0) {
     ra.push({ kind: 'sfx', sound: 'gift' }, { kind: 'overlay', slot: 'ticker', ttlMs: 4000 });
   }

@@ -43,7 +43,8 @@
   right: 0;
   bottom: 0;
   z-index: 9999;
-  width: 360px;
+  /* Thiết kế nào cần ngăn rộng hơn (vd sàn bar: lưới nhân vật, trang phục) thì đặt `--bx-ngan-rong`. */
+  width: min(var(--bx-ngan-rong, 360px), 100vw);
   display: flex;
   flex-direction: column;
   background: rgba(16, 13, 10, 0.96);
@@ -234,6 +235,85 @@
 .bx-q input[type='checkbox']:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+/* Nút bấm tức thời của module (`ui.actions`, NutModule.tsx): nằm trên nút phủ thẻ như hàng chỉnh nhanh. */
+.bx-the-nut {
+  position: relative;
+  z-index: 1;
+  margin-top: 9px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bx-the-nut button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(242, 196, 90, 0.45);
+  background: rgba(242, 196, 90, 0.12);
+  color: #f6e2b0;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.bx-the-nut button:hover:not(:disabled) {
+  background: rgba(242, 196, 90, 0.24);
+}
+.bx-the-nut button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+/* Nút đang có hiệu lực (`core.trangThaiNut`): tô đặc, các nút kia nhạt đi. */
+.bx-the-nut button[aria-pressed='true'],
+.bx-the-nut button[aria-pressed='true']:hover:not(:disabled) {
+  background: #f2c45a;
+  border-color: #f2c45a;
+  color: #1b1408;
+  font-weight: 600;
+}
+.bx-the-nut button[aria-pressed='false'] {
+  opacity: 0.7;
+}
+.bx-the-tt {
+  flex-basis: 100%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #9b958a;
+}
+.bx-the-tt::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6b665e;
+}
+.bx-the-tt[data-bat='true']::before {
+  background: #4fd17f;
+  box-shadow: 0 0 6px #4fd17f;
+}
+
+/* Ô chỉnh nhanh có hộp phụ (`ConfigField.popup`): một nút ghi giá trị đang chọn. */
+.bx-q-popup {
+  cursor: pointer;
+  font: inherit;
+  color: #f4efe6;
+  max-width: 100%;
+}
+.bx-q-popup:hover:not(:disabled) {
+  border-color: rgba(242, 196, 90, 0.5);
+}
+.bx-q-popup b {
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Hàng chỉnh nhanh: những ô hay sửa nhất, ngay trên thẻ, không phải mở modal. */
@@ -431,6 +511,22 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+/* Ô chọn: Windows vẽ mũi tên và danh sách thả xuống màu sáng, lạc hẳn khỏi
+ * bảng tối. Tự vẽ mũi tên, và báo trình duyệt dùng bảng màu tối cho danh sách. */
+select.bx-o {
+  appearance: none;
+  color-scheme: dark;
+  cursor: pointer;
+  padding-right: 28px;
+  background-color: rgba(0, 0, 0, 0.42);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23f2c45a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+select.bx-o option {
+  color: #f4efe6;
+  background: #241a14;
+}
 
 .bx-truot {
   display: flex;
@@ -547,4 +643,500 @@
   color: #9aa3b5;
   font-size: 11px;
   word-break: break-all;
+}
+
+/* Tab trong modal: mỗi nhóm việc một tab, để modal vừa một màn không phải cuộn. */
+.bx-tabs {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  padding: 10px 10px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+.bx-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px 8px;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  color: var(--bx-mo, rgba(255, 255, 255, 0.62));
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+}
+.bx-tab:hover {
+  color: #f4efe6;
+}
+.bx-tab[aria-selected='true'] {
+  color: #f4efe6;
+  border-bottom-color: #f2c45a;
+}
+/* Chấm nhỏ cạnh tab Vẽ ảnh: xanh là đang cho vẽ, xám là đã tắt. */
+.bx-tab-cham {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+}
+.bx-tab-cham[data-bat='true'] {
+  background: #3fbf6f;
+}
+
+/* Ô lưới ảnh (`gallery`, `select` có ảnh): mỗi mục một ảnh nhỏ, bấm để bật / chọn. */
+.bx-anh {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 6px;
+}
+.bx-anh-o {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 8px;
+  color: #cfc8bc;
+  background: rgba(0, 0, 0, 0.42);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  font: inherit;
+  font-size: 10.5px;
+  line-height: 1.2;
+  cursor: pointer;
+  opacity: 0.55;
+}
+.bx-anh-o img {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.bx-anh-bat {
+  opacity: 1;
+  color: #f4efe6;
+  border-color: rgba(242, 196, 90, 0.85);
+}
+.bx-anh-o:disabled {
+  cursor: default;
+}
+
+/* Thẻ kho kết nối AI: chỉ xem, không sửa — nên không có công tắc, và dòng
+   trạng thái phải đọc được bằng mắt từ xa lúc đang live. */
+.bx-kho-ds {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.bx-kho-ds li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+}
+
+.bx-kho-viec {
+  flex: 1;
+  opacity: 0.6;
+  font-size: 11px;
+}
+
+.bx-kho-trangthai {
+  font-weight: 700;
+  font-size: 11px;
+  color: #ffb4a8;
+}
+
+.bx-kho-ds li[data-co='true'] .bx-kho-trangthai {
+  color: #9ee3a8;
+}
+
+.bx-the-kho .bx-kho-mo {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  /* `background: none` và `font: inherit` là bắt buộc: thẻ này là <button>,
+     không có hai dòng đó thì trình duyệt tô nền trắng mặc định. */
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  text-align: center;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.bx-the-kho .bx-kho-mo:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bx-the-kho .bx-kho-phu {
+  font-weight: 500;
+  opacity: 0.7;
+  border-style: dashed;
+}
+
+/* Ô cắm khoá trong modal. Nhãn bên trái, ô bên phải. */
+.bx-kho-form {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.bx-kho-form label {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.bx-kho-form .bx-o {
+  width: 100%;
+}
+
+.bx-kho-nut {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.bx-kho-huy {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.bx-kho-bao {
+  margin: 2px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ee3a8;
+}
+
+/* Nút chữ trong modal kho dùng chung kiểu với nút "Xong", nên chỉ cần căn. */
+.bx-kho-huy {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.bx-kho-trong,
+.bx-kho-nhac {
+  margin: 0;
+  font-size: 12px;
+  color: var(--bx-mo, rgba(255, 255, 255, 0.62));
+}
+
+.bx-kho-nhac {
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+/* Danh sách kết nối trong modal: mỗi dòng bấm Sửa là đổ lại vào form. */
+/* Bảng kết nối trong modal: số thứ tự, tên, nút sửa. Form chỉ mở khi bấm Sửa. */
+.bx-kho-bang {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: separate;
+  border-spacing: 0 4px;
+  font-size: 12px;
+}
+.bx-kho-bang th {
+  padding: 0 8px 2px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.5;
+}
+.bx-kho-bang td {
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  vertical-align: middle;
+}
+.bx-kho-bang td:first-child {
+  border-radius: 7px 0 0 7px;
+}
+.bx-kho-bang td:last-child {
+  border-radius: 0 7px 7px 0;
+  text-align: right;
+  width: 1%;
+}
+.bx-kho-bang .bx-kho-stt {
+  width: 1%;
+  opacity: 0.5;
+  font-variant-numeric: tabular-nums;
+}
+.bx-kho-bang tr[data-dang='true'] td {
+  background: rgba(242, 196, 90, 0.14);
+}
+
+/* Ô "Dùng cho": mỗi việc một dòng, tick thì hiện ô model của việc đó. */
+.bx-kho-viec-o {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  align-items: start;
+  gap: 8px;
+  font-size: 12px;
+}
+.bx-kho-viec-o > span {
+  padding-top: 6px;
+}
+.bx-kho-viec-ds {
+  display: grid;
+  gap: 4px;
+}
+.bx-kho-viec-dong {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+}
+.bx-kho-tick {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.bx-kho-tick input {
+  accent-color: #f2c45a;
+}
+.bx-kho-tick[data-tat='true'] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.bx-kho-khong {
+  font-size: 11px;
+  opacity: 0.5;
+}
+
+.bx-kho-ds li[data-dang='true'] {
+  outline: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.bx-kho-sua {
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bx-kho-sua:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.bx-kho-dau {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 14px 0 -2px;
+  font-size: 12px;
+}
+
+/* Ô khoá kèm con mắt: ô co giãn, mắt đứng sát bên phải. */
+.bx-kho-khoa {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bx-kho-khoa .bx-o {
+  flex: 1;
+  min-width: 0;
+}
+
+.bx-kho-mat {
+  flex: none;
+  width: 28px;
+  padding: 5px 0;
+  border-radius: 6px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.bx-kho-mat:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Nút về trang quản lý: y hệt nút bánh răng nhưng ở góc trái. */
+.bx-nut-ve {
+  right: auto;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 18px;
+}
+
+/* Ô `roster`: hàng tab con (từng nhân vật…), dưới là các ô của mục đang chọn. */
+.bx-ds {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bx-ds-nhan {
+  font-size: 12px;
+  color: #cfc8bc;
+}
+.bx-ds-tabs {
+  padding: 0;
+  font-size: 12px;
+}
+.bx-ds-than {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+/* Ô `list`: mỗi mục một thẻ, nút Thêm ở dưới. */
+.bx-muc-the {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.bx-muc-the-dau {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bx-muc-bo,
+.bx-muc-them {
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 8px;
+  color: #f6e2b0;
+  background: rgba(242, 196, 90, 0.1);
+  border: 1px solid rgba(242, 196, 90, 0.4);
+}
+.bx-muc-bo {
+  padding: 3px 9px;
+  color: #e8a39a;
+  background: none;
+  border-color: rgba(232, 163, 154, 0.4);
+}
+.bx-muc-them {
+  padding: 8px;
+  border-style: dashed;
+}
+.bx-muc-bo:disabled,
+.bx-muc-them:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Ô `tu-do`: lưới món của tủ đồ, nút xoá góc trên, dòng trạng thái bộ đang mặc. */
+.bx-td-o {
+  position: relative;
+  display: flex;
+}
+.bx-td-o > .bx-anh-o {
+  flex: 1;
+}
+.bx-td-xoa {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 0;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  color: #fff;
+  background: rgba(150, 40, 40, 0.75);
+  opacity: 0;
+}
+.bx-td-o:hover .bx-td-xoa,
+.bx-td-xoa:focus-visible {
+  opacity: 1;
+}
+.bx-td-che {
+  font-size: 10px;
+  color: #9b958a;
+}
+.bx-td-tt {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #cfc8bc;
+}
+.bx-td-tt[data-loi='true'] {
+  color: #e8a39a;
+}
+.bx-td-nguon {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11px;
+  color: #9b958a;
+}
+.bx-td-nguon span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Dàn giọng: dòng trạng thái dưới tên giọng — đỏ khi giọng chưa đọc được. */
+.bx-giong-loi {
+  display: block;
+  font-size: 11px;
+  opacity: 0.75;
+}
+.bx-giong-loi[data-loi='true'] {
+  color: #ff9b8a;
+  opacity: 1;
+}
+.bx-mo-giong {
+  margin: -4px 0 10px;
+}
+
+.bx-the-loi {
+  color: #ffb3a6;
+  border-left: 2px solid #ff7a66;
+  padding-left: 6px;
 }

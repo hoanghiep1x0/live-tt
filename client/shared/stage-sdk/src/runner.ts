@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { boVai } from '@live/contracts';
 import type { Effect, Json, SlotName } from '@live/contracts';
 import { HangGiong, playSfx } from './audio';
 import { SO_MODULE, timDangKy } from './registry';
@@ -47,6 +48,8 @@ function bayGio(): number {
 export function useRunner(s: StageState): KetQuaChay {
   const song = useRef(new Map<string, TheSong>());
   const idCuoi = useRef(0);
+  const phienCuoi = useRef<number | null>(null);
+  const nutCuoi = useRef(0);
   const cauHinh = useRef(new Map<string, Json>());
 
   const giong = useRef<HangGiong | null>(null);
@@ -62,7 +65,7 @@ export function useRunner(s: StageState): KetQuaChay {
       if (e.kind === 'say') {
         // Vừa đọc to vừa hiện chữ: người xem tắt tiếng vẫn theo được. Trừ khi
         // module đã tự vẽ câu đó lên màn rồi.
-        if (e.caption !== false) setLoiMc({ text: e.text, at: bayGio() });
+        if (e.caption !== false) setLoiMc({ text: boVai(e.text), at: bayGio() });
         giong.current?.noi(e.text, e.priority ?? 'normal', e.voice ?? '');
       } else if (e.kind === 'sfx') {
         playSfx(e.sound, e.volume ?? 1);
@@ -112,6 +115,12 @@ export function useRunner(s: StageState): KetQuaChay {
 
   // Mục feed mới: đưa qua đúng móc của từng module đang bật.
   useEffect(() => {
+    // Phiên mới (phát lại, hay đổi phòng) đánh số feed lại từ 1. Giữ số cũ thì
+    // mọi mục của phiên mới bị coi là đã xử lý cho tới khi vượt số đó.
+    if (s.session.startedAt !== phienCuoi.current) {
+      phienCuoi.current = s.session.startedAt;
+      idCuoi.current = 0;
+    }
     const moi = s.session.recentFeed.filter((f) => f.id > idCuoi.current);
     if (moi.length === 0) return;
     idCuoi.current = Math.max(...moi.map((f) => f.id));
@@ -123,7 +132,11 @@ export function useRunner(s: StageState): KetQuaChay {
     // đúng mạch. Không module nào sinh ra nó — nó từ backend xuống.
     for (const f of moi) {
       if (f.kind !== 'host') continue;
-      ra.push(f.voice === undefined ? { kind: 'say', text: f.text } : { kind: 'say', text: f.text, voice: f.voice });
+      ra.push(
+        f.voice === undefined
+          ? { kind: 'say', text: f.text }
+          : { kind: 'say', text: f.text, voice: f.voice },
+      );
     }
     for (const t of song.current.values()) {
       for (const f of moi) ra.push(...t.feed(f, ctx));
@@ -131,6 +144,19 @@ export function useRunner(s: StageState): KetQuaChay {
     nhan.current(ra);
     setModState(new Map([...song.current].map(([id, t]) => [id, t.state()])));
   }, [s.session]);
+
+  // Người vận hành bấm nút của module: chạy mỗi lần bấm đúng một lần, chỉ ở module
+  // đang bật. Trang vừa mở không chạy lại các lần bấm cũ — `hanhDong` rỗng lúc đầu.
+  useEffect(() => {
+    const moi = s.hanhDong.filter((h) => h.id > nutCuoi.current);
+    if (moi.length === 0) return;
+    nutCuoi.current = Math.max(...moi.map((h) => h.id));
+    const ctx = { now: bayGio(), rand: Math.random, session: s.session };
+    const ra: Effect[] = [];
+    for (const h of moi) ra.push(...(song.current.get(h.moduleId)?.action(h.op, ctx) ?? []));
+    nhan.current(ra);
+    setModState(new Map([...song.current].map(([id, t]) => [id, t.state()])));
+  }, [s.hanhDong]);
 
   // Nhịp đều: chạy `onTick`, dọn slot hết hạn, và đẩy `now` để phần vẽ theo
   // thời gian (bóng chat tự tắt) được vẽ lại.

@@ -1,0 +1,36 @@
+{
+  "id": "san-bar-bai-bien",
+  "category": "san-bar",
+  "style": "bai-bien",
+  "name": "Sàn bar · Bãi biển",
+  "icon": "🏝️",
+  "summary": "Bãi biển hoàng hôn 3D: nhảy trên cát, dừa treo đèn, đuốc, lửa trại, máy bay chiếu đèn — chỉ có vũ công 3D, cắm vào slot stage-3d",
+  "version": "0.1.0",
+  "canvas": {
+    "width": 1080,
+    "height": 1920
+  },
+  "slots": [
+    "stage-3d"
+  ],
+  "provides": [
+    "stage-3d"
+  ],
+  "recommends": [
+    "vu-cong-3d"
+  ],
+  "defaults": {
+    "vu-cong-3d": {
+      "boBat": [
+        "ao-thun-short",
+        "the-thao",
+        "bikini"
+      ]
+    }
+  },
+  "entry": "dist/index.html",
+  "quality": {
+    "auto": true,
+    "minFps": 24
+  }
+}

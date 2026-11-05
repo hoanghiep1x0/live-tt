@@ -6,11 +6,22 @@
   pointer-events: none;
 }
 
-.mod-chat-bong {
+.mod-chat-o {
   position: absolute;
   right: 0;
   bottom: 0;
   max-width: 100%;
+  /* Chỗ của bóng do phần vẽ tính từ chiều cao thật của các bóng mới hơn; đổi
+     chỗ thì trượt chứ không nhảy. */
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+/* So le như bản cũ: bóng lẻ lùi vào trong một đoạn, hai bóng liền nhau không
+   thẳng hàng một cột — nhìn ra từng lời một, không dính thành một khối. */
+.mod-chat-o.le {
+  right: 6cqw;
+}
+
+.mod-chat-bong {
   margin: 0;
   padding: 1cqw 2.2cqw;
   border-radius: 2.4cqw 2.4cqw 0.6cqw 2.4cqw;
@@ -22,16 +33,13 @@
   border: 0.25cqw solid var(--stage-ring, rgba(242, 196, 90, 0.75));
   box-shadow: 0 0.6cqw 1.8cqw rgba(0, 0, 0, 0.45), 0 0 1.6cqw rgba(255, 200, 110, 0.18);
   text-shadow: 0 0.2cqw 0.4cqw rgba(0, 0, 0, 0.6);
-  /* Câu dài thì cắt ở hai dòng: bóng cao quá là đè lên bóng phía trên, mà một
-     nấc chỉ có 8.4cqw. */
+  /* Câu dài thì cắt ở hai dòng. */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  white-space: normal;
   overflow-wrap: anywhere;
-  /* Mỗi nấc cao 8.4cqw: bóng mới đẩy bóng cũ lên trên, trượt chứ không nhảy. */
-  transform: translateY(calc(var(--nac) * -8.4cqw));
-  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
   /* Thời lượng do phần vẽ đặt, đúng bằng quãng lõi còn giữ bóng. */
   animation: mod-chat-song ease-out forwards;
 }
@@ -60,29 +68,31 @@
 }
 
 /* Hiện lên, đứng yên gần hết đời, rồi trôi lên mờ dần — bóng không biến mất
-   đột ngột giữa lúc người ta đang đọc. */
+   đột ngột giữa lúc người ta đang đọc. Chỉ dịch trong lòng chỗ của nó; cú đẩy
+   lên là việc của `.mod-chat-o`. */
 @keyframes mod-chat-song {
   0% {
     opacity: 0;
-    transform: translateY(calc(var(--nac) * -8.4cqw + 3cqw)) scale(0.9);
+    transform: translateY(3cqw) scale(0.9);
   }
   8% {
     opacity: 1;
-    transform: translateY(calc(var(--nac) * -8.4cqw)) scale(1);
+    transform: translateY(0) scale(1);
   }
   85% {
     opacity: 1;
-    transform: translateY(calc(var(--nac) * -8.4cqw));
   }
   100% {
     opacity: 0;
-    transform: translateY(calc(var(--nac) * -8.4cqw - 5cqw));
+    transform: translateY(-5cqw);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .mod-chat-bong {
     animation: none;
+  }
+  .mod-chat-o {
     transition: none;
   }
 }

@@ -1,5 +1,7 @@
 {
   "id": "ke-chuyen",
+  "category": "ke-chuyen",
+  "style": "mac-dinh",
   "name": "Phòng kể chuyện",
   "icon": "📖",
   "summary": "AI MC đọc truyện, khán giả ngồi ghế hình quạt, top người tặng",
@@ -11,7 +13,6 @@
   "slots": [
     "top-bar",
     "ticker",
-    "dance-floor",
     "screen",
     "screen-overlay",
     "tops",

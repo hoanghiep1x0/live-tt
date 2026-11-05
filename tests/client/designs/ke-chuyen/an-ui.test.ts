@@ -8,7 +8,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Seat } from '@live/contracts';
 import {
+  AN_UI_MAC_DINH,
   canhAnUi,
+  docCauHinhAnUi,
   chonNguoiOm,
   khachXinOm,
   TONG_MS,
@@ -135,5 +137,46 @@ describe('khách gõ xin ôm', () => {
   it('người xin đã rời ghế thì lượt vẫn chạy với người khác', () => {
     const ra = chonNguoiOm(ngoi(4), ghe(8), 3, 2, 'khong-co-ai');
     expect(ra).toHaveLength(2);
+  });
+});
+
+describe('số người và cấu hình cảnh an ủi', () => {
+  it('khách tự gõ "ôm" thì chỉ một mình họ lên', () => {
+    expect(canhAnUi(50_000, { at: 49_000, user: 'lan' })?.soNguoi).toBe(1);
+  });
+
+  it('"lúc một lúc hai" thì có cả lượt một người lẫn lượt hai người', () => {
+    const so = new Set<number>();
+    for (let k = 0; k < 20; k += 1) so.add(canhAnUi(k * 60_000)?.soNguoi ?? 0);
+    expect([...so].sort()).toEqual([1, 2]);
+  });
+
+  it('chọn một hay hai thì lượt nào cũng đúng số đó', () => {
+    for (let k = 0; k < 10; k += 1) {
+      expect(canhAnUi(k * 60_000, null, { ...AN_UI_MAC_DINH, soNguoi: 'don' })?.soNguoi).toBe(1);
+      expect(canhAnUi(k * 60_000, null, { ...AN_UI_MAC_DINH, soNguoi: 'doi' })?.soNguoi).toBe(2);
+    }
+  });
+
+  it('đổi chu kỳ thì lượt rơi đúng nhịp mới', () => {
+    const cfg = { ...AN_UI_MAC_DINH, chuKyGiay: 120 };
+    expect(canhAnUi(60_000, null, cfg), 'giữa chu kỳ 120 giây thì nghỉ').toBeNull();
+    expect(canhAnUi(120_000, null, cfg)).not.toBeNull();
+  });
+
+  it('chu kỳ quá ngắn bị nâng lên, lượt không dính vào nhau', () => {
+    const cfg = { ...AN_UI_MAC_DINH, chuKyGiay: 1 };
+    expect(canhAnUi(TONG_MS + 1, null, cfg)).toBeNull();
+  });
+
+  it('chỉ ôm cậu bé, và tắt khách gõ thì khách gõ không gọi được', () => {
+    const cfg = { ...AN_UI_MAC_DINH, ai: 'cau-be' as const, khachGoi: false };
+    expect(canhAnUi(0, null, cfg)?.nhanVat).toBe('cau-be');
+    expect(canhAnUi(60_000, null, cfg)?.nhanVat).toBe('cau-be');
+    expect(canhAnUi(50_000, { at: 49_000, user: 'lan' }, cfg)).toBeNull();
+  });
+
+  it('giá trị lưu hỏng thì về mặc định', () => {
+    expect(docCauHinhAnUi({ anUiGiay: 'abc', anUiSoNguoi: 'ba', anUiAi: 1 })).toEqual(AN_UI_MAC_DINH);
   });
 });

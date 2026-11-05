@@ -1,90 +1,11 @@
 import { useEffect, useState } from 'react';
-import { KeyRound, Mic, Play, Plus, Star, Trash2 } from 'lucide-react';
+import { Bot, KeyRound, Play, Plus, Star, Trash2 } from 'lucide-react';
+import { quenDanGiong } from '../lib/danGiong';
 import { api, ttsThu } from '../lib/api';
-import type { CastVoice, ProviderInfo, ProviderKind, VoiceCfg } from '../lib/api';
+import type { CastVoice, ProviderInfo, VoiceCfg } from '../lib/api';
+import { AiKhoDialog } from './AiKhoDialog';
 import { Dialog, DialogBody, DialogClose, DialogTrigger } from './ui/dialog';
 import { Switch } from './ui/switch';
-
-const KIEU: Record<ProviderKind, string> = {
-  openai: 'Kiểu OpenAI (VieNeu, OpenAI, 9router…)',
-  elevenlabs: 'ElevenLabs',
-  anthropic: 'Anthropic — cho MC, không phải giọng đọc',
-};
-
-/** Mẫu điền sẵn cho những nhà hay dùng. Chọn một mẫu là điền hộ địa chỉ và
- *  model; người dùng chỉ còn phải dán khoá. "Tự điền" để trống hết. */
-interface Mau {
-  ten: string;
-  id: string;
-  kind: ProviderKind;
-  baseUrl: string;
-  model: string;
-  goiY: string;
-}
-
-const MAU: readonly Mau[] = [
-  {
-    ten: 'Tự điền',
-    id: '',
-    kind: 'openai',
-    baseUrl: '',
-    model: '',
-    goiY: 'Điền tay theo tài liệu của nhà cung cấp.',
-  },
-  {
-    ten: '9router (chạy trên máy)',
-    id: '9router',
-    kind: 'openai',
-    baseUrl: 'http://localhost:20128/v1',
-    model: 'google-tts/vi',
-    goiY: 'Giọng nằm trong model, ví dụ google-tts/vi hoặc edge-tts/vi-VN-HoaiMyNeural.',
-  },
-  {
-    ten: 'VieNeu',
-    id: 'vieneu',
-    kind: 'openai',
-    baseUrl: 'https://api.vieneu.io/api/v1',
-    model: 'vieneu-v4',
-    goiY: 'Tên giọng là tên người, ví dụ Anh Khôi.',
-  },
-  {
-    ten: 'OpenAI',
-    id: 'openai',
-    kind: 'openai',
-    baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4o-mini-tts',
-    goiY: 'Tên giọng ví dụ alloy, nova.',
-  },
-  {
-    ten: 'ElevenLabs',
-    id: 'eleven',
-    kind: 'elevenlabs',
-    baseUrl: '',
-    model: 'eleven_multilingual_v2',
-    goiY: 'Giọng là voice_id, chỉ chữ và số.',
-  },
-  {
-    ten: 'AI vẽ ảnh (OpenAI)',
-    id: 'anh',
-    kind: 'openai',
-    baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-image-1',
-    goiY:
-      'Khoá để nhờ AI vẽ ảnh cho khung chiếu. Tên ngắn phải đúng là "anh". ' +
-      'Nhà nào theo kiểu OpenAI (POST /images/generations) đều dùng được.',
-  },
-  {
-    ten: 'MC do AI dẫn (Anthropic)',
-    id: 'mc',
-    kind: 'anthropic',
-    baseUrl: '',
-    model: '',
-    goiY:
-      'Khoá cho MC, KHÔNG phải giọng đọc. Tên ngắn phải đúng là "mc" thì MC mới tìm ra. ' +
-      'Model chọn ở thẻ MC trên bảng xem, không điền ở đây. Địa chỉ để trống là gọi ' +
-      'api.anthropic.com; điền khi anh chạy một cổng trung chuyển trên máy.',
-  },
-];
 
 const CAU_THU = 'Xin chào cả phòng, đây là giọng đọc thử.';
 
@@ -95,8 +16,6 @@ interface Props {
 export function VoiceDialog({ onToast }: Props) {
   const [ds, setDs] = useState<ProviderInfo[]>([]);
   const [cfg, setCfg] = useState<VoiceCfg | null>(null);
-  const [mau, setMau] = useState(0);
-  const [moi, setMoi] = useState({ id: '', kind: 'openai' as ProviderKind, baseUrl: '', model: '', key: '' });
   const [dangThu, setDangThu] = useState('');
 
   const tai = (): void => {
@@ -117,6 +36,7 @@ export function VoiceDialog({ onToast }: Props) {
     void (async () => {
       try {
         const kq = await api.setVoice(c);
+        quenDanGiong();
         setCfg(kq.voice);
       } catch (e) {
         onToast(e instanceof Error ? e.message : 'không lưu được', true);
@@ -128,36 +48,6 @@ export function VoiceDialog({ onToast }: Props) {
     if (cfg === null) return;
     const cast = cfg.cast.map((x, j) => (j === i ? { ...x, ...v } : x));
     setCfg({ ...cfg, cast });
-  };
-
-  const chonMau = (i: number): void => {
-    setMau(i);
-    const m = MAU[i];
-    if (m === undefined) return;
-    setMoi({ id: m.id, kind: m.kind, baseUrl: m.baseUrl, model: m.model, key: '' });
-  };
-
-  const luuNha = (): void => {
-    const id = moi.id.trim();
-    if (id === '') {
-      onToast('Đặt một tên ngắn cho nhà cung cấp, ví dụ 9router', true);
-      return;
-    }
-    void (async () => {
-      try {
-        await api.setSecret(id, {
-          kind: moi.kind,
-          baseUrl: moi.baseUrl.trim(),
-          key: moi.key.trim(),
-          model: moi.model.trim(),
-        });
-        setMoi({ ...moi, key: '' });
-        tai();
-        onToast(`Đã lưu nhà cung cấp "${id}"`);
-      } catch (e) {
-        onToast(e instanceof Error ? e.message : 'không lưu được', true);
-      }
-    })();
   };
 
   const ngheThu = (v: CastVoice): void => {
@@ -184,18 +74,19 @@ export function VoiceDialog({ onToast }: Props) {
     })();
   };
 
-  const goiY = MAU[mau]?.goiY ?? '';
+  // Chỉ kết nối dùng được cho giọng đọc mới chọn được ở đây.
+  const nhaGiong = ds.filter((p) => p.uses.includes('tts'));
 
   return (
     <Dialog>
-      <DialogTrigger className="btn btn-icon btn-ghost" aria-label="Giọng đọc và khoá API">
-        <Mic size={16} />
+      <DialogTrigger className="btn btn-icon btn-ghost" aria-label="Giọng đọc">
+        <KeyRound size={16} />
       </DialogTrigger>
       <DialogBody
         size="md"
         icon={<KeyRound size={15} />}
-        title="Giọng đọc và khoá API"
-        desc="Một phiên có nhiều nhân vật, mỗi nhân vật một giọng. Khoá cho MC do AI dẫn cũng cắm ở đây (tên ngắn “mc”). Khoá nằm ở máy chủ và không bao giờ gửi về trang này."
+        title="Giọng đọc"
+        desc="Mỗi nhân vật một giọng: chọn kết nối giọng đọc trong kho AI dùng chung rồi điền tên giọng. Khoá nằm ở máy chủ và không bao giờ gửi về trang này."
         foot={<DialogClose className="btn btn-gold">Xong</DialogClose>}
       >
         <div className="quick-grid">
@@ -214,10 +105,26 @@ export function VoiceDialog({ onToast }: Props) {
               <p className="hint">Đang đọc cài đặt…</p>
             ) : (
               <>
+                <label className="form-inline hl" htmlFor="voice-multi">
+                  <span>
+                    <b>{cfg.multi === true ? 'Đa giọng' : 'Đơn giọng'}</b>
+                    <small>
+                      {cfg.multi === true
+                        ? 'Mỗi tính năng đọc bằng giọng chính của nó (tab Giọng đọc). Trong câu, [id-giọng] đổi sang giọng đó, [-] quay về giọng chính. Ví dụ: Ông lão gọi: [ong-lao] Con ơi! [-] Cô bé chạy về.'
+                        : 'Cả phòng đọc bằng giọng mặc định (ngôi sao). Giọng riêng của từng tính năng và dấu [id-giọng] trong câu bị bỏ qua.'}
+                    </small>
+                  </span>
+                  <Switch
+                    checked={cfg.multi === true}
+                    onCheckedChange={(on) => luuGiong({ ...cfg, multi: on })}
+                    label="Đa giọng"
+                  />
+                </label>
+
                 {cfg.cast.length === 0 ? (
                   <p className="hint">
-                    Chưa có giọng nào — sân khấu đang dùng giọng máy của trình duyệt. Thêm một
-                    giọng ở dưới.
+                    Chưa có giọng nào — sân khấu đang dùng giọng máy của trình duyệt. Thêm một giọng
+                    ở dưới.
                   </p>
                 ) : (
                   <div className="voice-list">
@@ -233,10 +140,7 @@ export function VoiceDialog({ onToast }: Props) {
                           }
                           onClick={() => luuGiong({ ...cfg, default: v.id })}
                         >
-                          <Star
-                            size={14}
-                            className={cfg.default === v.id ? 'la-mac-dinh' : ''}
-                          />
+                          <Star size={14} className={cfg.default === v.id ? 'la-mac-dinh' : ''} />
                         </button>
                         <span className="v-name">
                           <b>{v.id}</b>
@@ -257,9 +161,10 @@ export function VoiceDialog({ onToast }: Props) {
                           }}
                         >
                           <option value="">— chọn nhà —</option>
-                          {ds.map((p) => (
+                          {nhaGiong.map((p) => (
                             <option key={p.id} value={p.id}>
-                              {p.id}
+                              {p.name}
+                              {p.hasKey ? '' : ' (thiếu khoá)'}
                             </option>
                           ))}
                         </select>
@@ -367,135 +272,40 @@ export function VoiceDialog({ onToast }: Props) {
           <section className="quick-sec">
             <div className="quick-head">
               <span className="mod-icon">🔑</span>
-              <b>Khoá API</b>
-              <small>Giọng đọc và MC. Khoá chỉ nằm ở máy chủ, không bao giờ gửi ra trang nào</small>
+              <b>Kết nối giọng đọc</b>
+              <small>
+                Khoá nằm ở kho AI dùng chung — nhập một lần, MC và vẽ ảnh cũng chọn từ đó
+              </small>
             </div>
-
-            {ds.length === 0 ? (
-              <p className="hint">Chưa có nhà nào. Chọn một mẫu ở dưới rồi dán khoá.</p>
+            {nhaGiong.length === 0 ? (
+              <p className="hint">Chưa có kết nối giọng đọc nào. Mở kho AI để thêm.</p>
             ) : (
               <div className="voice-list">
-                {ds.map((p) => (
+                {nhaGiong.map((p) => (
                   <div className="voice-row" key={p.id}>
                     <span className="v-ico">{p.hasKey ? '🔐' : '⚠️'}</span>
                     <span className="v-name">
-                      <b>{p.id}</b>
-                      <small>{p.baseUrl === '' ? KIEU[p.kind] : p.baseUrl}</small>
+                      <b>{p.name}</b>
+                      <small>{p.models.tts ?? 'chưa đặt model'}</small>
                     </span>
                     <span className={p.hasKey ? 'v-tag v-clone' : 'v-tag'}>
                       {p.hasKey ? 'có khoá' : 'thiếu khoá'}
                     </span>
-                    <button
-                      type="button"
-                      className="btn btn-icon"
-                      title={`Xoá ${p.id}`}
-                      onClick={() => {
-                        void (async () => {
-                          try {
-                            await api.delSecret(p.id);
-                            tai();
-                            onToast(`Đã xoá ${p.id}`);
-                          } catch (e) {
-                            onToast(e instanceof Error ? e.message : 'không xoá được', true);
-                          }
-                        })();
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
                   </div>
                 ))}
               </div>
             )}
-
-            <div className="form" style={{ marginTop: 14 }}>
-              <div className="form-row">
-                <label htmlFor="n-mau">Mẫu</label>
-                <select
-                  className="input"
-                  id="n-mau"
-                  value={mau}
-                  onChange={(e) => chonMau(Number(e.target.value))}
-                >
-                  {MAU.map((m, i) => (
-                    <option key={m.ten} value={i}>
-                      {m.ten}
-                    </option>
-                  ))}
-                </select>
-                <span className="hint">{goiY}</span>
-              </div>
-              <div className="form-row">
-                <label htmlFor="n-id">Tên ngắn</label>
-                <input
-                  className="input"
-                  id="n-id"
-                  value={moi.id}
-                  placeholder="9router"
-                  onChange={(e) => setMoi({ ...moi, id: e.target.value })}
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="n-kieu">Kiểu giao thức</label>
-                <select
-                  className="input"
-                  id="n-kieu"
-                  value={moi.kind}
-                  onChange={(e) => setMoi({ ...moi, kind: e.target.value as ProviderKind })}
-                >
-                  {(Object.keys(KIEU) as ProviderKind[]).map((k) => (
-                    <option key={k} value={k}>
-                      {KIEU[k]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {moi.kind === 'openai' || moi.kind === 'anthropic' ? (
-                <div className="form-row">
-                  <label htmlFor="n-url">Địa chỉ</label>
-                  <input
-                    className="input"
-                    id="n-url"
-                    value={moi.baseUrl}
-                    placeholder="http://localhost:20128/v1"
-                    onChange={(e) => setMoi({ ...moi, baseUrl: e.target.value })}
-                  />
-                  <span className="hint">
-                    Chỉ nhận https, trừ khi nhà cung cấp chạy ngay trên máy này.
-                  </span>
-                </div>
-              ) : null}
-              <div className="form-row" hidden={moi.kind === 'anthropic'}>
-                <label htmlFor="n-model">Model mặc định</label>
-                <input
-                  className="input"
-                  id="n-model"
-                  value={moi.model}
-                  placeholder="google-tts/vi"
-                  onChange={(e) => setMoi({ ...moi, model: e.target.value })}
-                />
-                <span className="hint">
-                  Dùng khi giọng của nhân vật để trống. Giọng có dấu gạch chéo thì chính nó là
-                  model.
-                </span>
-              </div>
-              <div className="form-row">
-                <label htmlFor="n-key">Khoá API</label>
-                <input
-                  className="input"
-                  id="n-key"
-                  type="password"
-                  value={moi.key}
-                  placeholder="để trống nếu chỉ sửa địa chỉ"
-                  autoComplete="off"
-                  onChange={(e) => setMoi({ ...moi, key: e.target.value })}
-                />
-                <span className="hint">Khoá lưu ở máy chủ và không hiện lại ở đây.</span>
-              </div>
-              <button type="button" className="btn btn-gold" onClick={luuNha}>
-                Lưu nhà cung cấp
-              </button>
-            </div>
+            <AiKhoDialog
+              onToast={onToast}
+              tab="tts"
+              onDoi={setDs}
+              trigger={
+                <button type="button" className="btn" style={{ marginTop: 12 }}>
+                  <Bot size={15} />
+                  Mở kho kết nối AI
+                </button>
+              }
+            />
           </section>
         </div>
       </DialogBody>

@@ -769,3 +769,106 @@ async fn chua_phat_thi_loi_chao_chi_noi_la_chua_phat() {
     assert_eq!(loai, vec!["live", "voice"], "{chao:?}");
     assert_eq!(chao[0], json!({ "t": "live", "designId": Value::Null }));
 }
+
+/// Yêu cầu kiểu SÂN KHẤU: không token, có Origin của chính máy chủ — đúng
+/// cách bảng xem thử trong trang `/d/…` gọi về.
+async fn san_khau(m: &Moi, method: &str, path: &str, body: Option<Value>) -> (StatusCode, Value) {
+    let mut b = Request::builder()
+        .method(method)
+        .uri(path)
+        .header(header::HOST, HOST)
+        .header(header::ORIGIN, format!("http://{HOST}"));
+    let req = match body {
+        Some(v) => b
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(v.to_string()))
+            .unwrap(),
+        None => {
+            b = b.header(header::CONTENT_TYPE, "application/json");
+            b.body(Body::empty()).unwrap()
+        }
+    };
+    let (ma, j, _) = m.goi(req).await;
+    (ma, j)
+}
+
+#[tokio::test]
+async fn san_khau_cam_duoc_khoa_ma_khong_can_token() {
+    // Người vận hành cắm khoá ngay ở bảng xem thử, khỏi mở trang quản lý.
+    let m = moi();
+    let (ma, j) = san_khau(
+        &m,
+        "PUT",
+        "/s/secrets/mc",
+        Some(json!({ "kind": "anthropic", "model": "claude-sonnet-5-5", "key": "sk-bi-mat" })),
+    )
+    .await;
+    assert_eq!(ma, StatusCode::OK, "{j}");
+    assert_eq!(j["provider"]["hasKey"], json!(true));
+
+    // Backend dùng được ngay, không phải khởi động lại.
+    let p = live_backend::secrets::get(&Layout::new(&m.root), "mc").unwrap();
+    assert_eq!(p.key, "sk-bi-mat");
+}
+
+#[tokio::test]
+async fn san_khau_khong_bao_gio_doc_lai_duoc_gia_tri_khoa() {
+    // Lối cắm khoá là MỘT CHIỀU. Nếu test này đỏ thì trang đang lên sóng đọc
+    // được khoá — đúng lỗi của bản cũ, phải sửa ngay chứ không sửa test.
+    let m = moi();
+    san_khau(
+        &m,
+        "PUT",
+        "/s/secrets/mc",
+        Some(json!({ "kind": "anthropic", "key": "sk-bi-mat" })),
+    )
+    .await;
+
+    let (ma, j) = san_khau(&m, "GET", "/s/providers", None).await;
+    assert_eq!(ma, StatusCode::OK);
+    let tho = j.to_string();
+    assert!(!tho.contains("sk-bi-mat"), "danh sách lộ khoá: {tho}");
+    assert_eq!(j["providers"][0]["id"], json!("mc"));
+    assert_eq!(j["providers"][0]["hasKey"], json!(true));
+
+    // Cả lối của trang quản lý cũng không trả giá trị.
+    let (_, j) = m.api("GET", "/api/secrets", None).await;
+    assert!(!j.to_string().contains("sk-bi-mat"), "{j}");
+}
+
+#[tokio::test]
+async fn trang_ngoai_khong_cam_duoc_khoa() {
+    // Lối không token vẫn phải qua lớp chặn Origin: một trang web ngoài mở
+    // trên cùng máy không được ghi đè kết nối của người vận hành.
+    let m = moi();
+    let req = Request::builder()
+        .method("PUT")
+        .uri("/s/secrets/mc")
+        .header(header::HOST, HOST)
+        .header(header::ORIGIN, "https://ke-gian.example")
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(
+            json!({ "kind": "anthropic", "key": "sk-cua-ke-gian" }).to_string(),
+        ))
+        .unwrap();
+    let (ma, _, _) = m.goi(req).await;
+    assert_eq!(ma, StatusCode::FORBIDDEN);
+    assert!(live_backend::secrets::get(&Layout::new(&m.root), "mc").is_none());
+}
+
+#[tokio::test]
+async fn san_khau_khong_xoa_duoc_ket_noi() {
+    // Xoá vẫn chỉ ở trang quản lý: xoá nhầm giữa lúc live là tắt tính năng mà
+    // không ai thấy.
+    let m = moi();
+    san_khau(
+        &m,
+        "PUT",
+        "/s/secrets/mc",
+        Some(json!({ "kind": "anthropic", "key": "sk-bi-mat" })),
+    )
+    .await;
+    let (ma, _) = san_khau(&m, "DELETE", "/s/secrets/mc", None).await;
+    assert_eq!(ma, StatusCode::METHOD_NOT_ALLOWED);
+    assert!(live_backend::secrets::get(&Layout::new(&m.root), "mc").is_some());
+}

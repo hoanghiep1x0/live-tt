@@ -167,6 +167,20 @@ export function HangGhe({
  *  thay phiên hiện, mỗi lượt chừng này — đọc được mà không phải thu nhỏ chữ. */
 const DOI_TEN_MS = 4_000;
 
+/** Nhãn dưới ghế: ảnh đại diện (nếu có) và tên ĐẦY ĐỦ — như `SeatLabel` của
+ *  bản cũ. Ảnh hỏng thì bỏ ảnh, giữ tên, không để lại khung vỡ. */
+function TenGhe({ ten, anh }: { ten: string; anh: string | undefined }) {
+  const [hong, setHong] = useState(false);
+  return (
+    <span className="seat-label" title={ten}>
+      {anh === undefined || hong ? null : (
+        <img src={anh} alt="" referrerPolicy="no-referrer" onError={() => setHong(true)} />
+      )}
+      {ten}
+    </span>
+  );
+}
+
 /** Tên khán giả, nằm trên lớp riêng để không bị cuộn lệch khỏi ghế. */
 export function TenKhan({ ghe, ngoi }: { ghe: ChoNgoi[]; ngoi: Map<number, Seat> }) {
   const [luot, setLuot] = useState(0);
@@ -180,20 +194,26 @@ export function TenKhan({ ghe, ngoi }: { ghe: ChoNgoi[]; ngoi: Map<number, Seat>
       {ghe.map((g) => {
         const ai = ngoi.get(g.flat);
         if (ai === undefined) return null;
+        // So le như bản cũ: ghế thứ lẻ trong hàng hạ nhãn xuống một nấc, tên hai
+        // ghế cạnh nhau không đè chữ lên nhau.
+        const le = Number(g.key.split('-')[1] ?? 0) % 2 === 1;
+        const lop = ['seat-tag'];
+        if (le) lop.push('alt');
+        if (g.flat % 2 === luot) lop.push('name-off');
         return (
           <span
             key={g.key}
-            className={g.flat % 2 === luot ? 'seat-tag name-off' : 'seat-tag'}
+            className={lop.join(' ')}
             style={{
               left: `${g.x}%`,
               top: `${g.y}cqw`,
+              // Hàng trước đè hàng sau, như bản cũ.
+              zIndex: g.r + 1,
               // @ts-expect-error biến CSS tuỳ chỉnh
               '--seat-scale': g.scale,
             }}
           >
-            <span className="seat-label" title={ai.name}>
-              {ai.name}
-            </span>
+            <TenGhe ten={ai.name} anh={ai.avatar} />
           </span>
         );
       })}

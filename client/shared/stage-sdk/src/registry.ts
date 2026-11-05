@@ -14,8 +14,10 @@ import type {
   ModuleUi,
   SessionView,
   SlotName,
+  TrangThaiNut,
 } from '@live/contracts';
-import { runFeed, runTick } from '@live/runtime';
+import { ganGiong, khoaGiong, phuCauHinh } from '@live/contracts';
+import { runAction, runFeed, runTick } from '@live/runtime';
 
 import { moduleChatBubbles } from '@live/mod-chat-bubbles';
 import { Stage as ChatBubblesStage } from '@live/mod-chat-bubbles/stage';
@@ -27,12 +29,12 @@ import { moduleTicker } from '@live/mod-ticker';
 import { Stage as TickerStage } from '@live/mod-ticker/stage';
 import { moduleDanceFloor } from '@live/mod-dance-floor';
 import { Stage as DanceFloorStage } from '@live/mod-dance-floor/stage';
-import { moduleStory } from '@live/mod-story';
+import { moduleStory, trongSuot as storyTrongSuot } from '@live/mod-story';
 import { Stage as StoryStage } from '@live/mod-story/stage';
-import { moduleFollowThanks } from '@live/mod-follow-thanks';
-import { moduleGiftThanks } from '@live/mod-gift-thanks';
-import { moduleWelcome } from '@live/mod-welcome';
+import { moduleVuCong3d } from '@live/mod-vu-cong-3d';
+import { Stage as VuCong3dStage } from '@live/mod-vu-cong-3d/stage';
 
+import { DANH_SACH_MODULE } from './danh-sach';
 import type { StageState } from './state';
 
 export interface StagePartProps<C = Json, S = unknown> {
@@ -58,6 +60,8 @@ export interface CtxChung {
 export interface TheSong {
   feed(item: FeedItem, ctx: CtxChung): Effect[];
   tick(now: number, ctx: CtxChung): Effect[];
+  /** Người vận hành bấm một nút của module (`ModuleUi.actions`). */
+  action(op: string, ctx: CtxChung): Effect[];
   doiCauHinh(c: Json): void;
   dispose(): void;
   state(): unknown;
@@ -70,6 +74,9 @@ export interface DangKy {
   ui: ModuleUi;
   slot?: SlotName;
   Part?: ComponentType<StagePartProps>;
+  /** Module đang xin thiết kế bỏ nền của slot — màn chờ, nền khung — để lộ
+   *  phòng phía sau. Đọc theo cấu hình đầy đủ, vì thường là một công tắc. */
+  trongSuot?: (config: Json) => boolean;
   /** Cấu hình đầy đủ: mặc định của schema, phủ bằng thứ đã lưu.
    *
    *  Backend chỉ lưu những khoá người vận hành đã đổi, nên cấu hình thô luôn
@@ -77,37 +84,82 @@ export interface DangKy {
    *  vẽ tự phòng thân bằng `?? mặc định`, kiểu nào rồi cũng sót một chỗ. */
   hopCauHinh(luu: Json): Json;
   mo(config: Json): TheSong;
+  /** Hàng nút của module đang ở thế nào (`core.trangThaiNut`), đọc từ state lõi. */
+  trangThaiNut?: (state: unknown, now: number) => TrangThaiNut;
 }
 
-function dangKy<C, S>(
+/** Phần vẽ của một module, đã xoá kiểu để xếp chung. */
+interface PhanVe {
+  slot: SlotName;
+  Part: ComponentType<StagePartProps>;
+  trongSuot?: (config: Json) => boolean;
+}
+
+/** Ghép phần vẽ với module của nó. Nhận chính module object nên kiểu cấu hình
+ *  của Part được kiểm tra khớp với module; chỗ ép kiểu ở đây là ranh giới xoá
+ *  kiểu duy nhất, và nó an toàn vì `mo()` dựng đúng cặp config/state đó. */
+function phan<C, S>(
   mod: LiveModule<C, S>,
-  part?: { slot: SlotName; Part: ComponentType<StagePartProps<C, S>> },
-): DangKy {
+  p: {
+    slot: SlotName;
+    Part: ComponentType<StagePartProps<C, S>>;
+    trongSuot?: (config: C) => boolean;
+  },
+): [string, PhanVe] {
+  return [
+    mod.manifest.id,
+    {
+      slot: p.slot,
+      Part: p.Part as unknown as ComponentType<StagePartProps>,
+      ...(p.trongSuot === undefined
+        ? {}
+        : { trongSuot: p.trongSuot as unknown as (config: Json) => boolean }),
+    },
+  ];
+}
+
+/** Module nào có phần vẽ trên sân khấu, vẽ ở slot nào. Module không có ở đây
+ *  vẫn chạy (cảm ơn quà, chào người vào…), chỉ là không chiếm slot. Danh sách
+ *  module thì KHÔNG khai ở đây — xem `./danh-sach`. */
+const PHAN_VE = new Map<string, PhanVe>([
+  phan(moduleStory, { slot: 'screen', Part: StoryStage, trongSuot: storyTrongSuot }),
+  phan(moduleTopGivers, { slot: 'tops', Part: TopGiversStage }),
+  phan(moduleChatBubbles, { slot: 'chat', Part: ChatBubblesStage }),
+  phan(moduleLikesCounter, { slot: 'target', Part: LikesCounterStage }),
+  phan(moduleTicker, { slot: 'ticker', Part: TickerStage }),
+  phan(moduleDanceFloor, { slot: 'floor', Part: DanceFloorStage }),
+  phan(moduleVuCong3d, { slot: 'stage-3d', Part: VuCong3dStage }),
+]);
+
+function dangKy(mod: LiveModule, part: PhanVe | undefined): DangKy {
   // `schema.parse({})` cho đúng bộ mặc định mà module đã khai (quy ước 01 §7).
-  const macDinh = mod.manifest.schema.parse({}) as object;
-  const hopCauHinh = (luu: Json): Json =>
-    ({ ...macDinh, ...(typeof luu === 'object' && luu !== null ? luu : {}) }) as Json;
+  const macDinh = mod.manifest.schema.parse({}) as { [k: string]: Json };
+  // Ô chọn giọng của module, nếu có: câu nào module đọc mà không tự nói giọng
+  // nào thì runtime gắn giọng này vào — lõi module không phải biết gì về giọng.
+  const khoa = khoaGiong(mod.manifest.fields);
+  const giongCua = (c: Json): unknown =>
+    khoa === undefined ? undefined : (c as Record<string, unknown>)[khoa];
+  const hopCauHinh = (luu: Json): Json => phuCauHinh(mod.manifest.fields, macDinh, luu);
 
   return {
     id: mod.manifest.id,
     ui: mod.manifest,
     hopCauHinh,
-    ...(part === undefined
+    ...(part ?? {}),
+    ...(mod.core.trangThaiNut === undefined
       ? {}
-      : {
-          slot: part.slot,
-          // Component nhận props hẹp hơn; chỗ này là ranh giới xoá kiểu duy nhất,
-          // và nó an toàn vì `mo()` ở ngay dưới dựng đúng cặp config/state đó.
-          Part: part.Part as unknown as ComponentType<StagePartProps>,
-        }),
+      : { trangThaiNut: mod.core.trangThaiNut.bind(mod.core) }),
     mo(config) {
-      let cfg = hopCauHinh(config) as C;
+      let cfg = hopCauHinh(config);
       let st = mod.core.init(cfg);
       return {
-        feed: (item, ctx) => runFeed(mod, st, item, { ...ctx, config: cfg }),
-        tick: (now, ctx) => runTick(mod, st, now, { ...ctx, config: cfg }),
+        feed: (item, ctx) =>
+          ganGiong(runFeed(mod, st, item, { ...ctx, config: cfg }), giongCua(cfg)),
+        tick: (now, ctx) => ganGiong(runTick(mod, st, now, { ...ctx, config: cfg }), giongCua(cfg)),
+        action: (op, ctx) =>
+          ganGiong(runAction(mod, st, op, { ...ctx, config: cfg }), giongCua(cfg)),
         doiCauHinh(x) {
-          cfg = hopCauHinh(x) as C;
+          cfg = hopCauHinh(x);
           if (mod.core.onConfig !== undefined) st = mod.core.onConfig(st, cfg);
         },
         dispose() {
@@ -119,17 +171,17 @@ function dangKy<C, S>(
   };
 }
 
-export const SO_MODULE: readonly DangKy[] = [
-  dangKy(moduleGiftThanks),
-  dangKy(moduleWelcome),
-  dangKy(moduleFollowThanks),
-  dangKy(moduleStory, { slot: 'screen', Part: StoryStage }),
-  dangKy(moduleTopGivers, { slot: 'tops', Part: TopGiversStage }),
-  dangKy(moduleChatBubbles, { slot: 'chat', Part: ChatBubblesStage }),
-  dangKy(moduleLikesCounter, { slot: 'target', Part: LikesCounterStage }),
-  dangKy(moduleTicker, { slot: 'ticker', Part: TickerStage }),
-  dangKy(moduleDanceFloor, { slot: 'floor', Part: DanceFloorStage }),
-];
+// Phần vẽ cho một module chưa có trong danh sách là phần vẽ không bao giờ hiện:
+// báo ngay lúc nạp thay vì để người dùng đi tìm vì sao slot trống.
+for (const id of PHAN_VE.keys()) {
+  if (!DANH_SACH_MODULE.some((m) => m.manifest.id === id)) {
+    throw new Error(`Phần vẽ của "${id}" không có module trong danh-sach.ts`);
+  }
+}
+
+export const SO_MODULE: readonly DangKy[] = DANH_SACH_MODULE.map((m) =>
+  dangKy(m, PHAN_VE.get(m.manifest.id)),
+);
 
 export function timDangKy(id: string): DangKy | undefined {
   return SO_MODULE.find((x) => x.id === id);
@@ -137,4 +189,16 @@ export function timDangKy(id: string): DangKy | undefined {
 
 export function partsCho(slot: SlotName, enabled: readonly string[]): readonly DangKy[] {
   return SO_MODULE.filter((p) => p.slot === slot && enabled.includes(p.id));
+}
+
+/** Có module nào đang bật ở slot này xin khung trong suốt không. Thuần, để
+ *  test được mà không dựng React. */
+export function slotTrongSuot(
+  slot: SlotName,
+  enabled: readonly string[],
+  config: Readonly<Record<string, Json>>,
+): boolean {
+  return partsCho(slot, enabled).some(
+    (p) => p.trongSuot !== undefined && p.trongSuot(p.hopCauHinh(config[p.id] ?? {})),
+  );
 }

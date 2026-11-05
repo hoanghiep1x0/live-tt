@@ -16,6 +16,10 @@ Logic nhảy là module `hiphop-dancer`, cắm được vào mọi thiết kế 
 
 ## 2. Cấu trúc
 
+Mỗi thiết kế là **một kiểu** của **một loại phòng**: thư mục `client/designs/<cate>-<style>/`, `design.json` khai
+`"category"` và `"style"`; tài liệu và script của loại nằm ở `docs/phong/<cate>/`, `scripts/phong/<cate>/`.
+Quy tắc đặt tên: [01 §12](01-quy-uoc.md#12-phân-loại-phòng-loại--kiểu).
+
 ```
 client/designs/ke-chuyen/
 ├─ design.json
@@ -37,6 +41,8 @@ client/designs/ke-chuyen/
 ```json
 {
   "id": "ke-chuyen",
+  "category": "ke-chuyen",
+  "style": "mac-dinh",
   "name": "Phòng kể chuyện",
   "icon": "📖",
   "summary": "AI MC đọc truyện, khán giả ngồi ghế hình quạt, top người tặng",
@@ -97,6 +103,39 @@ export function Stage() {
 
 `Slot` tự tìm các module đang bật khai báo slot đó và vẽ chúng, xếp theo thứ tự đăng ký.
 Thiết kế không biết module nào sẽ nằm ở đó, và không cần biết.
+
+### Module xin, thiết kế chiều — không ai gọi tên ai
+
+Đôi khi module cần thiết kế đổi chính chỗ cắm của nó. Module không sửa được DOM của thiết
+kế, thiết kế không được `if (moduleId === …)`. Nên module **xin** qua `stage-sdk`, và thiết
+kế đọc tín hiệu bằng hook:
+
+| Hook | Module xin gì | Thiết kế làm gì |
+|---|---|---|
+| `useSlotSang(slot)` | Nhấn vùng này lên một lúc (effect `highlight`) | Làm nổi vùng đó |
+| `useSlotTrongSuot(slot)` | Bỏ nền của slot để lộ phòng phía sau | Thôi vẽ màn chờ và nền lòng khung; viền giữ nguyên |
+
+Thiết kế có màn chờ hay nền riêng dưới một slot thì **phải** chiều `useSlotTrongSuot` —
+không thì module bật nền trong suốt là lộ màn chờ đè lên chữ của nó:
+
+```tsx
+const khungTrong = useSlotTrongSuot('screen');
+<section className="stage-screen" data-trong-suot={khungTrong}>
+  {khungTrong ? null : <ManCho />}
+  <Slot name="screen" />
+</section>
+```
+
+Phía module, tín hiệu khai cạnh phần vẽ trong sổ module (`stage-sdk/src/registry.ts`),
+đọc từ cấu hình đầy đủ:
+
+```ts
+dangKy(moduleStory, { slot: 'screen', Part: StoryStage, trongSuot: (c) => c.transparentBg })
+```
+
+Bỏ nền thì khung không còn gì tự động phía sau: module xin trong suốt vẫn phải giữ một thứ
+chuyển động của riêng nó (Kể chuyện giữ dải sáng quét), và gợi ý ở ô cấu hình phải nói cho
+người vận hành biết.
 
 ## 6. Assets
 
@@ -282,3 +321,4 @@ Vì vậy **một lúc chỉ một thiết kế chạy**. Thiết kế nào dùn
 - [ ] Có `assets/CREDITS.md`
 - [ ] Không đọc `localStorage` — mọi cấu hình đến từ `stage-sdk`
 - [ ] Đổi cấu hình module không làm thiết kế tải lại
+- [ ] Có màn chờ hay nền dưới một slot thì chiều `useSlotTrongSuot` của slot đó

@@ -14,9 +14,11 @@ interface Props {
   disabled: boolean;
   onBat(on: boolean): void;
   onLuu(config: Record<string, Json>): void;
+  /** Bấm nút trên thẻ (`ui.actions`). Thiếu thì không vẽ nút. */
+  onBam?(op: string): void;
 }
 
-export function ModuleCard({ r, st, disabled, onBat, onLuu }: Props) {
+export function ModuleCard({ r, st, disabled, onBat, onLuu, onBam }: Props) {
   const ui = r.ui;
   const cfg = hopCauHinh(r, st?.config);
   const bat = st?.enabled === true;
@@ -55,7 +57,7 @@ export function ModuleCard({ r, st, disabled, onBat, onLuu }: Props) {
         ) : null}
 
         {quick.length > 0 ? (
-          <div className="mod-quick" style={{ '--n': quick.length } as React.CSSProperties}>
+          <div className="mod-quick">
             {quick.map((f) => (
               <QuickCell
                 key={f.key}
@@ -64,6 +66,24 @@ export function ModuleCard({ r, st, disabled, onBat, onLuu }: Props) {
                 disabled={disabled}
                 onChange={(v) => onLuu({ ...cfg, [f.key]: v })}
               />
+            ))}
+          </div>
+        ) : null}
+
+        {onBam !== undefined && (ui.actions ?? []).length > 0 ? (
+          <div className="mod-nut">
+            {(ui.actions ?? []).map((a) => (
+              <button
+                type="button"
+                key={a.op}
+                className="btn btn-sm"
+                // Nút bấm tức thời chỉ có nghĩa khi module đang chạy trên sân khấu.
+                disabled={disabled || !bat}
+                onClick={() => onBam(a.op)}
+              >
+                {a.icon === undefined ? null : <span aria-hidden>{a.icon}</span>}
+                {a.label}
+              </button>
             ))}
           </div>
         ) : null}

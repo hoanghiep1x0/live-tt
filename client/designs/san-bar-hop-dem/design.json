@@ -1,0 +1,27 @@
+{
+  "id": "san-bar-hop-dem",
+  "category": "san-bar",
+  "style": "hop-dem",
+  "name": "Sàn bar · Hộp đêm",
+  "icon": "🪩",
+  "summary": "Hộp đêm 3D: sàn kính LED, tường LED, đèn moving head, laser, quầy DJ — chỉ có vũ công 3D, cắm vào slot stage-3d",
+  "version": "0.1.0",
+  "canvas": {
+    "width": 1080,
+    "height": 1920
+  },
+  "slots": [
+    "stage-3d"
+  ],
+  "provides": [
+    "stage-3d"
+  ],
+  "recommends": [
+    "vu-cong-3d"
+  ],
+  "entry": "dist/index.html",
+  "quality": {
+    "auto": true,
+    "minFps": 24
+  }
+}

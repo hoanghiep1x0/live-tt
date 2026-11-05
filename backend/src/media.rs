@@ -119,7 +119,9 @@ pub async fn nhan(
     Json(json!({ "url": format!("/u/{design_id}/{ten}"), "name": ten })).into_response()
 }
 
-/// Nhà cung cấp ảnh trong kho khoá. Người vận hành thêm ở trang quản lý.
+/// Nhà cung cấp ảnh mặc định trong kho khoá, khi cấu hình phòng để trống.
+/// Người vận hành trỏ sang nhà nào cũng được, miễn nhà đó nói tiếng OpenAI
+/// (`POST {base}/images/generations`).
 pub const NHA_ANH: &str = "anh";
 
 const MODEL_MAC_DINH: &str = "gpt-image-1";
@@ -132,12 +134,12 @@ pub struct XinAnh {
 }
 
 /// Thân yêu cầu gửi nhà cung cấp ảnh. Hàm thuần, test được.
-pub fn than_tao_anh(model: &str, ta: &str) -> serde_json::Value {
+pub fn than_tao_anh(model: &str, ta: &str, co: &str) -> serde_json::Value {
     json!({
         "model": if model.is_empty() { MODEL_MAC_DINH } else { model },
         "prompt": ta.chars().take(MAX_TA).collect::<String>(),
         "n": 1,
-        "size": "1024x1024",
+        "size": co,
         "response_format": "b64_json",
     })
 }
@@ -160,7 +162,12 @@ pub enum Anh {
 }
 
 /// Gọi nhà cung cấp rồi trả về đúng mấy byte ảnh. Chặn luồng.
-fn goi_tao_anh(p: &crate::secrets::Provider, ta: &str) -> Result<Vec<u8>, String> {
+fn goi_tao_anh(
+    p: &crate::secrets::Provider,
+    model: &str,
+    ta: &str,
+    co: &str,
+) -> Result<Vec<u8>, String> {
     if p.base_url.is_empty() {
         return Err("nhà cung cấp ảnh chưa có địa chỉ".into());
     }
@@ -174,7 +181,11 @@ fn goi_tao_anh(p: &crate::secrets::Provider, ta: &str) -> Result<Vec<u8>, String
     let mut res = agent
         .post(&url)
         .header("Authorization", &format!("Bearer {}", p.key))
-        .send_json(&than_tao_anh(&p.model, ta))
+        .send_json(&than_tao_anh(
+            if model.is_empty() { p.model_cho(crate::secrets::Use::Image) } else { model },
+            ta,
+            co,
+        ))
         .map_err(|e| match e {
             ureq::Error::StatusCode(ma) => format!("{url} trả mã {ma}"),
             khac => format!("không gọi được {url}: {khac}"),
@@ -224,17 +235,25 @@ pub async fn tao_anh(
     if ta.is_empty() {
         return loi(StatusCode::BAD_REQUEST, "chưa tả ảnh cần vẽ");
     }
-    let Some(p) = crate::secrets::get(&st.layout, NHA_ANH) else {
-        return loi(
-            StatusCode::BAD_REQUEST,
-            "chưa có khoá cho nhà cung cấp ảnh (tên ngắn \"anh\")",
-        );
+    let cfg = st.ai_config(&design_id);
+    if !cfg.anh_enabled {
+        return loi(StatusCode::BAD_REQUEST, "nhờ AI vẽ ảnh đang tắt ở phòng này");
+    }
+    let Some((nha, p)) =
+        crate::secrets::tim(&st.layout, &cfg.anh_provider, NHA_ANH, crate::secrets::Use::Image)
+    else {
+        return loi(StatusCode::BAD_REQUEST, &crate::ai::thieu_nha(&cfg.anh_provider, "Ảnh"));
     };
     if p.key.is_empty() {
-        return loi(StatusCode::BAD_REQUEST, "nhà cung cấp ảnh chưa có khoá");
+        return loi(
+            StatusCode::BAD_REQUEST,
+            &format!("nhà cung cấp ảnh \"{nha}\" chưa có khoá"),
+        );
     }
 
-    let byte = match tokio::task::spawn_blocking(move || goi_tao_anh(&p, &ta)).await {
+    let model = cfg.anh_model.trim().to_string();
+    let co = cfg.co_anh();
+    let byte = match tokio::task::spawn_blocking(move || goi_tao_anh(&p, &model, &ta, &co)).await {
         Ok(Ok(b)) => b,
         Ok(Err(e)) => {
             tracing::warn!("vẽ ảnh: {e}");
@@ -319,10 +338,11 @@ mod tests {
 
     #[test]
     fn than_tao_anh_cat_loi_ta_qua_dai() {
-        let v = than_tao_anh("", &"a".repeat(MAX_TA + 500));
+        let v = than_tao_anh("", &"a".repeat(MAX_TA + 500), "1024x1024");
         assert_eq!(v["model"], json!(MODEL_MAC_DINH));
         assert_eq!(v["prompt"].as_str().unwrap().chars().count(), MAX_TA);
-        assert_eq!(than_tao_anh("dall-e-3", "cây vú sữa")["model"], json!("dall-e-3"));
+        assert_eq!(than_tao_anh("dall-e-3", "cây vú sữa", "1024x1024")["model"], json!("dall-e-3"));
+        assert_eq!(than_tao_anh("", "x", "1792x1024")["size"], json!("1792x1024"));
     }
 
     #[test]

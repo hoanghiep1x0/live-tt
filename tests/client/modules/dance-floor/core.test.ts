@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FeedItem } from '@live/contracts';
-import { runFeed, runTick } from '@live/runtime';
+import { runAction, runFeed, runTick } from '@live/runtime';
 import {
   CHO_DUNG,
   core,
@@ -129,6 +129,21 @@ describe('có quà thì lên nhảy', () => {
     const s = core.init(MAC_DINH);
     runFeed(mod, s, { ...qua(10_000), virtual: true }, ctx(MAC_DINH, 10_000));
     expect(s.nhayDen).toBe(0);
+  });
+});
+
+describe('nút Nhảy ngay', () => {
+  it('bấm là nhảy luôn, kể cả khi tắt nhảy khi có quà', () => {
+    const cfg = { ...MAC_DINH, danceOnGift: false };
+    const s = core.init(cfg);
+    const ra = runAction(mod, s, 'nhay', ctx(cfg, 1_000));
+    expect(ra).toEqual([{ kind: 'overlay', slot: 'floor', ttlMs: NHAY_MS }]);
+    expect(nhip(s, 2_000).every((d) => d === 'nhay')).toBe(true);
+  });
+
+  it('nút lạ thì không làm gì', () => {
+    const s = core.init(MAC_DINH);
+    expect(runAction(mod, s, 'khac', ctx(MAC_DINH, 0))).toEqual([]);
   });
 });
 

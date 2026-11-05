@@ -4,7 +4,8 @@
  *  gửi câu sang `POST /s/tts`, backend gắn khoá rồi gọi nhà cung cấp.
  */
 
-import type { Priority, SfxName } from '@live/contracts';
+import { tachVai } from '@live/contracts';
+import type { DoanDoc, Priority, SfxName } from '@live/contracts';
 
 // ---- Tiếng động: tổng hợp, không cần file ----
 
@@ -90,6 +91,9 @@ export interface VoiceCfg {
   /** Id giọng dùng khi câu không nói rõ đọc bằng giọng nào. */
   default: string;
   cast: CastVoice[];
+  /** Đa giọng: tính năng đọc bằng giọng chính của nó, `[id]` trong câu đổi
+   *  giọng. Tắt là đơn giọng — cả phòng một giọng mặc định. */
+  multi: boolean;
 }
 
 export const VOICE_MAC_DINH: VoiceCfg = {
@@ -98,6 +102,7 @@ export const VOICE_MAC_DINH: VoiceCfg = {
   volume: 1,
   default: '',
   cast: [],
+  multi: false,
 };
 
 /** Dài hơn thì nhà cung cấp cắt, mà đọc xong khán giả cũng quên mất chuyện gì. */
@@ -106,10 +111,10 @@ const MAX_TEXT = 400;
 const MAX_HANG = 4;
 
 interface Cho {
-  text: string;
+  /** Các đoạn của một câu, mỗi đoạn một giọng. Cả câu là một mục trong hàng
+   *  chờ: bỏ thì bỏ cả câu, không bao giờ cắt cụt giữa lời thoại. */
+  doan: DoanDoc[];
   priority: Priority;
-  /** Id giọng trong dàn. Rỗng thì backend dùng giọng mặc định. */
-  voiceId: string;
 }
 
 /** Bỏ emoji trước khi đưa cho máy đọc, nếu không nó đọc luôn cả tên emoji. */
@@ -120,6 +125,24 @@ export function chuanHoa(text: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, MAX_TEXT);
+}
+
+/** Danh sách giọng máy. Lần đầu trình duyệt hay trả rỗng rồi mới nạp xong,
+ *  nên chờ `voiceschanged` một chút trước khi kết luận máy không có giọng. */
+function cacGiongMay(): Promise<SpeechSynthesisVoice[]> {
+  const co = speechSynthesis.getVoices();
+  if (co.length > 0) return Promise.resolve(co);
+  return new Promise((xong) => {
+    const het = setTimeout(() => xong(speechSynthesis.getVoices()), 1_000);
+    speechSynthesis.addEventListener(
+      'voiceschanged',
+      () => {
+        clearTimeout(het);
+        xong(speechSynthesis.getVoices());
+      },
+      { once: true },
+    );
+  });
 }
 
 /** Hàng chờ đọc. Một câu một lúc, không chồng tiếng. */
@@ -136,15 +159,18 @@ export class HangGiong {
   }
 
   noi(text: string, priority: Priority = 'normal', voiceId = ''): void {
-    const t = chuanHoa(text);
-    if (t === '' || !this.cfg.enabled) return;
+    if (!this.cfg.enabled) return;
+    const doan = tachVai(text, voiceId, this.cfg.multi)
+      .map((d) => ({ text: chuanHoa(d.text), voice: d.voice }))
+      .filter((d) => d.text !== '');
+    if (doan.length === 0) return;
 
     if (priority === 'high') {
       // Câu quan trọng chen lên trước, nhưng không cắt ngang câu đang đọc —
       // cắt giữa chừng nghe như máy hỏng.
-      this.hang.unshift({ text: t, priority, voiceId });
+      this.hang.unshift({ doan, priority });
     } else {
-      this.hang.push({ text: t, priority, voiceId });
+      this.hang.push({ doan, priority });
     }
     while (this.hang.length > MAX_HANG) {
       // Bỏ câu thường cũ nhất; câu `high` được giữ.
@@ -178,7 +204,10 @@ export class HangGiong {
       while (this.hang.length > 0 && !this.dungLai && this.cfg.enabled) {
         const c = this.hang.shift();
         if (c === undefined) break;
-        await this.doc(c.text, c.voiceId);
+        for (const d of c.doan) {
+          if (this.dungLai || !this.cfg.enabled) break;
+          await this.doc(d.text, d.voice);
+        }
       }
     } finally {
       this.dangChay = false;
@@ -187,13 +216,17 @@ export class HangGiong {
 
   private async doc(text: string, voiceId: string): Promise<void> {
     if (this.cfg.cast.length > 0) {
+      // Đã có dàn giọng thì chỉ đọc bằng dàn. Giọng được gọi hỏng thì máy chủ
+      // tự chuyển sang giọng đọc được kế tiếp trong dàn, như chuỗi giọng của
+      // bản cũ; hỏng hết thì im. KHÔNG lui về giọng máy: máy không có giọng
+      // tiếng Việt là nó đọc chữ Việt bằng giọng tiếng Anh, lên sóng còn tệ
+      // hơn im lặng.
       try {
         await this.docQuaApi(text, voiceId);
-        return;
       } catch (e) {
-        // Nhà cung cấp hỏng thì vẫn phải đọc được, chứ không im bặt giữa live.
-        console.warn('[giọng đọc] nhà cung cấp lỗi, dùng giọng máy:', e);
+        console.warn('[giọng đọc] dàn giọng không đọc được câu này:', e);
       }
+      return;
     }
     await this.docBangMay(text);
   }
@@ -237,13 +270,18 @@ export class HangGiong {
     });
   }
 
-  /** Giọng máy của trình duyệt — dùng khi chưa cấu hình nhà cung cấp. */
+  /** Giọng máy của trình duyệt — dùng khi chưa cấu hình dàn giọng, và CHỈ khi
+   *  máy có giọng tiếng Việt. */
   private async docBangMay(text: string): Promise<void> {
     if (typeof speechSynthesis === 'undefined') return;
+    const vi = (await cacGiongMay()).find((v) => v.lang.toLowerCase().startsWith('vi'));
+    if (vi === undefined) {
+      console.warn('[giọng đọc] máy không có giọng tiếng Việt và chưa có dàn giọng — không đọc');
+      return;
+    }
     await new Promise<void>((xong) => {
       const u = new SpeechSynthesisUtterance(text);
-      const vi = speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith('vi'));
-      if (vi !== undefined) u.voice = vi;
+      u.voice = vi;
       u.lang = 'vi-VN';
       u.rate = this.cfg.speed;
       u.volume = this.cfg.volume;

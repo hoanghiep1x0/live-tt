@@ -5,7 +5,7 @@
  *  gắn. Nhờ vậy khoá không bao giờ lọt vào bundle của trang.
  */
 
-import type { DesignInfo, Json, SessionView } from '@live/contracts';
+import type { DesignInfo, Json, KieuNha, SessionView, ViecAi } from '@live/contracts';
 
 export interface ModuleState {
   enabled: boolean;
@@ -28,15 +28,51 @@ export interface SourceStatus {
   problem?: string;
 }
 
-export type ProviderKind = 'openai' | 'elevenlabs' | 'anthropic';
+/** Cùng kiểu với kho kết nối dùng chung ở `@live/contracts`. */
+export type ProviderKind = KieuNha;
+
+/** Loại việc một kết nối AI làm được. Kho chia tab theo đây. */
+export type AiUse = ViecAi;
 
 export interface ProviderInfo {
   id: string;
+  /** Tên hiển thị đúng như người vận hành gõ ("MC"); id là bản nắn để code gọi. */
+  name: string;
   kind: ProviderKind;
   baseUrl: string;
+  /** Model chung của bản cũ — loại nào chưa có model riêng thì dùng cái này. */
   model: string;
+  uses: AiUse[];
+  /** Model mặc định theo từng loại, đã điền đủ cả loại đang rơi về model chung. */
+  models: Partial<Record<AiUse, string>>;
   /** Có khoá hay chưa. Giá trị khoá không bao giờ ra khỏi backend. */
   hasKey: boolean;
+}
+
+/** Loại việc theo giao thức, cho kho cũ chưa khai `uses`. Trùng luật với
+ *  `uses_theo_kieu` ở backend. */
+const USES_THEO_KIEU: Record<ProviderKind, AiUse[]> = {
+  anthropic: ['chat'],
+  elevenlabs: ['tts'],
+  openai: ['chat', 'tts', 'image'],
+};
+
+/** Điền đủ trường cho một dòng kho. Backend cũ chưa trả `uses`/`models`; thiếu
+ *  mà để nguyên thì cả trang quản lý vỡ ngay lúc vẽ. */
+function chuanNha(p: Partial<ProviderInfo>): ProviderInfo {
+  const kind = p.kind ?? 'openai';
+  const model = p.model ?? '';
+  const uses = p.uses ?? USES_THEO_KIEU[kind];
+  return {
+    id: p.id ?? '',
+    name: p.name || (p.id ?? ''),
+    kind,
+    baseUrl: p.baseUrl ?? '',
+    model,
+    uses,
+    models: p.models ?? Object.fromEntries(model === '' ? [] : uses.map((u) => [u, model])),
+    hasKey: p.hasKey === true,
+  };
 }
 
 /** Một nhân vật trong dàn giọng. Một phiên có nhiều nhân vật, mỗi người một giọng. */
@@ -54,6 +90,8 @@ export interface VoiceCfg {
   /** Id giọng dùng khi câu không nói rõ đọc bằng giọng nào. */
   default: string;
   cast: CastVoice[];
+  /** Đa giọng. Backend cũ chưa có thì thiếu — coi như đơn giọng. */
+  multi?: boolean;
 }
 
 export class ApiError extends Error {
@@ -137,16 +175,23 @@ export const api = {
   setSource: (cfg: { kind: SourceKind; url?: string; channel?: string; nhip?: number }) =>
     call<{ source: SourceStatus }>('/source', 'PUT', cfg),
 
-  secrets: () => call<{ providers: ProviderInfo[] }>('/secrets'),
+  secrets: async () => {
+    const kq = await call<{ providers: Partial<ProviderInfo>[] }>('/secrets');
+    return { providers: kq.providers.map(chuanNha) };
+  },
 
   /** Khoá rỗng nghĩa là giữ khoá cũ — trang quản lý không đọc được khoá nên
    *  không gửi lại được, mà vẫn phải sửa được địa chỉ và model. */
   setSecret: (
     id: string,
-    v: { kind: ProviderKind; baseUrl?: string; key?: string; model?: string },
-  ) => call<{ provider: ProviderInfo }>(`/secrets/${id}`, 'PUT', v),
+    /** Thân dựng bằng `thanGhi` của `@live/contracts`, giống hệt sân khấu. */
+    v: Record<string, unknown>,
+  ) => call<{ provider: ProviderInfo }>(`/secrets/${encodeURIComponent(id)}`, 'PUT', v),
 
-  delSecret: (id: string) => call<{ removed: string }>(`/secrets/${id}`, 'DELETE'),
+  /** Khoá của một kết nối, cho form sửa. Danh sách thì không bao giờ có khoá. */
+  secretKey: (id: string) => call<{ key: string }>(`/secrets/${encodeURIComponent(id)}/key`),
+  delSecret: (id: string) =>
+    call<{ removed: string }>(`/secrets/${encodeURIComponent(id)}`, 'DELETE'),
 
   voice: () => call<{ voice: VoiceCfg }>('/voice'),
 
@@ -160,4 +205,8 @@ export const api = {
 
   setEnabled: (designId: string, moduleId: string, on: boolean) =>
     call<{ enabled: boolean }>(`/designs/${designId}/modules/${moduleId}/enabled`, 'POST', { on }),
+
+  /** Bấm nút trên thẻ (`ModuleUi.actions`). Không lưu gì: backend chuyển xuống sân khấu. */
+  bamNut: (designId: string, moduleId: string, action: string) =>
+    call<unknown>(`/designs/${designId}/modules/${moduleId}/action`, 'POST', { action }),
 };

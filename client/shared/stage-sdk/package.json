@@ -6,7 +6,8 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./danh-sach": "./src/danh-sach.ts"
   },
   "dependencies": {
     "@live/contracts": "*",
@@ -18,6 +19,7 @@
     "@live/mod-story": "*",
     "@live/mod-ticker": "*",
     "@live/mod-top-givers": "*",
+    "@live/mod-vu-cong-3d": "*",
     "@live/mod-welcome": "*",
     "@live/runtime": "*"
   },

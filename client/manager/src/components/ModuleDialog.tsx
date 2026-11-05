@@ -1,4 +1,5 @@
-import type { Json } from '@live/contracts';
+import { useState } from 'react';
+import type { ConfigField, Json } from '@live/contracts';
 import type { Registered } from '../lib/registry';
 import { tenSuKien } from '../lib/registry';
 import { ConfigRow } from './ConfigRow';
@@ -14,8 +15,28 @@ interface Props {
   onLuu(config: Record<string, Json>): void;
 }
 
+/** Gom ô theo `tab`, giữ thứ tự xuất hiện. Ô không khai tab về tab đầu. */
+function chiaTab(fields: readonly ConfigField[]): { ten: string; fields: ConfigField[] }[] {
+  const ra: { ten: string; fields: ConfigField[] }[] = [{ ten: TAB_DAU, fields: [] }];
+  for (const f of fields) {
+    const ten = f.tab ?? TAB_DAU;
+    let nhom = ra.find((t) => t.ten === ten);
+    if (nhom === undefined) {
+      nhom = { ten, fields: [] };
+      ra.push(nhom);
+    }
+    nhom.fields.push(f);
+  }
+  return ra;
+}
+
+const TAB_DAU = 'Cài đặt';
+
 export function ModuleDialog({ r, cfg, bat, disabled, onBat, onLuu }: Props) {
   const ui = r.ui;
+  const [tab, setTab] = useState(TAB_DAU);
+  const tabs = chiaTab(ui.fields);
+  const oCuaTab = tabs.find((t) => t.ten === tab)?.fields ?? [];
   return (
     <DialogBody
       icon={ui.icon}
@@ -27,8 +48,25 @@ export function ModuleDialog({ r, cfg, bat, disabled, onBat, onLuu }: Props) {
         <DialogClose className="btn btn-gold">Xong</DialogClose>
       }
     >
+      {tabs.length < 2 ? null : (
+        <div className="ai-tabs" role="tablist">
+          {tabs.map((t) => (
+            <button
+              key={t.ten}
+              type="button"
+              role="tab"
+              className="ai-tab"
+              aria-selected={tab === t.ten}
+              data-chon={tab === t.ten}
+              onClick={() => setTab(t.ten)}
+            >
+              {t.ten}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="form">
-        {ui.triggers.length > 0 ? (
+        {tab === TAB_DAU && ui.triggers.length > 0 ? (
           <div className="hooks">
             <span className="q-lbl">Chạy khi</span>
             {ui.triggers.map((t) => (
@@ -39,20 +77,22 @@ export function ModuleDialog({ r, cfg, bat, disabled, onBat, onLuu }: Props) {
           </div>
         ) : null}
 
-        <label className="form-inline hl" htmlFor={`on-${ui.id}`}>
-          <span>
-            <b>Bật tính năng</b>
-            <small>Tắt thì thiết kế vẫn chạy bình thường, chỉ thiếu tính năng này</small>
-          </span>
-          <Switch
-            checked={bat}
-            onCheckedChange={onBat}
-            disabled={disabled}
-            label={`Bật ${ui.name}`}
-          />
-        </label>
+        {tab !== TAB_DAU ? null : (
+          <label className="form-inline hl" htmlFor={`on-${ui.id}`}>
+            <span>
+              <b>Bật tính năng</b>
+              <small>Tắt thì thiết kế vẫn chạy bình thường, chỉ thiếu tính năng này</small>
+            </span>
+            <Switch
+              checked={bat}
+              onCheckedChange={onBat}
+              disabled={disabled}
+              label={`Bật ${ui.name}`}
+            />
+          </label>
+        )}
 
-        {ui.fields.map((f) => (
+        {oCuaTab.map((f) => (
           <ConfigRow
             key={f.key}
             moduleId={ui.id}

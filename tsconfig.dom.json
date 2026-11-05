@@ -7,6 +7,7 @@
     "declarationMap": false,
     "sourceMap": false,
     "noEmit": true,
+    "resolveJsonModule": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "types": ["node", "vite/client"],
@@ -29,6 +30,7 @@
     "client/modules/*/src/**/*.tsx",
     "client/designs/*/src/**/*.ts",
     "client/designs/*/src/**/*.tsx",
+    "client/designs/*/design.json",
     "client/designs/*/vite.config.ts"
   ]
 }

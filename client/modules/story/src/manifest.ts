@@ -1,12 +1,17 @@
 import { z } from 'zod';
+import { TAB_GIONG } from '@live/contracts';
 import type { ModuleManifest } from '@live/contracts';
 
 export const schema = z.object({
+  voiceId: z.string().max(60).default(''),
   title: z.string().max(120).default(''),
   /** Mỗi dòng một đoạn. Dòng trống bị bỏ qua. */
   passages: z.string().max(20_000).default(''),
   /** Ảnh hoặc video chiếu trong khung. Để trống thì khung chỉ có chữ. */
   media: z.string().max(600).default(''),
+  /** Bỏ hẳn nền của khung — không ảnh, không video, không nền đổi màu — để lộ
+   *  phòng phía sau. Dải sáng quét và chữ vẫn chạy để khung không đứng im. */
+  transparentBg: z.boolean().default(false),
   secPerPassage: z.number().int().min(3).max(300).default(18),
   readAloud: z.boolean().default(true),
   /** Hết đoạn cuối thì quay lại từ đầu. Phòng live chạy liên tục nên mặc định bật. */
@@ -14,6 +19,10 @@ export const schema = z.object({
 });
 
 export type Config = z.infer<typeof schema>;
+
+/** Báo cho thiết kế: bật nền trong suốt thì bỏ màn chờ và nền khung phía dưới,
+ *  không thì chúng lộ ra đè lên phụ đề. */
+export const trongSuot = (config: Config): boolean => config.transparentBg;
 
 export const manifest: ModuleManifest<Config> = {
   id: 'story',
@@ -27,7 +36,7 @@ export const manifest: ModuleManifest<Config> = {
   schema,
   slots: ['screen'],
   needs: ['tts'],
-  action: { label: 'Đoạn sau', op: 'next' },
+  actions: [{ label: 'Đoạn sau', op: 'next', icon: '⏭' }],
   quick: ['secPerPassage', 'readAloud'],
   fields: [
     {
@@ -51,7 +60,13 @@ export const manifest: ModuleManifest<Config> = {
       key: 'media',
       label: 'Ảnh hoặc video',
       type: 'media',
-      hint: 'Dán đường dẫn, tải file lên, hoặc nhờ AI vẽ. Để trống thì khung chỉ có chữ, và chữ sẽ nằm giữa khung cho cân.',
+      hint: 'Dán đường dẫn, tải file lên, hoặc nhờ AI vẽ. Để trống thì khung tự trải một nền đổi màu.',
+    },
+    {
+      key: 'transparentBg',
+      label: 'Nền trong suốt',
+      type: 'toggle',
+      hint: 'Tắt ảnh, video và nền đổi màu để lộ phòng phía sau. Nền phòng nên tự có chuyển động — TikTok soi khung hình đứng im.',
     },
     {
       key: 'secPerPassage',
@@ -62,7 +77,21 @@ export const manifest: ModuleManifest<Config> = {
       min: 3,
       max: 300,
     },
-    { key: 'readAloud', label: 'Đọc to từng đoạn', short: 'Đọc to', type: 'toggle' },
+    {
+      key: 'readAloud',
+      label: 'Đọc to từng đoạn',
+      short: 'Đọc to',
+      type: 'toggle',
+      tab: TAB_GIONG,
+    },
     { key: 'loop', label: 'Hết truyện thì kể lại từ đầu', type: 'toggle' },
+    {
+      key: 'voiceId',
+      label: 'Giọng chính',
+      short: 'Giọng',
+      type: 'voice',
+      tab: TAB_GIONG,
+      hint: 'Chỉ dùng khi phòng bật Đa giọng (trang quản lý, nút Giọng đọc). Trong câu, [id-giọng] đổi giọng, [-] quay về giọng chính.',
+    },
   ],
 };

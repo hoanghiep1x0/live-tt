@@ -14,6 +14,7 @@ pub mod bot;
 pub mod designs;
 pub mod events;
 pub mod files;
+pub mod hanh_dong;
 pub mod media;
 pub mod guard;
 pub mod paths;
@@ -24,6 +25,7 @@ pub mod source;
 pub mod state;
 pub mod store;
 pub mod tts;
+pub mod tu_do;
 pub mod voice;
 pub mod ws;
 
@@ -33,7 +35,7 @@ use axum::extract::Request;
 use axum::http::{header, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post, put};
+use axum::routing::{delete, get, post, put};
 use axum::Router;
 
 pub use paths::Layout;
@@ -51,6 +53,7 @@ pub fn router(st: Arc<AppState>) -> Router {
             "/api/secrets/:provider",
             put(api::put_secret).delete(api::delete_secret),
         )
+        .route("/api/secrets/:provider/key", get(api::get_secret_key))
         .route("/api/voice", get(api::get_voice).put(api::put_voice))
         // Trang quản lý cũng gọi được, để bấm "Nghe thử" mà không phải mở sân khấu.
         .route("/api/tts", post(api::post_tts))
@@ -74,19 +77,48 @@ pub fn router(st: Arc<AppState>) -> Router {
         .route(
             "/api/designs/:design_id/modules/:module_id/enabled",
             post(api::post_enabled),
+        )
+        .route(
+            "/api/designs/:design_id/modules/:module_id/action",
+            post(hanh_dong::post_action),
         );
 
     // Lối cho SÂN KHẤU: không đòi token, vì sân khấu chạy trong OBS và không có
     // chỗ nào giữ token. Vẫn qua lớp chặn Host và Origin như mọi thứ khác, nên
     // một trang web ngoài không gọi vào được.
     let stage = Router::new()
-        .route("/s/voice", get(api::get_voice))
+        // Ghi được từ sân khấu, cùng lối với `PUT /s/secrets/:id`: ngăn xem thử
+        // phải sửa được dàn giọng — giọng nào đọc bằng kết nối nào — mà trang
+        // này không giữ token. Dàn giọng không chứa khoá.
+        .route("/s/voice", get(api::get_voice).put(api::put_voice))
         .route("/s/tts", post(api::post_tts))
         // Bảng xem thử nằm ngay trong trang sân khấu, mà trang đó không giữ
         // token. Vẫn qua lớp chặn Host và Origin như mọi thứ khác.
         .route("/s/media/:design_id", post(media::nhan))
         .route("/s/media/:design_id/ai", post(media::tao_anh))
-        .route("/s/viet/:design_id", post(ai::viet));
+        .route("/s/viet/:design_id", post(ai::viet))
+        .route("/s/providers", get(api::list_secrets_public))
+        // Cắm khoá ngay từ bảng xem thử, khỏi phải mở trang quản lý. Người
+        // vận hành yêu cầu, và đây là đánh đổi có thật — ghi rõ ở đây để lần
+        // sau đọc lại còn biết đã cân nhắc gì (docs/05-backend.md §5).
+        //
+        // Danh sách (`list_secrets_public`) vẫn không bao giờ kèm khoá. Đọc
+        // khoá của MỘT kết nối thì được, qua `/s/secrets/:id/key` — người vận
+        // hành muốn form sửa hiện sẵn khoá dạng chấm và bấm con mắt là thấy
+        // lại (trước đây lối này chỉ ghi). Đánh đổi: thứ gì gọi được `/s/`
+        // trên máy này cũng ĐỌC và GHI ĐÈ được khoá — mà nó vốn đã đọc được
+        // file kho trên đĩa, nên thêm rủi ro không đáng kể. Cùng mức tin cậy với
+        // `/s/viet` và `/s/media` — hai lối đã tiêu được tiền API — và lớp
+        // chặn Host + Origin vẫn nguyên, nên một trang web ngoài không gọi
+        // vào được. XOÁ kết nối thì vẫn phải sang trang quản lý: xoá nhầm
+        // giữa lúc live là tắt tính năng mà không ai thấy.
+        .route("/s/secrets/:provider", put(api::put_secret))
+        .route("/s/secrets/:provider/key", get(api::get_secret_key))
+        // Tủ đồ của module (assets/tu-do/<nguồn>/<ô>/<món>/): sân khấu cần danh mục để mặc đồ. XOÁ cũng mở ở đây,
+        // khác hẳn khoá AI ở trên: người vận hành yêu cầu dọn tủ ngay từ bảng xem, và xoá nhầm chỉ mất một món đồ
+        // (chép lại từ D:\Assets là xong), không tắt tính năng nào giữa lúc live. Bảng xem vẫn hỏi lại trước khi xoá.
+        .route("/s/tu-do/:module_id", get(tu_do::liet_ke))
+        .route("/s/tu-do/:module_id/*rest", delete(tu_do::xoa));
 
     let files = Router::new()
         .route("/d/:id/", get(files::serve_root))

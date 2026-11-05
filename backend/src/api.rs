@@ -190,6 +190,12 @@ pub async fn list_secrets(State(st): State<Arc<AppState>>) -> Json<Value> {
     Json(json!({ "providers": crate::secrets::list(&st.layout) }))
 }
 
+/// Danh sách kết nối cho bảng xem thử trên sân khấu: đủ để chọn, không địa
+/// chỉ, không khoá.
+pub async fn list_secrets_public(State(st): State<Arc<AppState>>) -> Json<Value> {
+    Json(json!({ "providers": crate::secrets::list_public(&st.layout) }))
+}
+
 pub async fn put_secret(
     State(st): State<Arc<AppState>>,
     Path(provider): Path<String>,
@@ -197,6 +203,22 @@ pub async fn put_secret(
 ) -> Result<Json<Value>, AppError> {
     let p = crate::secrets::set(&st.layout, &provider, &than)?;
     Ok(Json(json!({ "provider": p })))
+}
+
+/// Khoá của MỘT kết nối, cho form sửa: hiện sẵn dưới dạng chấm, bấm con mắt
+/// là thấy lại. Chỉ gọi khi người vận hành bấm Sửa — danh sách thì vẫn không
+/// bao giờ kèm khoá. `no-store` để trình duyệt không giữ lại bản nào.
+pub async fn get_secret_key(
+    State(st): State<Arc<AppState>>,
+    Path(provider): Path<String>,
+) -> Result<impl IntoResponse, AppError> {
+    let Some(p) = crate::secrets::get(&st.layout, &provider) else {
+        return Err(AppError::NotFound(format!("không có nhà cung cấp \"{provider}\"")));
+    };
+    Ok((
+        [(axum::http::header::CACHE_CONTROL, "no-store")],
+        Json(json!({ "key": p.key })),
+    ))
 }
 
 pub async fn delete_secret(

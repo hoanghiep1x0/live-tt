@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Pencil, RotateCcw } from 'lucide-react';
+import { AlertTriangle, Eye, Pencil, Puzzle, RotateCcw } from 'lucide-react';
 import type { DesignInfo } from '@live/contracts';
 
 interface Props {
@@ -12,6 +12,8 @@ interface Props {
   onDatStudio(id: string, url: string): void;
   onReset(id: string): void;
   onToast(text: string, loi?: boolean): void;
+  /** Sang tab Tính năng. Tab đó chỉ cấu hình thiết kế đang phát. */
+  onSangTinhNang(): void;
 }
 
 export function DesignCard({
@@ -23,6 +25,7 @@ export function DesignCard({
   onDatStudio,
   onReset,
   onToast,
+  onSangTinhNang,
 }: Props) {
   const id = d.manifest.id;
   const dangPhat = live === id;
@@ -156,6 +159,39 @@ export function DesignCard({
       ) : null}
 
       <div className="card-actions">
+        <a
+          className="btn"
+          href={chuaBuild ? undefined : d.obsUrl}
+          target="_blank"
+          rel="noopener"
+          aria-disabled={chuaBuild}
+          title={chuaBuild ? 'Thiết kế chưa build, chưa xem được' : `Mở sân khấu ${d.displayName} ở tab mới`}
+          onClick={(e) => {
+            if (chuaBuild) {
+              e.preventDefault();
+              onToast('Thiết kế chưa build, chưa xem được', true);
+            }
+          }}
+        >
+          <Eye size={15} />
+          Xem mẫu
+        </a>
+        <button
+          type="button"
+          className="btn"
+          // Cấu hình tính năng luôn áp cho phòng đang phát; mở từ thẻ khác là
+          // chỉnh nhầm phòng, nên chỉ thẻ đang phát mới bấm được.
+          disabled={!dangPhat}
+          title={
+            dangPhat
+              ? `Cấu hình tính năng của ${d.displayName}`
+              : 'Bật Live phòng này để cấu hình tính năng'
+          }
+          onClick={onSangTinhNang}
+        >
+          <Puzzle size={15} />
+          Tính năng
+        </button>
         <button
           type="button"
           className="btn"

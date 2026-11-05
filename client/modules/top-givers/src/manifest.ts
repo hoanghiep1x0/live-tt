@@ -1,7 +1,10 @@
 import { z } from 'zod';
+import { TAB_GIONG } from '@live/contracts';
 import type { ModuleManifest } from '@live/contracts';
 
 export const schema = z.object({
+  voice: z.boolean().default(true),
+  voiceId: z.string().max(60).default(''),
   size: z.number().int().min(1).max(5).default(5),
   announce: z.boolean().default(true),
   template: z.string().min(1).max(200).default('{ten} vừa vươn lên dẫn đầu!'),
@@ -21,6 +24,7 @@ export const manifest: ModuleManifest<Config> = {
   // Bảng vinh danh đọc thẳng từ phiên — không tự cộng lại thứ backend đã cộng,
   // và việc báo đổi ngôi làm theo nhịp. Bắt `gift` chỉ để nhớ ai vừa tặng gì
   // cho dòng đua top.
+  room: 'ke-chuyen',
   triggers: ['gift'],
   configVersion: 3,
   schema,
@@ -52,6 +56,15 @@ export const manifest: ModuleManifest<Config> = {
       short: 'Dòng đua',
       type: 'toggle',
       hint: 'Khối trên: dòng đỏ báo ai vừa tặng gì và đang hạng mấy. Hiện một lúc lâu rồi nghỉ nửa phút',
+    },
+    { key: 'voice', label: 'Đọc to khi đổi ngôi', short: 'Đọc to', type: 'toggle', tab: TAB_GIONG },
+    {
+      key: 'voiceId',
+      label: 'Giọng chính',
+      short: 'Giọng',
+      type: 'voice',
+      tab: TAB_GIONG,
+      hint: 'Chỉ dùng khi phòng bật Đa giọng (trang quản lý, nút Giọng đọc). Trong câu, [id-giọng] đổi giọng, [-] quay về giọng chính.',
     },
   ],
 };

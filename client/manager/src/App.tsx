@@ -1,21 +1,34 @@
 import { useState } from 'react';
+import { Bot } from 'lucide-react';
+import { AiKhoDialog } from './components/AiKhoDialog';
+import type { AiUse } from './lib/api';
 import { BrowserDialog } from './components/BrowserDialog';
 import { VoiceDialog } from './components/VoiceDialog';
 import { DesignsTab } from './components/DesignsTab';
 import { ModulesTab } from './components/ModulesTab';
 import { TopBar } from './components/TopBar';
 import type { Tab } from './components/TopBar';
-import { MODULES } from './lib/registry';
+import { tinhNangDung } from './lib/tinhNangDung';
 import { useManager } from './lib/store';
+
+/** `?kho=chat|tts|image|video` trên địa chỉ: mở thẳng hộp Kết nối AI ở đúng
+ *  tab đó. Bảng xem thử trên sân khấu dùng đường này — khoá vẫn chỉ cắm ở
+ *  trang quản lý, nhưng từ sân khấu tới đây chỉ một cú bấm. */
+function khoTuDiaChi(): AiUse | null {
+  const v = new URLSearchParams(window.location.search).get('kho');
+  return v === 'chat' || v === 'tts' || v === 'image' || v === 'video' ? v : null;
+}
 
 export function App() {
   const m = useManager();
+  const [khoDau] = useState(khoTuDiaChi);
   const [tab, setTab] = useState<Tab>('designs');
   const [toastTay, setToastTay] = useState<{ text: string; loi: boolean } | null>(null);
 
   const toast = toastTay ?? m.toast;
   const tenLive = m.designs.find((d) => d.manifest.id === m.live)?.displayName ?? null;
-  const soBat = MODULES.filter((r) => m.mods[r.ui.id]?.enabled === true).length;
+  const dung = tinhNangDung(m);
+  const soBat = dung.filter((r) => m.mods[r.ui.id]?.enabled === true).length;
 
   const noi = (text: string, loi = false) => {
     setToastTay({ text, loi });
@@ -29,14 +42,33 @@ export function App() {
         onTab={setTab}
         soThietKe={m.designs.length}
         soBat={soBat}
-        soModule={MODULES.length}
+        soModule={dung.length}
         wsSong={m.wsSong}
         tenLive={tenLive}
         phien={m.phien}
         nguon={m.nguon}
         onNguon={m.doiNguon}
         browserTrigger={<BrowserDialog tenLive={tenLive} />}
-        voiceTrigger={<VoiceDialog onToast={noi} />}
+        voiceTrigger={
+          <>
+            <AiKhoDialog
+              onToast={noi}
+              tab={khoDau ?? 'chat'}
+              moNgay={khoDau !== null}
+              trigger={
+                <button
+                  type="button"
+                  className="btn btn-icon btn-ghost"
+                  aria-label="Kết nối AI"
+                  title="Kết nối AI dùng chung"
+                >
+                  <Bot size={16} />
+                </button>
+              }
+            />
+            <VoiceDialog onToast={noi} />
+          </>
+        }
       />
 
       <main>
@@ -58,9 +90,9 @@ export function App() {
         {m.dangTai && m.designs.length === 0 && m.mat === null ? (
           <div className="empty">Đang đọc danh sách thiết kế…</div>
         ) : tab === 'designs' ? (
-          <DesignsTab m={m} onToast={noi} />
+          <DesignsTab m={m} onToast={noi} onSangTinhNang={() => setTab('modules')} />
         ) : (
-          <ModulesTab m={m} onSangThietKe={() => setTab('designs')} />
+          <ModulesTab m={m} onSangThietKe={() => setTab('designs')} onToast={noi} />
         )}
       </main>
 

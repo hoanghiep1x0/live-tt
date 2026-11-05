@@ -1,20 +1,14 @@
-/** Sổ module đã cài.
+/** Sổ module đã cài, phía trang quản lý.
  *
- *  Thêm một tính năng = thêm một thư mục ở `client/modules/` rồi thêm một dòng
- *  ở đây. Không có `if (id === …)` ở bất kỳ đâu khác trong trang quản lý: mọi
- *  thứ nó cần vẽ đều đọc từ manifest.
+ *  Danh sách module KHÔNG khai ở đây: nó đọc đúng mảng mà sân khấu đọc
+ *  (`@live/stage-sdk/danh-sach`), nên tab ở trang này và bảng xem trên sân khấu
+ *  luôn cùng một danh sách. Không có `if (id === …)` ở bất kỳ đâu khác trong
+ *  trang quản lý: mọi thứ nó cần vẽ đều đọc từ manifest.
  */
 
+import { phuCauHinh } from '@live/contracts';
 import type { FeedKind, Json, ModuleUi } from '@live/contracts';
-import { manifest as chatBubbles } from '@live/mod-chat-bubbles';
-import { manifest as danceFloor } from '@live/mod-dance-floor';
-import { manifest as followThanks } from '@live/mod-follow-thanks';
-import { manifest as giftThanks } from '@live/mod-gift-thanks';
-import { manifest as likesCounter } from '@live/mod-likes-counter';
-import { manifest as story } from '@live/mod-story';
-import { manifest as ticker } from '@live/mod-ticker';
-import { manifest as topGivers } from '@live/mod-top-givers';
-import { manifest as welcome } from '@live/mod-welcome';
+import { DANH_SACH_MODULE } from '@live/stage-sdk/danh-sach';
 
 export interface Registered {
   ui: ModuleUi;
@@ -30,17 +24,7 @@ function reg(m: HasSchema): Registered {
   return { ui: m, defaults: m.schema.parse({}) as Record<string, Json> };
 }
 
-export const MODULES: readonly Registered[] = [
-  reg(story),
-  reg(giftThanks),
-  reg(welcome),
-  reg(chatBubbles),
-  reg(topGivers),
-  reg(likesCounter),
-  reg(followThanks),
-  reg(ticker),
-  reg(danceFloor),
-];
+export const MODULES: readonly Registered[] = DANH_SACH_MODULE.map((m) => reg(m.manifest));
 
 /** Chữ hiện trên nhãn "Chạy khi" của thẻ. */
 const TEN_SU_KIEN: Partial<Record<FeedKind, string>> = {
@@ -69,5 +53,5 @@ export function hopCauHinh(
   r: Registered,
   luu: Record<string, Json> | undefined,
 ): Record<string, Json> {
-  return { ...r.defaults, ...(luu ?? {}) };
+  return phuCauHinh(r.ui.fields, r.defaults, luu);
 }

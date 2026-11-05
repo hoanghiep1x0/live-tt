@@ -18,9 +18,9 @@ describe('manifest', () => {
     kiemModule(mod);
   });
 
-  it('chạy khi có tim, và dùng chung cho mọi loại phòng', () => {
+  it('chạy khi có tim, và chỉ thuộc phòng kể chuyện — thiết kế duy nhất dùng nó', () => {
     expect(mod.manifest.triggers).toEqual(['like']);
-    expect(mod.manifest.room).toBeUndefined();
+    expect(mod.manifest.room).toBe('ke-chuyen');
   });
 });
 

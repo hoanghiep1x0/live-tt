@@ -29,6 +29,9 @@ async fn chay(socket: WebSocket, st: Arc<AppState>) {
         }
     }
 
+    // Thiết kế mà cửa sổ này đang xem thử (tin `xem`), để lúc đóng còn báo.
+    let mut dang_xem: Option<String> = None;
+
     loop {
         tokio::select! {
             tin = bus.recv() => match tin {
@@ -48,10 +51,15 @@ async fn chay(socket: WebSocket, st: Arc<AppState>) {
             },
             tin = rx.next() => match tin {
                 Some(Ok(Message::Text(s))) => {
-                    if let Some(tra_loi) = xu_ly(&st, &s) {
+                    let mut dut = false;
+                    for tra_loi in xu_ly_cua(&st, &s, &mut dang_xem) {
                         if tx.send(Message::Text(tra_loi.to_string())).await.is_err() {
+                            dut = true;
                             break;
                         }
+                    }
+                    if dut {
+                        break;
                     }
                 }
                 Some(Ok(Message::Close(_))) | None => break,
@@ -59,6 +67,11 @@ async fn chay(socket: WebSocket, st: Arc<AppState>) {
                 _ => {}
             },
         }
+    }
+    // Cửa sổ đóng (hay mất nối): trả lượt xem. Cửa sổ cuối cùng của phòng đi
+    // thì phiên xem thử của phòng đó thôi chạy.
+    if let Some(id) = dang_xem {
+        st.dong_xem_thu(&id);
     }
 }
 
@@ -72,30 +85,100 @@ async fn chay(socket: WebSocket, st: Arc<AppState>) {
 /// Cổng duyệt đầy đủ — xét khác nhau theo nguồn, có mức "gợi ý cho người" —
 /// làm cùng lúc với module tự vận hành. Trước mắt thế này là đủ an toàn: `/ws`
 /// đã qua lớp chặn Host và Origin nên chỉ trang của chính app gọi được.
-fn xu_ly(st: &Arc<AppState>, raw: &str) -> Option<Value> {
-    let v: Value = serde_json::from_str(raw).ok()?;
+///
+/// Bản xem trước của một thiết kế CHƯA phát (bảng xem thử trên trang `/d/<id>/`)
+/// khai mình là ai bằng tin `xem`, và gửi lệnh kèm `designId`: lệnh áp vào chính
+/// thiết kế đó, trạng thái mới chỉ trả riêng cho trang đó (gắn `designId`), không
+/// phát cho ai — phòng đang live không bị đụng. Thiếu `designId` (trang quản lý)
+/// thì như cũ: áp vào thiết kế đang phát.
+#[cfg(test)]
+fn xu_ly(st: &Arc<AppState>, raw: &str) -> Vec<Value> {
+    xu_ly_cua(st, raw, &mut None)
+}
+
+/// `dang_xem`: thiết kế cửa sổ này đang xem thử, giữ qua các tin của nó.
+fn xu_ly_cua(st: &Arc<AppState>, raw: &str, dang_xem: &mut Option<String>) -> Vec<Value> {
+    let Ok(v) = serde_json::from_str::<Value>(raw) else { return vec![] };
     match v.get("t").and_then(Value::as_str) {
-        Some("ping") => Some(json!({ "t": "pong" })),
+        Some("ping") => vec![json!({ "t": "pong" })],
+        Some("xem") => match thiet_ke_cua(st, &v) {
+            Some(id) => {
+                // Một cửa sổ chỉ xem một phòng: khai phòng khác thì trả phòng cũ.
+                if dang_xem.as_deref() != Some(id.as_str()) {
+                    if let Some(cu) = dang_xem.replace(id.clone()) {
+                        st.dong_xem_thu(&cu);
+                    }
+                    st.mo_xem_thu(&id);
+                }
+                if st.live().as_deref() == Some(id.as_str()) {
+                    vec![]
+                } else {
+                    rieng(st, &id)
+                }
+            }
+            None => vec![],
+        },
         Some("command") => lam_lenh(st, &v),
-        _ => None,
+        _ => vec![],
     }
 }
 
-fn lam_lenh(st: &Arc<AppState>, v: &Value) -> Option<Value> {
+/// `designId` của tin, chỉ khi là id hợp lệ của một thiết kế có thật (id nằm trong
+/// đường dẫn thư mục — không nhận `..`, `/`).
+fn thiet_ke_cua(st: &Arc<AppState>, v: &Value) -> Option<String> {
+    let id = v.get("designId").and_then(Value::as_str)?;
+    let hop_le = !id.is_empty()
+        && id.len() <= 32
+        && id.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
+    (hop_le && st.design_exists(id)).then(|| id.to_string())
+}
+
+/// Trạng thái của một thiết kế chưa phát, gắn `designId` để trang biết là của mình.
+fn rieng(st: &Arc<AppState>, id: &str) -> Vec<Value> {
+    st.trang_thai_phong(id)
+        .into_iter()
+        .map(|mut m| {
+            if let Some(o) = m.as_object_mut() {
+                o.insert("designId".into(), json!(id));
+            }
+            m
+        })
+        .collect()
+}
+
+fn lam_lenh(st: &Arc<AppState>, v: &Value) -> Vec<Value> {
     if v.get("by").and_then(Value::as_str) != Some("nguoi") {
-        return Some(json!({ "t": "error", "message": "nguồn lệnh chưa được nhận" }));
+        return vec![json!({ "t": "error", "message": "nguồn lệnh chưa được nhận" })];
     }
-    let c = v.get("command")?;
+    let Some(c) = v.get("command") else { return vec![] };
     let op = c.get("op").and_then(Value::as_str).unwrap_or_default();
     // Kiểm whitelist TRƯỚC khi hỏi phòng nào đang phát: lệnh lạ thì phải bị từ
     // chối rõ ràng, kể cả lúc chưa phát phòng nào.
-    if op != "set-module" && op != "set-config" && op != "set-design-config" && op != "set-bot" && op != "set-ai" {
-        return Some(json!({ "t": "error", "message": "lệnh này chưa nhận" }));
+    if op != "set-module"
+        && op != "set-config"
+        && op != "set-design-config"
+        && op != "set-bot"
+        && op != "set-ai"
+        && op != "module-action"
+    {
+        return vec![json!({ "t": "error", "message": "lệnh này chưa nhận" })];
     }
 
-    let design = st.live()?;
+    let live = st.live();
+    let Some(design) = thiet_ke_cua(st, v).or_else(|| live.clone()) else { return vec![] };
     let module_id = c.get("moduleId").and_then(Value::as_str).unwrap_or_default();
     let patch = || c.get("patch").cloned().unwrap_or(Value::Null);
+
+    // Nút bấm của module: không lưu gì, `bam` tự phát (đang phát) hoặc trả riêng tin
+    // gắn `designId` cho trang xem thử vừa bấm (chưa phát).
+    if op == "module-action" {
+        let action = c.get("action").and_then(Value::as_str).unwrap_or_default();
+        return match crate::hanh_dong::bam(st, &design, module_id, action) {
+            Ok(_) if live.as_deref() == Some(design.as_str()) => vec![],
+            Ok(tin) => vec![tin],
+            Err(e) => vec![json!({ "t": "error", "message": format!("{e:?}") })],
+        };
+    }
 
     let kq = if op == "set-module" {
         let on = c.get("on").and_then(Value::as_bool).unwrap_or(false);
@@ -111,8 +194,10 @@ fn lam_lenh(st: &Arc<AppState>, v: &Value) -> Option<Value> {
     };
 
     match kq {
-        Ok(()) => None,
-        Err(e) => Some(json!({ "t": "error", "message": format!("{e:?}") })),
+        // Các hàm set_* đã phát cho mọi cửa sổ, kể cả cửa sổ vừa gửi lệnh: đang
+        // phát thì như tin thường, chưa phát thì gắn `designId` của phòng đó.
+        Ok(()) => vec![],
+        Err(e) => vec![json!({ "t": "error", "message": format!("{e:?}") })],
     }
 }
 
@@ -131,35 +216,111 @@ mod tests {
 
     #[test]
     fn ping_duoc_tra_pong() {
-        assert_eq!(xu_ly(&st(), r#"{"t":"ping"}"#), Some(json!({ "t": "pong" })));
+        assert_eq!(xu_ly(&st(), r#"{"t":"ping"}"#), vec![json!({ "t": "pong" })]);
     }
 
     #[test]
     fn tin_la_thi_bo_qua_chu_khong_sap() {
         let s = st();
-        assert_eq!(xu_ly(&s, "{}"), None);
-        assert_eq!(xu_ly(&s, "không phải json"), None);
-        assert_eq!(xu_ly(&s, r#"{"t":"xoa-het"}"#), None);
+        assert!(xu_ly(&s, "{}").is_empty());
+        assert!(xu_ly(&s, "không phải json").is_empty());
+        assert!(xu_ly(&s, r#"{"t":"xoa-het"}"#).is_empty());
     }
 
     #[test]
     fn lenh_khong_khai_nguon_thi_tu_choi() {
         let s = st();
         let ra = xu_ly(&s, r#"{"t":"command","command":{"op":"set-module","moduleId":"story","on":true}}"#);
-        assert_eq!(ra.unwrap()["t"], json!("error"));
+        assert_eq!(ra[0]["t"], json!("error"));
     }
 
     #[test]
     fn lenh_ngoai_whitelist_thi_tu_choi() {
         let s = st();
         let ra = xu_ly(&s, r#"{"t":"command","by":"nguoi","command":{"op":"xoa-het"}}"#);
-        assert_eq!(ra.unwrap()["t"], json!("error"));
+        assert_eq!(ra[0]["t"], json!("error"));
     }
 
     #[test]
     fn chua_phat_phong_nao_thi_lenh_khong_lam_gi() {
         let s = st();
         let ra = xu_ly(&s, r#"{"t":"command","by":"nguoi","command":{"op":"set-module","moduleId":"story","on":true}}"#);
-        assert_eq!(ra, None, "không có phòng để áp thì im lặng, không sập");
+        assert!(ra.is_empty(), "không có phòng để áp thì im lặng, không sập");
+    }
+
+    /// Có một thiết kế thật trong thư mục tạm.
+    fn st_co(id: &str) -> Arc<AppState> {
+        let p = tempfile::tempdir().unwrap().keep();
+        let d = p.join("client").join("designs").join(id);
+        std::fs::create_dir_all(d.join("dist")).unwrap();
+        std::fs::write(d.join("design.json"), format!(r#"{{"id":"{id}","name":"x","slots":[]}}"#)).unwrap();
+        AppState::new(Layout::new(p), 47830, "tok".into())
+    }
+
+    #[test]
+    fn xem_truoc_thiet_ke_chua_phat_bat_duoc_module() {
+        let s = st_co("san-bar-hop-dem");
+        let mut rx = s.subscribe();
+        let ra = xu_ly(
+            &s,
+            r#"{"t":"command","by":"nguoi","designId":"san-bar-hop-dem","command":{"op":"set-module","moduleId":"vu-cong-3d","on":true}}"#,
+        );
+        assert!(ra.is_empty(), "không trả riêng nữa: tin đi qua bus tới mọi cửa sổ");
+        let m = rx.try_recv().expect("phát cho mọi cửa sổ xem thử của phòng này");
+        assert_eq!(m["designId"], json!("san-bar-hop-dem"));
+        assert_eq!(m["enabled"], json!(["vu-cong-3d"]));
+        // nối lại: tin `xem` trả đúng trạng thái đã lưu
+        let lai = xu_ly(&s, r#"{"t":"xem","designId":"san-bar-hop-dem"}"#);
+        assert!(lai.iter().any(|m| m["t"] == json!("modules") && m["enabled"] == json!(["vu-cong-3d"])));
+    }
+
+    #[test]
+    fn bam_nut_module_o_trang_xem_thu_tra_rieng_tin_action() {
+        let s = st_co("san-bar-hop-dem");
+        let ra = xu_ly(
+            &s,
+            r#"{"t":"command","by":"nguoi","designId":"san-bar-hop-dem","command":{"op":"module-action","moduleId":"vu-cong-3d","action":"nhay"}}"#,
+        );
+        assert_eq!(ra.len(), 1);
+        assert_eq!(ra[0]["t"], json!("action"));
+        assert_eq!(ra[0]["moduleId"], json!("vu-cong-3d"));
+        assert_eq!(ra[0]["op"], json!("nhay"));
+        assert_eq!(ra[0]["designId"], json!("san-bar-hop-dem"));
+    }
+
+    #[test]
+    fn xem_thu_co_phien_rieng_gan_dung_phong() {
+        let s = st_co("ke-chuyen");
+        let ra = xu_ly(&s, r#"{"t":"xem","designId":"ke-chuyen"}"#);
+        let p = ra.iter().find(|m| m["t"] == json!("session")).expect("trang xem thử có phiên");
+        assert_eq!(p["designId"], json!("ke-chuyen"));
+        assert_eq!(p["view"]["designId"], json!("ke-chuyen"));
+        assert!(s.session_view().is_none(), "phiên xem thử không phải phiên đang phát");
+    }
+
+    #[test]
+    fn cua_so_cuoi_dong_thi_bo_phien_xem_thu() {
+        let s = st_co("ke-chuyen");
+        let mut a = None;
+        let mut b = None;
+        xu_ly_cua(&s, r#"{"t":"xem","designId":"ke-chuyen"}"#, &mut a);
+        xu_ly_cua(&s, r#"{"t":"xem","designId":"ke-chuyen"}"#, &mut b);
+        assert_eq!(s.cac_xem_thu().len(), 1);
+        s.dong_xem_thu("ke-chuyen");
+        assert_eq!(s.cac_xem_thu().len(), 1, "còn một cửa sổ thì phiên vẫn chạy");
+        s.dong_xem_thu("ke-chuyen");
+        assert!(s.cac_xem_thu().is_empty(), "hết cửa sổ thì bỏ phiên");
+    }
+
+    #[test]
+    fn designid_la_hoac_khong_co_that_thi_bo_qua() {
+        let s = st_co("san-bar-hop-dem");
+        assert!(xu_ly(&s, r#"{"t":"xem","designId":"../../etc"}"#).is_empty());
+        assert!(xu_ly(&s, r#"{"t":"xem","designId":"khong-co"}"#).is_empty());
+        let ra = xu_ly(
+            &s,
+            r#"{"t":"command","by":"nguoi","designId":"../x","command":{"op":"set-module","moduleId":"a","on":true}}"#,
+        );
+        assert!(ra.is_empty(), "id hỏng thì như không có id — chưa phát phòng nào nên im lặng");
     }
 }

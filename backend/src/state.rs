@@ -1,5 +1,6 @@
 //! Trạng thái chung của máy chủ: thiết kế đang phát, cấu hình module, bus phát xuống.
 
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 
@@ -43,6 +44,18 @@ pub struct AppState {
     /// Phiên của thiết kế đang phát. Phiên nằm ở backend để mọi cửa sổ quản lý,
     /// mọi sân khấu và OBS cùng thấy một sự thật.
     phien: RwLock<Option<Session>>,
+    /// Phiên riêng của từng thiết kế đang được XEM THỬ (chưa phát). Nhờ nó, bật
+    /// nhân vật ảo ở bảng xem thử là thấy người vào ghế ngay, không phải lên
+    /// sóng mới biết. Mọi tin của các phiên này gắn `designId`, nên phòng đang
+    /// phát và trang quản lý không bao giờ thấy chúng.
+    xem_thu: RwLock<HashMap<String, Session>>,
+    /// Mỗi thiết kế đang có bao nhiêu cửa sổ xem thử nối vào (tin `xem`).
+    /// Cửa sổ cuối cùng đóng thì phiên xem thử bị bỏ: nhân vật ảo thôi chạy,
+    /// MC thôi gọi AI — không ai xem mà vẫn tiêu tiền API là lỗi.
+    dang_xem: RwLock<HashMap<String, usize>>,
+    /// Lỗi lượt MC gần nhất của từng phòng (hết hạn mức, sai khoá…). Thẻ MC ở
+    /// bảng xem hiện câu này; lượt thành công thì xoá.
+    ai_loi: RwLock<HashMap<String, String>>,
     nguon: RwLock<SourceCfg>,
     /// Đổi nguồn là tăng số này; tác vụ nguồn cũ thấy số khác thì tự thoát.
     the_he_nguon: AtomicU64,
@@ -102,6 +115,9 @@ impl AppState {
             token,
             live: RwLock::new(None),
             phien: RwLock::new(None),
+            xem_thu: RwLock::new(HashMap::new()),
+            dang_xem: RwLock::new(HashMap::new()),
+            ai_loi: RwLock::new(HashMap::new()),
             nguon: RwLock::new(SourceCfg::default()),
             the_he_nguon: AtomicU64::new(0),
             loi_nguon: RwLock::new(None),
@@ -155,13 +171,9 @@ impl AppState {
             }
         }
 
-        // Số ghế và tỉ lệ đổi xu do thiết kế khai, vì mỗi bối cảnh một khác.
-        let (ghe, ti_le) = match designs::read_manifest(&self.layout.design_manifest(id), id) {
-            Ok(m) => (m.seats, m.point_rate),
-            Err(_) => (84, 1.0),
-        };
-        *self.phien.write().expect("khoá phiên hỏng") =
-            Some(Session::new(id, ghe, ti_le, bay_gio_ms()));
+        // Lên sóng thì phiên thật thay chỗ phiên xem thử.
+        self.xem_thu.write().expect("khoá xem thử hỏng").remove(id);
+        *self.phien.write().expect("khoá phiên hỏng") = Some(self.phien_moi(id));
         self.broadcast(json!({ "t": "live", "designId": id }));
         Ok(())
     }
@@ -175,6 +187,121 @@ impl AppState {
         if da_doi {
             self.broadcast(json!({ "t": "live", "designId": Value::Null }));
         }
+        // Phòng vừa thôi phát mà vẫn có trang xem thử thì quay về phiên xem thử.
+        self.dung_xem_thu();
+    }
+
+    /// Phiên trắng của một thiết kế. Số ghế và tỉ lệ đổi xu do thiết kế khai,
+    /// vì mỗi bối cảnh một khác.
+    fn phien_moi(&self, id: &str) -> Session {
+        let (ghe, ti_le) = match designs::read_manifest(&self.layout.design_manifest(id), id) {
+            Ok(m) => (m.seats, m.point_rate),
+            Err(_) => (84, 1.0),
+        };
+        Session::new(id, ghe, ti_le, bay_gio_ms())
+    }
+
+    // ---- Phiên xem thử ----
+
+    /// Một cửa sổ xem thử của `id` vừa nối. Dựng phiên xem thử nếu phòng chưa
+    /// phát. Đếm cả khi phòng đang phát: thôi phát thì cửa sổ đó vẫn còn đó.
+    pub fn mo_xem_thu(&self, id: &str) {
+        *self
+            .dang_xem
+            .write()
+            .expect("khoá xem thử hỏng")
+            .entry(id.to_string())
+            .or_insert(0) += 1;
+        self.dung_xem_thu();
+    }
+
+    /// Một cửa sổ xem thử của `id` vừa đóng. Hết cửa sổ thì bỏ phiên xem thử.
+    pub fn dong_xem_thu(&self, id: &str) {
+        let het = {
+            let mut g = self.dang_xem.write().expect("khoá xem thử hỏng");
+            match g.get_mut(id) {
+                Some(n) if *n > 1 => {
+                    *n -= 1;
+                    false
+                }
+                Some(_) => {
+                    g.remove(id);
+                    true
+                }
+                None => false,
+            }
+        };
+        if het {
+            self.xem_thu.write().expect("khoá xem thử hỏng").remove(id);
+        }
+    }
+
+    /// Mỗi phòng đang được xem mà chưa phát thì có đúng một phiên xem thử.
+    fn dung_xem_thu(&self) {
+        let live = self.live();
+        let ds: Vec<String> = self
+            .dang_xem
+            .read()
+            .expect("khoá xem thử hỏng")
+            .keys()
+            .filter(|id| live.as_deref() != Some(id.as_str()))
+            .cloned()
+            .collect();
+        let mut g = self.xem_thu.write().expect("khoá xem thử hỏng");
+        for id in ds {
+            if !g.contains_key(&id) {
+                let p = self.phien_moi(&id);
+                g.insert(id, p);
+            }
+        }
+    }
+
+    /// Các phiên xem thử đang có: id thiết kế và mốc mở phiên.
+    pub fn cac_xem_thu(&self) -> Vec<(String, i64)> {
+        self.xem_thu
+            .read()
+            .expect("khoá xem thử hỏng")
+            .iter()
+            .map(|(k, p)| (k.clone(), p.started_at()))
+            .collect()
+    }
+
+    pub fn xem_thu_view(&self, id: &str) -> Option<SessionView> {
+        self.xem_thu
+            .read()
+            .expect("khoá xem thử hỏng")
+            .get(id)
+            .map(|p| p.view(60))
+    }
+
+    /// MC nói một câu trong phiên xem thử của `id`. Như `mc_noi`, nhưng feed
+    /// gắn `designId` nên chỉ cửa sổ xem thử của đúng phòng đó nghe thấy.
+    pub fn mc_noi_xem_thu(&self, id: &str, text: String, voice: Option<String>) {
+        let now = bay_gio_ms();
+        let item = {
+            let mut g = self.xem_thu.write().expect("khoá xem thử hỏng");
+            match g.get_mut(id) {
+                Some(p) => p.mc_noi(now, text, voice),
+                None => return,
+            }
+        };
+        self.broadcast(json!({ "t": "feed", "items": [item], "designId": id }));
+    }
+
+    /// Áp một sự kiện vào phiên xem thử của `id`, phát feed gắn `designId`.
+    pub fn ap_su_kien_xem_thu(&self, id: &str, ev: LiveEvent, ao: bool) {
+        let now = bay_gio_ms();
+        let items = {
+            let mut g = self.xem_thu.write().expect("khoá xem thử hỏng");
+            match g.get_mut(id) {
+                Some(p) => p.apply(&ev, now, ao),
+                None => return,
+            }
+        };
+        if items.is_empty() {
+            return;
+        }
+        self.broadcast(json!({ "t": "feed", "items": items, "designId": id }));
     }
 
     // ---- Phiên và nguồn sự kiện ----
@@ -226,6 +353,18 @@ impl AppState {
     /// Nhịp đều: trả ghế của người đã vắng lâu, rồi phát bản phiên xuống.
     pub fn nhip_phien(&self) {
         let now = bay_gio_ms();
+        let xem: Vec<(String, SessionView)> = {
+            let mut g = self.xem_thu.write().expect("khoá xem thử hỏng");
+            g.iter_mut()
+                .map(|(id, p)| {
+                    p.thu_hoi_ghe(now);
+                    (id.clone(), p.view(60))
+                })
+                .collect()
+        };
+        for (id, view) in xem {
+            self.broadcast(json!({ "t": "session", "view": view, "designId": id }));
+        }
         let view = {
             let mut g = self.phien.write().expect("khoá phiên hỏng");
             match g.as_mut() {
@@ -250,25 +389,7 @@ impl AppState {
         let mut ra = vec![json!({ "t": "live", "designId": live })];
 
         if let Some(id) = live.as_deref() {
-            if let Ok(mods) = self.all_modules(id) {
-                let bat: Vec<&String> = mods
-                    .iter()
-                    .filter(|(_, v)| v.get("enabled").and_then(Value::as_bool).unwrap_or(false))
-                    .map(|(k, _)| k)
-                    .collect();
-                ra.push(json!({ "t": "modules", "enabled": bat }));
-
-                for (k, v) in &mods {
-                    if let Some(c) = v.get("config") {
-                        ra.push(json!({ "t": "config", "moduleId": k, "config": c }));
-                    }
-                }
-            }
-            if let Ok(cfg) = self.design_config(id) {
-                ra.push(json!({ "t": "design", "config": Value::Object(cfg) }));
-            }
-            ra.push(json!({ "t": "bot", "cfg": self.bot_config(id) }));
-            ra.push(json!({ "t": "ai", "cfg": self.ai_config(id) }));
+            ra.extend(self.trang_thai_phong(id));
         }
 
         ra.push(json!({ "t": "voice", "cfg": crate::voice::read(&self.layout) }));
@@ -277,6 +398,80 @@ impl AppState {
             ra.push(json!({ "t": "session", "view": v }));
         }
         ra
+    }
+
+    /// Trạng thái riêng của một thiết kế: module bật, cấu hình từng module, lựa
+    /// chọn của thiết kế, nhân vật ảo, MC AI. Dùng cho lời chào (thiết kế đang
+    /// phát) và cho bản xem trước của một thiết kế CHƯA phát (`ws.rs`, tin `xem`).
+    pub fn trang_thai_phong(&self, id: &str) -> Vec<Value> {
+        let mut ra = Vec::new();
+        if let Ok(mods) = self.all_modules(id) {
+            let bat: Vec<&String> = mods
+                .iter()
+                .filter(|(_, v)| v.get("enabled").and_then(Value::as_bool).unwrap_or(false))
+                .map(|(k, _)| k)
+                .collect();
+            ra.push(json!({ "t": "modules", "enabled": bat }));
+
+            for (k, v) in &mods {
+                if let Some(c) = v.get("config") {
+                    ra.push(json!({ "t": "config", "moduleId": k, "config": c }));
+                }
+            }
+        }
+        if let Ok(cfg) = self.design_config(id) {
+            ra.push(json!({ "t": "design", "config": Value::Object(cfg) }));
+        }
+        ra.push(json!({ "t": "bot", "cfg": self.bot_config(id) }));
+        ra.push(json!({ "t": "ai", "cfg": self.ai_config(id) }));
+        if let Some(v) = self.xem_thu_view(id) {
+            ra.push(json!({ "t": "session", "view": v }));
+        }
+        let loi = self.ai_loi.read().expect("khoá lỗi MC hỏng").get(id).cloned();
+        ra.push(json!({ "t": "ai-loi", "loi": loi }));
+        ra
+    }
+
+    /// Ghi lại lượt MC vừa rồi lỗi gì (`None`: lượt thành công). Chỉ phát khi
+    /// đổi, để thẻ MC không nháy mỗi nhịp lúc lỗi cứ lặp lại y hệt.
+    pub fn bao_ai(&self, design_id: &str, loi: Option<String>) {
+        let doi = {
+            let mut g = self.ai_loi.write().expect("khoá lỗi MC hỏng");
+            match &loi {
+                Some(l) => g.insert(design_id.to_string(), l.clone()).as_ref() != Some(l),
+                None => g.remove(design_id).is_some(),
+            }
+        };
+        if doi {
+            self.phat_cua(design_id, json!({ "t": "ai-loi", "loi": loi }));
+        }
+    }
+
+    /// MC cho một nhân vật ảo đang ngồi trong phòng nói một câu (lệnh `ao-noi`).
+    /// Không có ai ảo đang ngồi thì thôi — không dựng người từ hư không.
+    pub fn ao_noi(&self, design_id: &str, dang_phat: bool, text: String) -> bool {
+        let view = if dang_phat { self.session_view() } else { self.xem_thu_view(design_id) };
+        let Some(view) = view else { return false };
+        // Người do bộ nhân vật ảo dựng có nick `mh####` (xem `bot.rs`).
+        let ao: Vec<_> = view.seats.iter().filter(|s| s.user.starts_with("mh")).collect();
+        if ao.is_empty() {
+            return false;
+        }
+        let ai = ao[rand::random::<u32>() as usize % ao.len()];
+        let ev = LiveEvent {
+            who: crate::events::EventUser {
+                user: ai.user.clone(),
+                name: ai.name.clone(),
+                avatar: None,
+            },
+            what: crate::events::Payload::Comment { text },
+        };
+        if dang_phat {
+            self.ap_su_kien(ev, true);
+        } else {
+            self.ap_su_kien_xem_thu(design_id, ev, true);
+        }
+        true
     }
 
     pub fn the_he_nguon(&self) -> u64 {
@@ -385,9 +580,7 @@ impl AppState {
         doc.insert("ai".into(), moi_val.clone());
         store::write_json_atomic(&path, &Value::Object(doc))?;
 
-        if self.live().as_deref() == Some(design_id) {
-            self.broadcast(json!({ "t": "ai", "cfg": moi_val }));
-        }
+        self.phat_cua(design_id, json!({ "t": "ai", "cfg": moi_val }));
         Ok(())
     }
 
@@ -467,9 +660,7 @@ impl AppState {
         doc.insert("bot".into(), moi_val.clone());
         store::write_json_atomic(&path, &Value::Object(doc))?;
 
-        if self.live().as_deref() == Some(design_id) {
-            self.broadcast(json!({ "t": "bot", "cfg": moi_val }));
-        }
+        self.phat_cua(design_id, json!({ "t": "bot", "cfg": moi_val }));
         Ok(())
     }
 
@@ -510,9 +701,7 @@ impl AppState {
         doc.insert("design".into(), Value::Object(cfg.clone()));
         store::write_json_atomic(&path, &Value::Object(doc))?;
 
-        if self.live().as_deref() == Some(design_id) {
-            self.broadcast(json!({ "t": "design", "config": Value::Object(cfg) }));
-        }
+        self.phat_cua(design_id, json!({ "t": "design", "config": Value::Object(cfg) }));
         Ok(())
     }
 
@@ -618,9 +807,7 @@ impl AppState {
         }
         self.save_modules(design_id, modules)?;
 
-        if self.live().as_deref() == Some(design_id) {
-            self.broadcast(json!({ "t": "config", "moduleId": module_id, "config": config }));
-        }
+        self.phat_cua(design_id, json!({ "t": "config", "moduleId": module_id, "config": config }));
         Ok(())
     }
 
@@ -634,15 +821,28 @@ impl AppState {
         }
         self.save_modules(design_id, modules.clone())?;
 
-        if self.live().as_deref() == Some(design_id) {
-            let bat: Vec<&String> = modules
-                .iter()
-                .filter(|(_, v)| v.get("enabled").and_then(Value::as_bool).unwrap_or(false))
-                .map(|(k, _)| k)
-                .collect();
-            self.broadcast(json!({ "t": "modules", "enabled": bat }));
-        }
+        let bat: Vec<&String> = modules
+            .iter()
+            .filter(|(_, v)| v.get("enabled").and_then(Value::as_bool).unwrap_or(false))
+            .map(|(k, _)| k)
+            .collect();
+        self.phat_cua(design_id, json!({ "t": "modules", "enabled": bat }));
         Ok(())
+    }
+
+    /// Phát một tin trạng thái của thiết kế `design_id` xuống MỌI cửa sổ.
+    ///
+    /// Thiết kế đang phát: tin không gắn gì, như mọi tin của phòng đang live.
+    /// Chưa phát: gắn `designId`, để mọi cửa sổ xem thử của đúng phòng đó cùng
+    /// đổi ngay (bảng xem thử một cửa sổ, OBS hay cửa sổ khác thu hình), còn
+    /// phòng đang phát và trang quản lý bỏ qua.
+    fn phat_cua(&self, design_id: &str, mut tin: Value) {
+        if self.live().as_deref() != Some(design_id) {
+            if let Some(o) = tin.as_object_mut() {
+                o.insert("designId".into(), json!(design_id));
+            }
+        }
+        self.broadcast(tin);
     }
 }
 
@@ -815,6 +1015,32 @@ mod tests {
     }
 
     #[test]
+    fn doi_nha_cung_cap_ai_duoc_giu_lai_va_khong_xoa_o_khac() {
+        // Người vận hành trỏ phần chữ sang một nhà khác: phải giữ, và không
+        // được thổi bay nhịp hay lời dặn đã soạn.
+        let d = tempfile::tempdir().unwrap();
+        dung(d.path(), "ke-chuyen");
+        let s = state(d.path());
+        s.set_ai_config("ke-chuyen", json!({ "extra": "tối nay kể cổ tích", "everySec": 45 }))
+            .unwrap();
+        s.set_ai_config(
+            "ke-chuyen",
+            json!({ "provider": "openrouter", "model": "deepseek/deepseek-chat" }),
+        )
+        .unwrap();
+        s.set_ai_config("ke-chuyen", json!({ "anhProvider": "ve-anh" }))
+            .unwrap();
+
+        let c = s.ai_config("ke-chuyen");
+        assert_eq!(c.provider, "openrouter");
+        assert_eq!(c.model, "deepseek/deepseek-chat");
+        assert_eq!(c.nha_chu(), "openrouter");
+        assert_eq!(c.nha_anh(), "ve-anh");
+        assert_eq!(c.extra, "tối nay kể cổ tích", "ô cũ phải còn");
+        assert_eq!(c.every_sec, 45);
+    }
+
+    #[test]
     fn cau_hinh_khong_phai_object_bi_tu_choi() {
         let d = tempfile::tempdir().unwrap();
         dung(d.path(), "ke-chuyen");
@@ -874,9 +1100,9 @@ mod tests {
         s.set_config("hip-hop", "music", json!({ "vol": 10 }))
             .unwrap();
 
-        assert!(
-            rx.try_recv().is_err(),
-            "không được phát cấu hình của thiết kế đang tắt"
-        );
+        // Vẫn phát, để mọi cửa sổ xem thử của hip-hop cùng đổi; nhưng gắn
+        // `designId` nên phòng đang phát và trang quản lý bỏ qua.
+        let tin = rx.try_recv().expect("cửa sổ xem thử của hip-hop phải nhận");
+        assert_eq!(tin["designId"], json!("hip-hop"));
     }
 }

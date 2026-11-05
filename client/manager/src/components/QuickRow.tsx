@@ -1,4 +1,6 @@
+import { oChonGiong } from '@live/contracts';
 import type { ConfigField, Json } from '@live/contracts';
+import { useDanGiong } from '../lib/danGiong';
 import { Switch } from './ui/switch';
 
 interface Props {
@@ -9,7 +11,9 @@ interface Props {
 }
 
 /** Một ô chỉnh nhanh ngay trên thẻ. Nhãn ngắn lấy từ `short` của manifest. */
-export function QuickCell({ field: f, value, disabled, onChange }: Props) {
+export function QuickCell({ field, value, disabled, onChange }: Props) {
+  const dan = useDanGiong(field.type === 'voice');
+  const f = oChonGiong(field, dan, value);
   const nhan = f.short ?? f.label;
 
   let o;

@@ -15,6 +15,11 @@ Mã cũ ở các nhánh khác không theo quy ước này; nhánh này làm lạ
 | 05 | [Backend](05-backend.md) | HTTP, WebSocket, lưu trữ, khoá API, phục vụ OBS |
 | 06 | [Lộ trình chuyển đổi](06-lo-trinh.md) | Chuyển từng tính năng từ mã cũ sang, theo thứ tự |
 
+## Tài liệu theo phòng
+
+Tài liệu riêng của từng **loại phòng** và **kiểu phòng** nằm trong [phong/](phong/README.md), mỗi loại một thư mục
+(quy tắc: [01 §12](01-quy-uoc.md#12-phân-loại-phòng-loại--kiểu)). Tài liệu ở gốc `docs/` chỉ nói chuyện dùng chung mọi phòng.
+
 ## Ba câu tóm tắt
 
 1. **Thiết kế** là một phòng live hoàn chỉnh, đóng gói riêng, có assets riêng. Một lúc chỉ **một** thiết kế chạy.

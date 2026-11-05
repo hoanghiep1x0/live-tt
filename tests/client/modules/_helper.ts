@@ -53,8 +53,8 @@ export function kiemModule<C extends object, S>(m: LiveModule<C, S>): void {
     expect(keys, `ô chỉnh nhanh "${k}" không có trong fields`).toContain(k);
   }
   for (const f of man.fields) {
-    if (f.type !== 'select') continue;
-    expect(f.options?.length, `select "${f.key}" thiếu options`).toBeGreaterThan(0);
+    if (f.type !== 'select' && f.type !== 'gallery') continue;
+    expect(f.options?.length, `${f.type} "${f.key}" thiếu options`).toBeGreaterThan(0);
   }
 
   // Trang quản lý đọc `triggers` để nói "Chạy khi: có quà", còn runtime gọi theo

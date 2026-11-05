@@ -6,6 +6,7 @@ import {
   useAsset,
   useLoiMc,
   useSlotSang,
+  useSlotTrongSuot,
   useStage,
   useThietKe,
 } from '@live/stage-sdk';
@@ -15,7 +16,10 @@ import type { Huong } from './geometry';
 import { GHE_MAC_DINH, hallContentH, hallRowsFor } from './seats';
 import { dungGhe, HangGhe, TenKhan } from './parts/HangGhe';
 import { LoiDi } from './parts/LoiDi';
-import { AnUi, canhAnUi, khachXinOm } from './parts/AnUi';
+import { AN_UI_MAC_DINH, AnUi, canhAnUi, docCauHinhAnUi, khachXinOm } from './parts/AnUi';
+import { GoiYLenh } from './parts/GoiYLenh';
+import { VaoPhong } from './parts/VaoPhong';
+import { TungHoa } from './parts/TungHoa';
 
 /** Lựa chọn của riêng phòng này, hiện thành thẻ "Khung phòng" ở bảng xem.
  *
@@ -43,14 +47,58 @@ export const LUA_CHON: readonly DesignCard[] = [
     id: 'an-ui',
     name: 'Cảnh an ủi',
     icon: '🫂',
-    summary: 'Khán giả chạy lên ôm bé và cậu bé; khách gõ “ôm” cũng gọi được một lượt',
+    summary: 'Khán giả chạy lên ôm bé và cậu bé; chỉ chạy khi Nhân vật ảo đang bật',
     toggle: {
       key: 'anUi',
       label: 'Bật cảnh an ủi',
       type: 'toggle',
       value: true,
     },
-    fields: [],
+    fields: [
+      {
+        key: 'anUiGiay',
+        label: 'Mỗi lượt tự động cách nhau',
+        short: 'Cách (giây)',
+        type: 'number',
+        unit: 'giây',
+        min: 20,
+        max: 900,
+        value: AN_UI_MAC_DINH.chuKyGiay,
+        hint: 'Một lượt kéo dài chừng 13 giây (chạy lên, ôm, chạy về), nên dưới 20 giây là các lượt dính liền nhau',
+      },
+      {
+        key: 'anUiSoNguoi',
+        label: 'Mỗi lượt mấy người lên ôm',
+        short: 'Số người',
+        type: 'select',
+        options: [
+          { value: 'xen', label: 'Lúc một, lúc hai' },
+          { value: 'don', label: 'Một người' },
+          { value: 'doi', label: 'Hai người' },
+        ],
+        value: AN_UI_MAC_DINH.soNguoi,
+      },
+      {
+        key: 'anUiAi',
+        label: 'Ai được ôm',
+        short: 'Ôm ai',
+        type: 'select',
+        options: [
+          { value: 'luan-phien', label: 'Luân phiên bé và cậu bé' },
+          { value: 'be', label: 'Chỉ bé' },
+          { value: 'cau-be', label: 'Chỉ cậu bé' },
+        ],
+        value: AN_UI_MAC_DINH.ai,
+      },
+      {
+        key: 'anUiKhach',
+        label: 'Khách gõ “ôm” thì chính họ chạy lên',
+        short: 'Khách gõ ôm',
+        type: 'toggle',
+        value: AN_UI_MAC_DINH.khachGoi,
+        hint: 'Một mình khách đó lên ôm, đè lên lượt tự động. Tắt thì lời mời gõ “ôm” trên màn cũng tắt',
+      },
+    ],
   },
 ];
 
@@ -102,15 +150,23 @@ export function Stage() {
    *  chữ còn trôi, và thôi xin lúc nó nghỉ — nên dải tự ẩn đi giữa hai lượt,
    *  không nằm chình ình giữa màn cả buổi. */
   const tickerSang = useSlotSang('ticker');
+  /** Module trong khung xin bỏ nền: thôi vẽ màn chờ và nền khung, để lộ sảnh. */
+  const khungTrong = useSlotTrongSuot('screen');
   const gio = useDongHo();
   // Đồng hồ cho lượt người ra vào ở lối đi: chỉ cần đủ mịn để bắt đầu và kết
   // thúc một lượt, phần chạy là của CSS.
   const nhip = useNhip();
   // Lượt an ủi đang diễn ra. Thuần theo đồng hồ nên hai cửa sổ xem cùng phòng
   // thấy cùng một lượt.
-  const batAnUi = useThietKe()['anUi'] !== false;
+  const thietKe = useThietKe();
+  // Cảnh an ủi đi cùng nhân vật ảo: tắt nhân vật ảo là tắt luôn cảnh này,
+  // kể cả lượt khách gõ "ôm".
+  const batAnUi = thietKe['anUi'] !== false && s.bot.enabled;
+  const cfgAnUi = docCauHinhAnUi(thietKe);
   // Khách gõ "ôm" thì chính họ chạy lên, và lượt đó đè lên lượt định kỳ.
-  const canh = batAnUi ? canhAnUi(nhip, khachXinOm(s.session.recentFeed, nhip)) : null;
+  const canh = batAnUi
+    ? canhAnUi(nhip, khachXinOm(s.session.recentFeed, nhip), cfgAnUi)
+    : null;
   const beDuocOm = canh !== null && canh.nhanVat === 'be';
   // Khung dọc là mặc định; người vận hành gạt công tắc ở bảng xem thì đổi ngay,
   // không tải lại trang.
@@ -167,20 +223,22 @@ export function Stage() {
 
       {!s.noiDuoc ? <div className="stage-offline">mất kết nối máy chủ</div> : null}
 
-      <section className="stage-screen">
+      <section className="stage-screen" data-trong-suot={khungTrong}>
         <div className="stage-screen-inner">
           {/* Màn chờ của bản cũ: lời chào, đồng hồ lớn, một câu giữ chân. Không
               có câu nào nhắc người vận hành bật module — màn này đang phát ra
               ngoài, người xem đọc được. Người vận hành thấy module tắt ở bảng
               xem. Và màn chờ phải động: khung đứng im là TikTok soi. */}
-          <div className="stage-waiting">
-            <span className="stage-waiting-sen" />
-            <p className="waiting-welcome">Chào cả nhà đến với Phòng kể chuyện</p>
-            <p className="waiting-clock">{gio}</p>
-            <p className="waiting-note">
-              Chuyện sắp bắt đầu rồi, cả nhà ngồi lại nghe cùng nhau nha ❤
-            </p>
-          </div>
+          {khungTrong ? null : (
+            <div className="stage-waiting">
+              <span className="stage-waiting-sen" />
+              <p className="waiting-welcome">Chào cả nhà đến với Phòng kể chuyện</p>
+              <p className="waiting-clock">{gio}</p>
+              <p className="waiting-note">
+                Chuyện sắp bắt đầu rồi, cả nhà ngồi lại nghe cùng nhau nha ❤
+              </p>
+            </div>
+          )}
           <Slot name="screen" />
           <div className="slot-screen-overlay">
             <Slot name="screen-overlay" />
@@ -270,9 +328,12 @@ export function Stage() {
         <img className="stage-kid kid-boy" src={asset(CAU_BE)} alt="" draggable={false} />
       </div>
       <AnUi canh={canh} ngoi={ngoi} ghe={ghe} asset={asset} />
+      {/* Sàn đang nhảy thì khán giả trong rạp hô "Tung hoa!", như bản cũ. */}
+      <TungHoa dangNhay={sanSang} ngoi={ngoi} ghe={ghe} now={nhip} />
       <div className="slot-chat">
         <Slot name="chat" />
       </div>
+      <VaoPhong feed={s.session.recentFeed} now={nhip} />
       {/* Lời MC: chào hỏi, cảm ơn quà. KHÔNG nằm trong khung chiếu — khung đó
           dành cho nội dung truyện.
 
@@ -298,6 +359,9 @@ export function Stage() {
         <Slot name="full" />
       </div>
 
+      {/* Lời mời gõ "ôm" chỉ hiện khi gõ "ôm" thật sự gọi được một lượt. */}
+      <GoiYLenh nhip={nhip} batAnUi={batAnUi && cfgAnUi.khachGoi} />
+
       <footer className="stage-hints">
         {/* Dòng đầu KHÔNG chép nguyên bản cũ ("Gõ ghế B4 · chỗ của tôi · #mã ·
             gửi: … · ôm"): bản mới chưa có module nào đọc lệnh gõ từ bình luận,
@@ -314,11 +378,6 @@ export function Stage() {
             tôi`, `#mã`, `gửi: …`, nhưng bản mới chưa module nào đọc lệnh gõ,
             in lên sóng là bảo người xem làm một việc không chạy. Tắt cảnh an
             ủi thì không còn lệnh nào, dòng này biến mất luôn. */}
-        {!batAnUi ? null : (
-          <span>
-            Gõ <b>ôm</b> · <b>an ủi</b> · <b>thương bé</b> để chạy lên ôm bé
-          </span>
-        )}
         <Slot name="bottom-bar" />
       </footer>
     </div>

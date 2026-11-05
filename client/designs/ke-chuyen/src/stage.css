@@ -337,6 +337,14 @@ body {
   border-radius: 1cqw;
   background: var(--stage-bg-deep);
 }
+/* Module trong khung xin bỏ nền: giữ viền và quầng sáng — đó là khung của
+   phòng — còn lòng khung thì trong veo để lộ sảnh phía sau. */
+.stage-screen[data-trong-suot='true'] {
+  background: none;
+}
+.stage-screen[data-trong-suot='true'] .stage-screen-inner {
+  background: none;
+}
 .stage-video {
   position: absolute;
   inset: 0;
@@ -671,17 +679,26 @@ body {
   left: 50%;
   transform: translateX(var(--lech-nhan, -50%));
   margin-bottom: 0.5cqw;
-  padding: 0.2cqw 1cqw;
-  border-radius: 1cqw;
-  background: var(--stage-name-bg);
-  color: #fff4dc;
-  font-size: 2cqw;
-  font-weight: 600;
+  padding: 0.2cqw 1.1cqw;
+  border-radius: 1.4cqw;
+  /* Nền tối viền vàng, tên chữ vàng — cùng lối với lời báo "vừa vào phòng". */
+  background: rgba(20, 10, 4, 0.85);
+  border: 0.15cqw solid rgba(255, 210, 120, 0.6);
+  color: #fff;
+  font-size: 1.7cqw;
+  font-weight: 700;
   line-height: 1.5;
   white-space: nowrap;
   opacity: 0;
   animation: loi-nhan 5.2s ease-in-out both;
   animation-delay: inherit;
+}
+.loi-ten b {
+  color: #ffe39a;
+}
+/* Người vào thì viền sáng hơn một chút, để phân biệt với người ra. */
+.loi-di.vao .loi-ten {
+  border-color: rgba(255, 227, 154, 0.95);
 }
 @keyframes loi-nhan {
   0%,
@@ -823,6 +840,9 @@ body {
   height: 2.8cqw;
   transform: translate(-50%, -50%) scale(var(--seat-scale, 1));
 }
+/* Nhãn dưới ghế, kiểu bản cũ: tên đầy đủ trên nền tối viền vàng nhạt, có bóng
+   đổ cho nổi khỏi ghế. Nhãn được phép chồng lên nhãn bên cạnh — hàng trước đè
+   hàng sau (z-index đặt theo hàng) — vì đã có so le và thay phiên đỡ cho. */
 .seat-label {
   transition: opacity 1.5s ease-in-out;
   position: absolute;
@@ -830,18 +850,32 @@ body {
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  margin-top: 0.2cqw;
-  max-width: 7cqw;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-top: 0.1cqw;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4cqw;
   white-space: nowrap;
-  font-size: 1.9cqw;
+  font-size: 1.7cqw;
+  font-weight: 700;
   line-height: 1.25;
-  font-weight: 600;
-  background: var(--stage-name-bg);
   color: #fff;
-  padding: 0 0.9cqw;
+  padding: 0 0.8cqw;
   border-radius: 1cqw;
+  background: rgba(16, 8, 3, 0.82);
+  border: 0.12cqw solid rgba(255, 220, 140, 0.35);
+  box-shadow: 0 0.2cqw 0.5cqw rgba(0, 0, 0, 0.5);
+}
+.seat-label img {
+  width: 2cqw;
+  height: 2cqw;
+  margin-left: -0.5cqw;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 0.15cqw solid #ffe39a;
+}
+/* So le: ghế lẻ trong hàng hạ nhãn xuống, tên hai ghế cạnh nhau không đè chữ. */
+.seat-tag.alt .seat-label {
+  margin-top: 2.2cqw;
 }
 
 /* Tên ghế chẵn / lẻ thay phiên: mờ dần rồi tắt, rồi hiện dần lại */
@@ -865,6 +899,12 @@ body {
   height: 10cqw;
   z-index: 7;
   pointer-events: none;
+}
+/* Khung ngang: dải chữ chạy nâng theo cả cụm (`--group-lift`), sàn nhảy đứng
+   nguyên thì người trên sàn hụt xuống, cách dải chữ một khoảng trống. Nâng sàn
+   lên để đầu họ nằm ngay dưới dải chữ, hở chừng 0,8cqw. */
+.stage[data-orientation='landscape'] .slot-floor {
+  top: calc(var(--hall-top) - 6cqw);
 }
 /* ---- Hai bạn nhỏ đứng hai bên thanh tiến độ ----
    Ảnh và CHỖ ĐỨNG của bản cũ (`KIDS` trong `comfort.ts`): bé gái ngồi thiền
@@ -938,6 +978,98 @@ body {
   }
   to {
     transform: translate(-50%, calc(-100% - 0.35cqw)) scale(1.012);
+  }
+}
+
+/* Người mới vào: góc trái dưới (bóng chat ở bên phải), như bản cũ — nền tối,
+   tên chữ vàng, tối đa hai dòng và một dòng gộp khi đông. */
+.stage-joins {
+  position: absolute;
+  left: 3cqw;
+  bottom: 13cqw;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.8cqw;
+  max-width: 44cqw;
+  pointer-events: none;
+}
+.join-toast {
+  margin: 0;
+  padding: 0.5cqw 1.8cqw;
+  border-radius: 2cqw;
+  font-size: 2.1cqw;
+  line-height: 1.3;
+  color: #fff;
+  background: rgba(20, 10, 4, 0.82);
+  border: 0.15cqw solid rgba(255, 255, 255, 0.25);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  animation: join-in 4s ease forwards;
+}
+.join-toast b {
+  color: #ffe39a;
+}
+.join-toast.more {
+  color: #e9dcc4;
+}
+@keyframes join-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-2cqw);
+  }
+  10%,
+  85% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* "🌸 Tung hoa! 🌸" trên đầu khán giả lúc sàn đang nhảy — chữ của bản cũ
+   (`stage-dance-shout`): chữ kem viền hồng, bật lên rồi bay lên mờ dần. Mỗi chữ
+   sống hai nhịp (2,2 giây) nên hai tiếng hô so le chồng nhau. */
+.lop-tung-hoa {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+}
+.tung-hoa {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  white-space: nowrap;
+  font-size: 1.8cqw;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #fff3c4;
+  text-shadow:
+    0 0 0.8cqw rgba(255, 90, 150, 0.9),
+    0 0.25cqw 0 #8a2a00,
+    0 0 2cqw rgba(255, 200, 80, 0.6);
+  animation: tung-hoa 2.2s ease-out both;
+}
+@keyframes tung-hoa {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -60%) scale(0.5);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -110%) scale(1.15);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -120%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -150%) scale(0.9);
   }
 }
 
@@ -1183,5 +1315,83 @@ body {
   .om-tim span,
   .stage-kid.cui-chao {
     animation: none;
+  }
+}
+
+/* Popup "Cách tham gia phòng live" — chép lối thẻ hướng dẫn của bản cũ: nổi
+   GIỮA khung chiếu (không che hàng ghế), hiện theo chu kỳ rồi tự tắt. */
+.stage-guide {
+  position: absolute;
+  left: 50%;
+  top: var(--screen-mid);
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  width: 62cqw;
+  padding: 2.2cqw 3cqw 2.4cqw;
+  border-radius: 2.4cqw;
+  overflow: hidden;
+  color: #fff4dc;
+  background: linear-gradient(160deg, rgba(48, 24, 8, 0.96), rgba(24, 12, 4, 0.96));
+  border: 0.25cqw solid var(--gold);
+  box-shadow: 0 1cqw 4cqw rgba(0, 0, 0, 0.7), 0 0 3cqw rgba(242, 196, 90, 0.35);
+  animation: guide-vao 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.stage-guide-title {
+  margin: 0 0 1.6cqw;
+  font-size: 2.7cqw;
+  font-weight: 800;
+  color: var(--gold);
+  text-align: center;
+}
+
+.stage-guide ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1cqw;
+  font-size: 2.1cqw;
+  line-height: 1.4;
+}
+
+.stage-guide li::before {
+  content: '•';
+  margin-right: 1cqw;
+  color: var(--gold);
+  font-weight: 800;
+}
+
+.stage-guide b {
+  color: #3a1d00;
+  background: #ffe39a;
+  padding: 0 0.9cqw;
+  border-radius: 0.8cqw;
+}
+
+/* Thanh chạy dưới đáy: người xem thấy popup sắp hết giờ chứ không bị nó biến
+   mất giữa chừng lúc đang đọc. */
+.stage-guide-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 0.5cqw;
+  width: 100%;
+  background: var(--gold);
+  transform-origin: left;
+  animation: guide-chay linear forwards;
+}
+
+@keyframes guide-vao {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+}
+
+@keyframes guide-chay {
+  to {
+    transform: scaleX(0);
   }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Effect } from '@live/contracts';
 import { runAction, runTick } from '@live/runtime';
-import { catDoan, core, doanHienTai, moduleStory as mod, schema } from '@live/mod-story';
+import { catDoan, core, doanHienTai, moduleStory as mod, schema, trongSuot } from '@live/mod-story';
 import { ctx, kiemModule } from '../_helper';
 
 const BA_DOAN = 'Đoạn một.\nĐoạn hai.\nĐoạn ba.';
@@ -23,7 +23,16 @@ describe('manifest', () => {
   });
 
   it('có nút chuyển đoạn trên thẻ', () => {
-    expect(mod.manifest.action?.op).toBe('next');
+    expect(mod.manifest.actions?.map((a) => a.op)).toEqual(['next']);
+  });
+
+  it('nền trong suốt mặc định tắt, cấu hình cũ không xin thiết kế bỏ nền', () => {
+    expect(trongSuot(schema.parse({}))).toBe(false);
+    expect(trongSuot(schema.parse({ media: 'a.mp4' }))).toBe(false);
+  });
+
+  it('bật nền trong suốt thì xin thiết kế bỏ nền khung', () => {
+    expect(trongSuot(schema.parse({ transparentBg: true }))).toBe(true);
   });
 });
 

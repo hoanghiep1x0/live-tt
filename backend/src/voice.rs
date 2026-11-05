@@ -42,6 +42,11 @@ pub struct VoiceCfg {
     pub mac_dinh: String,
     #[serde(default)]
     pub cast: Vec<CastVoice>,
+    /// Đa giọng: mỗi tính năng đọc bằng giọng chính của nó, và dấu `[id]` trong
+    /// câu đổi sang giọng khác. Tắt (đơn giọng) thì cả phòng một giọng mặc định.
+    /// Sân khấu tự chia câu — backend chỉ giữ công tắc.
+    #[serde(default)]
+    pub multi: bool,
 }
 
 impl Default for VoiceCfg {
@@ -52,6 +57,7 @@ impl Default for VoiceCfg {
             volume: 1.0,
             mac_dinh: String::new(),
             cast: Vec::new(),
+            multi: false,
         }
     }
 }
@@ -132,6 +138,19 @@ mod tests {
             voice: "google-tts/vi".into(),
             role: String::new(),
         }
+    }
+
+    #[test]
+    fn cai_dat_cu_la_don_giong_va_cong_tac_luu_duoc() {
+        let cu: VoiceCfg = serde_json::from_value(serde_json::json!({
+            "enabled": true, "speed": 1.0, "volume": 1.0
+        }))
+        .unwrap();
+        assert!(!cu.multi, "cài đặt cũ không có công tắc thì vẫn đơn giọng như trước");
+        let (_d, l) = moi();
+        let c = write(&l, VoiceCfg { multi: true, ..VoiceCfg::default() }).unwrap();
+        assert!(c.multi);
+        assert!(read(&l).multi);
     }
 
     #[test]
