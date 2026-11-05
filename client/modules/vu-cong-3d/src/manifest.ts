@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { KHU_VUC } from '@live/contracts';
 import type { ModuleManifest } from '@live/contracts';
-import { KHO_DIEU, NGAU_NHIEN, NHAN_VAT, NHAN_VAT_MAU, NUT, nhanDieu, THEO_NHOM, TRANG_PHUC } from './core';
+import { AI_NGAU_NHIEN, KHO_DIEU, MODEL, NGAU_NHIEN, NHAN_VAT, NHAN_VAT_MAU, NUT, nhanDieu, THEO_NHOM, TRANG_PHUC } from './core';
 
 /** Ảnh nhỏ từng bộ, asset của chính module. Viết thẳng đường dẫn thay vì gọi
  *  `moduleAssetUrl`: manifest phải nạp được ở Node (test, trang quản lý) mà không kéo
@@ -24,14 +24,32 @@ const NHOM_MOI = {
   khuVuc: KHU_VUC[0].id,
   bo: BO_NGAU_NHIEN,
   dieu: DIEU_NHOM.theoNhom,
+  theoKho: true,
 };
 
+const k = (nguon: 'cc0' | 'ccby', o: string, id: string): string => `model-1/makehuman-${nguon}/${o}/${id}`;
+/** Kho nhân vật dựng sẵn: mỗi người một bộ phối đẹp — đám đông lấy người từ đây (không bốc lung tung cả tủ). */
+const KHO_MAC_DINH = [
+  { id: 'nv-cocktail', ten: 'Cocktail đen', mon: [k('ccby', 'lien', 'punkduck-black-cocktail-dress'), k('cc0', 'giay', 'toigo-stiletto-booties'), k('ccby', 'toc', 'punkduck-alpha7-long')] },
+  { id: 'nv-dam-do', ten: 'Đầm đỏ dự tiệc', mon: [k('ccby', 'lien', 'mindfront-f-dress-08'), k('ccby', 'giay', 'dressupdoc-sandals1'), k('ccby', 'toc', 'elvs-hazel-hair')] },
+  { id: 'nv-disco', ten: 'Disco tím', mon: [k('ccby', 'ao', 'elvs-disco-top-1-butterfly'), k('ccby', 'duoi', 'punkduck-black-mini-skirt'), k('ccby', 'giay', 'elvs-knee-high-heel-boots1'), k('ccby', 'toc', 'elvs-that-80s-babe-hair')] },
+  { id: 'nv-short-jean', ten: 'Áo quây + short jean', mon: [k('ccby', 'ao', 'punkduck-tube-top'), k('ccby', 'duoi', 'punkduck-female-short-jeans'), k('cc0', 'giay', 'scailman-gogo-platform-boots'), k('cc0', 'toc', 'toigo-blunt-bob-with-bangs'), k('ccby', 'kinh', 'elvs-ladies-sunglass1')] },
+  { id: 'nv-suon-xam', ten: 'Sườn xám đỏ', mon: [k('ccby', 'lien', 'punkduck-middle-length-qipao'), k('ccby', 'giay', 'dressupdoc-sandals1'), k('ccby', 'toc', 'o4saken-chinesebob01')] },
+  { id: 'nv-dam-quay', ten: 'Đầm quây trắng', mon: [k('ccby', 'lien', 'punkduck-tube-dress'), k('ccby', 'giay', 'madmanny-tight-leather-boots'), k('ccby', 'toc', 'elvs-wavy-bob')] },
+  { id: 'nv-croptop', ten: 'Croptop + váy xếp ly', mon: [k('ccby', 'ao', 'punkduck-sleeveless-crop-top'), k('ccby', 'duoi', 'mtknife-pleated-mini-skirt'), k('cc0', 'giay', 'toigo-ankle-boots-female'), k('cc0', 'toc', 'culturalibre-hair-01')] },
+  { id: 'nv-yem-do', ten: 'Đầm yếm đỏ', mon: [k('ccby', 'lien', 'elvs-halter-dress-mini'), k('cc0', 'giay', 'toigo-stiletto-booties'), k('ccby', 'toc', 'elvs-katherine-hair')] },
+].map((x) => ({ ...x, damDong: true }));
+const NHAN_VAT_MOI = { ten: 'Nhân vật mới', damDong: true, mon: [] };
+
 export const schema = z.object({
-  /** Từng người trong phòng (id trong `NHAN_VAT`): có mặt không, mặc bộ riêng hay theo
-   *  cả nhóm (`THEO_NHOM`). Người thiếu trong đây là có mặt, theo cả nhóm. */
+  /** Từng người trong phòng (id trong `NHAN_VAT`): có mặt không, món tủ đồ riêng (`mon`, có thì mặc các món này),
+   *  không thì bộ dựng sẵn riêng hay theo cả nhóm (`THEO_NHOM`). Người thiếu trong đây là có mặt, theo cả nhóm. */
   nhanVat: z
-    .record(z.string(), z.object({ co: z.boolean().default(true), bo: z.string().default(THEO_NHOM) }))
-    .default(Object.fromEntries(NHAN_VAT.map((x) => [x.id, { co: true, bo: THEO_NHOM }]))),
+    .record(
+      z.string(),
+      z.object({ co: z.boolean().default(true), mon: z.array(z.string()).default([]), bo: z.string().default(THEO_NHOM) }),
+    )
+    .default(Object.fromEntries(NHAN_VAT.map((x) => [x.id, { co: true, mon: [], bo: THEO_NHOM }]))),
   /** Món rời từ tủ đồ cả nhóm đang mặc (khoá `nguồn/ô/món`). Rỗng = dùng các bộ dựng sẵn trong GLB bên dưới. */
   doMon: z.array(z.string()).default([]),
   /** Bộ đang mặc (hoặc bộ mặc đầu tiên khi phòng tự đổi đồ). */
@@ -48,6 +66,28 @@ export const schema = z.object({
   dieu: z.string().default(NGAU_NHIEN),
   /** Chế độ ngẫu nhiên: cả nhóm sang điệu khác sau mỗi ngần này giây. */
   doiDieuGiay: z.number().int().min(3).max(120).default(10),
+  /** Màn thay đồ VIP: quà từ `thayDoXu` xu trở lên (hoặc nút "Thay đồ VIP") → cánh cửa, bùng nổ, ra đồ mới. */
+  thayDoBat: z.boolean().default(true),
+  thayDoXu: z.number().int().min(1).max(1_000_000).default(99),
+  /** Ai thay đồ: id trong `NHAN_VAT`, hoặc `AI_NGAU_NHIEN` (một trong ba vũ công trên sàn). */
+  thayDoAi: z.string().default('vu-cong-2'),
+  /** Bộ VIP bốc ngẫu nhiên trong kho nhân vật mỗi màn; tắt thì mặc `doVip`. */
+  vipNgauNhien: z.boolean().default(true),
+  doVip: z.array(z.string()).default([]),
+  /** Mặc đồ VIP ngần này phút rồi về đồ thường. */
+  giuVipPhut: z.number().int().min(0).max(60).default(3),
+  /** Kho nhân vật: mỗi người một bộ phối sẵn (món tủ đồ). Đám đông và bộ VIP ngẫu nhiên lấy từ đây. */
+  khoNhanVat: z
+    .array(
+      z.object({
+        id: z.string().default(''),
+        ten: z.string().default(NHAN_VAT_MOI.ten),
+        damDong: z.boolean().default(true),
+        mon: z.array(z.string()).default([]),
+      }),
+    )
+    .max(40)
+    .default(KHO_MAC_DINH),
   /** Đám đông: các nhóm người vận hành tự thêm. Mặc định không có — đám đông nặng máy. */
   damDong: z
     .array(
@@ -59,6 +99,8 @@ export const schema = z.object({
         khuVuc: z.string().default(NHOM_MOI.khuVuc),
         bo: z.string().default(BO_NGAU_NHIEN),
         dieu: z.string().default(NHOM_MOI.dieu),
+        /** Người trong nhóm lấy lần lượt từ kho nhân vật (những ai bật "Có trong đám đông"). Tắt thì mặc `bo`. */
+        theoKho: z.boolean().default(true),
       }),
     )
     .max(6)
@@ -82,8 +124,10 @@ export const manifest: ModuleManifest<Config> = {
   actions: [
     { label: 'Nhảy ngay', op: NUT.nhay, icon: '💃' },
     { label: 'Thôi nhảy', op: NUT.thoi, icon: '⏹' },
+    { label: 'Thay đồ VIP', op: NUT.thayDo, icon: '✨' },
   ],
-  // Thứ tự ô = thứ tự tab: Cài đặt (phản ứng khi có quà) · Vai chính · Đám đông · Điệu nhảy · Trang phục.
+  // Thứ tự ô = thứ tự tab: Cài đặt (phản ứng khi có quà) · Vai chính · Đám đông · Điệu nhảy · Đồ chung · Thay đồ VIP.
+  // Trang phục, phụ kiện của từng người nằm ngay trong tab Vai chính / Đám đông: chọn người xong chọn đồ luôn.
   fields: [
     {
       key: 'dongDienKhiCoQua',
@@ -120,14 +164,44 @@ export const manifest: ModuleManifest<Config> = {
           hint: 'Tắt thì người này không hiện trên sóng',
         },
         {
+          key: 'mon',
+          label: 'Trang phục & phụ kiện',
+          type: 'tu-do',
+          than: NHAN_VAT_MAU.than,
+          mau: MODEL,
+          boSan: 'bo',
+          hint: 'Bấm món để mặc / cởi; đầm thay cả áo lẫn quần. Bộ chưa che đủ thì tự mặc kèm đồ lót an toàn. Không chọn món nào thì mặc "Bộ dựng sẵn" bên dưới.',
+        },
+        {
           key: 'bo',
-          label: 'Bộ đồ',
+          label: 'Bộ dựng sẵn',
           type: 'select',
           options: [{ value: THEO_NHOM, label: 'Theo cả nhóm', img: anh('theo-nhom', 'svg') }, ...LUA_CHON],
-          hint: '"Theo cả nhóm" là mặc bộ ở tab Trang phục, đổi đồ theo quà và theo giờ cùng mọi người',
+          hint: 'Chỉ dùng khi người này chưa chọn món nào ở trên. "Theo cả nhóm" là mặc đồ chung ở tab Đồ chung, đổi đồ theo quà và theo giờ cùng mọi người',
         },
       ],
       tab: 'Vai chính',
+    },
+    {
+      key: 'khoNhanVat',
+      label: 'Nhân vật',
+      type: 'list',
+      max: 40,
+      moi: NHAN_VAT_MOI,
+      hint: 'Kho nhân vật: mỗi người một bộ phối sẵn. Đám đông lấy người từ đây, bộ VIP ngẫu nhiên cũng bốc từ đây.',
+      fields: [
+        { key: 'ten', label: 'Tên', type: 'text' },
+        { key: 'damDong', label: 'Có trong đám đông', type: 'toggle' },
+        {
+          key: 'mon',
+          label: 'Trang phục & phụ kiện',
+          type: 'tu-do',
+          than: NHAN_VAT_MAU.than,
+          mau: MODEL,
+          hint: 'Bấm món để mặc / cởi; đầm thay cả áo lẫn quần. Luôn có đồ lót an toàn bên trong.',
+        },
+      ],
+      tab: 'Đám đông',
     },
     {
       key: 'damDong',
@@ -147,23 +221,29 @@ export const manifest: ModuleManifest<Config> = {
           options: KHU_VUC.map((k) => ({ value: k.id, label: k.ten })),
         },
         {
-          key: 'bo',
-          label: 'Trang phục',
-          type: 'select',
-          options: [
-            { value: BO_NGAU_NHIEN, label: 'Ngẫu nhiên', img: anh('theo-nhom', 'svg') },
-            ...LUA_CHON,
-          ],
-          hint: '"Ngẫu nhiên" là mỗi người một bộ trong "Các bộ phòng được đổi qua"',
-        },
-        {
           key: 'dieu',
           label: 'Điệu',
           type: 'select',
           options: [
             { value: DIEU_NHOM.theoNhom, label: 'Theo cả nhóm — nhảy cùng vai chính' },
-            { value: DIEU_NHOM.tuDo, label: 'Mỗi người một điệu' },
+            { value: DIEU_NHOM.tuDo, label: 'Ngẫu nhiên — mỗi người một điệu' },
           ],
+        },
+        {
+          key: 'theoKho',
+          label: 'Lấy người từ kho nhân vật',
+          type: 'toggle',
+          hint: 'Mỗi người một nhân vật trong "Nhân vật" ở trên (những ai bật "Có trong đám đông"), lần lượt không ai trùng ai. Tắt thì mặc "Bộ dựng sẵn".',
+        },
+        {
+          key: 'bo',
+          label: 'Bộ dựng sẵn',
+          type: 'select',
+          options: [
+            { value: BO_NGAU_NHIEN, label: 'Ngẫu nhiên', img: anh('theo-nhom', 'svg') },
+            ...LUA_CHON,
+          ],
+          hint: 'Dùng khi tắt "Lấy người từ kho nhân vật" (hoặc kho trống). "Ngẫu nhiên" là mỗi người một bộ trong "Các bộ phòng được đổi qua"',
         },
       ],
       tab: 'Đám đông',
@@ -193,11 +273,13 @@ export const manifest: ModuleManifest<Config> = {
     },
     {
       key: 'doMon',
-      label: 'Tủ đồ',
+      label: 'Đồ chung (người chọn "Theo cả nhóm")',
       type: 'tu-do',
       than: NHAN_VAT_MAU.than,
+      mau: MODEL,
+      boSan: 'boDangMac',
       hint: 'Bấm món để mặc / cởi; đầm thay cả áo lẫn quần. Bộ chưa che đủ thì tự mặc kèm đồ lót an toàn. Không chọn món nào là dùng các bộ có sẵn bên dưới.',
-      tab: 'Trang phục',
+      tab: 'Đồ chung',
     },
     {
       key: 'boDangMac',
@@ -205,7 +287,7 @@ export const manifest: ModuleManifest<Config> = {
       short: 'Bộ',
       type: 'select',
       options: LUA_CHON,
-      tab: 'Trang phục',
+      tab: 'Đồ chung',
     },
     {
       key: 'boBat',
@@ -213,7 +295,7 @@ export const manifest: ModuleManifest<Config> = {
       type: 'gallery',
       options: LUA_CHON,
       hint: 'Bấm ảnh để bật / tắt. Bikini hợp phòng bãi biển; phòng hộp đêm nên tắt.',
-      tab: 'Trang phục',
+      tab: 'Đồ chung',
     },
     {
       key: 'doiDoPhut',
@@ -223,7 +305,60 @@ export const manifest: ModuleManifest<Config> = {
       min: 0,
       max: 120,
       hint: '0 là không tự đổi',
-      tab: 'Trang phục',
+      tab: 'Đồ chung',
+    },
+    {
+      key: 'thayDoBat',
+      label: 'Màn thay đồ VIP khi có quà lớn',
+      type: 'toggle',
+      hint: 'Cánh cửa trồi lên giữa sàn, đóng lại, khói và pháo hoa bùng nổ, mở ra là bộ đồ mới — kèm lời cảm ơn khách.',
+      tab: 'Thay đồ VIP',
+    },
+    {
+      key: 'thayDoXu',
+      label: 'Quà từ',
+      type: 'number',
+      unit: 'xu',
+      min: 1,
+      max: 1_000_000,
+      hint: 'Một lượt tặng đạt ngần này xu là mở màn. Màn đang diễn thì quà sau không cắt ngang.',
+      tab: 'Thay đồ VIP',
+    },
+    {
+      key: 'thayDoAi',
+      label: 'Ai thay đồ',
+      type: 'select',
+      options: [
+        { value: AI_NGAU_NHIEN, label: 'Ngẫu nhiên — một trong ba vũ công' },
+        ...NHAN_VAT.filter((x) => x.id.startsWith('vu-cong')).map((x) => ({ value: x.id, label: x.ten })),
+      ],
+      tab: 'Thay đồ VIP',
+    },
+    {
+      key: 'vipNgauNhien',
+      label: 'Bộ VIP ngẫu nhiên mỗi màn',
+      type: 'toggle',
+      hint: 'Mỗi màn bốc một bộ khác trong kho nhân vật (tab Đám đông) — khách tặng tiếp để xem bộ khác. Tắt thì mặc bộ VIP chọn bên dưới.',
+      tab: 'Thay đồ VIP',
+    },
+    {
+      key: 'doVip',
+      label: 'Bộ VIP (khi tắt ngẫu nhiên)',
+      type: 'tu-do',
+      than: NHAN_VAT_MAU.than,
+      mau: MODEL,
+      hint: 'Bấm món để mặc / cởi. Luôn có đồ lót an toàn bên trong.',
+      tab: 'Thay đồ VIP',
+    },
+    {
+      key: 'giuVipPhut',
+      label: 'Mặc đồ VIP trong',
+      type: 'number',
+      unit: 'phút',
+      min: 0,
+      max: 60,
+      hint: '0 là chỉ trong màn thay đồ, xong về đồ cũ.',
+      tab: 'Thay đồ VIP',
     },
   ],
 };

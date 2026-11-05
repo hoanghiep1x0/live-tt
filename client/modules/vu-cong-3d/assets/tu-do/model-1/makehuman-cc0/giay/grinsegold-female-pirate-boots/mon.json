@@ -3,12 +3,12 @@
  "ten": "Bốt cướp biển",
  "o": "giay",
  "nguon": "makehuman-cc0",
- "giayPhep": "AGPL3 (see also http://www.makehuman.org/doc/node/external_tools_license.html)",
+ "than": "model-1",
+ "gioi": "nu",
+ "tuoi": "nguoi-lon",
+ "giayPhep": "CC0",
  "tacGia": "RicoCilliers/Grinsegold",
  "che": [],
  "tamGiac": 31776,
- "mhclo": "grinsegold_female_pirate_boots.mhclo",
- "than": "model-1",
- "gioi": "nu",
- "tuoi": "nguoi-lon"
+ "mhclo": "grinsegold_female_pirate_boots.mhclo"
 }

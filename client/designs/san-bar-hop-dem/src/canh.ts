@@ -16,6 +16,7 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 const DANCER_HEIGHT = 1.65;
 const SWITCH_SECONDS = 16;
 import { BANG_MAU, BPM, nhipTai } from './nhip';
+import { taoManThayDo } from './thay-do';
 const PALETTE = BANG_MAU.map((c) => new THREE.Color(c));
 
 /** Dựng cảnh vào `mount`. `tex` = đường dẫn thư mục texture của kiểu (qua useAsset). `model` (tuỳ chọn) = GLB vũ công
@@ -39,6 +40,7 @@ export async function start({ space, model = null, mount, tex }: {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 400);
+  const manThayDo = taoManThayDo(scene, camera, DANCER_HEIGHT); // màn thay đồ VIP — tạo sớm: vuCong() dùng nó ngay lúc dựng
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.enablePan = false;
@@ -180,7 +182,15 @@ export async function start({ space, model = null, mount, tex }: {
   let an = []; // người không có mặt (`VuCong3D.an`)
   let boRieng = {}; // người mặc bộ riêng (`VuCong3D.boRieng`): id người → id bộ
   let monChung = []; // món rời cả nhóm mặc (`VuCong3D.mon`): URL thư mục món
+  let monRieng = {}; // món rời riêng từng người (`VuCong3D.monRieng`): id người → URL thư mục món
+  let thayDo = null; // màn thay đồ VIP (`VuCong3D.thayDo`)
+  let vipKhoa = ''; // id màn đang mặc đồ VIP ('' = không ai): đổi là mặc lại cả nhóm
+  // người đang mặc đồ VIP: từ mốc đổi đồ (sau rèm) tới hết giờ giữ đồ
+  const dangVip = (a, now = Date.now()) =>
+    thayDo !== null && a.id === thayDo.nguoi && now >= thayDo.tu + thayDo.moc.doiDo && now < thayDo.den;
   let damDong = [], kyDamDong = '', dongDam = []; // nhóm đám đông (`VuCong3D.damDong`) và người đã dựng
+  let dangRa = []; // người đám đông đang bước ra khỏi sàn (nhóm bị bỏ / tắt / bớt người) — ra xa rồi mới dọn
+  const RA_GIAY = 3.5, RA_TOC = 1.3; // bước ra bao lâu, nhanh cỡ nào (m/s)
   const TOI_DA_DAM_DONG = 40; // mỗi người là một nhân vật có xương: hơn số này máy phát live vẽ không nổi
   let modelUrl = null, boChon = null, dieuChung = null, nghi = false, luotNap = 0, dung = false;
   const TOC_NGHI = 0.3; // nghỉ: phát điệu chung chậm cỡ này → nhún nhẹ tại chỗ
@@ -313,7 +323,21 @@ export async function start({ space, model = null, mount, tex }: {
   // Những người nhảy theo điệu chung: vai chính, người trên màn chiếu, đám đông "theo cả nhóm".
   const nhomNhay = () => [...dancers, ...(screenDancer ? [screenDancer] : []), ...dongDam.filter((a) => !a.tuDo)];
 
+  // Người đám đông mất chỗ: bước ra xa tâm sàn (điệu đi bộ), RA_GIAY giây sau thì dọn.
+  function roiSan(a) {
+    const p = a.obj.position;
+    let dx = p.x - S.nhin[0], dz = p.z - S.nhin[1];
+    const l = Math.hypot(dx, dz) || 1;
+    dx /= l; dz /= l;
+    a.ra = { dx, dz, con: RA_GIAY };
+    a.obj.rotation.y = Math.atan2(dx, dz);
+    const di = ['Slide Hip Hop Walk', 'Dancing Running Man', 'Shuffling'].find(has);
+    if (di) play(a, di, false);
+    dangRa.push(a);
+  }
+
   function boHet() {
+    dangRa = [];
     for (const a of actors.splice(0)) {
       a.mixer.stopAllAction();
       a.obj.removeFromParent();
@@ -394,7 +418,7 @@ export async function start({ space, model = null, mount, tex }: {
   // (cách đều `O_CO`), chỉ đứng ô cùng màu nên hàng sau lọt khe hàng trước. Lấp từ ô gần giữa sàn ra ngoài.
   // Cả khối cùng quay một hướng: từ tâm ô chữ nhật về giữa sàn.
   function raiCho(o, n, daCo) {
-    const O_CO = 0.8;
+    const O_CO = 1.1;
     const ds = [];
     for (const [x0, x1, z0, z1] of o) {
       const goc = Math.atan2(S.nhin[0] - (x0 + x1) / 2, S.nhin[1] - (z0 + z1) / 2);
@@ -416,7 +440,13 @@ export async function start({ space, model = null, mount, tex }: {
 
   // Dựng lại đám đông theo các nhóm. Chỉ chạy khi nhóm đổi (số người, khu vực, đồ, cách nhảy), không mỗi nhịp.
   function datDamDong() {
-    for (const a of dongDam) boNguoi(a);
+    // Ai còn chỗ trong nhóm mới (cùng nhóm, thứ tự trong nhóm < số người mới) thì dựng lại tại chỗ; ai mất chỗ (nhóm bị
+    // bỏ, tắt, bớt người) thì quay lưng bước ra khỏi sàn rồi mới dọn — không biến mất giữa chừng trước mắt khách.
+    const soMoi = new Map(damDong.map((n) => [n.id, n.so]));
+    for (const a of dongDam) {
+      if (a.k < (soMoi.get(a.nhom) ?? 0)) boNguoi(a);
+      else roiSan(a);
+    }
     dongDam = [];
     kyDamDong = JSON.stringify(damDong);
     if (!gltf || !S.khuVuc) return;
@@ -429,18 +459,23 @@ export async function start({ space, model = null, mount, tex }: {
       const rand = rngTu(n.id);
       const cho = raiCho(o, Math.min(n.so, con), daCo);
       con -= cho.length;
-      for (const [x, z, goc] of cho) {
+      for (const [k, [x, z, goc]] of cho.entries()) {
         const a = makeActor('#d9d2c8', scene, S.floorY);
         a.id = `dam-dong:${n.id}`;
+        a.nhom = n.id; a.k = k; // nhóm và thứ tự trong nhóm: dựng lại thì biết ai còn chỗ
         a.dam = dongDam.length; // số thứ tự trong đám đông: chia lượt việc nặng giữa các khung hình
         a.cho = 0;              // giây chuyển động còn nợ (đám đông cập nhật nửa nhịp)
         // Đám đông không đổ bóng: bóng của vài chục người là vẽ lại cả bấy nhiêu xương thêm một lần.
         a.obj.traverse((o) => { if (o.isMesh) o.castShadow = false; });
         a.tuDo = !n.theoNhom;
         a.boCo = n.bo[Math.floor(rand() * n.bo.length)] ?? null;
+        // món tủ đồ người này mặc (thay cho bộ dựng sẵn): chia lần lượt các bộ ngẫu nhiên của nhóm (không ai trùng ai
+        // tới khi hết bộ), không có thì món chung
+        a.monNhom = n.monBo?.length ? n.monBo[k % n.monBo.length] : (n.mon ?? []);
         a.obj.position.set(x, S.floorY, z);
         a.obj.rotation.y = goc;
-                mac(a, a.boCo);
+        mac(a, a.boCo);
+        if (a.monNhom.length) void macMon(a, a.monNhom);
         if (dieuChung && !a.tuDo) vaoDieuChung(a);
         else {
           play(a, ds[Math.floor(rand() * ds.length)].name);
@@ -452,14 +487,21 @@ export async function start({ space, model = null, mount, tex }: {
     }
   }
 
-  // Bộ của từng người: bộ riêng nếu có, không thì theo cả nhóm. DJ không theo nhóm: mặc bộ đầu của GLB.
+  // Đồ của từng người, ưu tiên: món tủ đồ riêng → (đám đông) món của nhóm nó / bộ của nhóm nó → bộ dựng sẵn riêng →
+  // món chung cả nhóm → bộ chung. DJ không theo nhóm: món riêng, không thì bộ riêng hay bộ đầu của GLB.
   function macHet() {
     for (const a of nhomNhay()) {
-      // món rời cho cả nhóm, trừ người có bộ riêng và đám đông (đám đông giữ bộ dựng sẵn của nhóm nó)
-      if (monChung.length > 0 && !boRieng[a.id] && a.dam === undefined) void macMon(a, monChung);
+      const rieng = monRieng[a.id];
+      if (dangVip(a)) void macMon(a, thayDo.mon);
+      else if (rieng?.length) void macMon(a, rieng);
+      else if (a.dam !== undefined && a.monNhom?.length) void macMon(a, a.monNhom);
+      else if (monChung.length > 0 && !boRieng[a.id] && a.dam === undefined) void macMon(a, monChung);
       else { void macMon(a, []); mac(a, boRieng[a.id] ?? a.boCo ?? boChon); }
     }
-    if (djActor) mac(djActor, boRieng.dj ?? BO[0]);
+    if (djActor) {
+      if (monRieng.dj?.length) void macMon(djActor, monRieng.dj);
+      else { void macMon(djActor, []); mac(djActor, boRieng.dj ?? BO[0]); }
+    }
   }
 
   // ---------- món rời (tủ đồ) ----------
@@ -469,7 +511,11 @@ export async function start({ space, model = null, mount, tex }: {
       khoMon.set(url, Promise.all([
         new GLTFLoader().loadAsync(url + 'mon.glb'),
         new THREE.TextureLoader().loadAsync(url + 'mat-na.png'),
-      ]).then(([g, t]) => ({ g, t })).catch(() => null)); // món hỏng / đã xoá: bỏ món đó, không hỏng cả bộ
+      ]).then(([g, t]) => {
+        // tóc, mũ, kính, găng, phụ kiện: tấm mỏng (sợi tóc cắt alpha) — nhìn được cả hai mặt
+        if (/\/(toc|mu|kinh|gang-tay|phu-kien)\//.test(url)) g.scene.traverse((o) => { if (o.isMesh) o.material.side = THREE.DoubleSide; });
+        return { g, t, dau: /\/(toc|mu|kinh)\//.test(url) };
+      }).catch(() => null)); // món hỏng / đã xoá: bỏ món đó, không hỏng cả bộ
     }
     return khoMon.get(url);
   }
@@ -494,23 +540,36 @@ export async function start({ space, model = null, mount, tex }: {
     for (const m of a.mon) m.removeFromParent();
     a.mon = [];
     a.mn.co.value = 0;
+    // tóc của GLB: hiện lại, mặc tóc từ tủ (ô `toc`) thì ẩn bên dưới
+    a.obj.traverse((o) => { if (o.isMesh && /hair/i.test(o.name) && !o.userData?.outfits) o.visible = true; });
     if (!urls.length || !a.than) return;
     const ds = (await Promise.all(urls.map(napMon))).filter(Boolean);
     if (a.monKhoa !== khoa || !a.obj.parent) return; // đổi bộ giữa lúc tải, hoặc người đã bị dọn (màn chiếu ở cảnh riêng)
     // ẩn bộ dựng sẵn trong GLB (mọi món có `extras.outfits`); da theo mặt nạ món thay cho `_cover`
     a.obj.traverse((o) => { const t = o.userData?.outfits; if (typeof t === 'string' && !t.startsWith('[')) o.visible = false; });
     for (const u of a.che) u.value = 0;
+    if (urls.some((u) => u.includes('/toc/'))) a.obj.traverse((o) => { if (o.isMesh && /hair/i.test(o.name) && !o.userData?.outfits) o.visible = false; });
     const xuong = new Map(a.bones.map((b) => [b.name, b]));
-    for (const { g } of ds) {
+    for (const { g, dau } of ds) {
       g.scene.traverse((src) => {
         if (!src.isSkinnedMesh) return;
-        const bones = src.skeleton.bones.map((b) => xuong.get(b.name));
+        // `neutral_bone`: bộ xuất glTF tự thêm cho vài đỉnh không gắn xương nào (hay gặp ở tóc) — buộc vào xương thật gần
+        // nhất (đầu cho tóc / mũ / kính, hông cho món khác), lấy đúng boneInverse của xương đó trên thân để không lệch
+        const inv = src.skeleton.boneInverses.slice();
+        const bones = src.skeleton.bones.map((b, i) => {
+          const x = xuong.get(b.name);
+          if (x || b.name !== 'neutral_bone') return x;
+          const y = xuong.get(dau ? 'mixamorigHead' : 'mixamorigHips');
+          const j = a.than.skeleton.bones.indexOf(y);
+          if (j >= 0) inv[i] = a.than.skeleton.boneInverses[j];
+          return y;
+        });
         if (bones.some((b) => !b)) return; // xương lạ: món không thuộc nhân vật này
         const m = src.clone();
         m.frustumCulled = false; // khung bao lưới có xương không theo điệu nhảy
         m.castShadow = a.dam === undefined;
         a.than.parent.add(m);
-        m.bind(new THREE.Skeleton(bones, src.skeleton.boneInverses), a.than.bindMatrix);
+        m.bind(new THREE.Skeleton(bones, inv), a.than.bindMatrix);
         a.mon.push(m);
       });
     }
@@ -536,6 +595,17 @@ export async function start({ space, model = null, mount, tex }: {
     an = v?.an ?? [];
     boRieng = v?.boRieng ?? {};
     monChung = v?.mon ?? [];
+    monRieng = v?.monRieng ?? {};
+    const tdCu = thayDo;
+    thayDo = v?.thayDo ?? null;
+    manThayDo.dat(thayDo);
+    // màn mới: người thay đồ nhảy đứng tại chỗ suốt màn (nhảy sàn là bò ra khỏi khung cửa), hết màn mới nhảy tự do lại
+    if (thayDo && thayDo.id !== tdCu?.id && Date.now() < thayDo.tu + thayDo.moc.het) {
+      const a = dancers.find((x) => x.id === thayDo.nguoi);
+      const dung = ['Hip Hop Dancing', 'Samba Dancing', 'Dancing'].find(has);
+      if (a && dung) { play(a, dung, false); a.trongMan = true; }
+    }
+    for (const u of thayDo?.mon ?? []) void napMon(u); // tải trước: tới lúc đổi đồ sau rèm thì món đã sẵn
     damDong = v?.damDong ?? [];
     if (url !== modelUrl) { dieuChung = dieu; nghi = nghiMoi; void datModel(url); return; }
     macHet();
@@ -627,6 +697,13 @@ export async function start({ space, model = null, mount, tex }: {
       camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(sp));
     }
     nhipDam++;
+    for (const a of dangRa) {
+      a.ra.con -= dt;
+      a.obj.position.x += a.ra.dx * RA_TOC * dt;
+      a.obj.position.z += a.ra.dz * RA_TOC * dt;
+      if (a.ra.con <= 0) boNguoi(a);
+    }
+    if (dangRa.some((a) => a.ra.con <= 0)) dangRa = dangRa.filter((a) => a.ra.con > 0);
     for (const a of actors) {
       if (a.dam === undefined) {
         a.mixer.update(dt);
@@ -645,6 +722,16 @@ export async function start({ space, model = null, mount, tex }: {
       m.material.color.copy(tmp).multiplyScalar(1.6 + pulse * 1.2);
     }
     S.update(t, beat, pulse, bar4);
+    {
+      // màn thay đồ VIP: tới mốc đổi đồ / hết giờ giữ đồ thì mặc lại; hiệu ứng bám theo người thay đồ
+      const now = Date.now();
+      const k = thayDo !== null && now >= thayDo.tu + thayDo.moc.doiDo && now < thayDo.den ? String(thayDo.id) : '';
+      if (k !== vipKhoa) { vipKhoa = k; macHet(); }
+      for (const a of dancers) {
+        if (a.trongMan && (!thayDo || now >= thayDo.tu + thayDo.moc.het)) { a.trongMan = false; a.next = 0; }
+      }
+      manThayDo.capNhat(now, dt, thayDo ? (dancers.find((a) => a.id === thayDo.nguoi && a.obj.visible) ?? null) : null);
+    }
     if (screenDancer && (frame++ % 2 === 0)) {
       screenDancer.obj.rotation.y = Math.sin(t * 0.4) * 0.5;
       renderer.setRenderTarget(screenRT);
@@ -662,6 +749,7 @@ export async function start({ space, model = null, mount, tex }: {
     renderer.setAnimationLoop(null);
     ro.disconnect();
     renderer.domElement.removeEventListener('dblclick', chonVuCong);
+    manThayDo.don();
     controls.dispose();
     scene.traverse((o) => {
       o.geometry?.dispose?.();

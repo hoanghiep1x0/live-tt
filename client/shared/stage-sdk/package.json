@@ -21,7 +21,8 @@
     "@live/mod-top-givers": "*",
     "@live/mod-vu-cong-3d": "*",
     "@live/mod-welcome": "*",
-    "@live/runtime": "*"
+    "@live/runtime": "*",
+    "three": "0.169.0"
   },
   "peerDependencies": {
     "react": "19.3.1"

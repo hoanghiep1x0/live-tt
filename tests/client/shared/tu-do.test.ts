@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bamMon, boLenSong, docTuDo, khoaMon, locTuDo } from '@live/contracts';
+import { bamMon, boLenSong, docTuDo, khoaMon, locTuDo, rngChuoi } from '@live/contracts';
 import type { MonTuDo } from '@live/contracts';
 
 const m = (o: string, id: string, che: string[]): MonTuDo => ({
@@ -40,17 +40,31 @@ describe('bấm món', () => {
 });
 
 describe('bộ lên sóng', () => {
-  it('đủ che thì giữ nguyên', () => {
-    expect(boLenSong(TU, [k(AO), k(SHORT)])?.map((x) => x.id)).toEqual(['ao-hai-day', 'short']);
+  it('luôn mặc kèm đồ lót, kể cả khi áo quần đã che đủ', () => {
+    expect(boLenSong(TU, [k(AO), k(SHORT)])?.map((x) => x.id)).toEqual(['ao-hai-day', 'short', 'ao-lot', 'quan-lot']);
+  });
+
+  it('đã chọn lót thì không thêm lót trùng vùng', () => {
+    expect(boLenSong(TU, [k(AO), k(SHORT), k(LOT_DUOI)])?.map((x) => x.id)).toEqual([
+      'ao-hai-day',
+      'short',
+      'quan-lot',
+      'ao-lot',
+    ]);
   });
 
   it('váy, đầm hở đáy: tự mặc kèm quần lót', () => {
-    expect(boLenSong(TU, [k(AO), k(VAY)])?.map((x) => x.id)).toEqual(['ao-hai-day', 'vay-ngan', 'quan-lot']);
-    expect(boLenSong(TU, [k(DAM)])?.map((x) => x.id)).toEqual(['dam', 'quan-lot']);
+    expect(boLenSong(TU, [k(AO), k(VAY)])?.map((x) => x.id)).toEqual(['ao-hai-day', 'vay-ngan', 'ao-lot', 'quan-lot']);
+    expect(boLenSong(TU, [k(DAM)])?.map((x) => x.id)).toEqual(['dam', 'ao-lot', 'quan-lot']);
   });
 
   it('chỉ mặc quần: tự thêm áo lót', () => {
-    expect(boLenSong(TU, [k(SHORT)])?.map((x) => x.id)).toEqual(['short', 'ao-lot']);
+    expect(boLenSong(TU, [k(SHORT)])?.map((x) => x.id)).toEqual(['short', 'ao-lot', 'quan-lot']);
+  });
+
+  it('tóc dài khai che ngực cũng không thay được áo lót', () => {
+    const TOC = m('toc', 'toc-dai', ['nguc']);
+    expect(boLenSong([...TU, TOC], [k(TOC), k(SHORT)])?.map((x) => x.id)).toEqual(['toc-dai', 'short', 'ao-lot', 'quan-lot']);
   });
 
   it('tủ không có lót che được thì không cho mặc', () => {
@@ -84,5 +98,14 @@ describe('lọc tủ theo thân và tuổi', () => {
   it('khoá món có thân: cùng tên món ở hai thân là hai món', () => {
     expect(khoaMon(AO)).toBe('model-1/mh/ao/ao-hai-day');
     expect(khoaMon({ ...AO, than: 'model-2' })).not.toBe(khoaMon(AO));
+  });
+});
+
+describe('số giả ngẫu nhiên có hạt giống', () => {
+  it('cùng chuỗi cùng dãy, khác chuỗi khác dãy, luôn trong [0, 1)', () => {
+    const day = (h: string) => Array.from({ length: 5 }, rngChuoi(h));
+    expect(day('vip-1')).toEqual(day('vip-1'));
+    expect(day('vip-1')).not.toEqual(day('vip-2'));
+    expect(day('x').every((v) => v >= 0 && v < 1)).toBe(true);
   });
 });

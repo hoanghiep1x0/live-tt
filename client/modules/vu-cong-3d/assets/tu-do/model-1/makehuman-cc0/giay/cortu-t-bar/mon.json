@@ -3,12 +3,12 @@
  "ten": "Giày quai chữ T",
  "o": "giay",
  "nguon": "makehuman-cc0",
- "giayPhep": "?",
- "tacGia": "?",
- "che": [],
- "tamGiac": 352,
- "mhclo": "cortu_t-bar.mhclo",
  "than": "model-1",
  "gioi": "nu",
- "tuoi": "nguoi-lon"
+ "tuoi": "nguoi-lon",
+ "giayPhep": "CC0",
+ "tacGia": "cortu",
+ "che": [],
+ "tamGiac": 352,
+ "mhclo": "cortu_t-bar.mhclo"
 }

@@ -3,14 +3,14 @@
  "ten": "Quần short jeans",
  "o": "duoi",
  "nguon": "makehuman-cc0",
- "giayPhep": "?",
- "tacGia": "?",
+ "than": "model-1",
+ "gioi": "nu",
+ "tuoi": "nguoi-lon",
+ "giayPhep": "CC0",
+ "tacGia": "cortu",
  "che": [
   "hang"
  ],
  "tamGiac": 250,
- "mhclo": "cortu_jeans_shorts.mhclo",
- "than": "model-1",
- "gioi": "nu",
- "tuoi": "nguoi-lon"
+ "mhclo": "cortu_jeans_shorts.mhclo"
 }

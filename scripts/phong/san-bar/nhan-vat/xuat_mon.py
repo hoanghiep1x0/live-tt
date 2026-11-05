@@ -13,7 +13,7 @@ blender -b <base_v58_bikini.blend> --python scripts/phong/san-bar/nhan-vat/xuat_
 - Kiểm che (chính sách TikTok): món chạm vùng ngực / vùng kín (vung_nhay_cam.py) thì ẩn HẲN cả vùng đó trong mặt nạ và
   ghi vào `che` — sân khấu chỉ cho mặc bộ có đủ "nguc" và "hang".
 - <ô>: ao · duoi (quần, váy) · lien (đầm, suit liền — chiếm cả ao và duoi) · lot (đồ lót an toàn — sân khấu tự mặc kèm
-  khi bộ chưa che đủ) · giay · toc · phu-kien.
+  khi bộ chưa che đủ) · giay · toc · mu · kinh · gang-tay · phu-kien.
 - --ten <ten.json>: {"<tên file mhclo>": "Tên tiếng Việt"}; thiếu thì lấy tên trong .mhclo.
 - --gioi (mặc định nu), --tuoi: nhãn để lọc trong tủ. Phòng sàn bar chỉ nạp `tuoi` = nguoi-lon (luật ở client,
   `locTuDo`) — script từ chối tuổi khác để món trẻ em không bao giờ lọt vào tủ của phòng này.
@@ -57,10 +57,11 @@ if GIOI not in ("nu", "nam", "chung"):
 if TUOI != "nguoi-lon":
     raise SystemExit("tủ đồ phòng sàn bar chỉ nhận đồ người lớn (--tuoi nguoi-lon) — chính sách TikTok về trẻ vị thành niên")
 src_dir, KHO, THAN, NGUON, O, FILES = args[0], args[1], args[2], args[3], args[4], args[5:]
-O_HOP_LE = ("ao", "duoi", "lien", "lot", "giay", "toc", "phu-kien")
+O_HOP_LE = ("ao", "duoi", "lien", "lot", "giay", "toc", "mu", "kinh", "gang-tay", "phu-kien")
 if O not in O_HOP_LE:
     raise SystemExit(f"ô '{O}' lạ — dùng một trong {O_HOP_LE}")
 MASK = 512
+ANH_TOI_DA = 1024
 
 body = bpy.data.objects["Body"]
 for o in list(bpy.data.objects):
@@ -76,12 +77,17 @@ def dau_mhclo(path):
     """author / license / name trong phần đầu .mhclo."""
     d = {}
     for line in open(path, encoding="utf-8", errors="replace"):
-        m = re.match(r"#?\s*(author|license|name)\s+(.+)", line.strip())
+        m = re.match(r"#?\s*(author|license|name):?\s+(.+)", line.strip())  # MakeClothes 2 ghi "# author: X"
         if m and m.group(1) not in d:
             d[m.group(1)] = m.group(2).strip()
         if line.startswith("obj_file"):
             break
     return d
+
+
+# Giấy phép theo GÓI tải về (tên gói ở trang tài sản MakeHuman: *_cc0, *_ccby). Dòng "license" trong .mhclo không tin
+# được: nhiều món CC0 vẫn mang chữ AGPL3 mẫu của MakeClothes cũ.
+GIAY_PHEP_NGUON = {"makehuman-cc0": "CC0", "makehuman-ccby": "CC-BY 4.0"}
 
 
 def id_cua(path):
@@ -156,6 +162,7 @@ def ty_le_phu(o, ds, xa):
 TIA_XA = {"nguc": 0.04, "hang": 0.08}
 GAN = 0.03          # m: vải ôm trong tầm này quanh da là phủ (váy là ống hở bọc ngoài hông — xa hơn)
 NGUONG_PHU = 0.85   # ≥ 85 % đỉnh vùng có vải phủ mới tính là che
+O_CHE_DUOC = ("ao", "duoi", "lien", "lot")
 
 LOI_VUNG = VN["trong"](VN["X"], -0.01)   # lõi vùng (thu vào 1 cm, như rig_base): mép vùng lấn mặt trong đùi, tia không ra vải
 
@@ -169,7 +176,9 @@ for f, o in mon:
     che = []
     for k in ("nguc", "hang"):
         ds = np.asarray(VN[k])
-        tl = ty_le_phu(o, np.nonzero(LOI_VUNG[k])[0], TIA_XA[k])
+        # Tóc, giày, phụ kiện không bao giờ tính là che: tóc dài xoã ngực là sợi alpha, nhìn xuyên — tính che thì sân
+        # khấu bỏ áo lót, da ngực đã ẩn mà chỉ còn tóc lưa thưa.
+        tl = ty_le_phu(o, np.nonzero(LOI_VUNG[k])[0], TIA_XA[k]) if O in O_CHE_DUOC else 0.0
         print("PHU", o.name, k, f"{tl:.0%}", "nhóm Delete chạm" if an[ds].any() else "")
         if tl >= NGUONG_PHU:
             an[ds] = True          # che là ẩn HẲN cả vùng (như rig_base): nhảy mạnh da sát vải không lòi ra
@@ -207,9 +216,15 @@ sc.render.image_settings.file_format = "WEBP"
 sc.render.image_settings.color_mode = "RGBA"
 sc.render.image_settings.quality = 82
 sc.view_settings.view_transform = "Standard"
+sc.view_settings.exposure = 0.35
+# ảnh nhỏ phải sáng, dễ nhìn trên bảng: nền trời xám sáng làm ánh sáng toả đều (nền ảnh vẫn trong suốt), đèn mạnh hơn
+_w = sc.world or bpy.data.worlds.new("_w"); sc.world = _w; _w.use_nodes = True
+_bg = _w.node_tree.nodes.get("Background")
+if _bg:
+    _bg.inputs[0].default_value = (0.75, 0.75, 0.78, 1); _bg.inputs[1].default_value = 1.0
 cam = bpy.data.objects.new("_cam", bpy.data.cameras.new("_cam")); sc.collection.objects.link(cam); sc.camera = cam
 cam.data.lens = 85; cam.data.sensor_fit = "VERTICAL"
-for nm, en, rot in (("_key", 3.2, (0.95, 0.0, 0.5)), ("_fill", 1.2, (1.2, 0.0, -1.4)), ("_rim", 2.0, (1.9, 0.0, 3.0))):
+for nm, en, rot in (("_key", 4.5, (0.95, 0.0, 0.5)), ("_fill", 2.5, (1.2, 0.0, -1.4)), ("_rim", 2.0, (1.9, 0.0, 3.0))):
     L = bpy.data.objects.new(nm, bpy.data.lights.new(nm, "SUN")); sc.collection.objects.link(L)
     L.data.energy = en; L.rotation_euler = rot
 # MPFB gắn vào thân một bộ ẩn (MASK) cho mỗi món đã mặc → gỡ hết, ảnh từng món tự ẩn da bằng nhóm "_an" bên dưới
@@ -233,6 +248,36 @@ d = (zmax - zmin) * 1.08 / 2 / math.tan(cam.data.angle_y / 2)
 r = math.radians(20)
 cam.location = c + Vector((math.sin(r) * d, -math.cos(r) * d, 0.0))
 cam.rotation_euler = (c - cam.location).to_track_quat("-Z", "Y").to_euler()
+cam_ca_nguoi = (cam.location.copy(), cam.rotation_euler.copy())
+cam.data.clip_start = 0.01
+
+O_ANH_RIENG = ("toc", "mu", "kinh", "gang-tay", "giay", "lot", "phu-kien")   # ảnh chỉ có món, không thân, khung sát món
+
+
+def khung(o):
+    """Đặt camera (cùng góc nghiêng) ôm sát lưới món. Găng: một bên tay — hai tay dang chữ T thì món bé tí."""
+    dg = bpy.context.evaluated_depsgraph_get()
+    oe = o.evaluated_get(dg)
+    m = oe.to_mesh()
+    P = [o.matrix_world @ v.co for v in m.vertices]
+    oe.to_mesh_clear()
+    if O == "gang-tay":
+        P = [p for p in P if p.x > 0] or P
+    lo = Vector([min(p[i] for p in P) for i in range(3)])
+    hi = Vector([max(p[i] for p in P) for i in range(3)])
+    tam = (lo + hi) / 2
+    huong = Vector((math.sin(r), -math.cos(r), 0.0))
+    phai, len_ = Vector((math.cos(r), math.sin(r), 0.0)), Vector((0.0, 0.0, 1.0))
+    nua_ngang = max(abs((p - tam).dot(phai)) for p in P)
+    nua_doc = max(abs((p - tam).dot(len_)) for p in P)
+    sau = max((p - tam).dot(huong) for p in P)
+    ay = cam.data.angle_y
+    ax = 2 * math.atan(math.tan(ay / 2) * sc.render.resolution_x / sc.render.resolution_y)
+    d = max(nua_doc / math.tan(ay / 2), nua_ngang / math.tan(ax / 2)) * 1.2 + sau
+    cam.location = tam + huong * d
+    cam.rotation_euler = (tam - cam.location).to_track_quat("-Z", "Y").to_euler()
+
+
 mask_mod = body.modifiers.new("_an", "MASK")
 mask_mod.invert_vertex_group = True
 # lưới phụ của thân (helper: váy/quần tất ẩn, joint) — rig_base xoá trước khi xuất; ảnh nhỏ cũng phải ẩn
@@ -263,18 +308,35 @@ for f, o in mon:
     mask_mod.vertex_group = "_an"
     for _, x in mon:
         x.hide_render = x is not o
+    # món nhỏ (kính, giày…) chụp cả người thì không nhìn ra món: chụp riêng món
+    rieng = O in O_ANH_RIENG
+    an_them = [x for x in bpy.data.objects if x.type == "MESH" and x is not o and not x.hide_render] if rieng else []
+    for x in an_them:
+        x.hide_render = True
+    khung(o)   # mọi món: khung sát món (đồ mặc vẫn có thân, món nhỏ thì chỉ có món)
     sc.render.filepath = os.path.join(ra, "anh.webp")
     bpy.ops.render.render(write_still=True)
+    for x in an_them:
+        x.hide_render = False
+    cam.location, cam.rotation_euler = cam_ca_nguoi
     # GLB: lưới món + xương, không điệu
     bpy.ops.object.select_all(action="DESELECT")
     o.select_set(True); rig.select_set(True)
+    # hoa văn ≤ ANH_TOI_DA px, WebP: đồ cộng đồng hay kèm ảnh 4K (một đầm 40 MB) — sân khấu tải từng món qua mạng
+    for m in o.data.materials:
+        for n in (m.node_tree.nodes if m and m.node_tree else ()):
+            im = getattr(n, "image", None)
+            if im is not None and im.has_data and max(im.size) > ANH_TOI_DA:
+                k = ANH_TOI_DA / max(im.size)
+                im.scale(max(1, round(im.size[0] * k)), max(1, round(im.size[1] * k)))
     bpy.ops.export_scene.gltf(filepath=os.path.join(ra, "mon.glb"), export_format="GLB", use_selection=True,
-                              export_animations=False, export_skins=True, export_morph=False, export_yup=True)
+                              export_animations=False, export_skins=True, export_morph=False, export_yup=True,
+                              export_image_format="WEBP", export_image_quality=85)
     dau = dau_mhclo(f)
     tt = {
         "id": id_, "ten": TEN.get(os.path.basename(f)) or dau.get("name") or id_, "o": O, "nguon": NGUON,
         "than": THAN, "gioi": GIOI, "tuoi": TUOI,
-        "giayPhep": dau.get("license", "?"), "tacGia": dau.get("author", "?"), "che": che,
+        "giayPhep": GIAY_PHEP_NGUON.get(NGUON) or dau.get("license", "?"), "tacGia": dau.get("author", "?"), "che": che,
         "tamGiac": len(o.data.polygons), "mhclo": os.path.basename(f),
     }
     json.dump(tt, open(os.path.join(ra, "mon.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)

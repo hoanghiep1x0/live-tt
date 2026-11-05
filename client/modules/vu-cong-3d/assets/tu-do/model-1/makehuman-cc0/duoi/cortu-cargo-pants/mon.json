@@ -3,14 +3,14 @@
  "ten": "Quần túi hộp",
  "o": "duoi",
  "nguon": "makehuman-cc0",
- "giayPhep": "?",
- "tacGia": "?",
+ "than": "model-1",
+ "gioi": "chung",
+ "tuoi": "nguoi-lon",
+ "giayPhep": "CC0",
+ "tacGia": "cortu",
  "che": [
   "hang"
  ],
  "tamGiac": 196,
- "mhclo": "cortu_cargo_pants.mhclo",
- "than": "model-1",
- "gioi": "chung",
- "tuoi": "nguoi-lon"
+ "mhclo": "cortu_cargo_pants.mhclo"
 }

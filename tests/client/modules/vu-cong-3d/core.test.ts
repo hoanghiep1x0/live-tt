@@ -8,9 +8,12 @@ import {
   DIEU,
   DIEU_LUAN_PHIEN,
   KHO_DIEU,
+  MAN_THAY_DO,
+  MODEL,
   moduleVuCong3d as mod,
   NGAU_NHIEN,
   NHAN_VAT,
+  NHAN_VAT_MAU,
   THEO_NHOM,
   NUT,
   schema,
@@ -186,7 +189,7 @@ describe('hợp đồng slot stage-3d', () => {
 
 describe('nút trên thẻ', () => {
   it('manifest khai đúng các nút mà onAction nhận', () => {
-    expect(mod.manifest.actions?.map((a) => a.op)).toEqual([NUT.nhay, NUT.thoi]);
+    expect(mod.manifest.actions?.map((a) => a.op)).toEqual([NUT.nhay, NUT.thoi, NUT.thayDo]);
   });
 
   it('"Nhảy ngay" nhảy mãi tới khi bấm "Thôi nhảy", kể cả khi tắt đồng diễn theo quà', () => {
@@ -290,22 +293,24 @@ describe('kho điệu', () => {
 });
 
 describe('nhân vật', () => {
-  it('mặc định mọi người có mặt, mặc theo cả nhóm', () => {
-    for (const x of NHAN_VAT) expect(MAC_DINH.nhanVat[x.id]).toEqual({ co: true, bo: THEO_NHOM });
+  it('mặc định mọi người có mặt, chưa có món riêng, mặc theo cả nhóm', () => {
+    for (const x of NHAN_VAT) expect(MAC_DINH.nhanVat[x.id]).toEqual({ co: true, mon: [], bo: THEO_NHOM });
   });
 
-  it('tab Nhân vật là ô roster: mỗi người một tab, có Có mặt và Bộ đồ', () => {
+  it('tab Vai chính là ô roster: mỗi người một tab, có Có mặt, tủ đồ riêng và bộ dựng sẵn', () => {
     const o = mod.manifest.fields.find((f) => f.key === 'nhanVat');
     expect(o?.type).toBe('roster');
     expect(o?.options?.map((x) => x.value)).toEqual(NHAN_VAT.map((x) => x.id));
-    expect(o?.fields?.map((x) => x.key)).toEqual(['co', 'bo']);
-    expect(o?.fields?.[1]?.options?.every((x) => x.img !== undefined)).toBe(true);
+    expect(o?.fields?.map((x) => x.key)).toEqual(['co', 'mon', 'bo']);
+    // chọn người xong chọn đồ luôn: tủ đồ + khung thử đồ ngay trong tab của người đó
+    expect(o?.fields?.[1]).toMatchObject({ type: 'tu-do', than: NHAN_VAT_MAU.than, mau: MODEL });
+    expect(o?.fields?.[2]?.options?.every((x) => x.img !== undefined)).toBe(true);
   });
 
   it('sửa một ô của một người không đụng người khác', () => {
     const v = suaRoster(MAC_DINH.nhanVat, 'dj', 'bo', 'bikini');
-    expect(mucRoster(v, 'dj')).toEqual({ co: true, bo: 'bikini' });
-    expect(mucRoster(v, 'man-chieu')).toEqual({ co: true, bo: THEO_NHOM });
+    expect(mucRoster(v, 'dj')).toEqual({ co: true, mon: [], bo: 'bikini' });
+    expect(mucRoster(v, 'man-chieu')).toEqual({ co: true, mon: [], bo: THEO_NHOM });
     expect(mucRoster(null, 'dj')).toEqual({});
     expect(suaRoster(null, 'dj', 'co', false)).toEqual({ dj: { co: false } });
   });
@@ -357,12 +362,87 @@ describe('đám đông', () => {
     expect(doc([{ ...nhom, so: '5' }])?.damDong).toBeUndefined();
   });
 
-  it('5 tab theo thứ tự: Cài đặt, Vai chính, Đám đông, Điệu nhảy, Trang phục', () => {
+  it('6 tab theo thứ tự: Cài đặt, Vai chính, Đám đông, Điệu nhảy, Đồ chung, Thay đồ VIP', () => {
     const tabs: string[] = [];
     for (const f of mod.manifest.fields) {
       const t = f.tab ?? 'Cài đặt';
       if (!tabs.includes(t)) tabs.push(t);
     }
-    expect(tabs).toEqual(['Cài đặt', 'Vai chính', 'Đám đông', 'Điệu nhảy', 'Trang phục']);
+    expect(tabs).toEqual(['Cài đặt', 'Vai chính', 'Đám đông', 'Điệu nhảy', 'Đồ chung', 'Thay đồ VIP']);
+  });
+
+  it('đám đông lấy người từ kho nhân vật: kho có sẵn nhân vật phối đẹp, mỗi người có tủ đồ riêng', () => {
+    const kho = mod.manifest.fields.find((f) => f.key === 'khoNhanVat');
+    expect(kho?.type).toBe('list');
+    expect(kho?.tab).toBe('Đám đông');
+    expect(kho?.fields?.map((x) => x.key)).toEqual(['ten', 'damDong', 'mon']);
+    expect(MAC_DINH.khoNhanVat.length).toBeGreaterThanOrEqual(6);
+    for (const c of MAC_DINH.khoNhanVat) expect(c.mon.length).toBeGreaterThan(0);
+    const nhom = mod.manifest.fields.find((f) => f.key === 'damDong');
+    expect(nhom?.fields?.map((x) => x.key)).toEqual(['ten', 'bat', 'so', 'khuVuc', 'dieu', 'theoKho', 'bo']);
+    expect(nhom?.moi).toMatchObject({ theoKho: true });
+  });
+
+  it('hợp đồng giữ món riêng từng người và món của nhóm đám đông; sai dạng thì bỏ', () => {
+    const v = docVuCong3D(
+      JSON.stringify({
+        model: '/m/x/a.glb',
+        dieu: null,
+        monRieng: { dj: ['/m/x/tu-do/a/'] },
+        damDong: [{ id: 'n', so: 3, khuVuc: 'k', bo: [], theoNhom: true, mon: ['/m/x/tu-do/b/'], monBo: [['/m/x/tu-do/c/']] }],
+      }),
+    );
+    expect(v?.monRieng).toEqual({ dj: ['/m/x/tu-do/a/'] });
+    expect(v?.damDong?.[0]?.mon).toEqual(['/m/x/tu-do/b/']);
+    expect(v?.damDong?.[0]?.monBo).toEqual([['/m/x/tu-do/c/']]);
+    expect(docVuCong3D(JSON.stringify({ model: '/m/x/a.glb', monRieng: { dj: 'x' } }))?.monRieng).toBeUndefined();
+  });
+});
+
+describe('màn thay đồ VIP', () => {
+  const quaLon = (at: number, coins: number, id = 9): FeedItem => ({ ...qua(at, id), coins, name: 'Minh' });
+
+  it('quà đủ xu mở màn cho đúng người, quà nhỏ thì không', () => {
+    const s = core.init(cau({ thayDoXu: 99, thayDoAi: 'vu-cong-1' }));
+    runFeed(mod, s, quaLon(1_000, 10), ctx(s.config, 1_000));
+    expect(s.thayDo).toBeNull();
+    runFeed(mod, s, quaLon(2_000, 199, 2), ctx(s.config, 2_000));
+    expect(s.thayDo).toMatchObject({ id: 1, nguoi: 'vu-cong-1', khach: 'Minh', tu: 2_000 });
+  });
+
+  it('màn đang diễn thì quà sau không cắt ngang; diễn xong quà mới mở màn mới', () => {
+    const s = core.init(cau({ thayDoXu: 50 }));
+    runFeed(mod, s, quaLon(1_000, 100), ctx(s.config, 1_000));
+    runFeed(mod, s, quaLon(3_000, 100, 2), ctx(s.config, 3_000));
+    expect(s.thayDo?.id).toBe(1);
+    const sau = 1_000 + MAN_THAY_DO.het + 10;
+    runFeed(mod, s, quaLon(sau, 100, 3), ctx(s.config, sau));
+    expect(s.thayDo).toMatchObject({ id: 2, tu: sau });
+  });
+
+  it('tắt màn thay đồ thì quà lớn cũng không mở', () => {
+    const s = core.init(cau({ thayDoBat: false }));
+    runFeed(mod, s, quaLon(1_000, 10_000), ctx(s.config, 1_000));
+    expect(s.thayDo).toBeNull();
+  });
+
+  it('nút "Thay đồ VIP" mở màn không cần quà; hết giờ giữ đồ thì về đồ thường', () => {
+    const s = core.init(cau({ giuVipPhut: 1 }));
+    runAction(mod, s, NUT.thayDo, ctx(s.config, 1_000));
+    expect(s.thayDo).toMatchObject({ khach: '', den: 1_000 + MAN_THAY_DO.het + 60_000 });
+    runTick(mod, s, 1_000 + MAN_THAY_DO.het + 60_000, ctx(s.config, 1_000 + MAN_THAY_DO.het + 60_000));
+    expect(s.thayDo).toBeNull();
+  });
+
+  it('các mốc màn theo đúng thứ tự: cửa kín rồi mới đổi đồ, đổi xong mới mở cửa', () => {
+    expect(MAN_THAY_DO.dongCua).toBeLessThan(MAN_THAY_DO.doiDo);
+    expect(MAN_THAY_DO.doiDo).toBeLessThan(MAN_THAY_DO.moCua);
+    expect(MAN_THAY_DO.moCua).toBeLessThan(MAN_THAY_DO.het);
+  });
+
+  it('hợp đồng giữ màn thay đồ; thiếu mốc thì bỏ', () => {
+    const td = { id: 3, nguoi: 'vu-cong-2', khach: 'Minh', mon: ['/m/x/tu-do/a/'], tu: 1, den: 2, moc: MAN_THAY_DO };
+    expect(docVuCong3D(JSON.stringify({ model: '/m/x/a.glb', thayDo: td }))?.thayDo).toEqual(td);
+    expect(docVuCong3D(JSON.stringify({ model: '/m/x/a.glb', thayDo: { ...td, moc: {} } }))?.thayDo).toBeUndefined();
   });
 });

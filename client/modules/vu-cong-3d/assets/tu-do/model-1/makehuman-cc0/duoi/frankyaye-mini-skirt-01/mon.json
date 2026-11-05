@@ -3,12 +3,12 @@
  "ten": "Váy ngắn caro",
  "o": "duoi",
  "nguon": "makehuman-cc0",
- "giayPhep": "AGPL3 (see also http://www.makehuman.org/doc/node/external_tools_license.html)",
+ "than": "model-1",
+ "gioi": "nu",
+ "tuoi": "nguoi-lon",
+ "giayPhep": "CC0",
  "tacGia": "frankyaye",
  "che": [],
  "tamGiac": 860,
- "mhclo": "frankyaye_mini_skirt_01.mhclo",
- "than": "model-1",
- "gioi": "nu",
- "tuoi": "nguoi-lon"
+ "mhclo": "frankyaye_mini_skirt_01.mhclo"
 }

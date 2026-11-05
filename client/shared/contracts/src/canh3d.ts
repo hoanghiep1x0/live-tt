@@ -22,7 +22,14 @@ export interface NhomDamDong {
   khuVuc: string;
   bo: readonly string[];
   theoNhom: boolean;
+  /** Món tủ đồ cả nhóm này mặc (URL thư mục món, như `VuCong3D.mon`). Có thì thay cho `bo`. */
+  mon?: readonly string[];
+  /** Nhiều bộ tủ đồ (mỗi bộ là danh sách URL thư mục món, đã kèm lót): mỗi người trong nhóm bốc một bộ — đám đông
+   *  không ai giống ai. Có thì thay cho `mon` và `bo`. */
+  monBo?: readonly (readonly string[])[];
 }
+
+const laChuoi = (x: unknown): boolean => Array.isArray(x) && x.every((m) => typeof m === 'string');
 
 function laNhom(x: unknown): x is NhomDamDong {
   const n = x as Partial<NhomDamDong> | null;
@@ -34,7 +41,9 @@ function laNhom(x: unknown): x is NhomDamDong {
     typeof n.khuVuc === 'string' &&
     Array.isArray(n.bo) &&
     n.bo.every((b) => typeof b === 'string') &&
-    typeof n.theoNhom === 'boolean'
+    typeof n.theoNhom === 'boolean' &&
+    (n.mon === undefined || laChuoi(n.mon)) &&
+    (n.monBo === undefined || (Array.isArray(n.monBo) && n.monBo.every(laChuoi)))
   );
 }
 
@@ -61,6 +70,42 @@ export interface VuCong3D {
    *  Có món thì thiết kế ẩn bộ đồ dựng sẵn trong GLB (`trangPhuc`), gắn món vào xương từng vũ công và ẩn da dưới
    *  món theo ảnh mặt nạ. Danh sách đã đủ che (module tự thêm đồ lót) — thiết kế không phải kiểm. */
   mon?: readonly string[];
+  /** Món tủ đồ riêng của từng người: id người (như `an`) → URL thư mục món. Có thì người đó mặc các món này, bỏ qua
+   *  `boRieng`, `trangPhuc` và `mon` của cả nhóm. Đã đủ che như `mon`. */
+  monRieng?: Readonly<Record<string, readonly string[]>>;
+  /** Màn thay đồ VIP (quà lớn): thiết kế dựng cánh cửa quanh `nguoi`, đóng lại, bùng nổ, mở ra trong bộ `mon`
+   *  (URL thư mục món, đã kèm lót) rồi mặc tới `den`. Id mới là diễn lại từ đầu. */
+  thayDo?: ThayDo3D;
+}
+
+export interface ThayDo3D {
+  id: number;
+  nguoi: string;
+  /** Tên khách tặng quà — thiết kế hiện lời cảm ơn; rỗng thì không. */
+  khach: string;
+  mon: readonly string[];
+  /** Lúc bắt đầu màn và lúc hết mặc đồ VIP (ms, cùng đồng hồ với `Date.now()`). */
+  tu: number;
+  den: number;
+  /** Các mốc trong màn (ms tính từ `tu`): cửa đóng kín, đổi đồ (sau cửa), cửa mở, hết màn. */
+  moc: { dongCua: number; doiDo: number; moCua: number; het: number };
+}
+
+function laThayDo(x: unknown): x is ThayDo3D {
+  const t = x as Partial<ThayDo3D> | null;
+  const m = t?.moc as Partial<ThayDo3D['moc']> | undefined;
+  return (
+    typeof t === 'object' &&
+    t !== null &&
+    typeof t.id === 'number' &&
+    typeof t.nguoi === 'string' &&
+    typeof t.khach === 'string' &&
+    laChuoi(t.mon) &&
+    typeof t.tu === 'number' &&
+    typeof t.den === 'number' &&
+    m !== undefined &&
+    [m.dongCua, m.doiDo, m.moCua, m.het].every((v) => typeof v === 'number')
+  );
 }
 
 /** Đọc thuộc tính `data-canh3d`. Sai dạng thì `null` — thiết kế coi như không có module. */
@@ -85,6 +130,12 @@ export function docVuCong3D(raw: string | null | undefined): VuCong3D | null {
         : {}),
       ...(Array.isArray(v.damDong) && v.damDong.every(laNhom) ? { damDong: v.damDong } : {}),
       ...(Array.isArray(v.mon) && v.mon.every((x) => typeof x === 'string') ? { mon: v.mon } : {}),
+      ...(typeof v.monRieng === 'object' &&
+      v.monRieng !== null &&
+      Object.values(v.monRieng).every((ds) => Array.isArray(ds) && ds.every((x) => typeof x === 'string'))
+        ? { monRieng: v.monRieng }
+        : {}),
+      ...(laThayDo(v.thayDo) ? { thayDo: v.thayDo } : {}),
     };
   } catch {
     return null;

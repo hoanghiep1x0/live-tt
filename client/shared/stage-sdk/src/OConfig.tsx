@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   O_TU_DO,
   bamMon,
@@ -16,12 +16,18 @@ import type { ConfigField, Json } from '@live/contracts';
 import { useDesignId } from './Stage';
 import { moduleAssetUrl } from './assets';
 import { useTuDo, xoaTuDo } from './tu-do';
+import { XemThuDo } from './XemThuDo';
 
 interface Props {
   field: ConfigField;
   value: Json;
   disabled: boolean;
   onChange(value: Json): void;
+  /** Cấu hình chứa ô này (của module, hoặc của mục trong `roster` / `list`) — cho ô cần đọc ô anh em (`tu-do` → `boSan`). */
+  cfg?: Readonly<Record<string, Json>> | undefined;
+  /** Id module thật khi ô nằm trong `roster` / `list` (lúc đó `moduleId` chỉ là tiền tố id DOM) — ô `tu-do` cần nó
+   *  để đọc tủ đồ và asset của module. */
+  modId?: string | undefined;
 }
 
 function soHoac(v: Json, mac: number): number {
@@ -308,7 +314,7 @@ function OMedia({
  *  Tailwind, còn sân khấu phải nhẹ vì nó là thứ lên sóng. Thứ dùng chung là
  *  `ConfigField` của hợp đồng — tức là phần dễ lệch nhau nhất. */
 /** `roster`: hàng tab con, mỗi mục một tab; dưới là các ô của mục đang chọn. */
-function ODanhSach({ moduleId, field: f, value, disabled, onChange }: Props & { moduleId: string }) {
+function ODanhSach({ moduleId, modId, field: f, value, disabled, onChange }: Props & { moduleId: string }) {
   const muc = f.options ?? [];
   const [chon, setChon] = useState('');
   const dang = muc.some((m) => m.value === chon) ? chon : (muc[0]?.value ?? '');
@@ -336,7 +342,9 @@ function ODanhSach({ moduleId, field: f, value, disabled, onChange }: Props & { 
           <OConfig
             key={`${dang}/${o.key}`}
             moduleId={`${moduleId}-${f.key}-${dang}`}
+            modId={modId ?? moduleId}
             field={o}
+            cfg={cua}
             value={cua[o.key] ?? null}
             disabled={disabled}
             onChange={(x) => onChange(suaRoster(value, dang, o.key, x))}
@@ -347,55 +355,126 @@ function ODanhSach({ moduleId, field: f, value, disabled, onChange }: Props & { 
   );
 }
 
+/** Nút việc không lùi lại được (bỏ, xoá): bấm lần đầu nút đổi chữ thành "Chắc chưa?", bấm lần nữa trong 3 giây mới
+ *  làm. Không dùng `window.confirm`: khung xem trong app / OBS chặn hộp thoại, confirm trả false luôn — nút như chết. */
+function NutChac({
+  className,
+  chu,
+  hoi = 'Chắc chưa?',
+  title,
+  disabled,
+  lam,
+}: {
+  className: string;
+  chu: string;
+  hoi?: string;
+  title?: string;
+  disabled: boolean;
+  lam(): void;
+}) {
+  const [cho, setCho] = useState(false);
+  useEffect(() => {
+    if (!cho) return;
+    const h = setTimeout(() => setCho(false), 3_000);
+    return () => clearTimeout(h);
+  }, [cho]);
+  return (
+    <button
+      type="button"
+      className={cho ? `${className} bx-chac` : className}
+      title={title}
+      aria-label={cho ? hoi : title}
+      disabled={disabled}
+      onClick={() => {
+        if (cho) { setCho(false); lam(); } else setCho(true);
+      }}
+    >
+      {cho ? hoi : chu}
+    </button>
+  );
+}
+
 /** Id cho mục mới của `list`. Chỉ cần không trùng trong một danh sách. */
 function idMoi(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-/** `list`: mỗi mục một thẻ (các ô của mục + nút Bỏ), dưới cùng nút Thêm. */
-function ODanhSachMuc({ moduleId, field: f, value, disabled, onChange }: Props & { moduleId: string }) {
+/** `list`: bảng gọn mọi mục (tên, bật / tắt, Sửa, Bỏ) và nút Thêm ở trên; dưới là một thẻ duy nhất cho mục đang sửa
+ *  (các ô của mục) — chọn trong bảng xong sửa ngay bên dưới. Danh sách dài (kho nhân vật hàng chục người, mỗi người một tủ đồ) không phải kéo qua từng thẻ. */
+function ODanhSachMuc({ moduleId, modId, field: f, value, disabled, onChange }: Props & { moduleId: string }) {
   const ds = mucList(value);
   const day = f.max !== undefined && ds.length >= f.max;
+  const idCua = (m: Record<string, Json>, i: number): string => (typeof m['id'] === 'string' && m['id'] !== '' ? m['id'] : String(i));
+  const tenCua = (m: Record<string, Json>, i: number): string =>
+    typeof m['ten'] === 'string' && m['ten'] !== '' ? m['ten'] : `${f.label} ${i + 1}`;
+  const [chon, setChon] = useState('');
+  const i = Math.max(0, ds.findIndex((m, j) => idCua(m, j) === chon));
+  const m = ds[i];
+  // ô bật / tắt đầu tiên của mục (Bật nhóm, Có trong đám đông…) — hiện thành dấu trong bảng
+  const bat = (f.fields ?? []).find((o) => o.type === 'toggle');
   return (
     <div className="bx-ds">
       <span className="bx-ds-nhan">{f.label}</span>
       {f.hint === undefined ? null : <span className="bx-goi">{f.hint}</span>}
-      {ds.map((m, i) => {
-        const id = typeof m['id'] === 'string' ? m['id'] : String(i);
-        return (
-          <section key={id} className="bx-muc-the">
-            <div className="bx-muc-the-dau">
-              <b>{typeof m['ten'] === 'string' && m['ten'] !== '' ? m['ten'] : `${f.label} ${i + 1}`}</b>
-              <button
-                type="button"
-                className="bx-muc-bo"
-                disabled={disabled}
-                onClick={() => onChange(boList(value, i))}
-              >
-                Bỏ
-              </button>
-            </div>
-            {(f.fields ?? []).map((o) => (
-              <OConfig
-                key={o.key}
-                moduleId={`${moduleId}-${f.key}-${id}`}
-                field={o}
-                value={m[o.key] ?? null}
-                disabled={disabled}
-                onChange={(x) => onChange(suaList(value, i, o.key, x))}
-              />
-            ))}
-          </section>
-        );
-      })}
+      {ds.length === 0 ? null : (
+        <table className="bx-muc-bang">
+          <tbody>
+            {ds.map((x, j) => {
+              const id = idCua(x, j);
+              return (
+                <tr key={id} className={j === i ? 'bx-muc-dang' : undefined}>
+                  <td className="bx-muc-so">{j + 1}</td>
+                  <td className="bx-muc-ten">{tenCua(x, j)}</td>
+                  <td className="bx-muc-bat">{bat === undefined ? null : x[bat.key] === false ? 'tắt' : '✓'}</td>
+                  <td className="bx-muc-nut">
+                    <button type="button" className="bx-muc-sua" disabled={j === i} onClick={() => setChon(id)}>
+                      {j === i ? 'Đang sửa' : 'Sửa'}
+                    </button>
+                    <NutChac
+                      className="bx-muc-bo"
+                      chu="Bỏ"
+                      title={`Bỏ ${tenCua(x, j)}`}
+                      disabled={disabled}
+                      lam={() => onChange(boList(value, j))}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
       <button
         type="button"
         className="bx-muc-them"
         disabled={disabled || day}
-        onClick={() => onChange(themList(f, value, idMoi()))}
+        onClick={() => {
+          const id = idMoi();
+          onChange(themList(f, value, id));
+          setChon(id); // mục mới thành mục đang sửa
+        }}
       >
         {day ? `Tối đa ${f.max}` : `+ Thêm ${f.label.toLowerCase()}`}
       </button>
+      {m === undefined ? null : (
+        <section key={idCua(m, i)} className="bx-muc-the">
+          <div className="bx-muc-the-dau">
+            <b>Đang sửa: {tenCua(m, i)}</b>
+          </div>
+          {(f.fields ?? []).map((o) => (
+            <OConfig
+              key={o.key}
+              moduleId={`${moduleId}-${f.key}-${idCua(m, i)}`}
+              modId={modId ?? moduleId}
+              field={o}
+              cfg={m}
+              value={m[o.key] ?? null}
+              disabled={disabled}
+              onChange={(x) => onChange(suaList(value, i, o.key, x))}
+            />
+          ))}
+        </section>
+      )}
     </div>
   );
 }
@@ -403,7 +482,7 @@ function ODanhSachMuc({ moduleId, field: f, value, disabled, onChange }: Props &
 const TEN_VUNG: Record<string, string> = { nguc: 'ngực', hang: 'vùng kín' };
 
 /** `tu-do`: tủ đồ của module — tab theo ô, lưới ảnh bấm mặc / cởi, xoá món hoặc cả nguồn ngay tại đây. */
-function OTuDo({ moduleId, field: f, value, disabled, onChange }: Props & { moduleId: string }) {
+function OTuDo({ moduleId, field: f, value, cfg, disabled, onChange }: Props & { moduleId: string }) {
   // Chỉ đồ ôm theo thân nhân vật của module, và chỉ đồ người lớn (locTuDo).
   const than = f.than ?? '';
   const ds = locTuDo(useTuDo(moduleId), than);
@@ -419,8 +498,8 @@ function OTuDo({ moduleId, field: f, value, disabled, onChange }: Props & { modu
   const tuThem = bo === null ? [] : bo.filter((m) => !dangMac.includes(khoaMon(m)));
   const nguon = [...new Set(ds.map((m) => m.nguon))];
 
+  // hỏi lại bằng NutChac (bấm hai lần) — xoá là xoá hẳn thư mục trên máy
   async function xoa(duong: string, ten: string): Promise<void> {
-    if (!window.confirm(`Xoá "${ten}" khỏi tủ đồ? Xoá là xoá hẳn thư mục trên máy.`)) return;
     const loi = await xoaTuDo(moduleId, duong);
     setBao(loi === null ? `Đã xoá ${ten}` : `Không xoá được: ${loi}`);
     if (loi === null) onChange(dangMac.filter((k) => !k.startsWith(duong)));
@@ -446,6 +525,13 @@ function OTuDo({ moduleId, field: f, value, disabled, onChange }: Props & { modu
               </button>
             )}
           </p>
+          {f.mau === undefined ? null : (
+            <XemThuDo
+              url={moduleAssetUrl(moduleId, f.mau)}
+              mon={(bo ?? []).map((m) => moduleAssetUrl(moduleId, m.duong))}
+              bo={f.boSan === undefined || typeof cfg?.[f.boSan] !== 'string' ? null : (cfg[f.boSan] as string)}
+            />
+          )}
           <div className="bx-tabs bx-ds-tabs" role="tablist" aria-label={f.label}>
             {coO.map((x) => (
               <button
@@ -482,16 +568,14 @@ function OTuDo({ moduleId, field: f, value, disabled, onChange }: Props & { modu
                         {m.che.length === 0 ? 'không che vùng nào' : `che ${m.che.map((v) => TEN_VUNG[v] ?? v).join(', ')}`}
                       </small>
                     </button>
-                    <button
-                      type="button"
+                    <NutChac
                       className="bx-td-xoa"
-                      aria-label={`Xoá ${m.ten}`}
-                      title="Xoá món này khỏi tủ"
+                      chu="✕"
+                      hoi="Xoá?"
+                      title={`Xoá ${m.ten} khỏi tủ (xoá hẳn thư mục)`}
                       disabled={disabled}
-                      onClick={() => void xoa(k, m.ten)}
-                    >
-                      ✕
-                    </button>
+                      lam={() => void xoa(k, m.ten)}
+                    />
                   </div>
                 );
               })}
@@ -500,14 +584,13 @@ function OTuDo({ moduleId, field: f, value, disabled, onChange }: Props & { modu
             {nguon.map((n) => (
               <span key={n}>
                 {n} · {ds.filter((m) => m.nguon === n).length} món
-                <button
-                  type="button"
+                <NutChac
                   className="bx-muc-bo"
+                  chu="Xoá cả nguồn"
+                  hoi="Chắc xoá cả nguồn?"
                   disabled={disabled}
-                  onClick={() => void xoa(`${than}/${n}`, `cả nguồn ${n}`)}
-                >
-                  Xoá cả nguồn
-                </button>
+                  lam={() => void xoa(`${than}/${n}`, `cả nguồn ${n}`)}
+                />
               </span>
             ))}
           </div>
@@ -518,15 +601,25 @@ function OTuDo({ moduleId, field: f, value, disabled, onChange }: Props & { modu
   );
 }
 
-export function OConfig({ moduleId, field: f, value, disabled, onChange }: Props & { moduleId: string }) {
+export function OConfig({
+  moduleId,
+  field: f,
+  value,
+  disabled,
+  onChange,
+  cfg,
+  modId,
+}: Props & { moduleId: string }) {
   if (f.type === 'tu-do') {
-    return <OTuDo moduleId={moduleId} field={f} value={value} disabled={disabled} onChange={onChange} />;
+    return (
+      <OTuDo moduleId={modId ?? moduleId} field={f} value={value} cfg={cfg} disabled={disabled} onChange={onChange} />
+    );
   }
   if (f.type === 'list') {
-    return <ODanhSachMuc moduleId={moduleId} field={f} value={value} disabled={disabled} onChange={onChange} />;
+    return <ODanhSachMuc moduleId={moduleId} modId={modId} field={f} value={value} disabled={disabled} onChange={onChange} />;
   }
   if (f.type === 'roster') {
-    return <ODanhSach moduleId={moduleId} field={f} value={value} disabled={disabled} onChange={onChange} />;
+    return <ODanhSach moduleId={moduleId} modId={modId} field={f} value={value} disabled={disabled} onChange={onChange} />;
   }
   const id = `xem-${moduleId}-${f.key}`;
   const nhan = f.unit === undefined ? f.label : `${f.label} (${f.unit})`;

@@ -177,7 +177,15 @@ export const NHAN_VAT = [
 export const THEO_NHOM = '';
 
 /** Nút trên thẻ (`manifest.actions`) — đúng các `op` mà `onAction` nhận. */
-export const NUT = { nhay: 'nhay', thoi: 'thoi' } as const;
+export const NUT = { nhay: 'nhay', thoi: 'thoi', thayDo: 'thay-do' } as const;
+
+/** Màn thay đồ VIP: cánh cửa trồi lên, đóng lại, bùng nổ, mở ra là đồ mới. Thiết kế chạy đúng theo các mốc này (ms tính
+ *  từ `ThayDo.tu`) — đổi ở đây thì phần vẽ theo, không phải sửa hai chỗ. */
+export const MAN_THAY_DO = { dongCua: 1_600, doiDo: 2_600, moCua: 3_200, het: 7_600 } as const;
+
+/** Người được thay đồ khi ô "Ai thay đồ" là ngẫu nhiên: ba vũ công trên sàn. */
+export const AI_THAY_DO = ['vu-cong-2', 'vu-cong-1', 'vu-cong-3'] as const;
+export const AI_NGAU_NHIEN = 'ngau-nhien';
 
 export const MODEL = 'model-1.glb';
 
@@ -198,6 +206,32 @@ export interface State {
   dongDien: { dieu: string; den: number | null; tu: number } | null;
   /** Người vận hành đã bấm "Thôi nhảy": hết đồng diễn thì đứng nhún nhẹ, không nhảy tự do. */
   nghi: boolean;
+  /** Màn thay đồ VIP gần nhất (đang diễn hoặc người đó đang mặc đồ VIP tới `den`); `null` = không có. */
+  thayDo: ThayDo | null;
+  /** Đếm màn thay đồ: id màn — thiết kế thấy id mới là diễn lại từ đầu, và là hạt giống bốc bộ VIP. */
+  soMan: number;
+}
+
+export interface ThayDo {
+  id: number;
+  /** Người thay đồ (id trong `NHAN_VAT`). */
+  nguoi: string;
+  /** Tên khách tặng quà (rỗng khi người vận hành bấm nút). */
+  khach: string;
+  /** Lúc bắt đầu màn (ms). */
+  tu: number;
+  /** Mặc đồ VIP tới lúc này rồi về đồ thường. */
+  den: number;
+}
+
+/** Bắt đầu màn thay đồ VIP — màn đang diễn dở thì bỏ qua (cửa đang đóng mà đổi người là hỏng cảnh). */
+function thayDoVip(state: State, now: number, rand: () => number, khach: string): void {
+  const td = state.thayDo;
+  if (td !== null && now < td.tu + MAN_THAY_DO.het) return;
+  const chon = state.config.thayDoAi;
+  const nguoi = chon === AI_NGAU_NHIEN ? (AI_THAY_DO[Math.floor(rand() * AI_THAY_DO.length) % AI_THAY_DO.length] as string) : chon;
+  state.soMan += 1;
+  state.thayDo = { id: state.soMan, nguoi, khach, tu: now, den: now + MAN_THAY_DO.het + state.config.giuVipPhut * 60_000 };
 }
 
 /** Các bộ được phép mặc theo cấu hình, đúng thứ tự `TRANG_PHUC`. */
@@ -252,12 +286,15 @@ function batDauMan(state: State, now: number, rand: () => number, giay: number |
 
 export const core: ModuleCore<Config, State> = {
   init(config) {
-    return { config, bo: boHopLe(config.boDangMac, config), boTu: 0, dongDien: null, nghi: false };
+    return { config, bo: boHopLe(config.boDangMac, config), boTu: 0, dongDien: null, nghi: false, thayDo: null, soMan: 0 };
   },
 
   hooks: {
     gift: {
-      run(state, _item, ctx): Effect[] {
+      run(state, item, ctx): Effect[] {
+        // quà đủ lớn: màn thay đồ VIP (xu thật TikTok của cả lượt tặng)
+        const xu = item.coins ?? item.xu ?? 0;
+        if (state.config.thayDoBat && xu >= state.config.thayDoXu) thayDoVip(state, ctx.now, ctx.rand, item.name);
         if (state.config.doiDoKhiCoQua) doiBo(state, ctx.now);
         if (state.config.dongDienKhiCoQua) {
           // Quà dồn khi đang đồng diễn: kéo dài màn đang nhảy, không nhảy sang điệu khác
@@ -277,6 +314,7 @@ export const core: ModuleCore<Config, State> = {
 
   onTick(state, now, ctx) {
     if (state.boTu === 0) state.boTu = now;
+    if (state.thayDo !== null && now >= state.thayDo.den) state.thayDo = null;
     const phut = state.config.doiDoPhut;
     if (phut > 0 && now - state.boTu >= phut * 60_000) doiBo(state, now);
     const dd = state.dongDien;
@@ -303,6 +341,8 @@ export const core: ModuleCore<Config, State> = {
     } else if (op === NUT.thoi) {
       state.nghi = true;
       state.dongDien = null;
+    } else if (op === NUT.thayDo) {
+      thayDoVip(state, ctx.now, ctx.rand, '');
     }
     return [];
   },

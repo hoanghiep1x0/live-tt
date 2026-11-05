@@ -1072,6 +1072,17 @@ select.bx-o option {
 }
 .bx-td-o > .bx-anh-o {
   flex: 1;
+  opacity: 1; /* tủ đồ: không làm mờ món chưa mặc — món đang mặc đã có viền vàng */
+}
+/* Ảnh món nền trong: caro trắng để đồ tối màu (giày đen, kính) nổi hẳn lên; contain để không cắt mép món */
+.bx-td-o .bx-anh-o img {
+  object-fit: contain;
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(45deg, #ebebeb 25%, transparent 25%, transparent 75%, #ebebeb 75%),
+    linear-gradient(45deg, #ebebeb 25%, transparent 25%, transparent 75%, #ebebeb 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 6px 6px;
 }
 .bx-td-xoa {
   position: absolute;
@@ -1139,4 +1150,216 @@ select.bx-o option {
   color: #ffb3a6;
   border-left: 2px solid #ff7a66;
   padding-left: 6px;
+}
+
+/* Khung thử đồ 3D trên đầu tủ đồ (XemThuDo) */
+.bx-thu-do {
+  position: relative;
+  height: 300px;
+  margin: 6px 0 10px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 35%, #f4f1ec 0%, #cfc9c0 70%, #b9b2a8 100%);
+  cursor: grab;
+}
+.bx-thu-do > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.bx-thu-do-tt,
+.bx-thu-do-goi {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  font-size: 11px;
+  color: #4a443c;
+  pointer-events: none;
+}
+.bx-thu-do-tt {
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* Bảng chi phí buổi live: góc phải dưới, vùng đen ngoài khung 9:16. Px chứ
+   không cqw — nó không thuộc sân khấu. */
+.bx-chi-phi {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10000;
+  width: 260px;
+  max-height: calc(100vh - 70px);
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(20, 16, 12, 0.88);
+  border: 1px solid rgba(243, 211, 122, 0.35);
+  font: 13px/1.45 ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  color: #f4efe6;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+.bx-cp-dau {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.bx-cp-nhan {
+  flex: 1;
+  font-size: 11px;
+  opacity: 0.75;
+}
+.bx-cp-tong {
+  font-size: 18px;
+  color: #f3d37a;
+}
+.bx-cp-usd {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.bx-cp-mui {
+  font-size: 11px;
+  opacity: 0.6;
+}
+.bx-cp-tt {
+  margin: 2px 0 0;
+  font-size: 11px;
+  opacity: 0.8;
+}
+.bx-cp-tt[data-live='true']::before {
+  content: '●';
+  margin-right: 4px;
+  color: #ff4d5e;
+}
+.bx-cp-chua-ro {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #ffb3a6;
+}
+.bx-cp-bang {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+}
+.bx-cp-bang th,
+.bx-cp-bang td {
+  padding: 5px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  vertical-align: top;
+  font-size: 12px;
+}
+.bx-cp-bang th {
+  text-align: left;
+  font-weight: 600;
+}
+.bx-cp-bang td {
+  text-align: right;
+  white-space: nowrap;
+  color: #f3d37a;
+}
+.bx-cp-bang small {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  color: #f4efe6;
+  opacity: 0.65;
+}
+.bx-cp-goi {
+  margin: 6px 0 0;
+  font-size: 10px;
+  line-height: 1.4;
+  opacity: 0.6;
+}
+.bx-cp-so {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.bx-cp-so b {
+  color: #f3d37a;
+  font-variant-numeric: tabular-nums;
+}
+.bx-cp-so small {
+  display: block;
+  font-size: 10px;
+  opacity: 0.65;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bx-cp-truyen {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+/* Bảng gọn của ô `list`: một dòng mỗi mục, mục đang sửa sáng lên (thẻ sửa nằm phía trên) */
+.bx-muc-bang {
+  width: 100%;
+  margin: 8px 0;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.bx-muc-bang td {
+  padding: 6px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  vertical-align: middle;
+}
+.bx-muc-bang tr.bx-muc-dang td {
+  background: rgba(242, 196, 90, 0.1);
+}
+.bx-muc-so {
+  width: 22px;
+  color: #9b958a;
+}
+.bx-muc-ten {
+  color: #f4efe6;
+}
+.bx-muc-bat {
+  width: 36px;
+  color: #7fd39b;
+  text-align: center;
+}
+.bx-muc-nut {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+.bx-muc-nut > button + button {
+  margin-left: 6px;
+}
+.bx-muc-sua {
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: #f4efe6;
+  font: inherit;
+  cursor: pointer;
+}
+.bx-muc-sua:disabled {
+  border-color: rgba(242, 196, 90, 0.6);
+  color: #f2c45a;
+  cursor: default;
+}
+
+/* NutChac đang chờ bấm lần hai */
+.bx-chac,
+.bx-chac:hover {
+  background: #c0392b;
+  border-color: #e74c3c;
+  color: #fff;
+  opacity: 1;
 }

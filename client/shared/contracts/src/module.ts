@@ -84,6 +84,10 @@ export interface ConfigField {
   fields?: readonly ConfigField[];
   /** Cho `tu-do`: thân nhân vật của module (vd `model-1`) — bảng chỉ hiện đồ ôm theo thân này. */
   than?: string;
+  /** Cho `tu-do`: GLB thân trong assets của module (vd `model-1.glb`) — có thì bảng dựng khung thử đồ 3D. */
+  mau?: string;
+  /** Cho `tu-do`: khoá ô anh em giữ bộ dựng sẵn (vd `bo`) — khung thử đồ mặc bộ đó khi chưa chọn món nào. */
+  boSan?: string;
   /** Cho `list`: mục mới khi bấm Thêm (chưa có `id` — tự sinh). */
   moi?: { readonly [k: string]: Json };
 }

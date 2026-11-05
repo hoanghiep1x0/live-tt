@@ -3,6 +3,9 @@
  "ten": "Suit dạ tiệc trắng",
  "o": "lien",
  "nguon": "makehuman-cc0",
+ "than": "model-1",
+ "gioi": "nu",
+ "tuoi": "nguoi-lon",
  "giayPhep": "CC0",
  "tacGia": "MRT",
  "che": [
@@ -10,8 +13,5 @@
   "hang"
  ],
  "tamGiac": 7650,
- "mhclo": "toigo_suit_with_dinner_jacket.mhclo",
- "than": "model-1",
- "gioi": "nu",
- "tuoi": "nguoi-lon"
+ "mhclo": "toigo_suit_with_dinner_jacket.mhclo"
 }

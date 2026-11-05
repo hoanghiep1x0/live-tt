@@ -3,12 +3,12 @@
  "ten": "Giày MPFB 2",
  "o": "giay",
  "nguon": "mpfb-he-thong",
+ "than": "model-1",
+ "gioi": "chung",
+ "tuoi": "nguoi-lon",
  "giayPhep": "CC0",
  "tacGia": "MakeHuman (tài sản hệ thống MPFB)",
  "che": [],
  "tamGiac": 1532,
- "mhclo": "shoes02.mhclo",
- "than": "model-1",
- "gioi": "chung",
- "tuoi": "nguoi-lon"
+ "mhclo": "shoes02.mhclo"
 }

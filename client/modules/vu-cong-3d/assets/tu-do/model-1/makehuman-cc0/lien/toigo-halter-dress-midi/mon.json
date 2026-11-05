@@ -3,14 +3,14 @@
  "ten": "Đầm yếm midi",
  "o": "lien",
  "nguon": "makehuman-cc0",
+ "than": "model-1",
+ "gioi": "nu",
+ "tuoi": "nguoi-lon",
  "giayPhep": "CC0",
  "tacGia": "MRT",
  "che": [
   "nguc"
  ],
  "tamGiac": 2592,
- "mhclo": "toigo_halter_dress_midi.mhclo",
- "than": "model-1",
- "gioi": "nu",
- "tuoi": "nguoi-lon"
+ "mhclo": "toigo_halter_dress_midi.mhclo"
 }
