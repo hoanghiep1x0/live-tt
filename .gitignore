@@ -18,8 +18,16 @@ database/designs/
 database/secrets.json
 database/voice.json
 
-# Rust
+# Rust (target-claude: thư mục build riêng của các session Claude)
 backend/target/
+backend/target-claude/
+
+# Python
+__pycache__/
+*.pyc
+
+# Gói tài nguyên tải về (bên thứ ba, nặng) — dùng tại chỗ, không đưa vào repo
+download/
 
 # Hệ điều hành
 Thumbs.db

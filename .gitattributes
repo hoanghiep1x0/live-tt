@@ -1,0 +1,2 @@
+# Script shell chạy trên Linux (hpc-station): luôn LF, kể cả khi checkout trên Windows (core.autocrlf=true).
+*.sh text eol=lf
