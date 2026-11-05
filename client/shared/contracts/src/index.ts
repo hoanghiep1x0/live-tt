@@ -53,7 +53,7 @@ export type {
 } from './module';
 
 export { CANH3D_ATTR, KHU_VUC, docVuCong3D } from './canh3d';
-export type { NhomDamDong, ThayDo3D, VuCong3D } from './canh3d';
+export type { AnhGoc, NhomDamDong, ThayDo3D, VuCong3D } from './canh3d';
 
 export { TAB_GIONG, boVai, ganGiong, khoaGiong, loiGiong, oChonGiong, tachVai } from './giong';
 export type { DoanDoc, GiongCoNha, GiongTrongDan } from './giong';

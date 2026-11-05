@@ -27,6 +27,30 @@ export interface NhomDamDong {
   /** Nhiều bộ tủ đồ (mỗi bộ là danh sách URL thư mục món, đã kèm lót): mỗi người trong nhóm bốc một bộ — đám đông
    *  không ai giống ai. Có thì thay cho `mon` và `bo`. */
   monBo?: readonly (readonly string[])[];
+  /** Nhân vật ảnh động trong nhóm: đứng trên sàn thành tấm ảnh quay về camera, chạy khung của ảnh, đổi ảnh theo góc
+   *  camera nếu có ảnh nhiều góc. Người trong nhóm chia nhau cả `monBo` lẫn `anh`. */
+  anh?: readonly (string | AnhGoc)[];
+}
+
+/** Một nhân vật ảnh động nhiều góc (URL ảnh động mỗi góc). Thiếu góc nào thì lấy góc gần nhất có ảnh; góc bên kia lấy
+ *  bằng lật gương. Ảnh chéo / nghiêng vẽ người quay sang trái màn hình. */
+export interface AnhGoc {
+  truoc: string;
+  cheo?: string;
+  nghieng?: string;
+  cheoSau?: string;
+  sau?: string;
+}
+
+function laAnh(x: unknown): x is string | AnhGoc {
+  if (typeof x === 'string') return true;
+  const a = x as Partial<AnhGoc> | null;
+  return (
+    typeof a === 'object' &&
+    a !== null &&
+    typeof a.truoc === 'string' &&
+    [a.cheo, a.nghieng, a.cheoSau, a.sau].every((v) => v === undefined || typeof v === 'string')
+  );
 }
 
 const laChuoi = (x: unknown): boolean => Array.isArray(x) && x.every((m) => typeof m === 'string');
@@ -43,7 +67,8 @@ function laNhom(x: unknown): x is NhomDamDong {
     n.bo.every((b) => typeof b === 'string') &&
     typeof n.theoNhom === 'boolean' &&
     (n.mon === undefined || laChuoi(n.mon)) &&
-    (n.monBo === undefined || (Array.isArray(n.monBo) && n.monBo.every(laChuoi)))
+    (n.monBo === undefined || (Array.isArray(n.monBo) && n.monBo.every(laChuoi))) &&
+    (n.anh === undefined || (Array.isArray(n.anh) && n.anh.every(laAnh)))
   );
 }
 

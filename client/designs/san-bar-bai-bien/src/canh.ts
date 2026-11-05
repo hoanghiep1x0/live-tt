@@ -17,6 +17,7 @@ const DANCER_HEIGHT = 1.65;
 const SWITCH_SECONDS = 16;
 import { BANG_MAU, BPM, nhipTai } from './nhip';
 import { taoManThayDo } from './thay-do';
+import { taoNguoiAnh } from './anh-dong';
 const PALETTE = BANG_MAU.map((c) => new THREE.Color(c));
 
 /** Dựng cảnh vào `mount`. `tex` = đường dẫn thư mục texture của kiểu (qua useAsset). `model` (tuỳ chọn) = GLB vũ công
@@ -190,6 +191,7 @@ export async function start({ space, model = null, mount, tex }: {
     thayDo !== null && a.id === thayDo.nguoi && now >= thayDo.tu + thayDo.moc.doiDo && now < thayDo.den;
   let damDong = [], kyDamDong = '', dongDam = []; // nhóm đám đông (`VuCong3D.damDong`) và người đã dựng
   let dangRa = []; // người đám đông đang bước ra khỏi sàn (nhóm bị bỏ / tắt / bớt người) — ra xa rồi mới dọn
+  let dongAnh = [], anhRa = []; // người ảnh động (GIF) trong đám đông, và người ảnh động đang trượt ra khỏi sàn
   const RA_GIAY = 3.5, RA_TOC = 1.3; // bước ra bao lâu, nhanh cỡ nào (m/s)
   const TOI_DA_DAM_DONG = 40; // mỗi người là một nhân vật có xương: hơn số này máy phát live vẽ không nổi
   let modelUrl = null, boChon = null, dieuChung = null, nghi = false, luotNap = 0, dung = false;
@@ -338,6 +340,8 @@ export async function start({ space, model = null, mount, tex }: {
 
   function boHet() {
     dangRa = [];
+    for (const p of [...dongAnh, ...anhRa]) p.don();
+    dongAnh = []; anhRa = [];
     for (const a of actors.splice(0)) {
       a.mixer.stopAllAction();
       a.obj.removeFromParent();
@@ -414,26 +418,34 @@ export async function start({ space, model = null, mount, tex }: {
     };
   }
 
-  // Xếp `n` chỗ đứng trong các ô chữ nhật [x0, x1, z0, z1] của khu vực theo ô bàn cờ: lưới chung cho mọi nhóm
-  // (cách đều `O_CO`), chỉ đứng ô cùng màu nên hàng sau lọt khe hàng trước. Lấp từ ô gần giữa sàn ra ngoài.
-  // Cả khối cùng quay một hướng: từ tâm ô chữ nhật về giữa sàn.
-  function raiCho(o, n, daCo) {
-    const O_CO = 1.1;
-    const ds = [];
-    for (const [x0, x1, z0, z1] of o) {
-      const goc = Math.atan2(S.nhin[0] - (x0 + x1) / 2, S.nhin[1] - (z0 + z1) / 2);
-      for (let i = Math.ceil(x0 / O_CO); i * O_CO <= x1; i++) {
-        for (let j = Math.ceil(z0 / O_CO); j * O_CO <= z1; j++) {
-          if ((i + j) % 2 === 0) ds.push([i * O_CO, j * O_CO, goc]);
-        }
-      }
-    }
-    const xa = ([x, z]) => Math.hypot(x - S.nhin[0], z - S.nhin[1]);
-    ds.sort((a, b) => xa(a) - xa(b) || a[0] - b[0] || a[1] - b[1]);
+  // Xếp `n` chỗ đứng CHIA ĐỀU trong các ô chữ nhật [x0, x1, z0, z1] của khu vực: mỗi người mới đứng ở ứng viên xa mọi
+  // người khác nhất trong K điểm bốc ngẫu nhiên (best-candidate của Mitchell) — trải đều khắp khu vực mà không thành lưới
+  // so le cứng. Tính cả người đã đứng (`daCo`: vũ công, nhóm khác). `rand` theo id nhóm: tải lại trang vẫn y chỗ cũ, nhóm
+  // mới thêm thì khác. Mỗi người quay mặt về camera (khách xem live), lệch vài độ cho tự nhiên.
+  function raiCho(o, n, daCo, rand) {
+    const K = 24, KC = 0.75;
+    const [cx, , cz] = S.camera.pos;
+    const dt = o.map(([x0, x1, z0, z1]) => Math.max(0, (x1 - x0) * (z1 - z0)));
+    const tong = dt.reduce((s, v) => s + v, 0);
     const ra = [];
-    for (const [x, z, goc] of ds) {
-      if (ra.length >= n) break;
-      if ([...daCo, ...ra].every(([px, pz]) => Math.hypot(px - x, pz - z) > 0.75)) ra.push([x, z, goc]);
+    if (tong <= 0) return ra;
+    const bocDiem = () => {
+      let r = rand() * tong, i = 0;
+      while (i < o.length - 1 && r > dt[i]) r -= dt[i++];
+      const [x0, x1, z0, z1] = o[i];
+      return [x0 + rand() * (x1 - x0), z0 + rand() * (z1 - z0)];
+    };
+    for (let k = 0; k < n; k++) {
+      let tot = null, xaNhat = -1;
+      for (let j = 0; j < K; j++) {
+        const [x, z] = bocDiem();
+        let gan = Infinity;
+        for (const [px, pz] of daCo) gan = Math.min(gan, Math.hypot(px - x, pz - z));
+        for (const [px, pz] of ra) gan = Math.min(gan, Math.hypot(px - x, pz - z));
+        if (gan > xaNhat) { xaNhat = gan; tot = [x, z]; }
+      }
+      if (!tot || xaNhat < KC) break; // khu vực đã kín
+      ra.push([tot[0], tot[1], Math.atan2(cx - tot[0], cz - tot[1]) + (rand() - 0.5) * 0.7]);
     }
     return ra;
   }
@@ -447,7 +459,15 @@ export async function start({ space, model = null, mount, tex }: {
       if (a.k < (soMoi.get(a.nhom) ?? 0)) boNguoi(a);
       else roiSan(a);
     }
-    dongDam = [];
+    for (const p of dongAnh) {
+      if (p.k < (soMoi.get(p.nhom) ?? 0)) p.don();
+      else {
+        const q = p.obj.position, l = Math.hypot(q.x - S.nhin[0], q.z - S.nhin[1]) || 1;
+        p.ra = { dx: (q.x - S.nhin[0]) / l, dz: (q.z - S.nhin[1]) / l, con: RA_GIAY };
+        anhRa.push(p);
+      }
+    }
+    dongDam = []; dongAnh = [];
     kyDamDong = JSON.stringify(damDong);
     if (!gltf || !S.khuVuc) return;
     const daCo = S.spots.map(([x, z]) => [x, z]);
@@ -457,9 +477,28 @@ export async function start({ space, model = null, mount, tex }: {
       const o = S.khuVuc[n.khuVuc];
       if (!o || con <= 0) continue;
       const rand = rngTu(n.id);
-      const cho = raiCho(o, Math.min(n.so, con), daCo);
+      const cho = raiCho(o, Math.min(n.so, con), daCo, rand);
+      // người trong nhóm: nhân vật ảnh động (gift) của kho trước — thêm ảnh là có mặt ngay, nhóm ít người cũng không bốc
+      // sót — rồi nhân vật 3D (món tủ đồ), thứ tự xáo theo hạt giống nhóm: nhóm nào cũng bắt đầu từ nhân vật khác
+      const nguoi = [...(n.anh ?? []).map((anh) => ({ anh })), ...(n.monBo ?? []).map((mon) => ({ mon }))];
+      const soAnh = n.anh?.length ?? 0;
+      const thuTu = nguoi.map((_, i) => i);
+      for (let i = thuTu.length - 1; i > soAnh; i--) {
+        const j = soAnh + Math.floor(rand() * (i - soAnh + 1));
+        [thuTu[i], thuTu[j]] = [thuTu[j], thuTu[i]];
+      }
       con -= cho.length;
       for (const [k, [x, z, goc]] of cho.entries()) {
+        const chon = nguoi[thuTu[k % thuTu.length]];
+        if (chon?.anh) {
+          const p = taoNguoiAnh(chon.anh, DANCER_HEIGHT, camera, goc);
+          p.obj.position.set(x, S.floorY, z);
+          p.nhom = n.id; p.k = k;
+          scene.add(p.obj);
+          dongAnh.push(p);
+          daCo.push([x, z]);
+          continue;
+        }
         const a = makeActor('#d9d2c8', scene, S.floorY);
         a.id = `dam-dong:${n.id}`;
         a.nhom = n.id; a.k = k; // nhóm và thứ tự trong nhóm: dựng lại thì biết ai còn chỗ
@@ -471,7 +510,7 @@ export async function start({ space, model = null, mount, tex }: {
         a.boCo = n.bo[Math.floor(rand() * n.bo.length)] ?? null;
         // món tủ đồ người này mặc (thay cho bộ dựng sẵn): chia lần lượt các bộ ngẫu nhiên của nhóm (không ai trùng ai
         // tới khi hết bộ), không có thì món chung
-        a.monNhom = n.monBo?.length ? n.monBo[k % n.monBo.length] : (n.mon ?? []);
+        a.monNhom = chon?.mon ?? n.mon ?? [];
         a.obj.position.set(x, S.floorY, z);
         a.obj.rotation.y = goc;
         mac(a, a.boCo);
@@ -630,9 +669,9 @@ export async function start({ space, model = null, mount, tex }: {
     camera.aspect = w / h; camera.updateProjectionMatrix();
   }
   const ro = new ResizeObserver(resize); ro.observe(mount); resize();
-  // Người vận hành kéo chuột / chạm để xoay, cuộn để phóng. Không ai cầm (lên sóng qua OBS) thì camera tự đung
-  // đưa chậm quanh góc đang đứng; buông tay NGHI_TAY giây thì đung đưa tiếp từ đúng góc người vừa để lại.
-  // ?inspect=1: chỉ xoay tay, không tự đung đưa.
+  // Người vận hành kéo chuột / chạm để xoay, cuộn để phóng. Không ai cầm (lên sóng qua OBS) thì camera tự đổi cảnh
+  // (`daoDien`): toàn cảnh đung đưa, xoay một vòng quanh sàn, cận một vũ công, góc thấp — mỗi cảnh CANH_GIAY giây, chuyển
+  // êm. Buông tay NGHI_TAY giây thì đổi cảnh tiếp từ đúng góc người vừa để lại. ?inspect=1: chỉ xoay tay.
   const NGHI_TAY = 8;
   controls.enabled = true;
   let dangCam = false, buongLuc = -Infinity, dungDua = true, dungDuaTu = 0;
@@ -661,6 +700,49 @@ export async function start({ space, model = null, mount, tex }: {
     dungDua = false; buongLuc = clock.elapsedTime;
   }
   renderer.domElement.addEventListener('dblclick', chonVuCong);
+
+  // Đạo diễn camera khi không ai cầm: lần lượt các cảnh, mỗi cảnh một đích (tâm nhìn + toạ độ cầu quanh tâm); camera
+  // trượt êm về đích. Cảnh xoay vòng giúp khách thấy người ảnh động nhiều góc đổi ảnh theo góc nhìn.
+  const CANH_GIAY = 11;
+  const tamGoc = controls.target.clone();
+  const dichTam = new THREE.Vector3(), dichCau = new THREE.Spherical(), cauNay = new THREE.Spherical();
+  let canhSo = -1, canhTu = 0;
+  function daoDien(tt, dt) {
+    const so = Math.floor(tt / CANH_GIAY);
+    const trong = tt - so * CANH_GIAY;
+    if (so !== canhSo) {
+      canhSo = so; canhTu = tt;
+      // cận ai: một vũ công đang có mặt (đổi người mỗi lượt cận)
+      const co = dancers.filter((a) => a.obj.visible && a.dau);
+      dichCau.copy(goc0);
+      dichTam.copy(tamGoc);
+      const loai = so % 4;
+      if (loai === 2 && co.length > 0) {
+        co[Math.floor(so / 4) % co.length].dau.getWorldPosition(dichTam);
+        dichTam.y -= DANCER_HEIGHT * 0.25;
+        dichCau.radius = DANCER_HEIGHT * 2.2;
+        dichCau.phi = Math.PI * 0.44;
+      } else if (loai === 3) {
+        dichCau.radius = goc0.radius * 0.75;
+        dichCau.phi = Math.PI * 0.47; // góc thấp, nhìn hơi ngước
+      }
+    }
+    const loai = canhSo % 4;
+    const cau = dichCau.clone();
+    if (loai === 0) cau.theta += Math.sin(trong * 0.25) * lac;                       // toàn cảnh đung đưa
+    else if (loai === 1) cau.theta += (trong / CANH_GIAY) * Math.PI * 2 * 0.5;     // xoay nửa vòng quanh sàn
+    else cau.theta += Math.sin(trong * 0.3) * lac * 0.6;
+    // trượt êm từ chỗ đang đứng về đích (đầu cảnh mạnh tay hơn để chuyển cảnh nhanh)
+    const k = 1 - Math.exp(-dt * (tt - canhTu < 2 ? 2.2 : 6));
+    controls.target.lerp(dichTam, k);
+    cauNay.setFromVector3(camera.position.clone().sub(controls.target));
+    let dth = cau.theta - cauNay.theta;
+    dth = Math.atan2(Math.sin(dth), Math.cos(dth));
+    cauNay.theta += dth * k;
+    cauNay.phi += (cau.phi - cauNay.phi) * k;
+    cauNay.radius += (cau.radius - cauNay.radius) * k;
+    camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(cauNay));
+  }
 
   const clock = new THREE.Clock();
   const tmp = new THREE.Color();
@@ -692,10 +774,7 @@ export async function start({ space, model = null, mount, tex }: {
       goc0.setFromVector3(camera.position.clone().sub(controls.target));
       dungDua = true; dungDuaTu = t;
     }
-    if (!inspect && dungDua) {
-      const sp = goc0.clone(); sp.theta += Math.sin((t - dungDuaTu) * 0.08) * lac;
-      camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(sp));
-    }
+    if (!inspect && dungDua) daoDien(t - dungDuaTu, dt);
     nhipDam++;
     for (const a of dangRa) {
       a.ra.con -= dt;
@@ -704,6 +783,15 @@ export async function start({ space, model = null, mount, tex }: {
       if (a.ra.con <= 0) boNguoi(a);
     }
     if (dangRa.some((a) => a.ra.con <= 0)) dangRa = dangRa.filter((a) => a.ra.con > 0);
+    for (const p of dongAnh) p.capNhat(dt);
+    for (const p of anhRa) {
+      p.ra.con -= dt;
+      p.obj.position.x += p.ra.dx * RA_TOC * dt;
+      p.obj.position.z += p.ra.dz * RA_TOC * dt;
+      p.capNhat(dt);
+      if (p.ra.con <= 0) p.don();
+    }
+    if (anhRa.some((p) => p.ra.con <= 0)) anhRa = anhRa.filter((p) => p.ra.con > 0);
     for (const a of actors) {
       if (a.dam === undefined) {
         a.mixer.update(dt);

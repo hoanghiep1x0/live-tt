@@ -38,7 +38,19 @@ export function Stage({ config, modState }: StagePartProps<Config, State>) {
   );
   // Kho nhân vật: bộ của từng người (đã kèm lót). Đám đông lấy người có "Có trong đám đông"; bộ VIP ngẫu nhiên bốc cả kho.
   const kho = config.khoNhanVat.map((c) => ({ damDong: c.damDong, bo: url(c.mon) })).filter((c) => c.bo.length > 0);
-  const khoDam = kho.filter((c) => c.damDong).map((c) => c.bo);
+  // nhân vật có ảnh động: vào đám đông thành tấm ảnh, không mặc món (và không vào bộ VIP)
+  const khoAnh = config.khoNhanVat
+    .filter((c) => c.damDong && c.anh.trim() !== '')
+    .map((c) => ({
+      truoc: c.anh.trim(),
+      ...(c.anhCheo.trim() ? { cheo: c.anhCheo.trim() } : {}),
+      ...(c.anhNghieng.trim() ? { nghieng: c.anhNghieng.trim() } : {}),
+      ...(c.anhSau.trim() ? { sau: c.anhSau.trim() } : {}),
+    }));
+  const khoDam = config.khoNhanVat
+    .filter((c) => c.damDong && c.anh.trim() === '')
+    .map((c) => url(c.mon))
+    .filter((b) => b.length > 0);
   const td = modState.thayDo;
   // Bộ VIP: bốc theo id màn (cùng màn luôn ra cùng bộ, màn sau ra bộ khác)
   const vip =
@@ -67,9 +79,9 @@ export function Stage({ config, modState }: StagePartProps<Config, State>) {
     damDong: config.damDong
       .filter((n) => n.bat)
       .map((n, i) => {
-        // mỗi người một nhân vật trong kho, lần lượt; nhóm sau bắt đầu lệch đi để hai nhóm không đứng y nhau
-        const lech = khoDam.length > 0 ? (i * 3) % khoDam.length : 0;
-        const monBo = n.theoKho ? [...khoDam.slice(lech), ...khoDam.slice(0, lech)] : [];
+        // mỗi người một nhân vật trong kho — thiết kế xáo thứ tự và chỗ đứng theo id nhóm
+        const monBo = n.theoKho ? khoDam : [];
+        const anh = n.theoKho ? khoAnh : [];
         return {
           id: n.id === '' ? `nhom-${i}` : n.id,
           so: n.so,
@@ -77,6 +89,7 @@ export function Stage({ config, modState }: StagePartProps<Config, State>) {
           bo: n.bo !== BO_NGAU_NHIEN && LA_BO.has(n.bo) ? [n.bo] : boNgauNhien(config),
           theoNhom: n.dieu !== DIEU_NHOM.tuDo,
           ...(monBo.length > 0 ? { monBo } : {}),
+          ...(anh.length > 0 ? { anh } : {}),
         };
       }),
     ...(td !== null && vip.length > 0

@@ -375,7 +375,7 @@ describe('đám đông', () => {
     const kho = mod.manifest.fields.find((f) => f.key === 'khoNhanVat');
     expect(kho?.type).toBe('list');
     expect(kho?.tab).toBe('Đám đông');
-    expect(kho?.fields?.map((x) => x.key)).toEqual(['ten', 'damDong', 'mon']);
+    expect(kho?.fields?.map((x) => x.key)).toEqual(['ten', 'damDong', 'anh', 'anhCheo', 'anhNghieng', 'anhSau', 'mon']);
     expect(MAC_DINH.khoNhanVat.length).toBeGreaterThanOrEqual(6);
     for (const c of MAC_DINH.khoNhanVat) expect(c.mon.length).toBeGreaterThan(0);
     const nhom = mod.manifest.fields.find((f) => f.key === 'damDong');
@@ -389,12 +389,19 @@ describe('đám đông', () => {
         model: '/m/x/a.glb',
         dieu: null,
         monRieng: { dj: ['/m/x/tu-do/a/'] },
-        damDong: [{ id: 'n', so: 3, khuVuc: 'k', bo: [], theoNhom: true, mon: ['/m/x/tu-do/b/'], monBo: [['/m/x/tu-do/c/']] }],
+        damDong: [{ id: 'n', so: 3, khuVuc: 'k', bo: [], theoNhom: true, mon: ['/m/x/tu-do/b/'], monBo: [['/m/x/tu-do/c/']], anh: ['/media/a.gif'] }],
       }),
     );
     expect(v?.monRieng).toEqual({ dj: ['/m/x/tu-do/a/'] });
     expect(v?.damDong?.[0]?.mon).toEqual(['/m/x/tu-do/b/']);
     expect(v?.damDong?.[0]?.monBo).toEqual([['/m/x/tu-do/c/']]);
+    expect(v?.damDong?.[0]?.anh).toEqual(['/media/a.gif']);
+    // nhân vật ảnh động nhiều góc
+    const goc = { truoc: '/u/t.webp', nghieng: '/u/n.webp', sau: '/u/s.webp' };
+    const v2 = docVuCong3D(JSON.stringify({ model: '/m/x/a.glb', damDong: [{ id: 'n', so: 1, khuVuc: 'k', bo: [], theoNhom: true, anh: [goc] }] }));
+    expect(v2?.damDong?.[0]?.anh).toEqual([goc]);
+    const hong = docVuCong3D(JSON.stringify({ model: '/m/x/a.glb', damDong: [{ id: 'n', so: 1, khuVuc: 'k', bo: [], theoNhom: true, anh: [{ sau: 'x' }] }] }));
+    expect(hong?.damDong).toBeUndefined();
     expect(docVuCong3D(JSON.stringify({ model: '/m/x/a.glb', monRieng: { dj: 'x' } }))?.monRieng).toBeUndefined();
   });
 });

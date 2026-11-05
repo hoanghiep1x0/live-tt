@@ -38,8 +38,8 @@ const KHO_MAC_DINH = [
   { id: 'nv-dam-quay', ten: 'Đầm quây trắng', mon: [k('ccby', 'lien', 'punkduck-tube-dress'), k('ccby', 'giay', 'madmanny-tight-leather-boots'), k('ccby', 'toc', 'elvs-wavy-bob')] },
   { id: 'nv-croptop', ten: 'Croptop + váy xếp ly', mon: [k('ccby', 'ao', 'punkduck-sleeveless-crop-top'), k('ccby', 'duoi', 'mtknife-pleated-mini-skirt'), k('cc0', 'giay', 'toigo-ankle-boots-female'), k('cc0', 'toc', 'culturalibre-hair-01')] },
   { id: 'nv-yem-do', ten: 'Đầm yếm đỏ', mon: [k('ccby', 'lien', 'elvs-halter-dress-mini'), k('cc0', 'giay', 'toigo-stiletto-booties'), k('ccby', 'toc', 'elvs-katherine-hair')] },
-].map((x) => ({ ...x, damDong: true }));
-const NHAN_VAT_MOI = { ten: 'Nhân vật mới', damDong: true, mon: [] };
+].map((x) => ({ ...x, damDong: true, anh: '', anhCheo: '', anhNghieng: '', anhSau: '' }));
+const NHAN_VAT_MOI = { ten: 'Nhân vật mới', damDong: true, anh: '', anhCheo: '', anhNghieng: '', anhSau: '', mon: [] };
 
 export const schema = z.object({
   /** Từng người trong phòng (id trong `NHAN_VAT`): có mặt không, món tủ đồ riêng (`mon`, có thì mặc các món này),
@@ -83,6 +83,12 @@ export const schema = z.object({
         id: z.string().default(''),
         ten: z.string().default(NHAN_VAT_MOI.ten),
         damDong: z.boolean().default(true),
+        /** Ảnh động (GIF / PNG nền trong suốt): có thì nhân vật là tấm ảnh động trên sàn, bỏ qua `mon`. */
+        anh: z.string().default(''),
+        /** Cùng điệu nhảy ở các góc khác (người quay sang trái màn hình); thiếu thì lấy góc gần nhất. */
+        anhCheo: z.string().default(''),
+        anhNghieng: z.string().default(''),
+        anhSau: z.string().default(''),
         mon: z.array(z.string()).default([]),
       }),
     )
@@ -192,6 +198,21 @@ export const manifest: ModuleManifest<Config> = {
       fields: [
         { key: 'ten', label: 'Tên', type: 'text' },
         { key: 'damDong', label: 'Có trong đám đông', type: 'toggle' },
+        {
+          key: 'anh',
+          label: 'Ảnh động (GIF) — thay cho nhân vật 3D',
+          type: 'media',
+          hint: 'Ảnh nền trong suốt, nhân vật người lớn đứng cả người, chính diện (vd GIF nhảy nhờ ChatGPT vẽ). Có ảnh thì người này đứng trên sàn thành tấm ảnh động quay về camera; để trống là nhân vật 3D mặc đồ bên dưới.',
+          popup: ['anhCheo', 'anhNghieng', 'anhSau'],
+        },
+        { key: 'anhCheo', label: 'Góc chéo 45° (quay sang trái màn hình)', type: 'media' },
+        { key: 'anhNghieng', label: 'Góc nghiêng 90° (quay sang trái màn hình)', type: 'media' },
+        {
+          key: 'anhSau',
+          label: 'Phía sau lưng',
+          type: 'media',
+          hint: 'Cùng điệu nhảy, cùng số khung, cùng cỡ người. Camera nhìn từ phía nào thì hiện đúng góc đó; góc bên phải lấy bằng lật gương.',
+        },
         {
           key: 'mon',
           label: 'Trang phục & phụ kiện',
