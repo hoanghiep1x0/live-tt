@@ -1,0 +1,9 @@
+{
+  "live": "ke-chuyen",
+  "nguon": {
+    "channel": "hieuthao.1995",
+    "kind": "bridge",
+    "nhip": 900,
+    "url": "ws://127.0.0.1:8787/ws/live"
+  }
+}

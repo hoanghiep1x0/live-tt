@@ -8,15 +8,19 @@
     "client/shared/*",
     "client/modules/*",
     "client/designs/*",
-    "client/manager"
+    "client/manager",
+    "backend/cau-noi"
   ],
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.dom.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.dom.json && tsc -p backend/cau-noi/tsconfig.json",
     "build:designs": "npm run build --workspaces --if-present",
-    "dev": "npm run dev -w @live/manager"
+    "dev": "npm run dev -w @live/manager",
+    "app": "tauri dev",
+    "app:build": "tauri build"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.12.4",
     "@types/node": "22.20.5",
     "typescript": "5.6.3",
     "vite": "8.3.5",

@@ -1,0 +1,67 @@
+{
+  "id": "lop-hoc-chu",
+  "category": "lop-hoc",
+  "style": "chu",
+  "name": "Lớp học · Đố chữ",
+  "icon": "🏫",
+  "summary": "Lớp học 2D: bảng đen, bục cô giáo, 4 dãy bàn dài — người xem vào lớp ngồi ghế, gõ đáp án vào bình luận",
+  "version": "0.1.0",
+  "canvas": {
+    "width": 1080,
+    "height": 1920
+  },
+  "slots": [
+    "full",
+    "ticker"
+  ],
+  "provides": [
+    "tts",
+    "audio"
+  ],
+  "recommends": [
+    "do-chu"
+  ],
+  "defaults": {
+    "do-chu": {
+      "tenLop": "Lớp Học Chữ"
+    }
+  },
+  "seats": 30,
+  "pointRate": 1,
+  "crowd": {
+    "names": [],
+    "greet": [
+      "Chào {ten}, vào lớp ngồi chung nha 👋",
+      "{ten} gõ \"vào lớp\" đi bạn",
+      "Chào bạn mới {ten}",
+      "{ten} vào học muộn rồi kìa 😆"
+    ],
+    "thanks": [
+      "{ten} tặng cô dễ thương quá 🌹",
+      "Cảm ơn {ten} nha",
+      "Cả lớp cảm ơn {ten} 💕"
+    ],
+    "lines": [
+      "câu này khó ghê",
+      "cô ơi cho gợi ý với",
+      "nghe hết đề rồi mới gõ nha cả lớp",
+      "toán nhẩm nhanh quá trời",
+      "đuổi hình bắt chữ vui ghê",
+      "bàn đầu giỏi thật",
+      "cố lên cả lớp ơi",
+      "mình ngồi bàn cuối nè",
+      "hôm nay học vui quá",
+      "cô Ngân dễ thương ghê",
+      "chờ câu tiếp theo",
+      "đoán mãi chưa ra",
+      "sắp hết giờ rồi kìa",
+      "ra chơi chưa cô",
+      "tổ mình cố lên",
+      "thả tim cho lớp nào"
+    ]
+  },
+  "mc": {
+    "dan": "mc-dan.md"
+  },
+  "entry": "dist/index.html"
+}

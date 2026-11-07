@@ -86,14 +86,14 @@ export function xinOm(text: string): boolean {
 export function khachXinOm(
   feed: readonly FeedItem[],
   now: number,
-): { at: number; user: string } | null {
+): { at: number; user: string; name: string } | null {
   for (let i = feed.length - 1; i >= 0; i -= 1) {
     const f = feed[i];
     if (f === undefined) continue;
     if (now - f.at >= TONG_MS) break;
     if (f.kind !== 'comment' || f.virtual === true) continue;
     if (!xinOm(f.text)) continue;
-    return { at: f.at, user: f.user ?? f.name };
+    return { at: f.at, user: f.user ?? f.name, name: f.name };
   }
   return null;
 }
@@ -106,6 +106,8 @@ export interface Canh {
   t: number;
   /** Khách tự gõ xin ôm: chính họ phải là người chạy lên. */
   nguoiXin?: string;
+  /** Tên hiển thị của khách đó, để popup và lời cảm ơn gọi tên. */
+  tenXin?: string;
   /** Mấy người chạy lên lượt này. */
   soNguoi: 1 | 2;
 }
@@ -124,7 +126,7 @@ function soNguoiLuot(k: number, che: CauHinhAnUi['soNguoi']): 1 | 2 {
  *  phải chờ hết phút mới thấy gì thì chẳng ai gõ nữa. */
 export function canhAnUi(
   now: number,
-  xin: { at: number; user: string } | null = null,
+  xin: { at: number; user: string; name?: string } | null = null,
   cfg: CauHinhAnUi = AN_UI_MAC_DINH,
 ): Canh | null {
   if (cfg.khachGoi && xin !== null && now - xin.at < TONG_MS) {
@@ -134,6 +136,7 @@ export function canhAnUi(
       nhanVat: cfg.ai === 'cau-be' ? 'cau-be' : 'be',
       t: now - xin.at,
       nguoiXin: xin.user,
+      ...(xin.name === undefined ? {} : { tenXin: xin.name }),
       soNguoi: 1,
     };
   }
@@ -179,3 +182,69 @@ export function chonNguoiOm(
   return ra;
 }
 
+
+// ---- Popup trên đầu và lời cảm ơn, như `comfortCaptions` + `hugThanksLine` của bản cũ ----
+
+export const TEN_NHAN_VAT: Record<NhanVat, string> = { be: 'bé', 'cau-be': 'cậu bé' };
+
+const hoaDau = (t: string): string => t.charAt(0).toUpperCase() + t.slice(1);
+
+/** Tên gọn để gọi: bỏ biểu tượng, tên kiểu "Lâm Gia Hạo" lấy chữ cuối, biệt
+ *  danh lấy chữ đầu — như `shortName` của bản cũ. Tên mặc định "user123…" thì
+ *  thành rỗng (gọi chung "bạn"). */
+export function tenGon(ten: string): string {
+  const chu = ten.trim().split(/\s+/).filter((w) => /\p{L}/u.test(w));
+  if (chu.length === 0 || /^user\d{5,}$/i.test(chu[0] ?? '')) return '';
+  const tenNguoi = chu.length > 1 && chu.every((w) => /^\p{Lu}/u.test(w));
+  return (tenNguoi ? chu[chu.length - 1] : chu[0]) ?? '';
+}
+
+/** Lời popup trên đầu nhân vật ở thời điểm `canh.t`, hoặc `null`. Hai nhịp:
+ *  lúc người chạy lên và ôm, rồi lúc nhân vật cảm ơn trong lúc người về chỗ. */
+export function loiPopup(canh: Canh): string | null {
+  const ai = TEN_NHAN_VAT[canh.nhanVat];
+  const khach = canh.tenXin === undefined ? '' : tenGon(canh.tenXin);
+  if (canh.t < CHAY_MS + OM_MS) {
+    return khach !== '' ? `🤗 ${khach} lên ôm ${ai}` : `🤗 Cả phòng đang ôm ${ai}`;
+  }
+  if (canh.t < TONG_MS) {
+    return khach !== '' ? `${hoaDau(ai)} cảm ơn ${khach} ❤` : `${hoaDau(ai)} cười rồi — cảm ơn cả nhà ❤`;
+  }
+  return null;
+}
+
+const KHEN = [
+  'Ui, {ten} chạy lên ôm {ai} kìa, thương ghê',
+  '{ten} dễ thương quá, ôm {ai} một cái ấm cả lòng luôn',
+  'Cảm ơn {ten} đã lên an ủi {ai} nha, {ai} vui lắm đó',
+  '{ten} ơi, cái ôm của bạn làm {ai} cười rồi kìa',
+];
+const CHUNG = [
+  'Cảm ơn bạn đã chạy lên ôm {ai} nha',
+  'Thương ghê, có bạn lên an ủi {ai} rồi kìa',
+  '{ai} được ôm rồi, cười tươi luôn nè',
+];
+
+/** Lời MC đọc khi người ôm tới nơi. Có tên khách thật thì gọi tên (gộp "A và
+ *  B"), không thì cảm ơn chung — không gọi tên nhân vật ảo như khách thật. */
+export function loiCamOn(k: number, ten: readonly string[], nhanVat: NhanVat): string {
+  const ai = TEN_NHAN_VAT[nhanVat];
+  const ds = ten.map(tenGon).filter((x) => x !== '').slice(0, 3);
+  const i = Math.abs(k);
+  if (ds.length === 0) return (CHUNG[i % CHUNG.length] ?? '').replace(/\{ai\}/g, ai);
+  const goi = ds.length > 1 ? `${ds.slice(0, -1).join(', ')} và ${ds[ds.length - 1]}` : (ds[0] ?? '');
+  return (KHEN[i % KHEN.length] ?? '').replace(/\{ten\}/g, goi).replace(/\{ai\}/g, ai);
+}
+
+/** Khách tự gõ "ôm" thì cảm ơn, cách nhau ít nhất ngần này. */
+export const CAM_ON_KHACH_MS = 60_000;
+/** Lượt tự động: chỉ khoảng 1/3 số lượt và cách nhau ít nhất ngần này — đọc
+ *  mỗi lượt thì phòng thành cái loa. */
+export const CAM_ON_TU_DONG_MS = 3 * 60_000;
+
+/** Lượt này có đọc lời cảm ơn không. "1/3 số lượt" băm từ `k` chứ không bốc
+ *  ngẫu nhiên, để hai cửa sổ xem cùng phòng quyết như nhau. Hàm thuần. */
+export function camOnLuotNay(canh: Canh, lanTruoc: number, now: number): boolean {
+  if (canh.nguoiXin !== undefined) return now - lanTruoc >= CAM_ON_KHACH_MS;
+  return now - lanTruoc >= CAM_ON_TU_DONG_MS && (Math.imul(canh.k, 2654435761) >>> 0) % 3 === 0;
+}

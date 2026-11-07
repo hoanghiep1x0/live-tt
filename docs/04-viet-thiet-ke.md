@@ -199,6 +199,7 @@ không phải một nhánh mã mới. Thứ khác nhau giữa chúng chỉ có b
 | Hình tiếng riêng của bối cảnh | `assets/mod/<moduleId>/…` phủ lên asset module |
 | Bật tính năng nào | `recommends` + `defaults` trong `design.json` |
 | Nhân vật ảo nói gì | `crowd` trong `design.json` |
+| MC do AI dẫn nói theo kiểu gì | file lời dặn khai ở `mc.dan` trong `design.json` (vd `mc-dan.md`); không khai là lời dặn gốc của máy chủ |
 | Ảnh, video người vận hành đưa vào | `database/designs/<id>/media/`, phục vụ ở `/u/<id>/…` |
 
 Phần **cơ chế** — cảm ơn quà, chào người vào, top người tặng, bình chọn, quay thưởng, giọng

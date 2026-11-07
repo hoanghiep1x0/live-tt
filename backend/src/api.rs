@@ -122,6 +122,33 @@ pub async fn put_settings(
     Ok(Json(json!({ "settings": s })))
 }
 
+/// Link phát sóng của một phòng, cho BẢNG XEM THỬ ngay trên sân khấu.
+///
+/// Người vận hành đang đứng ở phòng, đổi link Studio tại chỗ — không phải bỏ
+/// phòng ra trang quản lý rồi quay lại. Link OBS không nằm ở đây: nó chính là
+/// địa chỉ trang sân khấu đang mở, trang tự biết.
+pub async fn get_link_phat(
+    State(st): State<Arc<AppState>>,
+    Path(design_id): Path<String>,
+) -> Result<Json<Value>, AppError> {
+    kiem_id(&design_id, "id thiết kế")?;
+    let s = crate::settings::read(&st.layout, &design_id);
+    Ok(Json(json!({ "studioUrl": s.studio_url })))
+}
+
+/// Đổi link Studio từ bảng xem thử. CHỈ ô đó: bảng xem thử không phải chỗ đổi
+/// tên phòng, nhận cả gói là mở đường sửa nhầm thứ khác.
+pub async fn put_link_phat(
+    State(st): State<Arc<AppState>>,
+    Path(design_id): Path<String>,
+    Json(body): Json<Value>,
+) -> Result<Json<Value>, AppError> {
+    kiem_id(&design_id, "id thiết kế")?;
+    let studio = body.get("studioUrl").cloned().unwrap_or(Value::Null);
+    let s = st.set_settings(&design_id, &json!({ "studioUrl": studio }))?;
+    Ok(Json(json!({ "studioUrl": s.studio_url })))
+}
+
 /// Xoá dữ liệu phiên. Trả về đúng những gì đã xoá, để người dùng không phải
 /// đoán xem nút vừa bấm có làm gì hay không.
 pub async fn post_reset(
@@ -176,6 +203,50 @@ pub async fn put_source(
         ));
     }
     crate::source::mo(st.clone(), cfg);
+    Ok(Json(json!({ "source": st.nguon() })))
+}
+
+/// Khoá Euler Stream của cầu nối TikTok: chỉ báo có hay chưa, không bao giờ
+/// trả giá trị (docs/07 §5).
+pub async fn get_khoa_cau_noi(State(st): State<Arc<AppState>>) -> Json<Value> {
+    Json(json!({ "hasKey": crate::secrets::khoa_euler(&st.layout).is_some() }))
+}
+
+/// Đặt khoá Euler (`{ "key": "…" }`, rỗng là xoá). Cầu nối đọc khoá lúc bật,
+/// nên đang chạy cầu nối mặc định thì mở lại nguồn để nó bật lại với khoá mới.
+pub async fn put_khoa_cau_noi(
+    State(st): State<Arc<AppState>>,
+    Json(than): Json<Value>,
+) -> Result<Json<Value>, AppError> {
+    let khoa = than.get("key").and_then(Value::as_str).unwrap_or("");
+    let co = crate::secrets::dat_khoa_euler(&st.layout, khoa)?;
+    let cfg = st.nguon().cfg;
+    if crate::source::tien_trinh::can_tu_bat(&cfg) {
+        crate::source::mo(st.clone(), cfg);
+    }
+    Ok(Json(json!({ "hasKey": co })))
+}
+
+/// Trang TikTok trong app đẩy dữ liệu vào nguồn `webview`.
+///
+/// Thân là JSON theo đúng giao thức cầu nối (`source::bridge`): một tin hoặc
+/// một mảng tin — sự kiện, `{type:"viewers",count}`, `{type:"status",state,message}`.
+/// Không lọc tin cũ theo `ts`: trang quản lý đã bỏ tin `isHistory` lúc giải mã.
+pub async fn post_source_day(
+    State(st): State<Arc<AppState>>,
+    body: String,
+) -> Result<Json<Value>, AppError> {
+    use crate::source::{bridge, SourceKind};
+    let kind = st.nguon().cfg.kind;
+    if kind != SourceKind::Webview {
+        // Đổi nguồn rồi mà trang cũ còn đẩy tới: từ chối, không trộn hai nguồn.
+        return Err(AppError::BadRequest(
+            "nguồn hiện tại không phải \"Trang TikTok\" — chọn lại nguồn trên thanh trên".into(),
+        ));
+    }
+    for x in bridge::doc_tin(&body, 0) {
+        bridge::ap_tin(&st, x);
+    }
     Ok(Json(json!({ "source": st.nguon() })))
 }
 
@@ -241,19 +312,30 @@ pub async fn post_tts(
     Json(req): Json<crate::tts::YeuCau>,
 ) -> Result<Response, AppError> {
     let layout = st.layout.clone();
-    let kq = tokio::task::spawn_blocking(move || crate::tts::sinh(&layout, &req))
+    let phong = req.design_id.clone().filter(|id| crate::paths::valid_id(id));
+    let kq = tokio::task::spawn_blocking(move || crate::tts::sinh_kem(&layout, &req))
         .await
         .map_err(|e| AppError::Internal(format!("luồng giọng đọc hỏng: {e}")))?;
 
     match kq {
-        Ok(bytes) => Ok((
+        Ok(doc) => {
+            // Sổ chi phí: giọng Edge / Google qua 9router là miễn phí; nhà khác
+            // tính theo gói của họ, máy không biết giá — ghi "chưa rõ".
+            if let Some(id) = &phong {
+                let d = crate::chi_phi::Dung { ky_tu: doc.ky_tu, ..Default::default() };
+                let usd = crate::chi_phi::giong_mien_phi(&doc.giong).then_some(0.0);
+                st.ghi_chi_phi(id, crate::chi_phi::GIONG, &d, usd);
+            }
+            let bytes = doc.byte;
+            Ok((
             [
                 (axum::http::header::CONTENT_TYPE, "audio/mpeg"),
                 (axum::http::header::CACHE_CONTROL, "no-store"),
             ],
             bytes,
         )
-            .into_response()),
+            .into_response())
+        }
         Err(crate::tts::TtsError::Invalid(m)) => Err(AppError::BadRequest(m)),
         // Nhà cung cấp từ chối: lỗi của họ hoặc của khoá, không phải của người
         // vừa bấm. 502 để trang quản lý phân biệt được với lỗi nhập liệu.

@@ -294,6 +294,21 @@
   padding: 0 8px;
   font-size: 12px;
 }
+/* Nút "Kết nối Studio" lúc phòng ĐANG nhận dữ liệu từ đúng kênh trong link:
+   xanh. Mất kết nối thì về màu nút thường, không cần đọc chữ cũng biết. */
+.btn-noi {
+  border-color: color-mix(in srgb, var(--ok) 60%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ok) 20%, transparent),
+    color-mix(in srgb, var(--ok) 9%, transparent)
+  );
+  color: color-mix(in srgb, var(--ok) 35%, var(--text));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ok) 28%, transparent);
+}
+.btn-noi:hover {
+  border-color: color-mix(in srgb, var(--ok) 85%, transparent);
+}
 .input {
   height: 34px;
   width: 100%;
@@ -1562,4 +1577,136 @@ main {
 /* Tab nhóm tính năng trên đầu trang Tính năng. */
 .nhom-tabs {
   margin: 4px 0 16px;
+}
+
+/* Trình duyệt trong app desktop — bố cục hộp "Trang TikTok" của bản cũ:
+   nút đăng nhập, hàng tab (✕ từng tab, "＋ Thêm tab"), thanh địa chỉ, khung trang. */
+.tt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+.modal-body:has(> .tt) {
+  display: flex;
+  flex-direction: column;
+}
+.modal-body > .tt {
+  flex: 1;
+  min-height: 0;
+}
+.tt-nut {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tt-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.tt-tab {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  background: rgba(255, 255, 255, 0.03);
+}
+.tt-tab[data-chon='true'] {
+  border-color: rgba(242, 196, 90, 0.6);
+  background: rgba(242, 196, 90, 0.1);
+}
+.tt-tab > button {
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 5px 8px;
+  max-width: 220px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tt-tab .tt-tab-x {
+  padding: 5px 6px;
+  opacity: 0.6;
+}
+.tt-tab .tt-tab-x:hover {
+  opacity: 1;
+}
+.tt-tab-moi {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.tt-tab-moi .input {
+  width: 280px;
+}
+.tt-dia-chi {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.tt-dia-chi .input {
+  flex: 1;
+  min-width: 0;
+}
+.tt-trong {
+  opacity: 0.6;
+  font-size: 13px;
+}
+/* Khung trang web: trang thật do vỏ app đặt chồng lên đúng hình chữ nhật này,
+   nên khung phải có chiều cao thật. */
+.tt-viewport {
+  flex: 1;
+  min-height: 320px;
+  border-radius: 10px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  background: rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tt-ngoai {
+  text-align: center;
+  padding: 24px;
+}
+.tt-ngoai p {
+  max-width: 460px;
+  margin: 8px auto 0;
+  opacity: 0.8;
+}
+.tt-ghi {
+  font-size: 12px;
+  opacity: 0.6;
+  margin: 0;
+}
+
+/* Trình duyệt thu gọn: nút nổi góc dưới phải, như bản cũ — trang vẫn chạy nền. */
+.tt-thu-gon {
+  margin-left: auto;
+}
+.tt-noi {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.tt-noi-muse {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  opacity: 0.6;
+}
+.tt-noi-muse[data-san='true'] {
+  opacity: 1;
+  color: var(--ok);
+  border-color: var(--ok);
 }

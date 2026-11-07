@@ -192,6 +192,8 @@ export async function start({ space, model = null, mount, tex }: {
   let damDong = [], kyDamDong = '', dongDam = []; // nhóm đám đông (`VuCong3D.damDong`) và người đã dựng
   let dangRa = []; // người đám đông đang bước ra khỏi sàn (nhóm bị bỏ / tắt / bớt người) — ra xa rồi mới dọn
   let dongAnh = [], anhRa = []; // người ảnh động (GIF) trong đám đông, và người ảnh động đang trượt ra khỏi sàn
+  let dongTat = []; // mọi người đám đông (3D lẫn ảnh động) theo thứ tự dựng — số thứ tự sau ba vũ công chính
+  let soi = null, hienSo = false, doiDoId = null; // doiDoId: id lần đổi đồ người ảnh động đã làm (`VuCong3D.doiDo`) // lệnh soi của khách (`VuCong3D.soi`), hiện số trên đầu (`VuCong3D.hienSo`)
   const RA_GIAY = 3.5, RA_TOC = 1.3; // bước ra bao lâu, nhanh cỡ nào (m/s)
   const TOI_DA_DAM_DONG = 40; // mỗi người là một nhân vật có xương: hơn số này máy phát live vẽ không nổi
   let modelUrl = null, boChon = null, dieuChung = null, nghi = false, luotNap = 0, dung = false;
@@ -339,7 +341,7 @@ export async function start({ space, model = null, mount, tex }: {
   }
 
   function boHet() {
-    dangRa = [];
+    dangRa = []; dongTat = [];
     for (const p of [...dongAnh, ...anhRa]) p.don();
     dongAnh = []; anhRa = [];
     for (const a of actors.splice(0)) {
@@ -467,7 +469,7 @@ export async function start({ space, model = null, mount, tex }: {
         anhRa.push(p);
       }
     }
-    dongDam = []; dongAnh = [];
+    dongDam = []; dongAnh = []; dongTat = [];
     kyDamDong = JSON.stringify(damDong);
     if (!gltf || !S.khuVuc) return;
     const daCo = S.spots.map(([x, z]) => [x, z]);
@@ -491,11 +493,12 @@ export async function start({ space, model = null, mount, tex }: {
       for (const [k, [x, z, goc]] of cho.entries()) {
         const chon = nguoi[thuTu[k % thuTu.length]];
         if (chon?.anh) {
-          const p = taoNguoiAnh(chon.anh, DANCER_HEIGHT, camera, goc);
+          const p = taoNguoiAnh(chon.anh, DANCER_HEIGHT, camera, goc, rand);
           p.obj.position.set(x, S.floorY, z);
           p.nhom = n.id; p.k = k;
           scene.add(p.obj);
           dongAnh.push(p);
+          dongTat.push({ anh: p });
           daCo.push([x, z]);
           continue;
         }
@@ -522,6 +525,7 @@ export async function start({ space, model = null, mount, tex }: {
         }
         daCo.push([x, z]);
         dongDam.push(a);
+        dongTat.push({ a });
       }
     }
   }
@@ -638,6 +642,16 @@ export async function start({ space, model = null, mount, tex }: {
     const tdCu = thayDo;
     thayDo = v?.thayDo ?? null;
     manThayDo.dat(thayDo);
+    soi = v?.soi ?? null;
+    hienSo = v?.hienSo === true;
+    // đổi bộ đồ người ảnh động: id mới mới đổi (id có sẵn lúc mở trang là lần đổi đã qua — không đổi lại)
+    const dd = v?.doiDo ?? null;
+    if (dd && doiDoId !== null && dd.id !== doiDoId) {
+      if (dd.so === 0) for (const p of dongAnh) p.doiBo(Math.random() * 1.5);
+      else nguoiSan()[dd.so - 1]?.anh?.doiBo();
+    }
+    if (dd) doiDoId = dd.id;
+    else if (doiDoId === null) doiDoId = 0;
     // màn mới: người thay đồ nhảy đứng tại chỗ suốt màn (nhảy sàn là bò ra khỏi khung cửa), hết màn mới nhảy tự do lại
     if (thayDo && thayDo.id !== tdCu?.id && Date.now() < thayDo.tu + thayDo.moc.het) {
       const a = dancers.find((x) => x.id === thayDo.nguoi);
@@ -670,11 +684,11 @@ export async function start({ space, model = null, mount, tex }: {
   }
   const ro = new ResizeObserver(resize); ro.observe(mount); resize();
   // Người vận hành kéo chuột / chạm để xoay, cuộn để phóng. Không ai cầm (lên sóng qua OBS) thì camera tự đổi cảnh
-  // (`daoDien`): toàn cảnh đung đưa, xoay một vòng quanh sàn, cận một vũ công, góc thấp — mỗi cảnh CANH_GIAY giây, chuyển
-  // êm. Buông tay NGHI_TAY giây thì đổi cảnh tiếp từ đúng góc người vừa để lại. ?inspect=1: chỉ xoay tay.
+  // (`daoDien`, kiểu quay club: cắt cảnh theo phách). Buông tay NGHI_TAY giây thì camera tự quay tiếp. ?inspect=1: chỉ
+  // xoay tay.
   const NGHI_TAY = 8;
   controls.enabled = true;
-  let dangCam = false, buongLuc = -Infinity, dungDua = true, dungDuaTu = 0;
+  let dangCam = false, buongLuc = -Infinity, dungDua = true;
   const goc0 = new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target));
   const lac = S.camera.azimuth ? Math.min(Math.abs(S.camera.azimuth[0]), Math.abs(S.camera.azimuth[1])) * 0.6 : 0.25;
   controls.addEventListener('start', () => { dangCam = true; dungDua = false; keoGan = false; });
@@ -701,47 +715,145 @@ export async function start({ space, model = null, mount, tex }: {
   }
   renderer.domElement.addEventListener('dblclick', chonVuCong);
 
-  // Đạo diễn camera khi không ai cầm: lần lượt các cảnh, mỗi cảnh một đích (tâm nhìn + toạ độ cầu quanh tâm); camera
-  // trượt êm về đích. Cảnh xoay vòng giúp khách thấy người ảnh động nhiều góc đổi ảnh theo góc nhìn.
-  const CANH_GIAY = 11;
+  // Đạo diễn camera khi không ai cầm — kiểu điện ảnh / MV: CẮT cảnh đúng đầu ô nhịp, mỗi cảnh một chuyển động máy có
+  // chủ đích và lần lượt dẫn mắt qua từng nhân vật: toàn cảnh mở màn → đẩy máy (dolly) vào một người → lượn cung → lia
+  // từ người này sang người kế (pan) → cần cẩu hạ từ cao xuống ngang tầm mắt → góc thấp ngước → kéo lùi lộ toàn sàn.
+  // Luôn đứng phía trước người được quay (không vòng ra sau lưng). Người ảnh động: xa hơn, lượn hẹp quanh chính diện.
+  // Khách gõ lệnh soi thì cận đúng người đó tới hết giờ.
   const tamGoc = controls.target.clone();
-  const dichTam = new THREE.Vector3(), dichCau = new THREE.Spherical(), cauNay = new THREE.Spherical();
-  let canhSo = -1, canhTu = 0;
-  function daoDien(tt, dt) {
-    const so = Math.floor(tt / CANH_GIAY);
-    const trong = tt - so * CANH_GIAY;
-    if (so !== canhSo) {
-      canhSo = so; canhTu = tt;
-      // cận ai: một vũ công đang có mặt (đổi người mỗi lượt cận)
-      const co = dancers.filter((a) => a.obj.visible && a.dau);
-      dichCau.copy(goc0);
-      dichTam.copy(tamGoc);
-      const loai = so % 4;
-      if (loai === 2 && co.length > 0) {
-        co[Math.floor(so / 4) % co.length].dau.getWorldPosition(dichTam);
-        dichTam.y -= DANCER_HEIGHT * 0.25;
-        dichCau.radius = DANCER_HEIGHT * 2.2;
-        dichCau.phi = Math.PI * 0.44;
-      } else if (loai === 3) {
-        dichCau.radius = goc0.radius * 0.75;
-        dichCau.phi = Math.PI * 0.47; // góc thấp, nhìn hơi ngước
-      }
+  const R0 = goc0.radius, PHI0 = goc0.phi, TH0 = goc0.theta;
+  const [camX0, , camZ0] = S.camera.pos;
+  // Người trên sàn theo số thứ tự: 1–3 vũ công chính (theo chỗ đứng trái → phải), rồi đám đông theo thứ tự dựng.
+  // Mỗi mục: { a } nhân vật 3D hoặc { anh } người ảnh động. Người đang ẩn vẫn giữ số, chỉ không quay được.
+  const nguoiSan = () => [...dancers.map((a) => ({ a })), ...dongTat];
+  const cung = (x, y) => !!x && !!y && (x.a ?? x.anh) === (y.a ?? y.anh); // mục bọc tạo mới mỗi lần — so người bên trong
+  const conTrenSan = (n) => (n.a ? n.a.obj.visible && trongCanh(n.a.obj) : trongCanh(n.anh.obj));
+  const viTri = (n, ra) => {
+    if (n.a) { n.a.dau.getWorldPosition(ra); ra.y -= DANCER_HEIGHT * 0.25; }
+    else { ra.copy(n.anh.obj.position); ra.y += DANCER_HEIGHT * 0.62; }
+    return ra;
+  };
+  const em = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+  const LICH = ['toan', 'dolly', 'cung', 'lia', 'cau', 'dolly', 'thap', 'lia', 'cung', 'keo', 'luon'];
+  const DAI = { toan: 16, luon: 16, cau: 12, can: 8, thap: 8, soi: 8, dolly: 12, cung: 12, lia: 8, keo: 12 }; // phách
+  const QUAY_NGUOI = new Set(['dolly', 'cung', 'lia', 'cau', 'thap', 'keo']); // cảnh có người chính
+  // khoảng cách đẹp tới một người: người ảnh động xa hơn (sát quá mặt vẽ vỡ nét, lộ là tấm ảnh phẳng)
+  const xaNguoi = (n) => DANCER_HEIGHT * (n.anh ? 3.6 : 2.2);
+  const hepNguoi = (n) => (n.anh ? 0.35 : 1); // độ lượn ngang so với người 3D
+  let canh = null, soCanh = 0, luotCan = 0;
+  const tamCanh = new THREE.Vector3(), cauCanh = new THREE.Spherical();
+  function lapCanh(loai, beat, nguoi, nguoi2) {
+    const dir = soCanh % 2 ? 1 : -1;
+    const c = { loai, tu: beat, den: beat + DAI[loai], nguoi: nguoi ?? null, nguoi2: nguoi2 ?? null, tam: tamGoc.clone(), dir };
+    if (c.nguoi) {
+      // đứng phía trước người đó: hướng từ người về chỗ camera mặc định
+      const q = viTri(c.nguoi, new THREE.Vector3());
+      c.theta = Math.atan2(camX0 - q.x, camZ0 - q.z);
     }
-    const loai = canhSo % 4;
-    const cau = dichCau.clone();
-    if (loai === 0) cau.theta += Math.sin(trong * 0.25) * lac;                       // toàn cảnh đung đưa
-    else if (loai === 1) cau.theta += (trong / CANH_GIAY) * Math.PI * 2 * 0.5;     // xoay nửa vòng quanh sàn
-    else cau.theta += Math.sin(trong * 0.3) * lac * 0.6;
-    // trượt êm từ chỗ đang đứng về đích (đầu cảnh mạnh tay hơn để chuyển cảnh nhanh)
-    const k = 1 - Math.exp(-dt * (tt - canhTu < 2 ? 2.2 : 6));
-    controls.target.lerp(dichTam, k);
-    cauNay.setFromVector3(camera.position.clone().sub(controls.target));
-    let dth = cau.theta - cauNay.theta;
-    dth = Math.atan2(Math.sin(dth), Math.cos(dth));
-    cauNay.theta += dth * k;
-    cauNay.phi += (cau.phi - cauNay.phi) * k;
-    cauNay.radius += (cau.radius - cauNay.radius) * k;
-    camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(cauNay));
+    return c;
+  }
+  function canhMoi(beat) {
+    const loai = LICH[soCanh++ % LICH.length];
+    if (QUAY_NGUOI.has(loai) || loai === 'can') {
+      const ds = nguoiSan().filter(conTrenSan);
+      if (ds.length === 0) return lapCanh('toan', beat);
+      const a = ds[luotCan++ % ds.length];
+      // lia: từ người vừa quay sang người kế (người sau lại là người chính của cảnh sau — mạch không đứt)
+      if (loai === 'lia') return ds.length > 1 ? lapCanh('lia', beat, a, ds[luotCan % ds.length]) : lapCanh('cung', beat, a);
+      return lapCanh(loai, beat, a);
+    }
+    return lapCanh(loai, beat);
+  }
+  function daoDien(t, dt) {
+    const beat = t * BPM / 60;
+    const nSoi = soi && Date.now() < soi.den ? nguoiSan()[soi.so - 1] : null;
+    if (nSoi && conTrenSan(nSoi)) {
+      if (!canh || canh.loai !== 'soi' || !cung(canh.nguoi, nSoi)) canh = lapCanh('soi', Math.floor(beat), nSoi);
+      if (beat >= canh.den) { canh.tu = canh.den; canh.den += DAI.soi; canh.dir = -canh.dir; } // soi lâu: đổi hướng lượn
+    } else if (!canh || beat >= canh.den || canh.loai === 'soi') {
+      canh = canhMoi(Math.floor(beat / 4) * 4); // cắt vào đầu ô nhịp
+    }
+    const c = canh, k = em((beat - c.tu) / (c.den - c.tu));
+    if (c.nguoi && conTrenSan(c.nguoi)) viTri(c.nguoi, c.tam);
+    if (c.loai === 'lia' && c.nguoi2 && conTrenSan(c.nguoi2)) {
+      // lia máy: tâm trượt từ người này sang người kia, hướng máy xoay theo (ease hai đầu như tay quay thật)
+      c.tam.lerp(viTri(c.nguoi2, tamCanh), k);
+    }
+    if (c.loai === 'keo') c.tam.lerp(tamGoc, k); // kéo lùi: lộ dần cả sàn
+    let r, phi, th;
+    const D = c.nguoi ? xaNguoi(c.nguoi) : 0, s = c.nguoi ? hepNguoi(c.nguoi) : 1;
+    const thNguoi = c.nguoi ? Math.atan2(camX0 - c.tam.x, camZ0 - c.tam.z) : TH0;
+    switch (c.loai) {
+      case 'dolly': r = D * (1.18 - 0.3 * k); phi = Math.PI * 0.47; th = c.theta + c.dir * 0.1 * s; break;
+      case 'cung': r = D; phi = Math.PI * 0.46; th = c.theta + c.dir * (0.4 - 0.8 * k) * s; break;
+      case 'lia': r = Math.max(D, c.nguoi2 ? xaNguoi(c.nguoi2) : D) * 1.25; phi = Math.PI * 0.46; th = thNguoi; break;
+      case 'keo': r = D * 0.95 + (R0 * 0.95 - D * 0.95) * k; phi = Math.PI * 0.47 + (PHI0 - Math.PI * 0.47) * k; th = c.theta + (TH0 - c.theta) * k; break;
+      case 'cau':
+        if (c.nguoi) { r = D * 1.15; phi = Math.PI * 0.3 + Math.PI * 0.17 * k; th = c.theta + c.dir * 0.12 * s; break; }
+        r = R0 * 0.68; phi = Math.PI * 0.49 - (Math.PI * 0.49 - (PHI0 - 0.12)) * k; th = TH0 + c.dir * 0.18; break;
+      case 'toan': r = R0 * (1.05 - 0.25 * k); phi = PHI0 + 0.03 * k; th = TH0 + c.dir * (0.12 - 0.24 * k); break;
+      case 'luon': r = R0 * 0.72; phi = PHI0 + 0.06; th = TH0 + c.dir * (0.45 - 0.9 * k); break;
+      case 'thap': r = DANCER_HEIGHT * (c.nguoi.anh ? 3.4 : 1.9) - 0.3 * k; phi = Math.PI * 0.53; th = c.theta + c.dir * (0.25 - 0.5 * k) * (c.nguoi.anh ? 0.35 : 1); break;
+      default: // can, soi: cận + đẩy sát, lượn nhẹ. Người ảnh động: đứng xa hẳn, đẩy ít — sát quá thì mặt vẽ vỡ nét
+        // (khung MimicMotion mềm ở mặt) và lộ là tấm ảnh phẳng
+        // người ảnh động: lượn hẹp quanh chính diện — ảnh mặt trước nét nhất, góc nghiêng / sau lưng ít nét hơn
+        r = DANCER_HEIGHT * (c.nguoi.anh ? 3.6 - 0.3 * k : 2.0 - 0.55 * k); phi = Math.PI * 0.45;
+        th = c.theta + c.dir * (0.3 - 0.6 * k) * (c.nguoi.anh ? 0.35 : 1);
+    }
+    // đầu cảnh: cắt thẳng tới vị trí (không trôi); giữa cảnh: bám mượt theo đường đi
+    const vuaCat = c !== daoDien.cuoi;
+    daoDien.cuoi = c;
+    cauCanh.set(r, phi, th);
+    if (vuaCat) controls.target.copy(c.tam);
+    else controls.target.lerp(c.tam, 1 - Math.exp(-dt * 8));
+    camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(cauCanh));
+  }
+  daoDien.cuoi = null;
+  // người đang được quay cận (cho đèn spot)
+  const dangQuay = () => {
+    if (!canh || !canh.nguoi || !['can', 'thap', 'soi', 'dolly', 'cung', 'cau', 'lia'].includes(canh.loai)) return null;
+    // lia: đèn đổi sang người kế khi máy đã quay quá nửa đường
+    const n = canh.loai === 'lia' && canh.nguoi2 && clock.elapsedTime * BPM / 60 > (canh.tu + canh.den) / 2 ? canh.nguoi2 : canh.nguoi;
+    return conTrenSan(n) ? n : null;
+  };
+
+  // Đèn spot rọi người đang được cận (lệnh soi hoặc cảnh cận của đạo diễn), và số thứ tự trên đầu mỗi người.
+  const spot = new THREE.SpotLight('#ffe6f4', 0, 0, 0.2, 0.55, 1);
+  spot.castShadow = false;
+  scene.add(spot, spot.target);
+  const dichSpot = new THREE.Vector3();
+  const nhanSo = new Map(); // người (a hoặc anh) → Sprite số
+  function anhSo(so, sang) {
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 64;
+    const g = cv.getContext('2d');
+    g.fillStyle = sang ? 'rgba(255,207,107,0.95)' : 'rgba(20,12,30,0.72)';
+    g.beginPath(); g.roundRect(14, 8, 100, 48, 24); g.fill();
+    g.font = 'bold 36px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = sang ? '#2a1405' : '#ffffff';
+    g.fillText(String(so), 64, 33);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
+    s.scale.set(0.42, 0.21, 1); s.renderOrder = 10;
+    return s;
+  }
+  function capNhatSo(dang) {
+    const ds = hienSo ? nguoiSan() : [];
+    const con = new Set();
+    ds.forEach((n, i) => {
+      const k = n.a ?? n.anh;
+      const sang = cung(n, dang);
+      let s = nhanSo.get(k);
+      if (!s || s.userData.so !== i + 1 || s.userData.sang !== sang) {
+        if (s) { s.removeFromParent(); s.material.map.dispose(); s.material.dispose(); }
+        s = anhSo(i + 1, sang); s.userData.so = i + 1; s.userData.sang = sang;
+        scene.add(s); nhanSo.set(k, s);
+      }
+      con.add(k);
+      s.visible = conTrenSan(n);
+      if (n.a) { n.a.dau.getWorldPosition(s.position); s.position.y += 0.38; }
+      else { s.position.copy(n.anh.obj.position); s.position.y += DANCER_HEIGHT + 0.25; }
+    });
+    for (const [k, s] of nhanSo) if (!con.has(k)) { s.removeFromParent(); s.material.map.dispose(); s.material.dispose(); nhanSo.delete(k); }
   }
 
   const clock = new THREE.Clock();
@@ -769,12 +881,8 @@ export async function start({ space, model = null, mount, tex }: {
         }
       }
     }
-    if (!inspect && !dangCam && !dungDua && t - buongLuc > NGHI_TAY) {
-      // Lấy góc đang đứng làm tâm mới; sin(0) = 0 nên camera đi tiếp êm, không giật về góc cũ.
-      goc0.setFromVector3(camera.position.clone().sub(controls.target));
-      dungDua = true; dungDuaTu = t;
-    }
-    if (!inspect && dungDua) daoDien(t - dungDuaTu, dt);
+    if (!inspect && !dangCam && !dungDua && t - buongLuc > NGHI_TAY) dungDua = true; // buông tay đủ lâu: tự quay tiếp
+    if (!inspect && dungDua) daoDien(t, dt);
     nhipDam++;
     for (const a of dangRa) {
       a.ra.con -= dt;
@@ -810,6 +918,17 @@ export async function start({ space, model = null, mount, tex }: {
       m.material.color.copy(tmp).multiplyScalar(1.6 + pulse * 1.2);
     }
     S.update(t, beat, pulse, bar4);
+    {
+      // đèn spot: theo người đang soi / đang được quay cận; không ai thì tắt dần
+      const dang = dangQuay();
+      if (dang) {
+        viTri(dang, dichSpot);
+        spot.target.position.lerp(dichSpot, 1 - Math.exp(-dt * 8));
+        spot.position.set(spot.target.position.x, spot.target.position.y + 7, spot.target.position.z + 1.5);
+      }
+      spot.intensity += ((dang ? 55 : 0) - spot.intensity) * (1 - Math.exp(-dt * 4));
+      capNhatSo(dang);
+    }
     {
       // màn thay đồ VIP: tới mốc đổi đồ / hết giờ giữ đồ thì mặc lại; hiệu ứng bám theo người thay đồ
       const now = Date.now();

@@ -35,9 +35,9 @@ import { Dialog, DialogBody, DialogClose, DialogTrigger } from './ui/dialog';
 export const TAB_AI: readonly { id: AiUse; ten: string; goiY: string }[] = VIEC_AI.map((v) => ({
   ...v,
   goiY: {
-    chat: 'MC do AI dẫn, nhờ AI viết nội dung.',
+    chat: 'Người dẫn do AI, nhờ AI viết nội dung.',
     image: 'Nhờ AI vẽ ảnh cho khung chiếu.',
-    tts: 'Dàn giọng đọc to câu MC và lời chào.',
+    tts: 'Dàn giọng đọc to lời dẫn và lời chào.',
     video: 'Chưa có tính năng nào dùng — khai sẵn được, bật lên khi có.',
   }[v.id],
 }));
@@ -271,7 +271,7 @@ export function AiKhoDialog({ onToast, tab, trigger, onDoi, moNgay = false }: Pr
                 ref={oTen}
                 className="input"
                 value={n.name}
-                placeholder="MC"
+                placeholder="người dẫn"
                 aria-label="Tên ngắn của kết nối"
                 onChange={(e) => setN({ ...n, name: e.target.value })}
               />

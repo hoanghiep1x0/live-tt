@@ -19,12 +19,20 @@ const FEED_GIU: usize = 200;
 const NGUOI_GIU: usize = 60;
 
 /// Vắng quá lâu thì trả ghế cho người khác. Người từng tặng quà được giữ lâu hơn.
+/// Ghế được ngồi nhiều hơn số người xem thật ngần này thì bắt đầu nhả bớt.
+/// Chừa một ít: TikTok báo số người xem trễ vài giây so với tin "vào phòng".
+const GHE_HON_NGUOI_XEM: usize = 2;
 pub const GHE_VANG_MS: i64 = 10 * 60 * 1000;
 pub const GHE_VANG_TANG_QUA_MS: i64 = 30 * 60 * 1000;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Totals {
+    /// Số người ĐANG xem (TikTok `total`).
     pub viewers: u64,
+    /// Tổng lượt xem cả buổi live (TikTok `totalUser`): mọi người đã ghé, kể cả
+    /// đã rời. Chỉ tăng. Bản chụp phiên cũ chưa có thì là 0.
+    #[serde(default)]
+    pub views: u64,
     pub likes: u64,
     pub gifts: u64,
     pub xu: i64,
@@ -75,6 +83,23 @@ pub struct FeedItem {
     /// Giọng đọc dạng "nhà-cung-cấp:tên-giọng", chỉ có ở câu MC.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub voice: Option<String>,
+    /// Câu MC nói VỚI KHÁCH (chào người mới vào, đáp bình luận). Sân khấu đọc
+    /// chồng lên lời kể, nhỏ tiếng hơn, để khách không phải chờ hết đoạn; lúc
+    /// không kể thì đọc bình thường.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub khach: Option<bool>,
+    /// Câu MC này là lời KỂ đoạn thứ mấy của truyện (đếm từ 0, `ke_truyen.rs`).
+    /// Module Kể chuyện bắt nó để chuyển đoạn và hiện lời kể làm phụ đề.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ke: Option<u32>,
+    /// Câu MC thuộc MẠCH TRUYỆN (lời kể, câu mở truyện): sân khấu đọc nó trước
+    /// mọi lời chào, chào đang dài thì nhường. Chào hỏi để trống.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub truyen: Option<bool>,
+    /// Lệnh khách gõ trong bình luận, đã đọc và áp (`lenh.rs`). Chỉ có ở mục
+    /// `comment` là lệnh.
+    #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
+    pub lenh: Option<crate::lenh::Lenh>,
 }
 
 impl FeedItem {
@@ -92,6 +117,10 @@ impl FeedItem {
             count: None,
             ao: None,
             voice: None,
+            ke: None,
+            truyen: None,
+            khach: None,
+            lenh: None,
         }
     }
 }
@@ -103,6 +132,21 @@ struct Viewer {
     last_at: i64,
     /// Người từng tặng quà được giữ ghế lâu hơn.
     da_tang: bool,
+    /// Điểm quy đổi từ quà của riêng người này.
+    xu: i64,
+    so_binh_luan: u32,
+    so_tim: u64,
+    /// Nhân vật do máy dựng. Không được chen vào bảng vinh danh: bảng đó để
+    /// cảm ơn người xem thật.
+    ao: bool,
+}
+
+/// Điểm tương tác để xếp bồ đoàn top: quà nặng nhất, rồi bình luận, rồi tim.
+/// Nguyên công thức `interactScore` của bản cũ. Hàm thuần.
+fn diem_tuong_tac(xu: i64, binh_luan: u32, tim: u64) -> i64 {
+    xu.saturating_mul(10)
+        .saturating_add(i64::from(binh_luan).saturating_mul(20))
+        .saturating_add(i64::try_from(tim).unwrap_or(i64::MAX))
 }
 
 /// Bản rút gọn chỉ đọc mà sân khấu và module được thấy.
@@ -116,6 +160,9 @@ pub struct SessionView {
     pub totals: Totals,
     #[serde(rename = "topGivers")]
     pub top_givers: Vec<Giver>,
+    /// Bảng vinh danh theo tương tác — xem `Session::top_tuong_tac`.
+    #[serde(rename = "topTuongTac")]
+    pub top_tuong_tac: Vec<Giver>,
     pub seats: Vec<Seat>,
     #[serde(rename = "recentUsers")]
     pub recent_users: Vec<crate::events::EventUser>,
@@ -140,6 +187,13 @@ pub struct Session {
     /// Số người xem do TikTok đếm. Khác hẳn số người mình thấy: phòng nghìn
     /// người thì mình chỉ biết mặt vài chục người có gõ chữ hay tặng quà.
     nguoi_xem_ngoai: Option<u64>,
+    /// Sơ đồ hàng ghế thiết kế khai (`seatRows`). Không khai thì phòng không có
+    /// mã ghế, và các lệnh "ghế B4", "chỗ…", "đánh…" không được đọc.
+    so_do: Option<crate::lenh::SoDoGhe>,
+    /// Mốc giờ gần nhất phiên được biết (tin vừa tới, hay nhịp thu hồi ghế).
+    /// `view()` không nhận giờ từ ngoài, mà bảng vinh danh theo tương tác thì
+    /// cần biết ai còn trong phòng — nên phiên tự giữ lấy mốc này.
+    luc_nay: i64,
 }
 
 impl Session {
@@ -157,6 +211,70 @@ impl Session {
             gan_day: VecDeque::new(),
             next_id: 1,
             nguoi_xem_ngoai: None,
+            so_do: None,
+            luc_nay: now,
+        }
+    }
+
+    /// Thiết kế có khai sơ đồ hàng ghế: bật các lệnh dùng mã ghế.
+    pub fn dat_so_do(&mut self, hang: Vec<usize>, sau: usize) {
+        if hang.is_empty() && sau == 0 {
+            return;
+        }
+        let sau = if sau == 0 { hang.last().copied().unwrap_or(1) } else { sau };
+        self.so_do = Some(crate::lenh::SoDoGhe { hang, sau, tong: self.ghe.len() });
+    }
+
+    /// Áp lệnh trong một bình luận của `user`. `None`: không phải lệnh, hoặc
+    /// lệnh cần mã ghế mà phòng không có sơ đồ ghế.
+    fn ap_lenh(&mut self, user: &str, chu: &str) -> Option<crate::lenh::Lenh> {
+        use crate::lenh::{Lenh, LenhTho};
+        match crate::lenh::doc(chu)? {
+            LenhTho::Gui(chu) => Some(Lenh::Gui { chu }),
+            LenhTho::Nhay => Some(Lenh::Nhay),
+            LenhTho::Ghe(ma) => {
+                let i = self.so_do.as_ref()?.chi_so(&ma);
+                let Some(i) = i else {
+                    return Some(Lenh::Ghe { ma, i: None, ok: false, ly_do: Some("phòng không có ghế này".into()) });
+                };
+                if self.ghe[i].as_deref().is_some_and(|u| u != user) {
+                    return Some(Lenh::Ghe { ma, i: Some(i), ok: false, ly_do: Some("ghế đã có người".into()) });
+                }
+                self.tra_ghe(user);
+                self.ghe[i] = Some(user.to_string());
+                self.ghe_cua.insert(user.to_string(), i);
+                Some(Lenh::Ghe { ma, i: Some(i), ok: true, ly_do: None })
+            }
+            LenhTho::Cho(ma) => {
+                let so_do = self.so_do.as_ref()?;
+                let i = if ma.is_empty() {
+                    self.ghe_cua.get(user).copied()
+                } else if ma.chars().all(|c| c.is_ascii_digit()) {
+                    ma.parse::<usize>().ok().filter(|n| (1..=so_do.tong).contains(n)).map(|n| n - 1)
+                } else {
+                    so_do.chi_so(&ma)
+                };
+                let ma = i.and_then(|i| so_do.ma(i)).unwrap_or(ma);
+                Some(Lenh::Cho { ma, i })
+            }
+            LenhTho::Treu(dich) => {
+                let so_do = self.so_do.as_ref()?;
+                let tu = self.ghe_cua.get(user).copied();
+                // Đích là mã ghế, hoặc tên một người đang ngồi (khớp không dấu).
+                let den = so_do.chi_so(&dich).or_else(|| {
+                    let can = crate::lenh::bo_dau(dich.trim());
+                    self.ghe_cua
+                        .iter()
+                        .filter(|(u, _)| u.as_str() != user)
+                        .find(|(u, _)| {
+                            self.viewers
+                                .get(*u)
+                                .is_some_and(|v| crate::lenh::bo_dau(&v.name).starts_with(&can))
+                        })
+                        .map(|(_, i)| *i)
+                });
+                Some(Lenh::Treu { dich, tu, den })
+            }
         }
     }
 
@@ -173,6 +291,46 @@ impl Session {
     pub fn dat_nguoi_xem(&mut self, n: u64) {
         self.nguoi_xem_ngoai = Some(n);
         self.totals.viewers = n;
+    }
+
+    /// Nhận tổng lượt xem từ nguồn. Lấy `max`: con số này chỉ tăng, tin đến
+    /// lệch thứ tự không được kéo nó lùi.
+    pub fn dat_luot_xem(&mut self, n: u64) {
+        self.totals.views = self.totals.views.max(n);
+    }
+
+    /// Buổi live kết thúc: trả hết ghế, xoá danh sách khách, số người xem về 0.
+    ///
+    /// TikTok KHÔNG BAO GIỜ gửi tin "rời phòng" — bản cũ cũng vậy
+    /// (`mapMember` ở `D:\Live\client\src\lib\tiktokMap.ts` luôn trả `join`),
+    /// nên bình thường ghế chỉ được trả khi người ta im quá 10 phút
+    /// (`thu_hoi_ghe`). Nhưng live tắt thì cả phòng đã ra hết cùng lúc: ngồi
+    /// chờ mười phút nữa là rạp còn đầy chibi và 👥 treo ở số cũ, nhìn vào
+    /// tưởng phòng vẫn đông. Giữ lại tổng của buổi (tim, quà, điểm) và sổ quà
+    /// — đó là thành tích của buổi, không phải người đang ngồi.
+    ///
+    /// Chỉ người xem THẬT rời đi. Nhân vật minh hoạ (`ao`) ở lại: họ do máy
+    /// dựng, không ở trong phòng TikTok nào — mất nguồn là lúc máy chủ tự bật
+    /// họ (`ai::canh_mat_nguon`), cầu nối báo "offline" mỗi phút mà dọn cả họ
+    /// là đám đông minh hoạ biến mất mỗi phút.
+    pub fn don_phong(&mut self) -> bool {
+        let that: Vec<String> = self.viewers.iter().filter(|(_, v)| !v.ao).map(|(u, _)| u.clone()).collect();
+        if that.is_empty() && self.nguoi_xem_ngoai.is_none() {
+            return false;
+        }
+        for u in &that {
+            self.viewers.remove(u);
+            if let Some(i) = self.ghe_cua.remove(u) {
+                if let Some(o) = self.ghe.get_mut(i) {
+                    *o = None;
+                }
+            }
+        }
+        self.gan_day.retain(|u| self.viewers.contains_key(u));
+        self.nguoi_xem_ngoai = None;
+        self.totals.viewers = 0;
+        self.cap_nhat_nguoi_xem();
+        true
     }
 
     fn cap_nhat_nguoi_xem(&mut self) {
@@ -198,6 +356,10 @@ impl Session {
                 avatar: ev.who.avatar.clone(),
                 last_at: now,
                 da_tang: false,
+                xu: 0,
+                so_binh_luan: 0,
+                so_tim: 0,
+                ao: false,
             });
         // Người đổi tên hiển thị giữa phiên là chuyện thường; theo tên mới nhất.
         v.name = ev.who.name.clone();
@@ -205,6 +367,7 @@ impl Session {
             v.avatar = ev.who.avatar.clone();
         }
         v.last_at = now;
+        self.luc_nay = self.luc_nay.max(now);
         if moi {
             self.gan_day.push_back(ev.who.user.clone());
             while self.gan_day.len() > NGUOI_GIU {
@@ -215,11 +378,23 @@ impl Session {
     }
 
     /// Xếp chỗ cho một người. Trả chỉ số ghế, hoặc `None` khi phòng đã kín.
+    ///
+    /// Chọn NGẪU NHIÊN trong các ghế còn trống, không lấp lần lượt từ đầu:
+    /// lấp theo thứ tự thì rạp đầy dần thành một khối vuông vắn từ hàng A,
+    /// nhìn là biết máy xếp. Rải ngẫu nhiên trông như người tự tìm chỗ ngồi.
     fn xep_ghe(&mut self, user: &str) -> Option<usize> {
         if let Some(i) = self.ghe_cua.get(user) {
             return Some(*i);
         }
-        let i = self.ghe.iter().position(Option::is_none)?;
+        let trong: Vec<usize> =
+            self.ghe.iter().enumerate().filter(|(_, g)| g.is_none()).map(|(i, _)| i).collect();
+        // Bốc theo tên người: cùng một người vào lại cùng phiên thì về đúng
+        // chỗ cũ, và hai cửa sổ cùng phòng xếp giống nhau (không dùng đồng hồ).
+        let mut h: u64 = 1_469_598_103_934_665_603;
+        for b in user.as_bytes().iter().chain(self.started_at.to_le_bytes().iter()) {
+            h = (h ^ u64::from(*b)).wrapping_mul(1_099_511_628_211);
+        }
+        let i = *trong.get((h % trong.len().max(1) as u64) as usize)?;
         self.ghe[i] = Some(user.to_string());
         self.ghe_cua.insert(user.to_string(), i);
         Some(i)
@@ -231,9 +406,39 @@ impl Session {
         }
     }
 
+    /// Nhả bớt ghế khi số người ngồi vượt quá số người xem THẬT của phòng.
+    ///
+    /// TikTok gửi tin "vào phòng" cho từng người nhưng gần như không gửi tin
+    /// "rời phòng", nên ghế cứ dồn lại: phòng hai người xem mà rạp hai chục
+    /// ghế có người, nhìn là biết đếm sai. Nhả người ngồi lâu mà im nhất
+    /// trước — ai vừa bình luận hay vừa tặng quà thì giữ.
+    fn nha_ghe_du(&mut self) {
+        let Some(that) = self.nguoi_xem_ngoai else { return };
+        let toi_da = that as usize + GHE_HON_NGUOI_XEM;
+        if self.ghe_cua.len() <= toi_da {
+            return;
+        }
+        let mut ds: Vec<(String, i64, bool)> = self
+            .ghe_cua
+            .keys()
+            .map(|u| {
+                let v = self.viewers.get(u);
+                (u.clone(), v.map_or(i64::MIN, |v| v.last_at), v.is_some_and(|v| v.da_tang))
+            })
+            .collect();
+        // Người tặng quà xếp cuối (giữ lại lâu nhất), rồi tới người vừa có
+        // hoạt động gần đây.
+        ds.sort_by_key(|(_, luc, tang)| (*tang, *luc));
+        for (u, _, _) in ds.into_iter().take(self.ghe_cua.len() - toi_da) {
+            self.tra_ghe(&u);
+            self.viewers.remove(&u);
+        }
+    }
+
     /// Vắng quá lâu thì trả ghế, để người đang xem có chỗ.
     /// Trả về số ghế vừa thu hồi.
     pub fn thu_hoi_ghe(&mut self, now: i64) -> usize {
+        self.luc_nay = self.luc_nay.max(now);
         let het: Vec<String> = self
             .ghe_cua
             .keys()
@@ -254,6 +459,8 @@ impl Session {
             self.tra_ghe(u);
             self.viewers.remove(u);
         }
+        // Ghế nhiều hơn người xem thật: nhả bớt ngay, không chờ hết hạn vắng.
+        self.nha_ghe_du();
         self.cap_nhat_nguoi_xem();
         het.len()
     }
@@ -266,6 +473,11 @@ impl Session {
     /// mà nói khác nhau thì module lúc chạy lúc không.
     pub fn apply(&mut self, ev: &LiveEvent, now: i64, ao: bool) -> Vec<FeedItem> {
         self.ghi_nguoi(ev, now);
+        if ao {
+            if let Some(v) = self.viewers.get_mut(&ev.who.user) {
+                v.ao = true;
+            }
+        }
         let id = self.id_moi();
         let name = ev.who.name.clone();
         let user = ev.who.user.clone();
@@ -282,18 +494,27 @@ impl Session {
             }
             Payload::Comment { text } => {
                 self.totals.comments += 1;
+                if let Some(v) = self.viewers.get_mut(&user) {
+                    v.so_binh_luan = v.so_binh_luan.saturating_add(1);
+                }
                 // Bình luận cũng là có mặt: người gõ chữ thì được giữ chỗ.
                 self.xep_ghe(&user);
-                FeedItem::moi(id, now, "comment", &name, text.clone())
+                let mut it = FeedItem::moi(id, now, "comment", &name, text.clone());
+                it.lenh = self.ap_lenh(&user, text);
+                it
             }
             Payload::Like { count, total } => {
-                // Tin tổng của TikTok hơn cộng dồn phía mình: tin có thể rơi mất
-                // trên đường, và tổng thì không bao giờ lùi.
-                let cong = self.totals.likes.saturating_add(u64::from(*count));
+                // Có tổng của TikTok thì DÙNG TỔNG (không cộng thêm `count` —
+                // `count` đã nằm trong tổng rồi, cộng nữa là đếm hai lần và số
+                // tim vọt lên cao hơn thật). Không có tổng mới cộng dồn. Tổng
+                // không bao giờ lùi nên lấy max. Đúng như bản cũ.
                 self.totals.likes = match total {
-                    Some(t) => cong.max(*t),
-                    None => cong,
+                    Some(t) => self.totals.likes.max(*t),
+                    None => self.totals.likes.saturating_add(u64::from(*count)),
                 };
+                if let Some(v) = self.viewers.get_mut(&ev.who.user) {
+                    v.so_tim = v.so_tim.saturating_add(u64::from(*count));
+                }
                 let mut it = FeedItem::moi(id, now, "like", &name, format!("thả {count} tim"));
                 it.count = Some(*count);
                 it
@@ -310,6 +531,7 @@ impl Session {
                 self.xep_ghe(&user);
                 if let Some(v) = self.viewers.get_mut(&user) {
                     v.da_tang = true;
+                    v.xu = v.xu.saturating_add(xu);
                 }
                 let anh = ev.who.avatar.clone();
                 let g = self.givers.entry(user.clone()).or_insert_with(|| Giver {
@@ -362,10 +584,21 @@ impl Session {
     /// Câu MC phải nằm TRONG phiên chứ không chỉ phát thẳng xuống sân khấu: lượt
     /// sau AI cần đọc lại mình vừa nói gì mới nối mạch được, và cửa sổ xem mở
     /// giữa chừng cũng thấy MC đang kể tới đâu.
-    pub fn mc_noi(&mut self, now: i64, text: String, voice: Option<String>) -> FeedItem {
+    pub fn mc_noi(
+        &mut self,
+        now: i64,
+        text: String,
+        voice: Option<String>,
+        ke: Option<u32>,
+        truyen: bool,
+        khach: bool,
+    ) -> FeedItem {
         let id = self.id_moi();
         let mut item = FeedItem::moi(id, now, "host", "MC", text);
         item.voice = voice;
+        item.ke = ke;
+        item.truyen = (truyen || ke.is_some()).then_some(true);
+        item.khach = khach.then_some(true);
         self.feed.push_back(item.clone());
         while self.feed.len() > FEED_GIU {
             self.feed.pop_front();
@@ -384,6 +617,62 @@ impl Session {
         v.sort_by(|a, b| b.xu.cmp(&a.xu).then_with(|| a.user.cmp(&b.user)));
         v.truncate(n);
         v
+    }
+
+    /// Bảng vinh danh theo TƯƠNG TÁC, không chỉ theo quà.
+    ///
+    /// Phòng mới mở chưa ai tặng quà thì bảng `top_givers` rỗng, năm bồ đoàn
+    /// trống trơ ra — người xem nhìn vào tưởng phòng vắng. Bản cũ
+    /// (`topInteract`) lấp bằng người đang trong phòng, nên lúc nào cũng có
+    /// ảnh thật trên bồ đoàn. Chuyển nguyên cách xếp đó:
+    ///
+    /// - chỉ người xem thật còn trong phòng (vắng quá 10 phút thì nhường chỗ;
+    ///   ai đã tặng quà được giữ 30 phút như giữ ghế),
+    /// - người tặng quà luôn đứng trên người chỉ bình luận / thả tim, rồi mới
+    ///   xét điểm tương tác,
+    /// - còn chỗ thì lấp bằng người chưa tương tác gì, ai có ảnh đứng trước.
+    ///
+    /// `coins` lấy từ sổ quà nếu người đó từng tặng, không thì 0.
+    pub fn top_tuong_tac(&self, n: usize, now: i64) -> Vec<Giver> {
+        let mut co_mat: Vec<(&String, &Viewer, i64)> = self
+            .viewers
+            .iter()
+            .filter(|(_, v)| !v.ao)
+            .filter(|(_, v)| {
+                let han = if v.xu > 0 {
+                    GHE_VANG_TANG_QUA_MS
+                } else {
+                    GHE_VANG_MS
+                };
+                now - v.last_at < han
+            })
+            .map(|(u, v)| (u, v, diem_tuong_tac(v.xu, v.so_binh_luan, v.so_tim)))
+            .collect();
+        // Xếp một lần cho cả hai nhóm: ai có tương tác đứng trước ai chưa có,
+        // trong nhóm có tương tác thì người tặng quà trước. Hoà hết thì lấy
+        // nick làm chốt, để bảng không nhảy chỗ mỗi lần vẽ lại.
+        co_mat.sort_by(|(ua, a, da), (ub, b, db)| {
+            (*db > 0)
+                .cmp(&(*da > 0))
+                .then_with(|| (b.xu > 0).cmp(&(a.xu > 0)))
+                .then_with(|| b.xu.cmp(&a.xu))
+                .then_with(|| db.cmp(da))
+                // Nhóm chưa tương tác: ai có ảnh đứng trước, rồi ai mới vào.
+                .then_with(|| b.avatar.is_some().cmp(&a.avatar.is_some()))
+                .then_with(|| b.last_at.cmp(&a.last_at))
+                .then_with(|| ua.cmp(ub))
+        });
+        co_mat
+            .into_iter()
+            .take(n)
+            .map(|(u, v, _)| Giver {
+                user: u.clone(),
+                name: v.name.clone(),
+                xu: v.xu,
+                coins: self.givers.get(u).map_or(0, |g| g.coins),
+                avatar: v.avatar.clone(),
+            })
+            .collect()
     }
 
     pub fn seats(&self) -> Vec<Seat> {
@@ -422,6 +711,7 @@ impl Session {
             started_at: Some(self.started_at),
             totals: self.totals.clone(),
             top_givers: self.top_givers(5),
+            top_tuong_tac: self.top_tuong_tac(5, self.luc_nay),
             seats: self.seats(),
             recent_users,
             recent_feed: self.feed.iter().rev().take(feed_n).rev().cloned().collect(),
@@ -440,6 +730,53 @@ mod tests {
 
     fn vao(u: &str) -> LiveEvent {
         LiveEvent::new(u, u, P::Join)
+    }
+
+    fn noi(u: &str, chu: &str) -> LiveEvent {
+        LiveEvent {
+            who: crate::events::EventUser { user: u.into(), name: u.into(), avatar: None },
+            what: Payload::Comment { text: chu.into() },
+        }
+    }
+
+    fn phong_co_so_do() -> Session {
+        let mut s = Session::new("ke-chuyen", 84, 1.0, 0);
+        s.dat_so_do(vec![8, 10, 12, 12, 14, 14], 14);
+        s
+    }
+
+    #[test]
+    fn go_ghe_b4_la_doi_sang_ghe_do() {
+        use crate::lenh::Lenh;
+        let mut s = phong_co_so_do();
+        let it = s.apply(&noi("lan", "ghế B4"), 1, false);
+        assert_eq!(it[0].lenh, Some(Lenh::Ghe { ma: "B4".into(), i: Some(11), ok: true, ly_do: None }));
+        assert_eq!(s.seats().iter().find(|x| x.user == "lan").map(|x| x.i), Some(11));
+        // Người khác xin đúng ghế đó: không được.
+        let it = s.apply(&noi("minh", "ghe b4"), 2, false);
+        assert!(matches!(&it[0].lenh, Some(Lenh::Ghe { ok: false, .. })));
+    }
+
+    #[test]
+    fn cho_cua_toi_va_danh_yeu_tra_dung_ghe() {
+        use crate::lenh::Lenh;
+        let mut s = phong_co_so_do();
+        s.apply(&noi("lan", "ghế A1"), 1, false);
+        s.apply(&noi("Minh", "ghế C2"), 2, false);
+        let it = s.apply(&noi("lan", "chỗ của tôi"), 3, false);
+        assert_eq!(it[0].lenh, Some(Lenh::Cho { ma: "A1".into(), i: Some(0) }));
+        let it = s.apply(&noi("lan", "đánh Minh"), 4, false);
+        assert_eq!(it[0].lenh, Some(Lenh::Treu { dich: "Minh".into(), tu: Some(0), den: Some(19) }));
+    }
+
+    #[test]
+    fn phong_khong_khai_so_do_ghe_thi_khong_doc_lenh_ghe() {
+        let mut s = Session::new("san-bar", 84, 1.0, 0);
+        let it = s.apply(&noi("lan", "ghế B4"), 1, false);
+        assert_eq!(it[0].lenh, None);
+        // Lệnh không cần ghế vẫn đọc: phòng có dải chữ / sàn nhảy thì dùng.
+        let it = s.apply(&noi("lan", "nhảy"), 2, false);
+        assert_eq!(it[0].lenh, Some(crate::lenh::Lenh::Nhay));
     }
 
     #[test]
@@ -509,6 +846,25 @@ mod tests {
         assert_eq!(s.thu_hoi_ghe(1_001 + GHE_VANG_MS), 2);
         assert_eq!(s.seats().len(), 0);
         assert_eq!(s.totals().viewers, 0);
+    }
+
+    #[test]
+    fn ghe_khong_duoc_nhieu_hon_so_nguoi_xem_that() {
+        let mut s = Session::new("ke-chuyen", 84, 1.0, 1_000);
+        for i in 0..20 {
+            s.apply(&vao(&format!("u{i}")), 1_000 + i64::from(i), false);
+        }
+        assert_eq!(s.seats().len(), 20, "ai vào cũng có ghế");
+        // Nguồn báo phòng chỉ còn 3 người xem: nhả bớt ngay, chừa 2 ghế đệm —
+        // không chờ hết hạn vắng, nếu không rạp đầy chibi của người đã ra.
+        s.dat_nguoi_xem(3);
+        s.thu_hoi_ghe(2_000);
+        assert_eq!(s.seats().len(), 5, "3 người xem + 2 ghế đệm");
+        assert_eq!(s.totals().viewers, 3, "số người xem lấy theo nguồn");
+        // Người xem tăng lại thì không nhả thêm ghế nào.
+        s.dat_nguoi_xem(50);
+        s.thu_hoi_ghe(2_100);
+        assert_eq!(s.seats().len(), 5);
     }
 
     #[test]
@@ -654,6 +1010,15 @@ mod tests {
         );
         assert_eq!(s.totals().likes, 900);
 
+        // Tin có tổng thì LẤY TỔNG, không cộng thêm `count` — `count` đã nằm
+        // trong tổng rồi. Cộng nữa là số tim vọt lên cao hơn thật.
+        s.apply(
+            &LiveEvent::new("a", "A", P::Like { count: 3, total: Some(903) }),
+            0,
+            false,
+        );
+        assert_eq!(s.totals().likes, 903, "theo đúng tổng của TikTok");
+
         // Tổng không bao giờ lùi, kể cả khi tin tới trễ.
         s.apply(
             &LiveEvent::new(
@@ -667,7 +1032,7 @@ mod tests {
             0,
             false,
         );
-        assert_eq!(s.totals().likes, 901);
+        assert_eq!(s.totals().likes, 903);
     }
 
     #[test]
@@ -711,7 +1076,9 @@ mod tests {
     fn cau_mc_vao_feed_de_luot_sau_doc_lai_duoc() {
         let mut s = Session::new("ke-chuyen", 4, 1.0, 0);
         s.apply(&vao("an"), 1_000, false);
-        let it = s.mc_noi(2_000, "Chào An nha".into(), Some("vieneu:mai".into()));
+        let it = s.mc_noi(2_000, "Chào An nha".into(), Some("vieneu:mai".into()), None, false, true);
+        assert_eq!(it.khach, Some(true));
+        assert_eq!(it.truyen, None, "lời chào không thuộc mạch truyện");
         assert_eq!(it.kind, "host");
         assert_eq!(it.name, "MC");
         assert_eq!(it.voice.as_deref(), Some("vieneu:mai"));
@@ -760,6 +1127,117 @@ mod tests {
     }
 
     #[test]
+    fn live_tat_thi_don_sach_rap_va_so_nguoi_xem_ve_khong() {
+        let mut s = phien();
+        s.apply(&vao("an"), 1_000, false);
+        s.apply(&vao("binh"), 1_000, false);
+        s.dat_nguoi_xem(12);
+        assert_eq!(s.seats().len(), 2);
+        assert_eq!(s.totals().viewers, 12);
+
+        assert!(s.don_phong(), "có người thì dọn là có đổi");
+        assert!(s.seats().is_empty(), "ghế phải trống hết");
+        assert_eq!(s.totals().viewers, 0);
+        assert!(s.top_tuong_tac(5, 1_000).is_empty());
+        assert!(!s.don_phong(), "dọn phòng đã trống thì không báo đổi");
+    }
+
+    #[test]
+    fn don_phong_chi_tien_nguoi_that_nhan_vat_minh_hoa_o_lai() {
+        let mut s = phien();
+        s.apply(&LiveEvent::new("an", "An", P::Join), 1_000, false);
+        s.apply(&LiveEvent::new("mh0001", "Bé Na", P::Join), 1_000, true);
+        assert!(s.don_phong());
+        let ghe: Vec<String> = s.seats().into_iter().map(|x| x.user).collect();
+        assert_eq!(ghe, vec!["mh0001".to_string()], "nhân vật minh hoạ vẫn ngồi");
+        // Báo "offline" lần nữa (cầu nối báo mỗi phút): không còn ai thật để dọn.
+        assert!(!s.don_phong());
+    }
+
+    #[test]
+    fn don_phong_giu_lai_thanh_tich_cua_buoi() {
+        let mut s = phien();
+        s.apply(
+            &LiveEvent::new(
+                "an",
+                "An",
+                P::Gift {
+                    gift: "Rose".into(),
+                    count: 2,
+                    xu_each: 5,
+                },
+            ),
+            1_000,
+            false,
+        );
+        let xu = s.totals().xu;
+        s.don_phong();
+        assert_eq!(s.totals().xu, xu, "quà của buổi không bị xoá");
+        assert_eq!(s.top_givers(5).len(), 1, "sổ quà của buổi vẫn còn");
+    }
+
+    #[test]
+    fn bo_doan_top_lap_bang_nguoi_trong_phong_khi_chua_ai_tang_qua() {
+        // Chuyện hay gặp nhất: phòng vừa mở, có người xem mà chưa ai tặng quà.
+        // Bảng quà rỗng, nhưng bảng tương tác phải có người — để năm bồ đoàn
+        // hiện ảnh thật chứ không trơ ra như phòng vắng.
+        let mut s = phien();
+        s.apply(&vao("an"), 1_000, false);
+        s.apply(&vao("binh"), 1_100, false);
+        assert!(s.top_givers(5).is_empty(), "chưa ai tặng quà");
+        let t = s.top_tuong_tac(5, 1_200);
+        assert_eq!(t.len(), 2);
+        assert!(t.iter().all(|g| g.xu == 0));
+    }
+
+    #[test]
+    fn bo_doan_top_xep_nguoi_tang_qua_tren_nguoi_chi_binh_luan() {
+        let mut s = phien();
+        s.apply(&vao("an"), 1_000, false);
+        for i in 0..5 {
+            s.apply(&noi("an", "hay quá"), 1_010 + i, false);
+        }
+        s.apply(&vao("binh"), 1_020, false);
+        s.apply(
+            &LiveEvent::new(
+                "binh",
+                "Bình",
+                P::Gift {
+                    gift: "Rose".into(),
+                    count: 1,
+                    xu_each: 1,
+                },
+            ),
+            1_030,
+            false,
+        );
+        let t = s.top_tuong_tac(5, 1_100);
+        assert_eq!(
+            t.iter().map(|g| g.user.as_str()).collect::<Vec<_>>(),
+            vec!["binh", "an"],
+            "một món quà vẫn đứng trên năm bình luận"
+        );
+    }
+
+    #[test]
+    fn bo_doan_top_bo_nhan_vat_ao_va_nguoi_vang_lau() {
+        let mut s = phien();
+        s.apply(&vao("bot"), 1_000, true);
+        s.apply(&vao("an"), 1_000, false);
+        s.apply(&vao("cu"), 1_000, false);
+        let t = s.top_tuong_tac(5, 1_000);
+        assert_eq!(t.len(), 2, "nhân vật ảo không được lên bảng vinh danh");
+
+        // "cu" im từ đầu, quá hạn vắng thì nhường chỗ.
+        s.apply(&noi("an", "còn đây"), 1_000 + GHE_VANG_MS, false);
+        let t = s.top_tuong_tac(5, 1_000 + GHE_VANG_MS);
+        assert_eq!(
+            t.iter().map(|g| g.user.as_str()).collect::<Vec<_>>(),
+            vec!["an"]
+        );
+    }
+
+    #[test]
     fn view_khop_hinh_dang_hop_dong_ben_client() {
         let mut s = phien();
         s.apply(&vao("an"), 1_000, false);
@@ -769,6 +1247,7 @@ mod tests {
             "startedAt",
             "totals",
             "topGivers",
+            "topTuongTac",
             "seats",
             "recentUsers",
             "recentFeed",

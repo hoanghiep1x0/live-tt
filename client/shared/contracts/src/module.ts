@@ -39,7 +39,36 @@ export type ConfigFieldType =
   | 'list'
   /** Chọn món trong tủ đồ của module (`assets/tu-do/<nguồn>/<ô>/<món>/`, máy chủ quét ở `/s/tu-do/<module>`).
    *  Giá trị là mảng khoá món `"<nguồn>/<ô>/<món>"`. Bảng xem dựng lưới ảnh theo ô, có nút xoá món / cả nguồn. */
-  | 'tu-do';
+  | 'tu-do'
+  /** Tiến độ ảnh minh hoạ của truyện (`anh-truyen.ts`): máy chủ tự lập hồ sơ,
+   *  chọn đoạn và vẽ — ô này chỉ cho xem, vẽ lại một ảnh hay lập lại từ đầu.
+   *  Cần `truyen` để biết ô nào là các đoạn và hồ sơ. Giá trị là mảng `MocAnh`. */
+  | 'anh-truyen'
+  /** Chọn một kết nối trong kho Kết nối AI làm được việc `viec`. Giá trị là id
+   *  kết nối, rỗng là mặc định của kho. */
+  | 'ket-noi'
+  /** AI tạo ảnh, ghi rõ tên: công tắc hai phía "muse.ai (trình duyệt trong app,
+   *  miễn phí)" ↔ "API" (kết nối vẽ ảnh, tính tiền). Giá trị là boolean — bật là
+   *  muse.ai. API thì dùng cài đặt ảnh của phòng (kết nối, model, kích thước). */
+  | 'nguon-anh'
+  /** Truyện kế tiếp máy chủ chuẩn bị sẵn (`truyen_sau.rs`) — CHỈ ĐỂ XEM, kèm nút
+   *  đổi truyện khác. Giá trị là object cùng dạng các ô truyện. Sổ đã kể ở ô
+   *  `daKe` của cùng module. */
+  | 'truyen-sau'
+  /** AI viết truyện & dẫn chuyện qua đâu: 'api' (kết nối AI, tính tiền theo
+   *  token), 'codex' (Codex CLI, tài khoản ChatGPT), 'claude' (Claude Code,
+   *  tài khoản Claude). Ô hiện trạng thái cài / đăng nhập từ `/s/ai-cli`. */
+  | 'nguon-chu'
+  /** Khối "AI kể & viết truyện": bật MC (ghi cả ô này — cách kể — lẫn MC của
+   *  phòng), chọn AI chạy qua đâu (API / Codex / Claude) — ô AI nằm ở
+   *  `mcKe.ai` — kèm dòng "Đang chạy". */
+  | 'mc-ke-chuyen'
+  /** Kho truyện phòng đã kể (máy chủ `kho_da_ke.rs`): bảng mỗi hàng một
+   *  truyện, xem lại và kể lại kèm ảnh cũ. Không lưu gì trong module. */
+  | 'kho-truyen'
+  /** "Ai đọc gì" — phân vai giọng của MC (cấu hình AI của phòng, không lưu ở
+   *  module): dẫn chuyện, nhân vật, chào, đáp khách, cảm ơn quà, an ủi. */
+  | 'vai-giong';
 
 /** Mô tả một khoá cấu hình để trang quản lý tự dựng form.
  *
@@ -73,6 +102,20 @@ export interface ConfigField {
    *  khai một dòng, bảng xem mọc ra cái nút, và không chỗ nào phải biết tên
    *  module nào (quy ước 01 §6). */
   ai?: string;
+  /** Khoá những ô khác của module gửi kèm làm bối cảnh khi nhờ AI viết ô này —
+   *  vd hồ sơ nhân vật phải đọc được truyện thì mới tả đúng người trong truyện. */
+  aiTheo?: readonly string[];
+  /** Cho `anh-truyen`: khoá của các ô làm nên truyện. */
+  truyen?: { doan: string; phongCach: string; hoSo: string; hoSoCua: string; loi: string };
+  /** Chỉ hiện ô khi nó THẬT SỰ có tác dụng: hiện nếu khớp MỘT trong các điều
+   *  kiện, mỗi điều kiện là { khoá ô khác: [các giá trị được] } — mọi khoá trong
+   *  điều kiện đều phải khớp. Không khai là luôn hiện. Xét trên cấu hình đã ghép
+   *  mặc định. Vd chỉ hiện lúc tự đọc: `[{ cachKe: ['tu-doc'] }]`. */
+  hienKhi?: readonly Readonly<Record<string, readonly Json[]>>[];
+  /** Cho `mc-ke-chuyen`: khoá ô giữ nguồn AI ('api' | 'codex' | 'claude'). */
+  mcKe?: { ai: string };
+  /** Cho `ket-noi`: việc kết nối phải làm được. */
+  viec?: 'chat' | 'tts' | 'image' | 'video';
   /** Tên tab chứa ô này trong modal cấu hình. Thiếu là tab đầu ("Cài đặt").
    *  Modal chỉ chia tab khi có ô khai tab — module ngắn vẫn là một trang. */
   tab?: string;
@@ -106,7 +149,7 @@ export interface ModuleAction {
 }
 
 /** Loại phòng live. Mỗi loại có một nhúm tính năng của riêng nó. */
-export type RoomKind = 'ke-chuyen' | 'san-bar' | 'dam-cuoi';
+export type RoomKind = 'ke-chuyen' | 'san-bar' | 'dam-cuoi' | 'lop-hoc';
 
 /** Loại phòng theo thứ tự hiện trên trang. Mở một dạng live mới = thêm một dòng
  *  ở đây rồi gắn `room` cho các module của nó. */
@@ -114,6 +157,7 @@ export const LOAI_PHONG: readonly { id: RoomKind; name: string }[] = [
   { id: 'ke-chuyen', name: 'Live Kể Truyện' },
   { id: 'san-bar', name: 'Live Sàn Bar' },
   { id: 'dam-cuoi', name: 'Live Đám Cưới' },
+  { id: 'lop-hoc', name: 'Live Lớp Học' },
 ];
 
 /** `x` có phải id một loại phòng đã khai trong `LOAI_PHONG` không. */
@@ -151,11 +195,15 @@ export function hopPhong(
  *
  *  Chỉ "Kết nối AI" là dùng chung, nên nó không có dòng ở đây. */
 export const TINH_NANG_HE = {
-  /** MC do AI dẫn: chỉ phòng kể chuyện có chỗ hiện lời MC. */
-  mc: { room: ['ke-chuyen'] },
+  /** Thẻ "Người dẫn do AI" riêng: lớp học — MC là cô giáo trò chuyện với lớp
+   *  (lời dặn riêng ở `mc.dan` của thiết kế). Phòng kể chuyện không có thẻ này:
+   *  MC chính là người kể truyện, cài đặt MC nằm trong tính năng Kể chuyện (ô
+   *  `mc-ke-chuyen`), chào khách cũng do MC lo nên không có module chào riêng. */
+  mc: { room: ['lop-hoc'] },
   /** Nhân vật ảo: thiết kế nào khai `crowd.lines` thì dùng. Sàn bar chỉ có
-   *  vũ công 3D, không khai đám đông. */
-  nhanVatAo: { room: ['ke-chuyen'] },
+   *  vũ công 3D, không khai đám đông. Lớp học: ngồi ghế và nói chuyện, không
+   *  trả lời, không điểm (module `do-chu`). */
+  nhanVatAo: { room: ['ke-chuyen', 'lop-hoc'] },
 } as const satisfies Record<string, { room: readonly RoomKind[] }>;
 
 /** Tính năng có chạy được — và THẤY được — ở thiết kế này không: đúng loại
@@ -200,6 +248,9 @@ export interface ModuleUi {
   needs?: readonly Capability[];
   /** Nút bấm tức thời trên thẻ. Phải khớp các `op` mà `core.onAction` nhận. */
   actions?: readonly ModuleAction[];
+  /** Tính năng chính của loại phòng (vd Kể chuyện ở phòng kể chuyện): thẻ
+   *  đứng đầu phần riêng của phòng, trên cả thẻ MC. */
+  theDau?: boolean;
 }
 
 export interface ModuleManifest<C = Json> extends ModuleUi {
@@ -215,6 +266,10 @@ export interface Ctx<C> {
   /** Tiêm vào để test chạy lại cho cùng kết quả. Không dùng Math.random. */
   rand: () => number;
   session: SessionView;
+  /** Hàng đọc của sân khấu đang đọc hoặc còn câu chờ. Lõi nào cần chạy theo
+   *  nhịp giọng (dừng đồng hồ trong lúc đọc đề, đọc xong mới mở bảng) đọc ô
+   *  này thay vì tự đoán câu dài bao lâu. Thiếu (test, máy chủ) là coi như im. */
+  dangNoi?: boolean;
 }
 
 /** Một móc sự kiện: "khi có quà thì…", "khi có người theo dõi thì…".
@@ -331,4 +386,10 @@ export function suaList(v: Json, i: number, o: string, x: Json): Json {
 /** Giá trị `list` sau khi bỏ mục thứ `i`. */
 export function boList(v: Json, i: number): Json {
   return mucList(v).filter((_, k) => k !== i);
+}
+
+/** Ô này có nên hiện với cấu hình `cfg` không (`ConfigField.hienKhi`). Hàm thuần. */
+export function hienO(f: Pick<ConfigField, 'hienKhi'>, cfg: Readonly<Record<string, Json>>): boolean {
+  if (f.hienKhi === undefined || f.hienKhi.length === 0) return true;
+  return f.hienKhi.some((dk) => Object.entries(dk).every(([k, ds]) => ds.includes(cfg[k] ?? null)));
 }

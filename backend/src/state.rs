@@ -60,11 +60,25 @@ pub struct AppState {
     /// Đổi nguồn là tăng số này; tác vụ nguồn cũ thấy số khác thì tự thoát.
     the_he_nguon: AtomicU64,
     loi_nguon: RwLock<Option<String>>,
+    /// Lỗi của tiến trình cầu nối do backend tự bật (thiếu Node, chưa
+    /// `npm install`, cầu nối chết…). Để ô riêng, không chung `loi_nguon`: client
+    /// WebSocket của nguồn `bridge` cứ mỗi lần nối hụt lại ghi lỗi của nó, sẽ đè
+    /// mất câu "cần cài Node" — thứ duy nhất người vận hành cần đọc lúc đó.
+    loi_tien_trinh: RwLock<Option<String>>,
     /// Đếm file tải lên, để hai file trong cùng một mili-giây không đè nhau.
     media_dem: AtomicU64,
     /// Một lượt gọi MC đang bay. Gọi chồng lên nhau là MC nói hai câu cùng lúc
     /// và hoá đơn API nhân đôi.
     ai_ban: std::sync::atomic::AtomicBool,
+    /// Sổ chi phí của buổi hiện tại ở từng phòng (`chi_phi.rs`). Lên sóng là
+    /// mở sổ mới; tắt sóng thì sổ được lưu lại và vẫn giữ ở đây để bảng còn
+    /// hiện tổng của buổi vừa xong.
+    chi_phi: RwLock<HashMap<String, crate::chi_phi::So>>,
+    /// Truyện đang kể ở từng phòng: dấu và lúc bắt đầu kể — MC chỉ gửi lại
+    /// chuyện của truyện này, không gửi chuyện của truyện đã xong.
+    truyen_tu: RwLock<HashMap<String, (String, i64)>>,
+    /// MC đang kể tới đoạn nào ở từng phòng (`ke_truyen.rs`).
+    ke_toi: RwLock<HashMap<String, crate::ke_truyen::TienDo>>,
     tx: broadcast::Sender<Value>,
 }
 
@@ -121,8 +135,12 @@ impl AppState {
             nguon: RwLock::new(SourceCfg::default()),
             the_he_nguon: AtomicU64::new(0),
             loi_nguon: RwLock::new(None),
+            loi_tien_trinh: RwLock::new(None),
             media_dem: AtomicU64::new(0),
             ai_ban: std::sync::atomic::AtomicBool::new(false),
+            chi_phi: RwLock::new(HashMap::new()),
+            truyen_tu: RwLock::new(HashMap::new()),
+            ke_toi: RwLock::new(HashMap::new()),
             tx,
         })
     }
@@ -171,21 +189,31 @@ impl AppState {
             }
         }
 
+        // Buổi live MỚI không bao giờ mở màn bằng truyện đã kể: TikTok coi đó
+        // là phát lại. Dọn khung về màn chờ, MC mở truyện mới ngay sau đó.
+        crate::ke_truyen::don_truyen_cu(self, id);
+        self.ghi_nho_nguon();
         // Lên sóng thì phiên thật thay chỗ phiên xem thử.
         self.xem_thu.write().expect("khoá xem thử hỏng").remove(id);
         *self.phien.write().expect("khoá phiên hỏng") = Some(self.phien_moi(id));
         self.broadcast(json!({ "t": "live", "designId": id }));
+        // Buổi live mới: sổ chi phí mới, tính từ lúc này.
+        let so = self.so_moi(id, true);
+        self.chi_phi.write().expect("khoá chi phí hỏng").insert(id.to_string(), so.clone());
+        self.phat_cua(id, json!({ "t": "chi-phi", "so": so }));
         Ok(())
     }
 
     pub fn stop_live(&self) {
-        let da_doi = {
+        let cu = {
             let mut cur = self.live.write().expect("khoá live hỏng");
-            cur.take().is_some()
+            cur.take()
         };
+        self.ghi_nho_nguon();
         *self.phien.write().expect("khoá phiên hỏng") = None;
-        if da_doi {
+        if let Some(id) = &cu {
             self.broadcast(json!({ "t": "live", "designId": Value::Null }));
+            self.dong_so_chi_phi(id);
         }
         // Phòng vừa thôi phát mà vẫn có trang xem thử thì quay về phiên xem thử.
         self.dung_xem_thu();
@@ -194,11 +222,15 @@ impl AppState {
     /// Phiên trắng của một thiết kế. Số ghế và tỉ lệ đổi xu do thiết kế khai,
     /// vì mỗi bối cảnh một khác.
     fn phien_moi(&self, id: &str) -> Session {
-        let (ghe, ti_le) = match designs::read_manifest(&self.layout.design_manifest(id), id) {
-            Ok(m) => (m.seats, m.point_rate),
-            Err(_) => (84, 1.0),
-        };
-        Session::new(id, ghe, ti_le, bay_gio_ms())
+        let m = designs::read_manifest(&self.layout.design_manifest(id), id).ok();
+        let (ghe, ti_le) = m.as_ref().map_or((84, 1.0), |m| (m.seats, m.point_rate));
+        let mut s = Session::new(id, ghe, ti_le, bay_gio_ms());
+        // Mã ghế ("ghế B4") là đồ đạc của từng phòng: chỉ phòng tự khai sơ đồ
+        // hàng ghế mới đọc các lệnh dùng mã ghế.
+        if let Some(m) = m.filter(|m| !m.seat_rows.is_empty()) {
+            s.dat_so_do(m.seat_rows, m.row_seats.unwrap_or(0));
+        }
+        s
     }
 
     // ---- Phiên xem thử ----
@@ -276,12 +308,12 @@ impl AppState {
 
     /// MC nói một câu trong phiên xem thử của `id`. Như `mc_noi`, nhưng feed
     /// gắn `designId` nên chỉ cửa sổ xem thử của đúng phòng đó nghe thấy.
-    pub fn mc_noi_xem_thu(&self, id: &str, text: String, voice: Option<String>) {
+    pub fn mc_noi_xem_thu(&self, id: &str, text: String, voice: Option<String>, ke: Option<u32>, truyen: bool, chao: bool) {
         let now = bay_gio_ms();
         let item = {
             let mut g = self.xem_thu.write().expect("khoá xem thử hỏng");
             match g.get_mut(id) {
-                Some(p) => p.mc_noi(now, text, voice),
+                Some(p) => p.mc_noi(now, text, voice, ke, truyen, chao),
                 None => return,
             }
         };
@@ -348,6 +380,33 @@ impl AppState {
         if let Some(p) = self.phien.write().expect("khoá phiên hỏng").as_mut() {
             p.dat_nguoi_xem(n);
         }
+    }
+
+    /// Tổng lượt xem cả buổi live, do TikTok đếm (xem `Session::dat_luot_xem`).
+    pub fn dat_luot_xem(&self, n: u64) {
+        if let Some(p) = self.phien.write().expect("khoá phiên hỏng").as_mut() {
+            p.dat_luot_xem(n);
+        }
+    }
+
+    /// Kênh tắt live: dọn rạp ngay (xem `Session::don_phong`). Phát bản phiên
+    /// xuống luôn, không đợi nhịp sau — người xem OBS phải thấy rạp trống đúng
+    /// lúc buổi live kết thúc.
+    pub fn don_phong(&self) {
+        let view = {
+            let mut g = self.phien.write().expect("khoá phiên hỏng");
+            match g.as_mut() {
+                Some(p) => {
+                    if !p.don_phong() {
+                        return;
+                    }
+                    p.view(60)
+                }
+                None => return,
+            }
+        };
+        tracing::info!("kênh tắt live: dọn rạp, số người xem về 0");
+        self.broadcast(json!({ "t": "session", "view": view }));
     }
 
     /// Nhịp đều: trả ghế của người đã vắng lâu, rồi phát bản phiên xuống.
@@ -429,7 +488,139 @@ impl AppState {
         }
         let loi = self.ai_loi.read().expect("khoá lỗi MC hỏng").get(id).cloned();
         ra.push(json!({ "t": "ai-loi", "loi": loi }));
+        if let Some(so) = self.so_chi_phi(id) {
+            ra.push(json!({ "t": "chi-phi", "so": so }));
+        }
         ra
+    }
+
+    /// Ghi một lượt gọi AI vào sổ chi phí của phòng rồi phát sổ xuống. `usd`
+    /// `None` là nhà cung cấp không cho biết giá. Sổ đã đóng (buổi live vừa
+    /// tắt) thì mở sổ mới — lượt này là của lúc xem thử, không phải buổi cũ.
+    pub fn ghi_chi_phi(&self, design_id: &str, khoan: &str, d: &crate::chi_phi::Dung, usd: Option<f64>) {
+        let live = self.live().as_deref() == Some(design_id);
+        let moi = self.so_moi(design_id, live);
+        let so = {
+            let mut g = self.chi_phi.write().expect("khoá chi phí hỏng");
+            let so = g.entry(design_id.to_string()).or_insert_with(|| moi.clone());
+            if so.ket_thuc.is_some() {
+                *so = moi;
+            }
+            so.ghi(khoan, d, usd);
+            so.clone()
+        };
+        self.phat_cua(design_id, json!({ "t": "chi-phi", "so": so }));
+    }
+
+    /// Truyện đang kể ở phòng: (tên, dấu tên + các đoạn). `None` khi module
+    /// story tắt hoặc chưa có đoạn nào.
+    fn truyen_dang_ke(&self, design_id: &str) -> Option<(String, String)> {
+        let m = self.module_state(design_id, "story").ok().filter(|m| m.enabled)?;
+        let doan = crate::anh_truyen::cat_doan(m.config.get("passages")?.as_str()?);
+        if doan.is_empty() {
+            return None;
+        }
+        let ten = m.config.get("title").and_then(Value::as_str).unwrap_or_default().to_string();
+        let dau = crate::anh_truyen::dau_truyen(&ten, &doan);
+        Some((ten, dau))
+    }
+
+    /// Sổ trắng của một buổi; truyện đang có lúc mở sổ là truyện thứ nhất.
+    fn so_moi(&self, design_id: &str, live: bool) -> crate::chi_phi::So {
+        let mut so = crate::chi_phi::So::moi(design_id, live, bay_gio_ms());
+        if let Some((ten, dau)) = self.truyen_dang_ke(design_id) {
+            so.ghi_truyen(&ten, &dau);
+        }
+        so
+    }
+
+    /// Cấu hình story vừa đổi: đổi sang truyện khác thì sổ đếm thêm một truyện
+    /// và phát lại ngay. Chưa có sổ thì mở sổ (xem thử) — để bảng biết đã kể
+    /// mấy truyện kể cả khi chưa tốn đồng nào.
+    fn theo_doi_truyen(&self, design_id: &str) {
+        let Some((ten, dau)) = self.truyen_dang_ke(design_id) else { return };
+        {
+            let mut g = self.truyen_tu.write().expect("khoá truyện hỏng");
+            match g.get(design_id) {
+                // Lần đầu thấy truyện (vừa mở máy chủ): coi như kể từ đầu, giữ
+                // nguyên những gì MC đã nói về chính truyện này.
+                None => {
+                    g.insert(design_id.to_string(), (dau.clone(), i64::MIN));
+                }
+                Some((d, _)) if *d != dau => {
+                    g.insert(design_id.to_string(), (dau.clone(), bay_gio_ms()));
+                }
+                Some(_) => {}
+            }
+        }
+        let live = self.live().as_deref() == Some(design_id);
+        let so = {
+            let mut g = self.chi_phi.write().expect("khoá chi phí hỏng");
+            let so = g
+                .entry(design_id.to_string())
+                .or_insert_with(|| crate::chi_phi::So::moi(design_id, live, bay_gio_ms()));
+            if so.ket_thuc.is_some() {
+                *so = crate::chi_phi::So::moi(design_id, live, bay_gio_ms());
+            }
+            if !so.ghi_truyen(&ten, &dau) {
+                return;
+            }
+            so.clone()
+        };
+        self.phat_cua(design_id, json!({ "t": "chi-phi", "so": so }));
+    }
+
+    /// MC đang kể truyện `dau` tới đâu ở phòng này. Truyện khác thì từ đầu.
+    pub fn tien_do_ke(&self, design_id: &str, dau: &str) -> crate::ke_truyen::TienDo {
+        let g = self.ke_toi.read().expect("khoá kể truyện hỏng");
+        crate::ke_truyen::TienDo::cua(g.get(design_id), dau)
+    }
+
+    /// Ghi lại tiến độ kể sau một lượt MC.
+    pub fn ghi_tien_do_ke(&self, design_id: &str, td: crate::ke_truyen::TienDo) {
+        self.ke_toi.write().expect("khoá kể truyện hỏng").insert(design_id.to_string(), td);
+    }
+
+    /// Lúc truyện đang kể ở phòng bắt đầu (đổi truyện là đổi mốc). `None` khi
+    /// máy chủ chưa thấy truyện nào đổi từ lúc mở — gửi đủ như thường.
+    pub fn truyen_bat_dau(&self, design_id: &str) -> Option<i64> {
+        self.truyen_tu.read().expect("khoá truyện hỏng").get(design_id).map(|(_, t)| *t)
+    }
+
+    /// Sổ chi phí đang mở của một phòng.
+    pub fn so_chi_phi(&self, design_id: &str) -> Option<crate::chi_phi::So> {
+        self.chi_phi.read().expect("khoá chi phí hỏng").get(design_id).cloned()
+    }
+
+    /// Buổi live vừa tắt: chốt sổ và ghi thêm một dòng vào
+    /// `database/designs/<id>/chi-phi.jsonl`. Sổ vẫn giữ trong bộ nhớ để bảng
+    /// còn hiện tổng buổi vừa xong.
+    fn dong_so_chi_phi(&self, design_id: &str) {
+        let so = {
+            let mut g = self.chi_phi.write().expect("khoá chi phí hỏng");
+            let Some(so) = g.get_mut(design_id) else { return };
+            if so.ket_thuc.is_some() {
+                return;
+            }
+            so.ket_thuc = Some(bay_gio_ms());
+            so.clone()
+        };
+        if let Some(thu_muc) = self.layout.config_file(design_id).parent() {
+            use std::io::Write;
+            let dong = serde_json::to_string(&so).unwrap_or_default();
+            let ghi = std::fs::create_dir_all(thu_muc).and_then(|()| {
+                std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(thu_muc.join("chi-phi.jsonl"))
+                    .and_then(|mut f| writeln!(f, "{dong}"))
+            });
+            match ghi {
+                Ok(()) => tracing::info!(thiet_ke = %design_id, usd = so.tong_usd, "chốt sổ chi phí buổi live"),
+                Err(e) => tracing::warn!("không ghi được sổ chi phí: {e}"),
+            }
+        }
+        self.phat_cua(design_id, json!({ "t": "chi-phi", "so": so }));
     }
 
     /// Ghi lại lượt MC vừa rồi lỗi gì (`None`: lượt thành công). Chỉ phát khi
@@ -445,6 +636,11 @@ impl AppState {
         if doi {
             self.phat_cua(design_id, json!({ "t": "ai-loi", "loi": loi }));
         }
+    }
+
+    /// Lượt MC gần nhất của phòng có đang lỗi không (`bao_ai`).
+    pub fn ai_dang_loi(&self, design_id: &str) -> bool {
+        self.ai_loi.read().expect("khoá lỗi MC hỏng").contains_key(design_id)
     }
 
     /// MC cho một nhân vật ảo đang ngồi trong phòng nói một câu (lệnh `ao-noi`).
@@ -487,16 +683,75 @@ impl AppState {
     pub fn doi_nguon(&self, cfg: SourceCfg) -> u64 {
         *self.nguon.write().expect("khoá nguồn hỏng") = cfg;
         *self.loi_nguon.write().expect("khoá nguồn hỏng") = None;
-        self.the_he_nguon.fetch_add(1, Ordering::SeqCst) + 1
+        *self.loi_tien_trinh.write().expect("khoá nguồn hỏng") = None;
+        self.ghi_nho_nguon();
+        let the_he = self.the_he_nguon.fetch_add(1, Ordering::SeqCst) + 1;
+        self.phat_nguon();
+        the_he
     }
 
+    /// Phát trạng thái nguồn xuống mọi trang (`{ t: 'source' }`), để nút "Kết
+    /// nối Studio" và thanh trên đổi ngay chứ không đợi tải lại trang.
+    fn phat_nguon(&self) {
+        self.broadcast(json!({ "t": "source", "source": self.nguon() }));
+    }
+
+    /// Ghi nguồn sự kiện và phòng đang phát ra đĩa, để mở app lại là chạy tiếp.
+    fn ghi_nho_nguon(&self) {
+        let cfg = self.nguon.read().expect("khoá nguồn hỏng").clone();
+        let live = self.live.read().expect("khoá live hỏng").clone();
+        let v = json!({ "nguon": cfg, "live": live });
+        if let Err(e) = store::write_json_atomic(&self.layout.nguon_file(), &v) {
+            tracing::warn!(?e, "không ghi được nguồn sự kiện");
+        }
+    }
+
+    /// Đọc lại nguồn và phòng đang phát của lần chạy trước. Trả phòng cần phát
+    /// tiếp, nếu có. Gọi lúc máy chủ mở (`khoi_dong`).
+    pub fn doc_nguon_da_nho(&self) -> Option<String> {
+        let v = store::read_json(&self.layout.nguon_file()).ok().flatten()?;
+        if let Some(cfg) = v.get("nguon").cloned().and_then(|c| serde_json::from_value::<SourceCfg>(c).ok()) {
+            *self.nguon.write().expect("khoá nguồn hỏng") = cfg;
+        }
+        v.get("live").and_then(Value::as_str).map(str::to_string)
+    }
+
+    /// Lỗi của nguồn đang chạy (`None`: đang nhận dữ liệu). Chỉ phát xuống khi
+    /// đổi — nguồn nối lại mỗi vài giây mà lần nào cũng phát là nháy cả trang.
     pub fn dat_loi_nguon(&self, loi: Option<String>) {
-        *self.loi_nguon.write().expect("khoá nguồn hỏng") = loi;
+        let doi = {
+            let mut g = self.loi_nguon.write().expect("khoá nguồn hỏng");
+            let doi = *g != loi;
+            *g = loi;
+            doi
+        };
+        if doi {
+            self.phat_nguon();
+        }
+    }
+
+    /// Lỗi của tiến trình cầu nối (`source::tien_trinh`). Có thì nó thắng lỗi
+    /// của nguồn: cầu nối chưa chạy thì mọi lỗi nối khác chỉ là hệ quả.
+    pub fn dat_loi_tien_trinh(&self, loi: Option<String>) {
+        let doi = {
+            let mut g = self.loi_tien_trinh.write().expect("khoá nguồn hỏng");
+            let doi = *g != loi;
+            *g = loi;
+            doi
+        };
+        if doi {
+            self.phat_nguon();
+        }
     }
 
     pub fn nguon(&self) -> SourceStatus {
         let cfg = self.nguon.read().expect("khoá nguồn hỏng").clone();
-        let problem = self.loi_nguon.read().expect("khoá nguồn hỏng").clone();
+        let problem = self
+            .loi_tien_trinh
+            .read()
+            .expect("khoá nguồn hỏng")
+            .clone()
+            .or_else(|| self.loi_nguon.read().expect("khoá nguồn hỏng").clone());
         let running = cfg.kind != crate::source::SourceKind::Tat && problem.is_none();
         SourceStatus {
             cfg,
@@ -589,12 +844,12 @@ impl AppState {
     /// Di qua feed chu khong phai mot tin rieng: cau MC phai nam trong phien de
     /// luot sau AI doc lai duoc minh vua noi gi, va cua so xem mo giua chung
     /// cung thay MC dang ke toi dau.
-    pub fn mc_noi(&self, text: String, voice: Option<String>) {
+    pub fn mc_noi(&self, text: String, voice: Option<String>, ke: Option<u32>, truyen: bool, chao: bool) {
         let now = bay_gio_ms();
         let item = {
             let mut g = self.phien.write().expect("khoá phiên hỏng");
             match g.as_mut() {
-                Some(p) => p.mc_noi(now, text, voice),
+                Some(p) => p.mc_noi(now, text, voice, ke, truyen, chao),
                 None => return,
             }
         };
@@ -665,6 +920,27 @@ impl AppState {
     }
 
     /// Cau va ten cua nhan vat ao, lay tu design.json cua thiet ke.
+    /// Câu nhân vật ảo chào và cảm ơn khách thật của phòng (chào, cảm ơn).
+    pub fn crowd_dap(&self, design_id: &str) -> (Vec<String>, Vec<String>) {
+        match designs::read_manifest(&self.layout.design_manifest(design_id), design_id) {
+            Ok(m) => (m.crowd.greet, m.crowd.thanks),
+            Err(_) => (Vec::new(), Vec::new()),
+        }
+    }
+
+    /// Lời dặn MC riêng của thiết kế (`mc.dan` trong design.json), hoặc `None`
+    /// khi thiết kế không khai, file thiếu, rỗng hay quá dài — lúc đó MC dùng
+    /// lời dặn gốc. Đường dẫn đi qua `safe_join` trong thư mục của chính thiết kế.
+    pub fn dan_mc(&self, design_id: &str) -> Option<String> {
+        let m = designs::read_manifest(&self.layout.design_manifest(design_id), design_id).ok()?;
+        let rel = m.mc?.dan?;
+        let goc = self.layout.designs_dir().join(design_id);
+        let file = crate::paths::safe_join(&goc, &rel)?;
+        let chu = std::fs::read_to_string(file).ok()?;
+        let chu = chu.trim();
+        (!chu.is_empty() && chu.len() <= crate::ai::MAX_DAN_THIET_KE).then(|| chu.to_string())
+    }
+
     pub fn crowd_cua(&self, design_id: &str) -> (Vec<String>, Vec<String>) {
         match designs::read_manifest(&self.layout.design_manifest(design_id), design_id) {
             Ok(m) => (m.crowd.lines, m.crowd.names),
@@ -808,6 +1084,9 @@ impl AppState {
         self.save_modules(design_id, modules)?;
 
         self.phat_cua(design_id, json!({ "t": "config", "moduleId": module_id, "config": config }));
+        if module_id == "story" {
+            self.theo_doi_truyen(design_id);
+        }
         Ok(())
     }
 
@@ -827,6 +1106,9 @@ impl AppState {
             .map(|(k, _)| k)
             .collect();
         self.phat_cua(design_id, json!({ "t": "modules", "enabled": bat }));
+        if module_id == "story" && on {
+            self.theo_doi_truyen(design_id);
+        }
         Ok(())
     }
 
@@ -865,6 +1147,92 @@ mod tests {
 
     fn state(root: &Path) -> Arc<AppState> {
         AppState::new(Layout::new(root), 47830, "tok".into())
+    }
+
+    #[test]
+    fn loi_dan_mc_rieng_cua_thiet_ke_va_lui_ve_goc() {
+        let tmp = tempfile::tempdir().unwrap();
+        dung(tmp.path(), "ke-chuyen");
+        let s = state(tmp.path());
+        assert_eq!(s.dan_mc("ke-chuyen"), None, "không khai mc.dan thì dùng lời dặn gốc");
+
+        let d = tmp.path().join("client/designs/lop-hoc-chu");
+        fs::create_dir_all(&d).unwrap();
+        fs::write(
+            d.join("design.json"),
+            r#"{"id":"lop-hoc-chu","name":"x","mc":{"dan":"mc-dan.md"}}"#,
+        )
+        .unwrap();
+        assert_eq!(s.dan_mc("lop-hoc-chu"), None, "khai mà thiếu file thì cũng lùi về gốc");
+        fs::write(d.join("mc-dan.md"), "  Bạn là cô giáo.  
+").unwrap();
+        assert_eq!(s.dan_mc("lop-hoc-chu").as_deref(), Some("Bạn là cô giáo."));
+
+        // Đường dẫn thoát ra ngoài thư mục thiết kế bị chặn.
+        fs::write(tmp.path().join("bi-mat.md"), "khoá").unwrap();
+        fs::write(
+            d.join("design.json"),
+            r#"{"id":"lop-hoc-chu","name":"x","mc":{"dan":"../../../bi-mat.md"}}"#,
+        )
+        .unwrap();
+        assert_eq!(s.dan_mc("lop-hoc-chu"), None);
+    }
+
+    #[test]
+    fn so_chi_phi_mo_khi_len_song_chot_khi_tat_roi_mo_so_xem_thu_moi() {
+        let tmp = tempfile::tempdir().unwrap();
+        dung(tmp.path(), "ke-chuyen");
+        let s = state(tmp.path());
+        let d = crate::chi_phi::Dung { tok_vao: 100, tok_ra: 10, ..Default::default() };
+
+        s.go_live("ke-chuyen").unwrap();
+        s.ghi_chi_phi("ke-chuyen", crate::chi_phi::MC, &d, Some(0.01));
+        s.ghi_chi_phi("ke-chuyen", crate::chi_phi::VE_ANH, &d, None);
+        let so = s.so_chi_phi("ke-chuyen").unwrap();
+        assert!(so.live && so.ket_thuc.is_none());
+        assert_eq!((so.khoan["mc"].lan, so.chua_ro), (1, 1));
+
+        s.stop_live();
+        let chot = s.so_chi_phi("ke-chuyen").unwrap();
+        assert!(chot.ket_thuc.is_some(), "tắt sóng là chốt sổ, vẫn giữ để bảng hiện");
+        let file = tmp.path().join("database/designs/ke-chuyen/chi-phi.jsonl");
+        let dong = fs::read_to_string(&file).unwrap();
+        assert_eq!(dong.lines().count(), 1);
+        assert!(dong.contains("\"tongUsd\":0.01"));
+
+        // Lượt gọi sau buổi live là của lúc xem thử: sổ mới, không cộng vào buổi cũ.
+        s.ghi_chi_phi("ke-chuyen", crate::chi_phi::VIET, &d, Some(0.002));
+        let moi = s.so_chi_phi("ke-chuyen").unwrap();
+        assert!(!moi.live && moi.ket_thuc.is_none());
+        assert!(!moi.khoan.contains_key("mc"));
+        // Tắt sóng lần nữa khi không phát thì không ghi thêm dòng nào.
+        s.stop_live();
+        assert_eq!(fs::read_to_string(&file).unwrap().lines().count(), 1);
+    }
+
+    #[test]
+    fn so_dem_truyen_da_ke_trong_buoi() {
+        let tmp = tempfile::tempdir().unwrap();
+        dung(tmp.path(), "ke-chuyen");
+        let s = state(tmp.path());
+        s.set_enabled("ke-chuyen", "story", true).unwrap();
+        s.set_config("ke-chuyen", "story", json!({ "title": "Cây vú sữa", "passages": "Một.
+Hai." }))
+            .unwrap();
+
+        s.go_live("ke-chuyen").unwrap();
+        assert_eq!(s.so_chi_phi("ke-chuyen").unwrap().truyen, ["Cây vú sữa"], "truyện lúc lên sóng là truyện thứ nhất");
+
+        // Sửa chữ trong cùng truyện: không đếm thêm.
+        s.set_config("ke-chuyen", "story", json!({ "passages": "Một.
+Hai khác." })).unwrap();
+        assert_eq!(s.so_chi_phi("ke-chuyen").unwrap().truyen.len(), 1);
+
+        // Đổi truyện: đếm thêm.
+        s.set_config("ke-chuyen", "story", json!({ "title": "Tấm Cám", "passages": "Ngày xưa." })).unwrap();
+        // Ghi cấu hình khác của story (ảnh, lỗi…) mà truyện không đổi: không đếm.
+        s.set_config("ke-chuyen", "story", json!({ "anhLoi": "" })).unwrap();
+        assert_eq!(s.so_chi_phi("ke-chuyen").unwrap().truyen, ["Cây vú sữa", "Tấm Cám"]);
     }
 
     #[test]

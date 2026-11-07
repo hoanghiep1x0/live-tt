@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Eye, Pencil, Puzzle, RotateCcw } from 'lucide-react';
+import { AlertTriangle, AppWindow, Eye, Pencil, Puzzle, RotateCcw } from 'lucide-react';
+import { laApp, nickTuLink, phongCuaSo } from '../lib/desktop';
 import type { DesignInfo } from '@live/contracts';
 
 interface Props {
   d: DesignInfo;
   /** Thiết kế đang phát, nếu có. Khác cái này thì nút phát bị khoá. */
   live: string | null;
+  /** Nguồn sự kiện đang nối tới kênh nào và có chạy không — nút "Kết nối
+   *  Studio" xanh khi phòng này đang thật sự nhận dữ liệu từ kênh đó. */
+  nguonChay?: boolean;
+  nguonKenh?: string;
+  /** Vì sao nguồn chưa nhận được dữ liệu ("Đang nối…", "Kênh chưa phát live"…). */
+  nguonLoi?: string;
+  /** Nghe kênh này qua cầu nối TikTok. */
+  onNoiKenh(nick: string): void;
   onBatLive(id: string): void;
   onTatLive(): void;
   onDoiTen(id: string, ten: string): void;
@@ -19,6 +28,10 @@ interface Props {
 export function DesignCard({
   d,
   live,
+  nguonChay,
+  nguonKenh,
+  nguonLoi,
+  onNoiKenh,
   onBatLive,
   onTatLive,
   onDoiTen,
@@ -32,9 +45,15 @@ export function DesignCard({
   const khoa = live !== null && !dangPhat;
   const chuaBuild = d.status === 'error';
 
+  // Nick trong link live của phòng. Nguồn đang chạy đúng nick đó thì phòng
+  // thật sự có dữ liệu về — nút sáng xanh; đứt thì về màu thường.
   const [sua, setSua] = useState(false);
   const [ten, setTen] = useState(d.displayName);
   const [studio, setStudio] = useState(d.studioUrl ?? '');
+
+  const nick = nickTuLink(studio);
+  const dangNoiKenh = nick !== null && (nguonKenh ?? '').trim().replace(/^@/, '').toLowerCase() === nick;
+  const noiDung = nguonChay === true && dangNoiKenh;
   const o = useRef<HTMLInputElement>(null);
 
   // Tên và link có thể đổi từ cửa sổ quản lý khác; theo backend chứ không giữ
@@ -123,7 +142,7 @@ export function DesignCard({
         <input
           className="input"
           value={studio}
-          placeholder="https://livestudio.tiktok.com/…"
+          placeholder="https://www.tiktok.com/@kenh/live"
           aria-label={`Link TikTok Studio ${d.displayName}`}
           onChange={(e) => setStudio(e.target.value)}
           onBlur={() => {
@@ -133,22 +152,39 @@ export function DesignCard({
             if (e.key === 'Enter') onDatStudio(id, studio);
           }}
         />
-        <a
-          className="btn btn-sm"
-          href={studio === '' ? undefined : studio}
-          target="_blank"
-          rel="noopener"
-          aria-disabled={studio === ''}
-          title={studio === '' ? 'Dán link phòng trên TikTok LIVE Studio vào ô bên' : 'Mở TikTok LIVE Studio'}
-          onClick={(e) => {
+        {/* Bấm là backend nghe kênh trong link qua cầu nối TikTok (docs/07 §7).
+            KHÔNG mở trang TikTok nào: dữ liệu đi thẳng từ máy chủ TikTok, chạy
+            được cả trong app lẫn trình duyệt thường. Mọi thiết kế dùng chung
+            nguồn này — phòng nào đang phát thì nhận dữ liệu.
+            Xanh = đang thật sự nhận dữ liệu từ đúng kênh trong link. */}
+        <button
+          type="button"
+          className={noiDung ? 'btn btn-sm btn-noi' : 'btn btn-sm'}
+          data-noi={noiDung}
+          title={
+            studio === ''
+              ? 'Dán link phòng live TikTok vào ô bên'
+              : noiDung
+                ? `Đang nhận dữ liệu từ @${nick ?? ''}`
+                : dangNoiKenh && nguonLoi !== undefined
+                  ? nguonLoi
+                  : 'Lấy bình luận, tim, quà, người xem của kênh này'
+          }
+          onClick={() => {
             if (studio === '') {
-              e.preventDefault();
-              onToast('Chưa có link Studio cho phòng này', true);
+              onToast('Chưa có link live cho phòng này', true);
+              return;
             }
+            if (nick === null) {
+              onToast('Link không có nick kênh — dán link dạng tiktok.com/@kenh/live', true);
+              return;
+            }
+            if (studio !== (d.studioUrl ?? '')) onDatStudio(id, studio);
+            onNoiKenh(nick);
           }}
         >
           Kết nối Studio
-        </a>
+        </button>
       </div>
 
       {d.problem !== undefined ? (
@@ -159,6 +195,29 @@ export function DesignCard({
       ) : null}
 
       <div className="card-actions">
+        {/* Trong app desktop: mở phòng ra MỘT CỬA SỔ riêng, sân khấu kèm bảng
+            cài đặt — chỉnh ngay bên cạnh hình như bản cũ. Mở bằng trình duyệt
+            thường thì không có lệnh này, nên chỉ hiện trong app. */}
+        {laApp() ? (
+          <button
+            type="button"
+            className="btn"
+            disabled={chuaBuild}
+            title={
+              chuaBuild
+                ? 'Thiết kế chưa build, chưa mở được'
+                : `Mở ${d.displayName} ra cửa sổ riêng, có bảng cài đặt`
+            }
+            onClick={() => {
+              void phongCuaSo.mo(d.manifest.id).catch((e: unknown) => {
+                onToast(e instanceof Error ? e.message : 'Không mở được cửa sổ phòng', true);
+              });
+            }}
+          >
+            <AppWindow size={15} />
+            Mở phòng
+          </button>
+        ) : null}
         <a
           className="btn"
           href={chuaBuild ? undefined : d.obsUrl}

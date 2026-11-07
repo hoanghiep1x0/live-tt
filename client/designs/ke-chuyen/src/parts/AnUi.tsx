@@ -23,10 +23,21 @@ import { AISLES_X, HALL_FIRST_Y, HALL_ROW_H } from '../seats';
 import { loiGan } from './di-lai';
 import { ANH_DUNG, anhCua, kieuChibi } from './ghe';
 import type { ChoNgoi } from './ghe';
-import { CHAY_MS, CHO_NHAN_VAT, CHO_OM, chonNguoiOm, OM_MS } from './an-ui';
+import { CHAY_MS, CHO_NHAN_VAT, CHO_OM, chonNguoiOm, loiPopup, OM_MS } from './an-ui';
 import type { Canh } from './an-ui';
 
-export { AN_UI_MAC_DINH, canhAnUi, chonNguoiOm, docCauHinhAnUi, khachXinOm, TONG_MS, xinOm } from './an-ui';
+export {
+  AN_UI_MAC_DINH,
+  CHAY_MS,
+  camOnLuotNay,
+  canhAnUi,
+  chonNguoiOm,
+  docCauHinhAnUi,
+  khachXinOm,
+  loiCamOn,
+  TONG_MS,
+  xinOm,
+} from './an-ui';
 export type { Canh, NhanVat } from './an-ui';
 
 function NguoiOm({
@@ -75,23 +86,35 @@ function NguoiOm({
   );
 }
 
+/** Chỗ đứng ôm nâng theo cụm hai em ở khung ngang. */
+function nang(p: { x: number; y: number }, lift: number): { x: number; y: number } {
+  return { x: p.x, y: p.y - lift };
+}
+
 export function AnUi({
   canh,
   ngoi,
   ghe,
   asset,
+  lift = 0,
 }: {
   canh: Canh | null;
   ngoi: Map<number, Seat>;
   ghe: readonly ChoNgoi[];
   asset: (p: string) => string;
+  /** Khung ngang nâng cả cụm hai em lên ngần này cqw (`--group-lift`). Chỗ
+   *  đứng ôm và tim tính theo khung dọc, nên phải nâng theo — không thì người
+   *  chạy lên dừng hụt dưới chân hai em. Rạp ghế (chỗ xuất phát) không nâng. */
+  lift?: number;
 }) {
   if (canh === null) return null;
   const cho = CHO_OM[canh.nhanVat];
   const nguoi = chonNguoiOm(ngoi, ghe, canh.k, Math.min(canh.soNguoi, cho.length), canh.nguoiXin);
   if (nguoi.length === 0) return null;
-  const tim = CHO_NHAN_VAT[canh.nhanVat];
+  const goc = CHO_NHAN_VAT[canh.nhanVat];
+  const tim = { x: goc.x, y: goc.y - lift };
   const dangOm = canh.t >= CHAY_MS && canh.t < CHAY_MS + OM_MS;
+  const loi = loiPopup(canh);
 
   return (
     <>
@@ -103,7 +126,7 @@ export function AnUi({
         <NguoiOm
           key={`${canh.k}:${n.user}`}
           tu={n}
-          den={cho[i] ?? cho[0] ?? { x: 50, y: 120 }}
+          den={nang(cho[i] ?? cho[0] ?? { x: 50, y: 120 }, lift)}
           // Ngả người về phía nhân vật: đứng bên phải thì ngả trái và ngược lại.
           nghieng={(cho[i] ?? cho[0] ?? { x: 50 }).x >= tim.x ? -1 : 1}
           user={n.user}
@@ -114,6 +137,14 @@ export function AnUi({
       </div>
       {/* Tim thì NẰM TRÊN: nó là hiệu ứng bay lên, bị hàng bồ đoàn che mất thì
           coi như không có. */}
+      {/* Popup trên đầu người được ôm, như bản cũ: ở lề trái hoặc phải theo
+          phía nhân vật đứng, hẹp để không lấn khung chiếu. `key` theo câu: đổi
+          câu là popup mới hiện lên lại. */}
+      {loi === null ? null : (
+        <p key={loi} className={tim.x < 50 ? 'om-loi ben-trai' : 'om-loi ben-phai'} role="status">
+          {loi}
+        </p>
+      )}
       {!dangOm ? null : (
         <div className="om-tim" style={{ left: `${tim.x}%`, top: `${tim.y - 11}cqw` }} aria-hidden>
           {['💗', '🤍', '💖', '🤍', '💗'].map((h, i) => (

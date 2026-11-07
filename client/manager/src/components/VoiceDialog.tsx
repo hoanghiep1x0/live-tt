@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Bot, KeyRound, Play, Plus, Star, Trash2 } from 'lucide-react';
+import { chuNguon, giongQua, nguonGiong } from '@live/contracts';
 import { quenDanGiong } from '../lib/danGiong';
 import { api, ttsThu } from '../lib/api';
 import type { CastVoice, ProviderInfo, VoiceCfg } from '../lib/api';
@@ -144,7 +145,10 @@ export function VoiceDialog({ onToast }: Props) {
                         </button>
                         <span className="v-name">
                           <b>{v.id}</b>
-                          <small>{v.role === '' ? 'chưa ghi vai' : v.role}</small>
+                          <small>
+                            {v.role === '' ? 'chưa ghi vai' : v.role} ·{' '}
+                            {chuNguon(nguonGiong(v, ds))}
+                          </small>
                         </span>
                         <select
                           className="input input-xs"
@@ -281,18 +285,24 @@ export function VoiceDialog({ onToast }: Props) {
               <p className="hint">Chưa có kết nối giọng đọc nào. Mở kho AI để thêm.</p>
             ) : (
               <div className="voice-list">
-                {nhaGiong.map((p) => (
+                {nhaGiong.map((p) => {
+                  const doc = cfg === null ? [] : giongQua(cfg.cast, p.id);
+                  return (
                   <div className="voice-row" key={p.id}>
                     <span className="v-ico">{p.hasKey ? '🔐' : '⚠️'}</span>
                     <span className="v-name">
                       <b>{p.name}</b>
-                      <small>{p.models.tts ?? 'chưa đặt model'}</small>
+                      <small>
+                        {p.models.tts ?? 'chưa đặt model'}
+                        {doc.length === 0 ? ' · chưa đọc cho vai nào' : ` · đọc cho ${doc.join(', ')}`}
+                      </small>
                     </span>
                     <span className={p.hasKey ? 'v-tag v-clone' : 'v-tag'}>
                       {p.hasKey ? 'có khoá' : 'thiếu khoá'}
                     </span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             <AiKhoDialog

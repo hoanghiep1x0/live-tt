@@ -40,6 +40,17 @@ pub struct YeuCau {
     pub voice: Option<String>,
     #[serde(default)]
     pub speed: Option<f32>,
+    /// Phòng xin đọc — để ghi vào sổ chi phí của đúng phòng đó.
+    #[serde(default, rename = "designId")]
+    pub design_id: Option<String>,
+}
+
+/// Một câu vừa đọc xong: tiếng, giọng thật đã đọc (tên giọng hoặc model) và
+/// số ký tự đã gửi đi — nhà giọng tính tiền theo ký tự.
+pub struct DaDoc {
+    pub byte: Vec<u8>,
+    pub giong: String,
+    pub ky_tu: u64,
 }
 
 #[derive(Debug)]
@@ -147,6 +158,11 @@ pub fn loi_theo_ma(ma: u16, chi_tiet: &str) -> String {
 
 /// Gọi nhà cung cấp. **Chặn luồng** — gọi trong `spawn_blocking`.
 pub fn sinh(layout: &Layout, req: &YeuCau) -> Result<Vec<u8>, TtsError> {
+    sinh_kem(layout, req).map(|d| d.byte)
+}
+
+/// Như `sinh`, kèm giọng thật đã đọc và số ký tự — cho sổ chi phí.
+pub fn sinh_kem(layout: &Layout, req: &YeuCau) -> Result<DaDoc, TtsError> {
     let text: String = req.text.trim().chars().take(MAX_TEXT).collect();
     if text.is_empty() {
         return Err(TtsError::Invalid("không có câu nào để đọc".into()));
@@ -246,7 +262,8 @@ pub fn sinh(layout: &Layout, req: &YeuCau) -> Result<Vec<u8>, TtsError> {
     if bytes.is_empty() {
         return Err(TtsError::Provider("nhà cung cấp trả về rỗng".into()));
     }
-    Ok(bytes)
+    let ten = if giong.trim().is_empty() { p.model_cho(secrets::Use::Tts).to_string() } else { giong };
+    Ok(DaDoc { byte: bytes, giong: ten, ky_tu: text.chars().count() as u64 })
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-import type { Effect, ModuleCore } from '@live/contracts';
+import type { Effect, FeedItem, ModuleCore } from '@live/contracts';
 import type { Config } from './manifest';
 
 /** Chỗ đứng trên sàn, tính TRONG LÒNG slot `floor` chứ không theo toạ độ màn:
@@ -28,20 +28,20 @@ export const TOI_DA = CHO_DUNG.length;
  *  nữ tóc dài · nam tóc rối. */
 const KIEU = [5, 2, 1, 4, 3, 6, 2] as const;
 
-/** Mỗi ngần này làm một động tác nghỉ, giữ trong `NGHI_LAU_MS`.
- *  Lấy đúng `IDLE_EVERY_MS` của bản cũ. */
-const NGHI_MOI_MS = 16_000;
-const NGHI_LAU_MS = 3_200;
-/** Người này lệch người kia ngần này: chia đều vòng 16 giây cho đủ số chỗ, nhờ
- *  vậy nhiều lắm là hai người cùng nghỉ một lúc, sàn luôn còn người đứng thẳng. */
-const NGHI_LECH_MS = NGHI_MOI_MS / TOI_DA;
+/** Chạy từ lối giữa rạp lên chỗ đứng / từ chỗ đứng xuống lại lối giữa. Đủ
+ *  cho cả nhóm xuất phát lệch nhau (`CHAM_MS` mỗi người) mà vẫn kịp tới nơi. */
+export const LEN_MS = 3_200;
+export const XUONG_MS = 3_200;
+/** Người sau xuất phát chậm hơn người trước ngần này — cả nhóm ùa lên chứ
+ *  không như một khối dịch chuyển. Phải khớp `stage.css`. */
+export const CHAM_MS = 120;
+/** Khách gõ "nhảy": được nhảy thêm ngần này — đúng `FLOOR_MS` của bản cũ. */
+export const KHACH_NHAY_MS = 30_000;
+/** Mỗi khách phải chờ ngần này mới gọi lên sàn lại được (`FLOOR_USER_GAP_MS`). */
+export const KHACH_CHO_MS = 90_000;
 
-/** Quà dồn không cắt ngang màn đang nhảy: màn sau chờ hết màn trước + ngần này.
- *  Bản cũ gộp hai số thành `DANCE_GAP_MS`; tách ra vì thời lượng nhảy giờ là
- *  cấu hình, người vận hành đổi nó thì quãng nghỉ không việc gì phải đổi theo. */
-const NGHI_GIUA_MAN_MS = 20_000;
-
-export type Dang = 'dung' | 'nghi' | 'nhay';
+/** `len`: đang chạy lên sàn · `nhay`: đang nhảy · `xuong`: nhảy xong, chạy xuống. */
+export type Dang = 'len' | 'nhay' | 'xuong';
 
 export interface NguoiSan {
   /** Chỉ số chỗ đứng. Vừa là key lúc vẽ, vừa quyết chỗ và kiểu nhân vật. */
@@ -51,82 +51,126 @@ export interface NguoiSan {
   co: number;
   kieu: number;
   dang: Dang;
-  /** Mốc bắt đầu động tác hiện tại. Phần vẽ lùi hoạt ảnh về đúng quãng đã
-   *  chạy, nhờ vậy hai cửa sổ cùng xem một phòng thấy họ nhún cùng nhịp. */
+  /** Tên khách đứng ở chỗ này (gõ "nhảy"), hiện trên đầu. Không có là người
+   *  nhảy minh hoạ của màn quà. */
+  ten?: string;
+  /** Mốc bắt đầu chặng hiện tại. Phần vẽ lùi hoạt ảnh về đúng quãng đã chạy,
+   *  nhờ vậy hai cửa sổ cùng xem một phòng thấy họ cùng nhịp. */
   tu: number;
 }
 
 export interface State {
   config: Config;
-  /** Mốc bắt đầu và kết thúc màn nhảy. `nhayDen` bằng 0 là chưa có màn nào. */
+  /** Mốc bắt đầu chạy lên, và mốc hết nhảy. `nhayDen` bằng 0 là chưa có màn
+   *  nào. Hết nhảy thì còn `XUONG_MS` chạy xuống rồi sàn trống. */
   nhayTu: number;
   nhayDen: number;
   nguoi: NguoiSan[];
+  /** Khách đã gõ "nhảy" trong màn này, theo thứ tự lên — người thứ i đứng chỗ i. */
+  khach: { user: string; ten: string }[];
+  /** Lần cuối mỗi khách được gọi lên, để giãn cách `KHACH_CHO_MS`. */
+  lanGoi: Record<string, number>;
 }
 
-/** Động tác của người ở chỗ thứ `i` tại thời điểm `now`.
- *
- *  Thuần theo `now`: không giữ bộ đếm riêng, không gọi `rand`. Hai cửa sổ mở
- *  cách nhau nửa tiếng vẫn thấy cùng một người đang cúi chào. */
-export function dangCua(
-  i: number,
+/** Cả nhóm đang ở chặng nào lúc `now`, hoặc `null` khi sàn trống. Thuần theo
+ *  đồng hồ: hai cửa sổ mở cách nhau nửa tiếng vẫn thấy cùng một chặng. */
+export function chang(
   now: number,
   nhayTu: number,
   nhayDen: number,
-): { dang: Dang; tu: number } {
-  if (nhayDen > now) return { dang: 'nhay', tu: nhayTu };
-  const lech = i * NGHI_LECH_MS;
-  const moc = Math.floor((now + lech) / NGHI_MOI_MS) * NGHI_MOI_MS - lech;
-  return now - moc < NGHI_LAU_MS ? { dang: 'nghi', tu: moc } : { dang: 'dung', tu: 0 };
+): { dang: Dang; tu: number } | null {
+  if (nhayDen <= 0 || now < nhayTu) return null;
+  if (now < nhayTu + LEN_MS) return { dang: 'len', tu: nhayTu };
+  if (now < nhayDen) return { dang: 'nhay', tu: nhayTu + LEN_MS };
+  if (now < nhayDen + XUONG_MS) return { dang: 'xuong', tu: nhayDen };
+  return null;
 }
 
-/** Cả sàn tại thời điểm `now`. */
-export function xepSan(config: Config, now: number, nhayTu: number, nhayDen: number): NguoiSan[] {
+/** Cả sàn tại thời điểm `now`. Không có màn nào thì sàn trống — như bản cũ,
+ *  người chỉ lên sàn khi có quà. */
+export function xepSan(
+  config: Config,
+  now: number,
+  nhayTu: number,
+  nhayDen: number,
+  khach: readonly { ten: string }[] = [],
+): NguoiSan[] {
+  const c = chang(now, nhayTu, nhayDen);
+  if (c === null) return [];
   const n = Math.min(Math.max(config.count, 0), TOI_DA);
   return Array.from({ length: n }, (_, i) => {
     const cho = CHO_DUNG[i] as (typeof CHO_DUNG)[number];
-    return { cho: i, ...cho, kieu: KIEU[i] as number, ...dangCua(i, now, nhayTu, nhayDen) };
+    const k = khach[i];
+    return { cho: i, ...cho, kieu: KIEU[i] as number, ...c, ...(k === undefined ? {} : { ten: k.ten }) };
   });
 }
 
-/** Mở một màn nhảy từ `now`. */
-function batDauNhay(state: State, now: number): Effect[] {
-  state.nhayTu = now;
-  state.nhayDen = now + state.config.danceSec * 1_000;
-  state.nguoi = xepSan(state.config, now, state.nhayTu, state.nhayDen);
-  // Xin sáng slot sàn suốt màn nhảy: thiết kế nào muốn hắt thêm đèn xuống sàn,
-  // hay cho khán giả hô "Tung hoa!", thì đọc `useSlotSang('floor')`.
-  return [{ kind: 'overlay', slot: 'floor', ttlMs: state.config.danceSec * 1_000 }];
+/** Khách gõ "nhảy" (máy chủ đã đọc lệnh, `item.lenh`): chibi của họ lên sàn,
+ *  tên hiện trên đầu, nhảy thêm `KHACH_NHAY_MS`. Như bản cũ: mỗi người chờ
+ *  `KHACH_CHO_MS` mới gọi lại được; sàn hết chỗ thì thôi, không chen ai xuống.
+ *  Nhân vật ảo gõ thì không tính — chỗ trên sàn là của khách thật. */
+export function khachGoiNhay(state: State, item: FeedItem, now: number): Effect[] {
+  if (item.lenh?.loai !== 'nhay' || item.virtual === true) return [];
+  const user = item.user ?? item.name;
+  if (user === '' || state.khach.some((k) => k.user === user)) return [];
+  if (now - (state.lanGoi[user] ?? -Infinity) < KHACH_CHO_MS) return [];
+  if (state.khach.length >= Math.min(state.config.count, TOI_DA)) return [];
+  state.lanGoi[user] = now;
+  state.khach.push({ user, ten: item.name });
+  return moMan(state, now, KHACH_NHAY_MS);
+}
+
+/** Có quà (hay bấm "Nhảy ngay"):
+ *  - sàn trống → cả nhóm chạy lên rồi nhảy;
+ *  - đang chạy lên hoặc đang nhảy → nhảy thêm, khỏi xuống (quà nối tiếp);
+ *  - đang chạy xuống → quay lại nhảy luôn, khỏi chạy lên lại từ đầu. */
+export function moMan(state: State, now: number, dai = state.config.danceSec * 1_000): Effect[] {
+  const c = chang(now, state.nhayTu, state.nhayDen);
+  if (c === null) {
+    state.nhayTu = now;
+    state.nhayDen = now + LEN_MS + dai;
+  } else if (c.dang === 'xuong') {
+    state.nhayTu = now - LEN_MS;
+    state.nhayDen = now + dai;
+  } else {
+    state.nhayDen = Math.max(state.nhayDen, now + dai);
+  }
+  state.nguoi = xepSan(state.config, now, state.nhayTu, state.nhayDen, state.khach);
+  // Xin sáng slot sàn tới hết màn: khán giả hô "Tung hoa!" và thẻ MC tự ẩn
+  // theo `useSlotSang('floor')`. Nối dài màn thì xin lại cho đủ hạn mới.
+  return [{ kind: 'overlay', slot: 'floor', ttlMs: state.nhayDen - now }];
 }
 
 export const core: ModuleCore<Config, State> = {
   init(config) {
-    return { config, nhayTu: 0, nhayDen: 0, nguoi: xepSan(config, 0, 0, 0) };
+    return { config, nhayTu: 0, nhayDen: 0, nguoi: [], khach: [], lanGoi: {} };
   },
 
   hooks: {
+    comment: {
+      run(state, item, ctx): Effect[] {
+        return khachGoiNhay(state, item, ctx.now);
+      },
+    },
     gift: {
       run(state, _item, ctx): Effect[] {
         if (!state.config.danceOnGift) return [];
-        // Quà dồn thì bỏ qua: cắt ngang màn đang nhảy để bắt đầu lại từ đầu
-        // chỉ làm cả nhóm giật về tư thế cũ giữa chừng.
-        if (state.nhayDen > 0 && ctx.now < state.nhayDen + NGHI_GIUA_MAN_MS) return [];
-
-        return batDauNhay(state, ctx.now);
+        return moMan(state, ctx.now);
       },
     },
   },
 
   // Người vận hành bấm "Nhảy ngay": như "Quà ảo: cho 3 chibi lên nhảy" của
-  // bản cũ. Không chờ quãng nghỉ giữa hai màn và không cần bật "nhảy khi có
-  // quà" — người bấm là người quyết.
+  // bản cũ, không cần bật "nhảy khi có quà" — người bấm là người quyết.
   onAction(state, op, ctx) {
     if (op !== 'nhay') return [];
-    return batDauNhay(state, ctx.now);
+    return moMan(state, ctx.now);
   },
 
   onTick(state, now) {
-    state.nguoi = xepSan(state.config, now, state.nhayTu, state.nhayDen);
+    // Sàn trống thì người đã lên xong lượt: màn sau xếp khách lại từ đầu.
+    if (chang(now, state.nhayTu, state.nhayDen) === null) state.khach = [];
+    state.nguoi = xepSan(state.config, now, state.nhayTu, state.nhayDen, state.khach);
     return [];
   },
 
@@ -139,23 +183,23 @@ export const core: ModuleCore<Config, State> = {
       // phút thì người vận hành tưởng nút hỏng.
       state.nhayTu = 0;
       state.nhayDen = 0;
-      state.nguoi = state.nguoi.map((n) =>
-        n.dang === 'nhay' ? { ...n, dang: 'dung', tu: 0 } : n,
-      );
+      state.nguoi = [];
+      state.khach = [];
     } else if (state.nhayDen > 0 && config.danceSec !== cu.danceSec) {
       // Đổi thời lượng giữa chừng: tính lại hạn của chính màn đang chạy, không
       // thì màn này chạy nốt theo số cũ rồi mới nghe lời.
-      state.nhayDen = state.nhayTu + config.danceSec * 1_000;
+      state.nhayDen = state.nhayTu + LEN_MS + config.danceSec * 1_000;
     }
 
     // Bớt người thì bỏ ngay. Thêm người thì nhịp sau (≤ 250 ms) họ có mặt —
-    // `onConfig` không có `now` nên chưa dựng nổi động tác đúng mốc.
+    // `onConfig` không có `now` nên chưa dựng nổi chặng đúng mốc.
     if (state.nguoi.length > config.count) state.nguoi = state.nguoi.slice(0, config.count);
     return state;
   },
 
   dispose(state) {
     state.nguoi = [];
+    state.khach = [];
     state.nhayTu = 0;
     state.nhayDen = 0;
   },

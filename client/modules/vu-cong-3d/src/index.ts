@@ -18,6 +18,7 @@ export {
   MAN_THAY_DO,
   MODEL,
   NHAN_VAT_MAU,
+  docLenhSoi,
   NGAU_NHIEN,
   NHAN_VAT,
   THEO_NHOM,

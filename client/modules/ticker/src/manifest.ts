@@ -2,10 +2,10 @@ import { z } from 'zod';
 import type { ModuleManifest } from '@live/contracts';
 
 const MOI_MAC_DINH = [
-  'Nghe thấy ấm lòng thì thả một trái tim cho câu chuyện nha ❤',
-  'Follow kênh để ghé nghe chuyện bất cứ lúc nào 🌸',
-  'Thích chuyện nào, bình luận cho MC biết để kể tiếp nha 😊',
-  'Một lượt chia sẻ là thêm một người được nghe câu chuyện này đó 🌷',
+  'Nghe thấy ấm lòng thì thả một trái tim cho câu truyện nha ❤',
+  'Follow kênh để ghé nghe truyện bất cứ lúc nào 🌸',
+  'Thích truyện nào, bình luận cho chúng mình biết để kể tiếp nha 😊',
+  'Một lượt chia sẻ là thêm một người được nghe câu truyện này đó 🌷',
 ].join('\n');
 
 export const schema = z.object({

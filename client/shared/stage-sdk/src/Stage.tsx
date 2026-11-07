@@ -37,6 +37,7 @@ const RONG: KetQuaChay = {
   loiMc: null,
   slotSang: new Map(),
   now: 0,
+  noi: () => {},
 };
 
 const KHONG_CO: readonly DesignCard[] = [];
@@ -134,6 +135,11 @@ export function useSession(): SessionView {
  *  thì làm phụ đề, không có video thì đặt giữa khung. */
 export function useLoiMc(): LoiMc | null {
   return useContext(Ctx).chay.loiMc;
+}
+
+/** Cho thiết kế đọc to một câu, chung hàng đọc với module và MC. */
+export function useNoi(): (text: string, voice?: string) => void {
+  return useContext(Ctx).chay.noi;
 }
 
 /** Slot nào đang được một module xin sáng. Thiết kế dùng để nhấn vùng đó lên. */

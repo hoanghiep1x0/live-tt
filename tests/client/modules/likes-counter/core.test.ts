@@ -8,6 +8,13 @@ const MAC_DINH = schema.parse({});
 
 const TIM: FeedItem = { id: 1, at: 0, kind: 'like', name: 'Hạnh', text: 'thả tim', user: 'hanh' };
 
+/** Module đã thấy phiên từ lúc 0 tim — như phòng vừa lên sóng. */
+function daNhin(c: typeof MAC_DINH) {
+  const s = core.init(c);
+  runFeed(mod, s, TIM, ctx(c, 0, 0));
+  return s;
+}
+
 function loiNoi(effects: Effect[]): string | undefined {
   const e = effects.find((x) => x.kind === 'say');
   return e?.kind === 'say' ? e.text : undefined;
@@ -26,12 +33,12 @@ describe('manifest', () => {
 
 describe('báo mốc', () => {
   it('im lặng khi chưa tới mốc nào', () => {
-    const s = core.init(MAC_DINH);
+    const s = daNhin(MAC_DINH);
     expect(runFeed(mod, s, TIM, ctx(MAC_DINH, 0, 2_400))).toEqual([]);
   });
 
   it('báo đúng mốc 25% và không báo lại mốc đó', () => {
-    const s = core.init(MAC_DINH);
+    const s = daNhin(MAC_DINH);
     expect(loiNoi(runFeed(mod, s, TIM, ctx(MAC_DINH, 0, 2_500)))).toBe(
       'Đã 25% mục tiêu tim, cảm ơn cả phòng!',
     );
@@ -39,14 +46,14 @@ describe('báo mốc', () => {
   });
 
   it('nhảy vọt thì chỉ báo mốc cao nhất, không đọc dồn cả bốn mốc', () => {
-    const s = core.init(MAC_DINH);
+    const s = daNhin(MAC_DINH);
     const ra = runFeed(mod, s, TIM, ctx(MAC_DINH, 0, 9_000));
     expect(ra.filter((e) => e.kind === 'say')).toHaveLength(1);
     expect(loiNoi(ra)).toContain('75%');
   });
 
   it('vượt mục tiêu thì dừng ở 100%', () => {
-    const s = core.init(MAC_DINH);
+    const s = daNhin(MAC_DINH);
     expect(loiNoi(runFeed(mod, s, TIM, ctx(MAC_DINH, 0, 30_000)))).toContain('100%');
     expect(runFeed(mod, s, TIM, ctx(MAC_DINH, 1_000, 90_000))).toEqual([]);
   });
@@ -54,7 +61,7 @@ describe('báo mốc', () => {
 
 describe('đổi cấu hình giữa lúc đang live', () => {
   it('nâng mục tiêu không làm đọc lại các mốc cũ', () => {
-    const s = core.init(MAC_DINH);
+    const s = daNhin(MAC_DINH);
     runFeed(mod, s, TIM, ctx(MAC_DINH, 0, 5_000)); // 50%
     const c = { ...MAC_DINH, goal: 20_000 };
     core.onConfig!(s, c);
@@ -65,11 +72,29 @@ describe('đổi cấu hình giữa lúc đang live', () => {
   });
 
   it('đổi bước báo thì làm tròn mốc đã báo theo bước mới', () => {
-    const s = core.init(MAC_DINH);
+    const s = daNhin(MAC_DINH);
     runFeed(mod, s, TIM, ctx(MAC_DINH, 0, 7_500)); // mốc 75 với bước 25
     const c = { ...MAC_DINH, stepPercent: 10 };
     core.onConfig!(s, c);
     expect(runFeed(mod, s, TIM, ctx(c, 1_000, 7_500))).toEqual([]);
     expect(loiNoi(runFeed(mod, s, TIM, ctx(c, 2_000, 8_000)))).toContain('80%');
+  });
+});
+
+describe('mở trang giữa buổi live', () => {
+  it('tổng tim đã có sẵn: không đọc lại mốc cũ, vượt mốc mới thì báo', () => {
+    const c = { ...MAC_DINH, goal: 40_000 };
+    const s = core.init(c);
+    // Nối vào lúc TikTok đã đếm 21.000 tim (52%): im, chỉ ghi nền.
+    expect(runFeed(mod, s, TIM, ctx(c, 0, 21_000))).toEqual([]);
+    expect(runFeed(mod, s, TIM, ctx(c, 1_000, 22_000))).toEqual([]);
+    // Lên 75% trong lúc đang xem thì báo.
+    expect(loiNoi(runFeed(mod, s, TIM, ctx(c, 2_000, 30_000)))).toContain('75%');
+  });
+
+  it('đã quá mục tiêu từ trước: không đọc "100%" lúc vừa mở', () => {
+    const s = core.init(MAC_DINH);
+    expect(runFeed(mod, s, TIM, ctx(MAC_DINH, 0, 21_085))).toEqual([]);
+    expect(runFeed(mod, s, TIM, ctx(MAC_DINH, 1_000, 21_200))).toEqual([]);
   });
 });

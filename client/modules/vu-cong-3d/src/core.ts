@@ -210,6 +210,29 @@ export interface State {
   thayDo: ThayDo | null;
   /** Đếm màn thay đồ: id màn — thiết kế thấy id mới là diễn lại từ đầu, và là hạt giống bốc bộ VIP. */
   soMan: number;
+  /** Khách gõ lệnh soi (vd "soi 5"): camera cận + đèn rọi người số `so` tới `den`. */
+  soi: Soi | null;
+  /** Lần đổi bộ đồ người ảnh động gần nhất: người số `so` (0 = mọi người ảnh động); `id` tăng mỗi lần. */
+  doiAnh: { so: number; id: number } | null;
+}
+
+export interface Soi {
+  /** Số thứ tự người trên sàn (1–3 vũ công chính trái → phải, rồi đám đông). */
+  so: number;
+  khach: string;
+  tu: number;
+  den: number;
+}
+
+/** Đọc lệnh soi trong một câu bình luận: "<lệnh> 5", "<lệnh> #5", "<lệnh>5" (không phân biệt hoa thường, bỏ dấu). */
+export function docLenhSoi(text: string, lenh: string): number | null {
+  const bo = (s: string): string => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+  const l = bo(lenh.trim());
+  if (l === '') return null;
+  const m = new RegExp(`(?:^|\\s)${l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*#?(\\d{1,3})(?!\\d)`).exec(bo(text));
+  if (m === null) return null;
+  const so = Number(m[1]);
+  return so >= 1 ? so : null;
 }
 
 export interface ThayDo {
@@ -258,6 +281,12 @@ export function boKe(hienTai: string, config: Config): string {
 function doiBo(state: State, now: number): void {
   state.bo = boKe(state.bo, state.config);
   state.boTu = now;
+  doiAnh(state, 0); // người ảnh động đổi bộ cùng lúc vũ công 3D đổi đồ
+}
+
+/** Người ảnh động số `so` (0 = tất cả) đổi sang bộ đồ khác của mình. */
+function doiAnh(state: State, so: number): void {
+  state.doiAnh = { so, id: (state.doiAnh?.id ?? 0) + 1 };
 }
 
 /** Đang chọn một điệu cố định, hay ngẫu nhiên. */
@@ -286,10 +315,26 @@ function batDauMan(state: State, now: number, rand: () => number, giay: number |
 
 export const core: ModuleCore<Config, State> = {
   init(config) {
-    return { config, bo: boHopLe(config.boDangMac, config), boTu: 0, dongDien: null, nghi: false, thayDo: null, soMan: 0 };
+    return {
+      config, bo: boHopLe(config.boDangMac, config), boTu: 0, dongDien: null, nghi: false, thayDo: null, soMan: 0, soi: null,
+      doiAnh: null,
+    };
   },
 
   hooks: {
+    comment: {
+      run(state, item, ctx): Effect[] {
+        if (state.config.soiBat) {
+          const so = docLenhSoi(item.text, state.config.lenhSoi);
+          if (so !== null) state.soi = { so, khach: item.name, tu: ctx.now, den: ctx.now + state.config.soiGiay * 1_000 };
+        }
+        if (state.config.doiDoLenhBat) {
+          const so = docLenhSoi(item.text, state.config.lenhDoiDo);
+          if (so !== null) doiAnh(state, so);
+        }
+        return [];
+      },
+    },
     gift: {
       run(state, item, ctx): Effect[] {
         // quà đủ lớn: màn thay đồ VIP (xu thật TikTok của cả lượt tặng)
@@ -315,6 +360,7 @@ export const core: ModuleCore<Config, State> = {
   onTick(state, now, ctx) {
     if (state.boTu === 0) state.boTu = now;
     if (state.thayDo !== null && now >= state.thayDo.den) state.thayDo = null;
+    if (state.soi !== null && now >= state.soi.den) state.soi = null;
     const phut = state.config.doiDoPhut;
     if (phut > 0 && now - state.boTu >= phut * 60_000) doiBo(state, now);
     const dd = state.dongDien;

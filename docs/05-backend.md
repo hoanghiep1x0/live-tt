@@ -96,6 +96,7 @@ trang đó. Mấy route này vì vậy miễn token, nhưng vẫn qua lớp ch�
 | `POST /s/media/<designId>?ext=png` | Nhận một file tải lên; thân yêu cầu là chính nội dung file |
 | `POST /s/media/<designId>/ai` | Nhờ AI vẽ một ảnh (`{ prompt }`), cất vào kho rồi trả đường dẫn |
 | `POST /s/viet/<designId>` | Nhờ AI viết chữ cho một ô cấu hình (`{ what, extra }`), trả `{ text }` |
+| `GET/PUT /s/so/<designId>/<moduleId>` | Sổ bền của module (`database/designs/<id>/so/<module>.json`): thứ tính năng tự ghi trong lúc chạy và phải còn sau khi tắt máy, vd sổ lớp học. Máy chủ chỉ cất — không hiểu nội dung. Trần 8 MB |
 
 Đuôi file đi theo **danh sách cho phép** (ảnh và video thường gặp), không phải danh sách
 cấm: quên chặn một đuôi lạ thì thành lỗ hổng, còn quên cho phép một đuôi mới thì chỉ là
@@ -223,6 +224,19 @@ nhảy sang nhà khác. Cắm OpenRouter, Groq, DeepSeek hay một cổng trung 
 | `GET` / `PUT /api/voice` | Dàn giọng: danh sách nhân vật, giọng mặc định, nhanh chậm |
 | `POST /api/tts` | Gọi hộ nhà cung cấp, trả bytes mp3 (trang quản lý dùng để nghe thử) |
 | `POST /api/ai/tick` | Backend gọi Claude, trả `RoomCommand[]` đã lọc — **chưa làm** |
+| `GET` / `PUT /api/source/khoa` | Khoá Euler Stream của cầu nối TikTok: `GET` chỉ trả `{ hasKey }`; `PUT { key }` đặt, rỗng là xoá |
+
+### Khoá Euler Stream của cầu nối TikTok
+
+Cũng ở `database/secrets.json`, nhưng ở **mục riêng** `"_cau-noi": { "eulerKey": "…" }` — không phải một
+dòng kết nối AI. Tên bắt đầu bằng `_` nên không bao giờ trùng id kết nối (`[a-z0-9-]`); kho đọc bỏ qua
+mọi mục `_…`, ghi thì giữ nguyên chúng — nên khoá không hiện trong hộp Kết nối AI, không lọt vào
+`GET /s/providers`, và sửa một kết nối AI không làm mất nó. Kho đọc từng dòng: một dòng hỏng chỉ mất
+dòng đó, không mất cả kho.
+
+Backend đọc khoá lúc bật cầu nối rồi truyền qua biến môi trường `EULER_API_KEY`; không bao giờ ghi vào
+`nguon.json`, vào URL hay xuống client. Đặt khoá mới thì backend mở lại nguồn để cầu nối bật lại với
+khoá đó. Không có khoá vẫn chạy (giới hạn ký miễn phí). Xem 07 §5.
 
 ### Lối `/s/` — dành cho sân khấu
 
@@ -329,8 +343,12 @@ Mọi nguồn trả đúng `LiveEvent`, nên phần còn lại của hệ thốn
 | Nguồn | Việc | Trạng thái |
 |---|---|---|
 | `mau` | Giả lập, để dựng phòng và thử tính năng khi chưa lên sóng | **xong** |
-| `bridge` | Nối tới tiến trình đọc TikTok chạy ngoài, qua WebSocket | **xong** |
-| `webview` | Tự đọc khung webcast trong webview TikTok | chưa |
+| `bridge` | Nối tới cầu nối TikTok qua WebSocket; cầu nối mặc định **backend tự bật** (07) | **xong** |
+| `webview` | Tự đọc khung webcast trong webview TikTok | **không dùng** (07 §1) |
+
+**Một nguồn cho mọi thiết kế.** Dữ liệu live lấy một chỗ (`backend/src/source`), đổ vào phiên của
+thiết kế đang phát, rồi phát xuống qua `feed` / `session`. Thiết kế và module không bao giờ tự nối
+TikTok — thêm thiết kế mới không phải đụng tới nguồn, đổi cách lấy dữ liệu không phải đụng tới thiết kế.
 
 ### Cờ `virtual` — của bot, không phải của nguồn mẫu
 
@@ -366,6 +384,21 @@ Những chi tiết đã giữ đúng bản cũ: bỏ tin cũ hơn lúc nối 3 g
 lại quà của phiên trước), tin hỏng thì bỏ chứ không làm sập nguồn, nối lại với
 thời gian chờ tăng dần 2 → 15 giây. Backend chỉ nhận `ws://` — cầu nối chạy trên
 chính máy này, không phải một máy chủ ngoài Internet.
+
+**Cầu nối nằm trong dự án và backend tự bật nó** — xem [07 — Cầu nối TikTok](07-cau-noi-tiktok.md):
+
+| Chỗ | Việc |
+|---|---|
+| `backend/cau-noi/` | Gói Node `@live/cau-noi` (`tiktok-live-connector` giải protobuf, `map.ts` chuẩn hoá) |
+| `source/tien_trinh.rs` | Bật / giám sát / tắt tiến trình `node`, khi nguồn là `bridge` **và** `url` mặc định |
+| `source/bridge.rs` | Client WebSocket — hai tác vụ chạy song song, không gọi nhau |
+
+Lỗi của tiến trình (thiếu Node ≥ 23.6, chưa `npm install`, cổng 8787 bị giữ, cầu nối chết) nằm ở ô
+riêng và **thắng** lỗi nối của client — không thì câu "cần cài Node" bị câu "không nối được" đè mất.
+
+Luật trạng thái: chỉ `dang-live` xoá lỗi nguồn (nút "Kết nối Studio" xanh). Nối được tới cầu nối mới
+là "Đang nối tới phòng live…", chưa xanh. `offline` dọn phòng (`don_phong`). Nguồn `bridge` chưa có
+kênh thì báo "Chưa có kênh TikTok" và không bật gì.
 
 ### `webview` — vì sao chưa làm
 
@@ -404,7 +437,7 @@ Sau khi có HTTP server, chỉ giữ những lệnh thật sự cần quyền h�
 
 Bỏ `store_load` / `store_set` — thay bằng REST. Bỏ `tts_speech` — thay bằng `POST /api/tts`.
 
-`tiktok_navigate` giữ nguyên whitelist chỉ cho `*.tiktok.com` qua HTTPS.
+Trình duyệt trong app mở được mọi trang http(s) (chặn file:, javascript:…); các tab web không có quyền gọi lệnh của app.
 
 ## 8. Test
 

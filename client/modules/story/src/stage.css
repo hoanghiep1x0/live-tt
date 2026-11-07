@@ -48,29 +48,6 @@
   }
 }
 
-/* Nền tự trải khi khung chưa có ảnh hay video.
- *
- * Màu chạy một vòng 72 giây: chậm tới mức người xem chỉ thấy khung "ấm dần"
- * rồi "nguội dần", nhưng pixel thì không khung nào giống khung nào. Xoay sắc
- * trên một dải màu dựng sẵn cho ra chuyển màu mượt mà không cần mười chặng. */
-.mod-truyen-nen {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(120% 80% at 50% 12%, rgba(255, 221, 160, 0.3) 0%, rgba(255, 221, 160, 0) 60%),
-    linear-gradient(165deg, #6d3b86 0%, #a8436a 38%, #d8713f 72%, #3a2246 100%);
-  animation: mod-truyen-mau 72s linear infinite;
-}
-
-@keyframes mod-truyen-mau {
-  from {
-    filter: hue-rotate(0deg);
-  }
-  to {
-    filter: hue-rotate(360deg);
-  }
-}
-
 /* Dải sáng quét ngang, rất mờ. Giữ khung sống cả khi chiếu ảnh tĩnh. */
 .mod-truyen-quet {
   position: absolute;
@@ -151,7 +128,7 @@
 
 .mod-truyen-ten {
   margin: 0 0 1.6cqmin;
-  font-size: 6.5cqmin;
+  font-size: 7.8cqmin;
   font-weight: 700;
   color: var(--gold, #f2c45a);
   text-shadow: 0 0 0.5cqmin rgba(0, 0, 0, 0.9), 0 0.3cqmin 1cqmin rgba(0, 0, 0, 0.85);
@@ -159,10 +136,14 @@
 
 .mod-truyen-doan {
   margin: 0;
-  font-size: 5.5cqmin;
+  font-size: 5cqmin;
   line-height: 1.45;
   font-weight: 600;
-  text-shadow: 0 0 0.5cqmin rgba(0, 0, 0, 0.9), 0 0.3cqmin 1cqmin rgba(0, 0, 0, 0.85);
+  /* Chữ nằm trên ảnh sáng tối đủ kiểu: bóng dày để luôn đọc được. */
+  text-shadow:
+    0 0 0.5cqmin rgba(0, 0, 0, 0.95),
+    0 0.25cqmin 0.8cqmin rgba(0, 0, 0, 0.9),
+    0 0.6cqmin 1.8cqmin rgba(0, 0, 0, 0.75);
 }
 
 @keyframes mod-truyen-chu-vao {
@@ -179,4 +160,86 @@
   .mod-truyen-chu {
     animation: none;
   }
+}
+
+/* Sang mốc ảnh mới: ảnh mới hiện dần lên thay vì giật cảnh. */
+.mod-truyen-hien {
+  animation: mod-truyen-hien 1.2s ease both;
+}
+/* Có hình thì khung tự có nền tối: ảnh đang mờ dần lên cũng không lộ màn chờ
+   phía sau. */
+.mod-truyen[data-co-hinh='true'] {
+  background: #0b0a0e;
+}
+@keyframes mod-truyen-hien {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---- Giờ nghỉ: dải "Truyện tiếp theo" đặt trên màn chờ của thiết kế ----
+   Không có nền phủ cả khung: màn chờ ("Chào cả nhà" + đồng hồ) phải lộ ra.
+   Dải nằm sát đáy khung, dưới câu "Truyện sắp bắt đầu…", sáng nhẹ theo nhịp
+   cho khung không đứng im. */
+.mod-truyen-giai-lao {
+  position: absolute;
+  left: 50%;
+  bottom: 5cqmin;
+  transform: translateX(-50%);
+  max-width: 92%;
+  display: flex;
+  align-items: baseline;
+  gap: 1.6cqmin;
+  padding: 1.2cqmin 3.4cqmin;
+  border-radius: 99px;
+  background: linear-gradient(135deg, rgba(70, 38, 20, 0.92), rgba(36, 18, 9, 0.92));
+  border: 0.4cqmin solid var(--gold, #f2c45a);
+  box-shadow: 0 0 3cqmin rgba(242, 196, 90, 0.35);
+  white-space: nowrap;
+  animation: giai-lao-sang 3.2s ease-in-out infinite, giai-lao-vao 0.7s ease-out;
+}
+.mod-truyen-giai-lao-nhan {
+  font-size: 2.6cqmin;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f6eedf;
+  opacity: 0.85;
+}
+.mod-truyen-giai-lao-ten {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 4.2cqmin;
+  font-weight: 800;
+  color: var(--gold, #f2c45a);
+  text-shadow: 0 0.3cqmin 1cqmin rgba(0, 0, 0, 0.8);
+}
+@keyframes giai-lao-sang {
+  50% {
+    box-shadow: 0 0 5cqmin rgba(242, 196, 90, 0.6);
+  }
+}
+@keyframes giai-lao-vao {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 2cqmin);
+  }
+}
+
+/* Đồng hồ góc khung: truyện đã kể được bao lâu. Số chạy từng giây nên khung
+   không bao giờ đứng im, kể cả khi trong suốt, chưa có hình. */
+.mod-truyen-dong-ho {
+  position: absolute;
+  top: 3cqmin;
+  right: 3.4cqmin;
+  z-index: 4;
+  padding: 0.8cqmin 2.2cqmin;
+  border-radius: 99px;
+  font-size: 3.4cqmin;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff4dc;
+  background: rgba(20, 10, 4, 0.55);
+  border: 0.3cqmin solid rgba(242, 196, 90, 0.6);
+  text-shadow: 0 0.2cqmin 0.6cqmin rgba(0, 0, 0, 0.7);
 }

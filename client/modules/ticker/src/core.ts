@@ -87,7 +87,11 @@ export const core: ModuleCore<Config, State> = {
   hooks: {
     comment: {
       run(state, item, ctx) {
-        const text = item.text.trim();
+        // Lệnh gõ: "gửi: …" thì chạy đúng lời nhắn (bỏ chữ "gửi:"); lệnh khác
+        // ("ghế B4", "nhảy"…) là để điều khiển phòng, không phải lời nhắn.
+        const lenh = item.lenh;
+        if (lenh !== undefined && lenh.loai !== 'gui') return [];
+        const text = (lenh?.loai === 'gui' ? lenh.chu : item.text).trim();
         if (text === '') return [];
         if (
           state.config.source === 'top' &&
@@ -137,6 +141,10 @@ export const core: ModuleCore<Config, State> = {
   },
 
   onConfig(state, config) {
+    // Thu hẹp về "chỉ top người tặng" giữa lúc đang live: bỏ hàng chờ nhận theo
+    // luật cũ, không thì lời của người thường vẫn chạy nốt cả tràng. Dòng đang
+    // chạy dở thì cho chạy hết, cắt ngang giữa chữ trông như lỗi.
+    if (config.source === 'top' && state.config.source !== 'top') state.cho = [];
     state.config = config;
 
     // Đổi tốc độ giữa lúc đang live: tính lại hạn của chính dòng đang chạy,

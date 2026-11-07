@@ -1,0 +1,177 @@
+/* Lớp học · Đố chữ — bố cục khung.
+ *
+ * Khung rộng min(100vw, 100vh×9/16), tỉ lệ 9:16. Bên trong là một tấm 1080×1920
+ * phóng theo khung (transform), để module vẽ theo đúng pixel của nền gốc.
+ */
+
+:root {
+  --lop-nen: #1a0f06;
+  --lop-phan: #f4f1e6;
+  --lop-vang: #ffe680;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+}
+
+#san-khau {
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+
+.stage {
+  position: relative;
+  width: min(100vw, calc(100vh * 9 / 16));
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  background: var(--lop-nen);
+}
+
+/* Nền của bản cũ: ảnh 941×1672 phóng lên 1080 ngang, neo đỉnh. */
+.lop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: top left;
+  background: #c8642a top center / 1080px auto no-repeat;
+  /* Module trong lớp dùng cqw theo bề rộng tấm 1080. */
+  container-type: inline-size;
+}
+
+.lop-full {
+  position: absolute;
+  inset: 0;
+}
+
+/* Màn chờ trên bảng đen — đúng chỗ bảng chữ của module (310, 262, 555×348). */
+.lop-cho {
+  position: absolute;
+  left: 310px;
+  top: 262px;
+  width: 555px;
+  height: 348px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--lop-phan);
+  font-family: 'Patrick Hand', 'Be Vietnam Pro', sans-serif;
+  text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+  animation: lop-cho-tho 3.2s ease-in-out infinite;
+}
+
+.lop-cho-to {
+  font-size: 68px;
+  line-height: 1;
+}
+
+.lop-cho-nho {
+  margin-top: 22px;
+  font-size: 34px;
+  line-height: 1.35;
+}
+
+.lop-cho-nho b {
+  color: var(--lop-vang);
+  font-weight: 400;
+}
+
+/* Màn chờ phải động: khung đứng im là TikTok soi. */
+@keyframes lop-cho-tho {
+  50% {
+    opacity: 0.72;
+    transform: translateY(-4px);
+  }
+}
+
+/* Dải chữ chạy nằm dưới dãy bàn thứ tư, trên vùng giao diện TikTok che. */
+.lop-ticker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 1640px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  pointer-events: none;
+}
+
+.lop-ticker:empty {
+  display: none;
+}
+
+/* Bong bóng thoại MC: chỗ bảng "Học sinh xuất sắc" (10, 230, rộng 326), đuôi chỉ xuống đầu cô (~215, 430). */
+.lop-mc {
+  position: absolute;
+  left: 10px;
+  top: 222px;
+  width: 340px;
+  z-index: 70;
+  padding: 16px 20px;
+  border-radius: 26px;
+  border: 4px solid #f9a8d4;
+  background: #fffaf3;
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.3);
+  color: #4a2c0e;
+  animation: lop-mc-vao 0.35s ease-out;
+}
+
+.lop-mc::after {
+  content: '';
+  position: absolute;
+  left: 184px;
+  bottom: -26px;
+  border: 14px solid transparent;
+  border-top: 16px solid #f9a8d4;
+}
+
+.lop-mc p {
+  margin: 0;
+  font-size: 29px;
+  font-weight: 600;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@keyframes lop-mc-vao {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.92);
+  }
+}
+
+/* Dòng minh bạch: chữ nhỏ, mờ, sát mép dưới — đủ đọc, không tranh chỗ với game. */
+.lop-minh-bach {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  text-align: center;
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.72);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 60;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lop-cho,
+  .lop-mc {
+    animation: none;
+  }
+}

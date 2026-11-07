@@ -60,6 +60,12 @@ export const designManifestSchema = z.object({
   defaults: z.record(z.string().regex(ID_RE), z.record(z.string(), z.unknown())).default({}),
   /** Số chỗ ngồi của phòng. Vị trí từng chỗ là việc của thiết kế. */
   seats: z.number().int().positive().max(1_000_000).default(84),
+  /** Sơ đồ hàng ghế: số ghế hàng A, B, … Có khai thì khách gõ được "ghế B4",
+   *  "chỗ của tôi", "đánh B4" — mã ghế là đồ đạc của phòng, phòng không khai
+   *  thì không có các lệnh đó. */
+  seatRows: z.array(z.number().int().positive().max(1000)).max(26).optional(),
+  /** Số ghế mỗi hàng sau các hàng đã khai. */
+  rowSeats: z.number().int().positive().max(1000).optional(),
   /** Đổi xu TikTok sang điểm của phòng. Mỗi bối cảnh có thể khác nhau. */
   pointRate: z.number().positive().max(1000).default(1),
   /** Nhân vật ảo của riêng bối cảnh này.
@@ -74,8 +80,25 @@ export const designManifestSchema = z.object({
       names: z.array(z.string().min(1)).default([]),
       /** Câu họ bình luận. Rỗng là coi như bối cảnh này không khai đám đông. */
       lines: z.array(z.string().min(1)).default([]),
+      /** Câu nhân vật ảo chào khách THẬT mới vào, `{ten}` là tên. Rỗng: không chào. */
+      greet: z.array(z.string().min(1)).default([]),
+      /** Câu nhân vật ảo cảm ơn khách thật tặng quà, `{ten}` là tên. Rỗng: không cảm ơn. */
+      thanks: z.array(z.string().min(1)).default([]),
     })
-    .default({ names: [], lines: [] }),
+    .default({ names: [], lines: [], greet: [], thanks: [] }),
+  /** Người dẫn do AI của riêng bối cảnh: `dan` là file lời dặn hệ thống của MC, đường
+   *  dẫn trong thư mục thiết kế (vd `mc-dan.md`). Phòng kể chuyện dẫn truyện, lớp
+   *  học thì cô giáo trò chuyện với lớp — mỗi phòng một file, máy chủ không rẽ
+   *  nhánh theo id. Không khai thì MC dùng lời dặn gốc của máy chủ. */
+  mc: z
+    .object({
+      dan: z
+        .string()
+        .regex(/^[a-z0-9][a-z0-9._/-]{0,79}$/, 'mc.dan là đường dẫn tương đối trong thư mục thiết kế')
+        .refine((x) => !x.split('/').includes('..'), 'mc.dan không được ra ngoài thư mục thiết kế')
+        .optional(),
+    })
+    .optional(),
   entry: z.string().default('dist/index.html'),
   quality: z
     .object({ auto: z.boolean().default(true), minFps: z.number().int().positive().default(24) })

@@ -18,6 +18,7 @@ Mixamo và các điệu nhảy. Cách **dùng** GLB trong phòng (module vũ cô
 | 07 | [Nhật ký model-1](07-nhat-ky-model-1.md) | Chuỗi lệnh, điểm giống từng phiên bản — mốc để so |
 | 08 | [ChatGPT cùng Blender](08-chatgpt-blender.md) | Chia việc, vòng lặp vẽ → dựng → so 1:1, luật vẽ, dáng / cỡ / màu, ngưỡng đạt, lời nhắc mẫu |
 | 09 | [Tủ đồ chia món](09-tu-do.md) | Món rời gắn xương model-1, thư mục nguồn/ô/món (xoá là xoá thư mục), luật che + lót tự mặc kèm, `xuat_mon.py` |
+| 10 | [Nhân vật ảnh động nhiều góc](10-nhan-vat-anh-dong.md) | Ảnh ChatGPT 8 góc theo người nộm + MimicMotion vẽ điệu Mixamo → 8 WebP có alpha; quy ước góc, thông số hpc, lên sàn, tăng độ mượt |
 
 ## Kiến trúc
 

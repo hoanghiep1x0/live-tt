@@ -51,3 +51,47 @@ describe('trang xem thử chỉ nhận phiên của chính phòng mình', () => 
     expect(s.session.designId).toBe('san-bar-hop-dem');
   });
 });
+
+describe('sổ chi phí', () => {
+  const so = (designId: string) => ({
+    designId,
+    batDau: 1,
+    ketThuc: null,
+    live: true,
+    khoan: { mc: { lan: 2, tokVao: 100, tokRa: 20, kyTu: 0, usd: 0.001, chuaRo: 0 } },
+    tongUsd: 0.001,
+    chuaRo: 0,
+    truyen: ['Cây vú sữa'],
+  });
+
+  it('phòng đang phát nhận sổ không gắn designId', () => {
+    const s = apTin(trang('ke-chuyen', 'ke-chuyen'), { t: 'chi-phi', so: so('ke-chuyen') });
+    expect(s.chiPhi?.tongUsd).toBe(0.001);
+  });
+
+  it('sổ của phòng khác thì không áp', () => {
+    const s = apTin(trang('ke-chuyen', 'san-bar-hop-dem'), {
+      t: 'chi-phi',
+      so: so('san-bar-hop-dem'),
+      designId: 'san-bar-hop-dem',
+    });
+    expect(s.chiPhi).toBeNull();
+  });
+
+  it('phòng xem thử nhận sổ gắn đúng designId của mình', () => {
+    const s = apTin(trang('ke-chuyen', null), { t: 'chi-phi', so: so('ke-chuyen'), designId: 'ke-chuyen' });
+    expect(s.chiPhi?.khoan['mc']?.lan).toBe(2);
+  });
+});
+
+describe('tin backend gửi xuống mà sân khấu không cần', () => {
+  it('tin nguồn sự kiện: giữ nguyên trạng thái', () => {
+    const tin = { t: 'source', source: { kind: 'bridge', url: '', channel: 'a', nhip: 900, running: true } } as const;
+    expect(apTin(BAN_DAU, tin)).toBe(BAN_DAU);
+  });
+
+  it('loại tin chưa có trong bản đã build: bỏ qua chứ không làm hỏng trạng thái', () => {
+    const la = { t: 'tin-tuong-lai', x: 1 } as unknown as Parameters<typeof apTin>[1];
+    expect(apTin(BAN_DAU, la)).toBe(BAN_DAU);
+  });
+});

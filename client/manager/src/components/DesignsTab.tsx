@@ -54,6 +54,10 @@ export function DesignsTab({ m, onToast, onSangTinhNang }: Props) {
               key={d.manifest.id}
               d={d}
               live={m.live}
+              nguonChay={m.nguon?.running === true && (m.nguon.problem ?? '') === ''}
+              nguonKenh={m.nguon?.kind === 'bridge' ? m.nguon.channel : ''}
+              {...(m.nguon?.problem !== undefined ? { nguonLoi: m.nguon.problem } : {})}
+              onNoiKenh={m.noiKenh}
               onBatLive={m.batLive}
               onTatLive={m.tatLive}
               onDoiTen={m.doiTen}

@@ -8,6 +8,7 @@ import {
   DIEU,
   DIEU_LUAN_PHIEN,
   KHO_DIEU,
+  docLenhSoi,
   MAN_THAY_DO,
   MODEL,
   moduleVuCong3d as mod,
@@ -368,14 +369,17 @@ describe('đám đông', () => {
       const t = f.tab ?? 'Cài đặt';
       if (!tabs.includes(t)) tabs.push(t);
     }
-    expect(tabs).toEqual(['Cài đặt', 'Vai chính', 'Đám đông', 'Điệu nhảy', 'Đồ chung', 'Thay đồ VIP']);
+    expect(tabs).toEqual(['Cài đặt', 'Vai chính', 'Đám đông', 'Điệu nhảy', 'Đồ chung', 'Thay đồ VIP', 'Camera & số']);
   });
 
   it('đám đông lấy người từ kho nhân vật: kho có sẵn nhân vật phối đẹp, mỗi người có tủ đồ riêng', () => {
     const kho = mod.manifest.fields.find((f) => f.key === 'khoNhanVat');
     expect(kho?.type).toBe('list');
     expect(kho?.tab).toBe('Đám đông');
-    expect(kho?.fields?.map((x) => x.key)).toEqual(['ten', 'damDong', 'anh', 'anhCheo', 'anhNghieng', 'anhSau', 'mon']);
+    expect(kho?.fields?.map((x) => x.key)).toEqual([
+      'ten', 'damDong', 'anh', 'anhCheo', 'anhNghieng', 'anhCheoSau', 'anhSau', 'anhCheoSauP', 'anhNghiengP', 'anhCheoP', 'boAnh',
+      'mon',
+    ]);
     expect(MAC_DINH.khoNhanVat.length).toBeGreaterThanOrEqual(6);
     for (const c of MAC_DINH.khoNhanVat) expect(c.mon.length).toBeGreaterThan(0);
     const nhom = mod.manifest.fields.find((f) => f.key === 'damDong');
@@ -451,5 +455,68 @@ describe('màn thay đồ VIP', () => {
     const td = { id: 3, nguoi: 'vu-cong-2', khach: 'Minh', mon: ['/m/x/tu-do/a/'], tu: 1, den: 2, moc: MAN_THAY_DO };
     expect(docVuCong3D(JSON.stringify({ model: '/m/x/a.glb', thayDo: td }))?.thayDo).toEqual(td);
     expect(docVuCong3D(JSON.stringify({ model: '/m/x/a.glb', thayDo: { ...td, moc: {} } }))?.thayDo).toBeUndefined();
+  });
+});
+
+describe('lệnh soi của khách', () => {
+  const binhLuan = (at: number, text: string, id = 50): FeedItem => ({ id, at, kind: 'comment', name: 'Lan', text, user: 'lan' });
+
+  it('đọc "soi 5", "Soi #12", "SOI7", có chữ khác xung quanh; bỏ câu không phải lệnh', () => {
+    expect(docLenhSoi('soi 5', 'soi')).toBe(5);
+    expect(docLenhSoi('ơi Soi #12 đi', 'soi')).toBe(12);
+    expect(docLenhSoi('SOI7', 'soi')).toBe(7);
+    expect(docLenhSoi('sói 3', 'soi')).toBe(3); // bỏ dấu: gõ có dấu vẫn nhận
+    expect(docLenhSoi('xin chào', 'soi')).toBeNull();
+    expect(docLenhSoi('soi 0', 'soi')).toBeNull();
+    expect(docLenhSoi('cam 4', 'cam')).toBe(4);
+  });
+
+  it('bình luận có lệnh thì soi đúng người tới hết giờ, rồi tự thôi', () => {
+    const s = core.init(cau({ soiGiay: 20 }));
+    runFeed(mod, s, binhLuan(1_000, 'soi 4'), ctx(s.config, 1_000));
+    expect(s.soi).toMatchObject({ so: 4, khach: 'Lan', den: 21_000 });
+    runTick(mod, s, 21_000, ctx(s.config, 21_000));
+    expect(s.soi).toBeNull();
+  });
+
+  it('tắt lệnh soi thì bình luận không làm gì', () => {
+    const s = core.init(cau({ soiBat: false }));
+    runFeed(mod, s, binhLuan(1_000, 'soi 4'), ctx(s.config, 1_000));
+    expect(s.soi).toBeNull();
+  });
+});
+
+describe('đổi bộ đồ người ảnh động', () => {
+  const binhLuan = (at: number, text: string, id = 60): FeedItem => ({ id, at, kind: 'comment', name: 'Lan', text, user: 'lan' });
+
+  it('khách gõ "đổi đồ 5" (có dấu hay không): người số 5 đổi bộ, mỗi lần một id mới', () => {
+    const s = core.init(cau({}));
+    runFeed(mod, s, binhLuan(1_000, 'đổi đồ 5'), ctx(s.config, 1_000));
+    expect(s.doiAnh).toEqual({ so: 5, id: 1 });
+    runFeed(mod, s, binhLuan(2_000, 'doi do #5', 61), ctx(s.config, 2_000));
+    expect(s.doiAnh).toEqual({ so: 5, id: 2 });
+  });
+
+  it('tắt lệnh đổi đồ thì bình luận không làm gì; lệnh soi vẫn chạy', () => {
+    const s = core.init(cau({ doiDoLenhBat: false }));
+    runFeed(mod, s, binhLuan(1_000, 'đổi đồ 5 soi 4'), ctx(s.config, 1_000));
+    expect(s.doiAnh).toBeNull();
+    expect(s.soi).toMatchObject({ so: 4 });
+  });
+
+  it('vũ công 3D đổi đồ (có quà) thì mọi người ảnh động cũng đổi bộ', () => {
+    const s = core.init(cau({ doiDoKhiCoQua: true }));
+    runFeed(mod, s, qua(1_000, 70), ctx(s.config, 1_000));
+    expect(s.doiAnh).toEqual({ so: 0, id: 1 });
+  });
+
+  it('hợp đồng: người ảnh động nhiều bộ và lần đổi đồ qua được docVuCong3D; bộ rỗng thì bỏ cả nhóm', () => {
+    const nguoi = { bo: [{ truoc: '/u/a.webp' }, { truoc: '/u/b.webp', sau: '/u/b-sau.webp' }] };
+    const nhom = { id: 'n', so: 2, khuVuc: 'phia-truoc', bo: ['x'], theoNhom: true, anh: [nguoi, '/u/c.gif'] };
+    const v = docVuCong3D(JSON.stringify({ model: '/m/x/a.glb', damDong: [nhom], doiDo: { so: 4, id: 3 } }));
+    expect(v?.damDong?.[0]?.anh).toEqual([nguoi, '/u/c.gif']);
+    expect(v?.doiDo).toEqual({ so: 4, id: 3 });
+    const hong = docVuCong3D(JSON.stringify({ model: '/m/x/a.glb', damDong: [{ ...nhom, anh: [{ bo: [] }] }] }));
+    expect(hong?.damDong).toBeUndefined();
   });
 });

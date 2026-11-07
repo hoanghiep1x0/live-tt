@@ -109,6 +109,16 @@ export function tenKetNoi(p: Pick<KetNoiAi, 'id' | 'name'>): string {
   return p.name !== undefined && p.name !== '' ? p.name : p.id;
 }
 
+/** Tả rõ một kết nối cho việc `viec`: tên · nơi gọi · model — để người vận
+ *  hành biết chính xác AI nào đang làm, không chỉ cái tên tự đặt. Hàm thuần. */
+export function moTaKetNoi(p: Pick<KetNoiAi, 'id' | 'name' | 'kind' | 'baseUrl' | 'models'>, viec: ViecAi): string {
+  // Không dùng `URL`: phần hợp đồng chạy cả ở Node không có DOM.
+  const host = /^[a-z][a-z0-9+.-]*:\/\/([^/?#]+)/i.exec((p.baseUrl ?? '').trim())?.[1];
+  const noi = host !== undefined ? host.replace(/^api\./, '') : p.kind;
+  const model = p.models[viec]?.trim();
+  return [tenKetNoi(p), noi, model !== undefined && model !== '' ? model : 'model mặc định'].join(' · ');
+}
+
 /** Kết nối đã có ứng với mẫu nào: trùng địa chỉ trước (9router chạy trên máy
  *  đặt tên gì cũng nhận ra), rồi trùng tên ngắn, không thì theo giao thức. */
 export function mauCua(p: Pick<KetNoiAi, 'id' | 'kind' | 'baseUrl'>): MauNha {

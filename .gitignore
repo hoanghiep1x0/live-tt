@@ -21,6 +21,9 @@ database/voice.json
 # Rust (target-claude: thư mục build riêng của các session Claude)
 backend/target/
 backend/target-claude/
+desktop/target/
+# Tauri tự sinh lược đồ quyền khi build.
+desktop/gen/
 
 # Python
 __pycache__/
@@ -33,3 +36,6 @@ download/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Hồ sơ trình duyệt riêng của dự án (cookie đăng nhập muse.ai…) — không bao giờ commit.
+database/trinh-duyet/

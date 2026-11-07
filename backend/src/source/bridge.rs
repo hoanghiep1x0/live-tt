@@ -1,8 +1,9 @@
-//! Nguồn cầu nối: nối tới một tiến trình đọc TikTok chạy ngoài.
+//! Nguồn cầu nối: client WebSocket nối tới cầu nối TikTok.
 //!
-//! Đây là đường tới **dữ liệu TikTok thật** mà không cần vỏ Tauri. Tiến trình
-//! ngoài (bản cũ có sẵn ở `D:\Live\tools\bridge`) đọc phòng live rồi đẩy JSON
-//! qua WebSocket; backend chỉ việc nhận và chuẩn hoá.
+//! Đây là đường tới **dữ liệu TikTok thật**, không qua trình duyệt nào. Cầu nối
+//! (`backend/cau-noi`, backend tự bật — xem `tien_trinh`) đọc phòng live rồi đẩy
+//! JSON qua WebSocket; ở đây chỉ việc nhận và chuẩn hoá. Trỏ `url` sang một cầu
+//! nối khác nói cùng giao thức (vd bản cũ `D:\Live\tools\bridge`) cũng chạy.
 //!
 //! Giao thức giữ nguyên của bản cũ để dùng lại được cầu nối đã có:
 //!
@@ -36,7 +37,8 @@ const CHO_TRAN_MS: u64 = 15_000;
 pub enum TinCauNoi {
     SuKien(Box<LiveEvent>),
     /// Số người đang xem do TikTok đếm — tin con số này hơn số người mình thấy.
-    Viewers(u64),
+    /// Kèm tổng lượt xem cả buổi (`views`) nếu cầu nối gửi.
+    Viewers(u64, Option<u64>),
     TrangThai {
         state: String,
         message: Option<String>,
@@ -61,7 +63,13 @@ fn doc_mot(v: Value, mo_luc: i64) -> TinCauNoi {
         return match t {
             "viewers" => match v.get("count").and_then(Value::as_u64) {
                 // Giới hạn như bản cũ: số vô lý thì bỏ, không để nó lên màn.
-                Some(n) if n <= 1_000_000 => TinCauNoi::Viewers(n),
+                Some(n) if n <= 1_000_000 => TinCauNoi::Viewers(
+                    n,
+                    // Tổng lượt xem: phải không nhỏ hơn số đang xem, và không vô lý.
+                    v.get("views")
+                        .and_then(Value::as_u64)
+                        .filter(|&t| t >= n && t <= 1_000_000_000),
+                ),
                 _ => TinCauNoi::Bo,
             },
             "status" => TinCauNoi::TrangThai {
@@ -100,6 +108,50 @@ fn bay_gio_ms() -> i64 {
         .unwrap_or(0)
 }
 
+/// Áp một tin theo giao thức cầu nối vào phiên. Dùng chung cho nguồn `bridge`
+/// (tin qua WebSocket) và nguồn `webview` (tin trang quản lý đẩy vào
+/// `POST /api/source/day`).
+///
+/// Lời báo lúc đã nối cầu nối nhưng chưa nhận được gì từ phòng live.
+pub const DANG_NOI: &str = "Đang nối tới phòng live…";
+
+/// Lỗi nguồn ứng với một trạng thái kênh. Hàm thuần.
+///
+/// Nút "Kết nối Studio" chỉ xanh khi **đang thật sự nhận** dữ liệu: chỉ
+/// `dang-live` xoá lỗi. `dang-noi` là "đang nối…", chưa xanh — trước đây nối
+/// được tới cầu nối là xanh luôn, dù kênh chưa live hay sai nick.
+pub fn loi_theo_trang_thai(state: &str, message: Option<String>) -> Option<String> {
+    match state {
+        "dang-live" => None,
+        "dang-noi" => Some(message.unwrap_or_else(|| DANG_NOI.into())),
+        _ => Some(message.unwrap_or_else(|| state.to_string())),
+    }
+}
+
+/// Luật trạng thái: xem `loi_theo_trang_thai`. Thêm: `offline` — kênh tắt live
+/// là cả phòng ra cùng lúc. TikTok không gửi tin "rời phòng" cho ai, nên không
+/// dọn ở đây thì rạp còn đầy chibi và 👥 treo ở số cũ suốt mười phút.
+pub fn ap_tin(st: &AppState, x: TinCauNoi) {
+    match x {
+        // Sự kiện từ cầu nối là người THẬT, không phải nhân vật ảo.
+        TinCauNoi::SuKien(e) => st.ap_su_kien(*e, false),
+        TinCauNoi::Viewers(n, luot) => {
+            st.dat_nguoi_xem(n);
+            if let Some(t) = luot {
+                st.dat_luot_xem(t);
+            }
+        }
+        TinCauNoi::TrangThai { state, message } => {
+            tracing::info!(%state, ?message, "nguồn báo trạng thái");
+            if state == "offline" {
+                st.don_phong();
+            }
+            st.dat_loi_nguon(loi_theo_trang_thai(&state, message));
+        }
+        TinCauNoi::Bo => {}
+    }
+}
+
 pub async fn chay(st: Arc<AppState>, cfg: SourceCfg, the_he: u64) {
     let mut cho = CHO_DAU_MS;
     tracing::info!(url = %cfg.url, channel = %cfg.channel, "mở nguồn cầu nối");
@@ -110,11 +162,10 @@ pub async fn chay(st: Arc<AppState>, cfg: SourceCfg, the_he: u64) {
             return;
         }
 
-        match mot_lan(&st, &cfg, the_he).await {
-            Ok(()) => {
-                st.dat_loi_nguon(None);
-                cho = CHO_DAU_MS;
-            }
+        match mot_lan(&st, &cfg, the_he, &mut cho).await {
+            // Chỉ về đây khi nguồn đã đổi: không đụng lỗi nguồn — giờ nó là
+            // của nguồn mới.
+            Ok(()) => return,
             Err(e) => {
                 tracing::warn!(loi = %e, "cầu nối đứt, sẽ thử lại");
                 st.dat_loi_nguon(Some(e));
@@ -131,10 +182,12 @@ pub async fn chay(st: Arc<AppState>, cfg: SourceCfg, the_he: u64) {
     }
 }
 
-async fn mot_lan(st: &Arc<AppState>, cfg: &SourceCfg, the_he: u64) -> Result<(), String> {
+async fn mot_lan(st: &Arc<AppState>, cfg: &SourceCfg, the_he: u64, cho: &mut u64) -> Result<(), String> {
     let (ws, _) = tokio_tungstenite::connect_async(&cfg.url)
         .await
-        .map_err(|e| format!("không nối được {}: {e}", cfg.url))?;
+        .map_err(|e| format!("Chưa nối được cầu nối TikTok ({}) — đang thử lại: {e}", cfg.url))?;
+    // Nối được thì lần đứt sau chờ ngắn lại từ đầu.
+    *cho = CHO_DAU_MS;
     let (mut tx, mut rx) = ws.split();
 
     let chao = serde_json::json!({ "type": "subscribe", "channel": cfg.channel });
@@ -143,7 +196,10 @@ async fn mot_lan(st: &Arc<AppState>, cfg: &SourceCfg, the_he: u64) -> Result<(),
         .map_err(|e| format!("không gửi được lời chào: {e}"))?;
 
     let mo_luc = bay_gio_ms();
-    st.dat_loi_nguon(None);
+    // Nối được cầu nối chưa phải là có dữ liệu: chờ cầu nối báo `dang-live`.
+    if st.the_he_nguon() == the_he {
+        st.dat_loi_nguon(Some(DANG_NOI.into()));
+    }
     tracing::info!(url = %cfg.url, "đã nối cầu nối");
 
     while let Some(tin) = rx.next().await {
@@ -159,20 +215,7 @@ async fn mot_lan(st: &Arc<AppState>, cfg: &SourceCfg, the_he: u64) -> Result<(),
         };
 
         for x in doc_tin(&raw, mo_luc) {
-            match x {
-                // Sự kiện từ cầu nối là người THẬT, không phải nhân vật ảo.
-                TinCauNoi::SuKien(e) => st.ap_su_kien(*e, false),
-                TinCauNoi::Viewers(n) => st.dat_nguoi_xem(n),
-                TinCauNoi::TrangThai { state, message } => {
-                    tracing::info!(%state, ?message, "cầu nối báo trạng thái");
-                    if state == "offline" || state == "loi" {
-                        st.dat_loi_nguon(message.clone().or(Some(state)));
-                    } else {
-                        st.dat_loi_nguon(None);
-                    }
-                }
-                TinCauNoi::Bo => {}
-            }
+            ap_tin(st, x);
         }
     }
     Err("cầu nối ngừng gửi".into())
@@ -248,7 +291,17 @@ mod tests {
     fn doc_duoc_so_nguoi_xem() {
         assert_eq!(
             doc_tin(r#"{"type":"viewers","count":1234}"#, MO)[0],
-            TinCauNoi::Viewers(1234)
+            TinCauNoi::Viewers(1234, None)
+        );
+        assert_eq!(
+            doc_tin(r#"{"type":"viewers","count":1234,"views":64394}"#, MO)[0],
+            TinCauNoi::Viewers(1234, Some(64394)),
+            "kèm tổng lượt xem cả buổi"
+        );
+        assert_eq!(
+            doc_tin(r#"{"type":"viewers","count":1234,"views":10}"#, MO)[0],
+            TinCauNoi::Viewers(1234, None),
+            "tổng lượt xem nhỏ hơn số đang xem là vô lý — bỏ phần đó"
         );
     }
 
@@ -274,6 +327,25 @@ mod tests {
             }
             x => panic!("phải là trạng thái, nhận {x:?}"),
         }
+    }
+
+    #[test]
+    fn chi_dang_live_moi_xoa_loi_nguon() {
+        assert_eq!(loi_theo_trang_thai("dang-live", Some("ổn".into())), None);
+        assert_eq!(
+            loi_theo_trang_thai("dang-noi", None).as_deref(),
+            Some(DANG_NOI),
+            "đang nối thì chưa xanh"
+        );
+        assert_eq!(
+            loi_theo_trang_thai("dang-noi", Some("Đang nối tới @abc".into())).as_deref(),
+            Some("Đang nối tới @abc")
+        );
+        assert_eq!(
+            loi_theo_trang_thai("offline", Some("Kênh chưa phát live".into())).as_deref(),
+            Some("Kênh chưa phát live")
+        );
+        assert_eq!(loi_theo_trang_thai("loi", None).as_deref(), Some("loi"));
     }
 
     #[test]

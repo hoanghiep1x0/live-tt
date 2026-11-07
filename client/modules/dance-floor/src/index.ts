@@ -6,7 +6,19 @@ import type { Config } from './manifest';
 
 export const moduleDanceFloor: LiveModule<Config, State> = { manifest, core };
 
-export { core, dangCua, xepSan, CHO_DUNG, TOI_DA } from './core';
+export {
+  core,
+  chang,
+  khachGoiNhay,
+  moMan,
+  xepSan,
+  CHO_DUNG,
+  KHACH_CHO_MS,
+  KHACH_NHAY_MS,
+  LEN_MS,
+  TOI_DA,
+  XUONG_MS,
+} from './core';
 export { manifest, schema } from './manifest';
 // Phần vẽ lấy qua `@live/mod-dance-floor/stage` — xem ghi chú ở top-givers.
 export type { Dang, NguoiSan, State } from './core';

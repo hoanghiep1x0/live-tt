@@ -28,6 +28,16 @@ impl Default for Canvas {
     }
 }
 
+/// MC do AI dẫn của riêng bối cảnh này. `dan` là đường dẫn (trong thư mục thiết
+/// kế) tới file lời dặn hệ thống của MC — phòng kể chuyện dẫn truyện, lớp học
+/// thì cô giáo trò chuyện với lớp. Không khai thì dùng lời dặn gốc (`ai::DAN_GOC`).
+/// Khai ở thiết kế chứ không `if id` ở máy chủ: thêm bối cảnh là thêm một file.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct McKhai {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dan: Option<String>,
+}
+
 /// Nhan vat ao cua rieng boi canh nay. Xem `bot.rs`: noi dung thuoc ve thiet
 /// ke chu khong phai mot bo dung chung o backend.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -36,6 +46,13 @@ pub struct Crowd {
     pub names: Vec<String>,
     #[serde(default)]
     pub lines: Vec<String>,
+    /// Câu nhân vật ảo chào khách THẬT mới vào, `{ten}` là tên khách. Bỏ trống
+    /// thì nhân vật ảo không chào — câu chào là giọng riêng của từng phòng.
+    #[serde(default)]
+    pub greet: Vec<String>,
+    /// Câu nhân vật ảo cảm ơn khách thật tặng quà, `{ten}` là tên khách.
+    #[serde(default)]
+    pub thanks: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -67,6 +84,13 @@ pub struct DesignManifest {
     /// Số chỗ ngồi của phòng. Vị trí từng chỗ là việc của thiết kế.
     #[serde(default = "ghe_mac_dinh")]
     pub seats: usize,
+    /// Sơ đồ hàng ghế: số ghế hàng A, B, … Có khai thì khách gõ được "ghế B4",
+    /// "chỗ của tôi", "đánh B4". Không khai thì phòng không có mã ghế.
+    #[serde(default, rename = "seatRows", skip_serializing_if = "Vec::is_empty")]
+    pub seat_rows: Vec<usize>,
+    /// Số ghế mỗi hàng sau các hàng đã khai.
+    #[serde(default, rename = "rowSeats", skip_serializing_if = "Option::is_none")]
+    pub row_seats: Option<usize>,
     /// Đổi xu TikTok sang điểm của phòng. Mỗi bối cảnh có thể khác nhau.
     #[serde(default = "ti_le_mac_dinh", rename = "pointRate")]
     pub point_rate: f64,
@@ -76,6 +100,8 @@ pub struct DesignManifest {
     /// Cau va ten cua nhan vat ao trong phong nay.
     #[serde(default)]
     pub crowd: Crowd,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mc: Option<McKhai>,
     #[serde(default = "entry_mac_dinh")]
     pub entry: String,
 }
@@ -204,9 +230,12 @@ pub fn scan(layout: &Layout, port: u16, live: Option<&str>) -> Vec<DesignInfo> {
                     canvas: Canvas::default(),
                     slots: Vec::new(),
                     crowd: Crowd::default(),
+                    mc: None,
                     provides: Vec::new(),
                     recommends: Vec::new(),
                     seats: ghe_mac_dinh(),
+                    seat_rows: Vec::new(),
+                    row_seats: None,
                     point_rate: ti_le_mac_dinh(),
                     defaults: BTreeMap::new(),
                     entry: entry_mac_dinh(),

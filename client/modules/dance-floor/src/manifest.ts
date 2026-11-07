@@ -3,8 +3,7 @@ import type { ModuleManifest } from '@live/contracts';
 import { TOI_DA } from './core';
 
 export const schema = z.object({
-  /** Bao nhiêu người đứng trên sàn. Luôn có người đứng đó, kể cả lúc không ai
-   *  nhảy — sàn trống trước hàng ghế A nhìn ra ngay là phòng thiếu người. */
+  /** Bao nhiêu người chạy lên sàn mỗi màn. */
   count: z.number().int().min(1).max(TOI_DA).default(3),
   danceOnGift: z.boolean().default(true),
   danceSec: z.number().int().min(10).max(600).default(120),
@@ -16,8 +15,9 @@ export const manifest: ModuleManifest<Config> = {
   id: 'dance-floor',
   name: 'Sàn nhảy',
   icon: '💃',
-  summary: 'Vài người đứng trên sàn trước hàng ghế, có quà thì cả nhóm lên nhảy',
-  triggers: ['gift'],
+  summary: 'Có quà thì vài người chạy lên sàn trước hàng ghế nhảy, khán giả tung hoa; xong thì chạy xuống',
+  // `comment`: khách gõ "nhảy" thì chibi của họ lên sàn (máy chủ đọc lệnh sẵn ở `item.lenh`).
+  triggers: ['gift', 'comment'],
   configVersion: 1,
   schema,
   slots: ['floor'],
@@ -50,11 +50,11 @@ export const manifest: ModuleManifest<Config> = {
       label: 'Có quà thì lên nhảy',
       short: 'Nhảy khi có quà',
       type: 'toggle',
-      hint: 'Tắt thì họ vẫn đứng đó làm động tác nghỉ, chỉ không nhảy nữa',
+      hint: 'Tắt thì chỉ nhảy khi bấm “Nhảy ngay”. Quà tới liên tiếp thì nhảy tiếp, không chạy xuống',
     },
     {
       key: 'danceSec',
-      label: 'Một màn nhảy kéo dài',
+      label: 'Mỗi món quà nhảy thêm',
       short: 'Nhảy',
       type: 'number',
       unit: 'giây',

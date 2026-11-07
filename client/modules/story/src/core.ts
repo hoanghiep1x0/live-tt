@@ -1,3 +1,4 @@
+import { cachKeCua } from '@live/contracts';
 import type { Effect, ModuleCore } from '@live/contracts';
 import type { Config } from './manifest';
 
@@ -15,7 +16,18 @@ export interface State {
   daDoc: boolean;
   /** Kể hết truyện rồi và không lặp lại. */
   hetTruyen: boolean;
+  /** Lời MC vừa kể đoạn hiện tại (MC tự kể). Hiện làm phụ đề thay cho chữ gốc
+   *  của đoạn, vì đó mới là câu người xem đang nghe. `null` khi tự đọc. */
+  loiKe: string | null;
+  /** Lần cuối MC kể một đoạn. */
+  mcKeLuc: number;
+  /** Nhịp đầu tiên module chạy — để biết MC đã vắng bao lâu từ lúc mở. */
+  batDau: number;
 }
+
+/** MC tự kể mà vắng ngần này (tắt, hết hạn mức, lỗi) thì module tự đọc tiếp
+ *  từng đoạn như trước — truyện không bao giờ đứng im trên sóng. */
+export const CHO_MC_MS = 45_000;
 
 /** Cắt khối chữ thành từng đoạn. Dòng trống bị bỏ, khoảng trắng thừa nén lại. */
 export function catDoan(passages: string): string[] {
@@ -31,10 +43,18 @@ export function doanHienTai(state: State): string | null {
   return ds[state.doan] ?? null;
 }
 
+/** Chữ phụ đề trong khung truyện: LUÔN là chữ gốc của đoạn đang kể — chỉ nội
+ *  dung truyện. Lời MC diễn lại (có khi chêm câu đố, gọi cả nhà, mời thả tim)
+ *  chỉ đọc thành tiếng, không bao giờ lên khung truyện. */
+export function chuPhuDe(state: State): string | null {
+  return doanHienTai(state);
+}
+
 function sang(state: State, i: number, now: number, ds: string[]): Effect[] {
   state.doan = i;
   state.tu = now;
   state.daDoc = true;
+  state.loiKe = null;
 
   const d = ds[i];
   if (d === undefined) return [];
@@ -50,12 +70,55 @@ function sang(state: State, i: number, now: number, ds: string[]): Effect[] {
 
 export const core: ModuleCore<Config, State> = {
   init(config) {
-    return { config, doan: -1, tu: 0, daDoc: false, hetTruyen: false };
+    return {
+      config,
+      doan: -1,
+      tu: 0,
+      daDoc: false,
+      hetTruyen: false,
+      loiKe: null,
+      mcKeLuc: 0,
+      batDau: 0,
+    };
   },
 
-  onTick(state, now) {
+  hooks: {
+    // MC tự kể (như bản cũ): mỗi câu kể của MC mang số đoạn — chuyển tới đúng
+    // đoạn đó, hiện lời MC làm phụ đề. Không đọc gì ở đây: runner đã đọc câu
+    // MC bằng nhiều giọng rồi.
+    host: {
+      run(state, item, ctx): Effect[] {
+        if (cachKeCua(state.config) === 'tu-doc') return [];
+        // MC nói câu nào (chuyển tiếp, chào giữa hai truyện…) cũng là MC đang
+        // có mặt: đừng tự đọc thay — không thì đoạn đầu truyện mới bị đọc hai lần.
+        state.mcKeLuc = ctx.now;
+        if (item.ke === undefined) return [];
+        if (item.ke < 0 || item.ke >= catDoan(state.config.passages).length) return [];
+        state.doan = item.ke;
+        state.tu = ctx.now;
+        state.daDoc = true;
+        state.loiKe = item.text;
+        state.mcKeLuc = ctx.now;
+        state.hetTruyen = false;
+        return [{ kind: 'overlay', slot: 'screen', ttlMs: 2000 }];
+      },
+    },
+  },
+
+  onTick(state, now, ctx) {
     const ds = catDoan(state.config.passages);
     if (ds.length === 0 || state.hetTruyen) return [];
+
+    if (cachKeCua(state.config) !== 'tu-doc') {
+      if (state.batDau === 0) state.batDau = now;
+      // MC đang kể (hoặc mới mở, chờ MC vào): đoạn do MC chuyển. Vắng quá
+      // `CHO_MC_MS` thì rơi xuống tự đọc ở dưới, truyện vẫn chạy.
+      if (now - Math.max(state.mcKeLuc, state.batDau) < CHO_MC_MS) return [];
+    }
+
+    // Tự đọc to: còn đang đọc (đoạn trước, hay câu MC) thì chưa sang đoạn —
+    // khung đổi đoạn khi giọng đọc đoạn cũ còn dở là chữ, hình đi trước giọng.
+    if (state.config.readAloud && ctx.dangNoi) return [];
 
     if (state.doan < 0 || !state.daDoc) {
       const i = Math.max(0, Math.min(state.doan, ds.length - 1));
@@ -92,7 +155,23 @@ export const core: ModuleCore<Config, State> = {
       state.tu = 0;
       state.daDoc = false;
     }
+    // Đổi truyện thì lời kể cũ không còn đúng đoạn nào nữa; và đếm lại thời
+    // gian chờ MC từ đầu — MC đang chuyển truyện, sắp mở truyện mới.
+    if (truoc.join('\n') !== sau.join('\n')) {
+      state.loiKe = null;
+      state.batDau = 0;
+      state.mcKeLuc = 0;
+    }
     if (sau.length > 0) state.hetTruyen = false;
     return state;
   },
 };
+
+/** "mm:ss" (hay "h:mm:ss") từ số giây. Hàm thuần. */
+export function dongHo(giay: number): string {
+  const g = Math.max(0, Math.floor(giay));
+  const h = Math.floor(g / 3600);
+  const p = String(Math.floor((g % 3600) / 60)).padStart(2, '0');
+  const s = String(g % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${p}:${s}` : `${p}:${s}`;
+}

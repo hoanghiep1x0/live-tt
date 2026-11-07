@@ -3,6 +3,53 @@
 import type { CommandSource, Json, RoomCommand } from './effects';
 import type { FeedItem, SessionView } from './events';
 
+/** Một khoản trong sổ chi phí (`backend/src/chi_phi.rs`). */
+export interface KhoanChiPhi {
+  lan: number;
+  tokVao: number;
+  tokRa: number;
+  /** Số ký tự đã đọc (giọng đọc). */
+  kyTu: number;
+  usd: number;
+  /** Số lượt nhà cung cấp không cho biết giá. */
+  chuaRo: number;
+}
+
+/** Sổ chi phí của một buổi: mở lúc lên sóng, chốt lúc tắt sóng. `live` false
+ *  là chi phí lúc xem thử, chưa lên sóng. */
+export interface SoChiPhi {
+  designId: string;
+  batDau: number;
+  ketThuc: number | null;
+  live: boolean;
+  /** Khoá: mc, viet, ke-hoach-anh, ve-anh, ve-anh-muse, giong. */
+  khoan: Record<string, KhoanChiPhi>;
+  tongUsd: number;
+  chuaRo: number;
+  /** Tên các truyện đã kể trong buổi, theo thứ tự. */
+  truyen: string[];
+}
+
+/** Nguồn sự kiện live (`backend/src/source`). Một nguồn chung cho mọi thiết
+ *  kế: thiết kế không tự nối TikTok, chỉ nhận `feed` / `session`.
+ *  `bridge` = cầu nối TikTok (docs/07); `webview` còn trong backend nhưng không dùng. */
+export type KieuNguon = 'tat' | 'mau' | 'bridge' | 'webview';
+
+/** Trạng thái nguồn — `GET /api/source` và tin `{ t: 'source' }` cùng một dạng. */
+export interface TrangThaiNguon {
+  kind: KieuNguon;
+  /** Địa chỉ cầu nối (`ws://127.0.0.1:8787/ws/live` là cầu nối backend tự bật). */
+  url: string;
+  /** Nick TikTok đang nghe. */
+  channel: string;
+  /** Nhịp của nguồn giả lập, mili-giây. */
+  nhip: number;
+  /** Đang chạy và không có lỗi = đang thật sự nhận dữ liệu. */
+  running: boolean;
+  /** Vì sao chưa nhận được dữ liệu: "Đang nối…", "Kênh chưa phát live", "Cần cài Node.js…". */
+  problem?: string;
+}
+
 /** Backend gửi xuống. Thiết kế và manager nhận cùng một tập.
  *
  *  `designId` trên tin trạng thái phòng (config, modules, design, bot, ai) và
@@ -21,17 +68,23 @@ export type Down =
   /** Nhân vật ảo đổi — áp nóng. Thiết kế đọc để biết có phải ghi dòng minh bạch
    *  "có nhân vật minh họa" ở chân màn hay không. */
   | { t: 'bot'; cfg: Json; designId?: string }
-  /** MC do AI dẫn đổi — áp nóng. Không bao giờ mang khoá API. */
+  /** Người dẫn do AI đổi — áp nóng. Không bao giờ mang khoá API. */
   | { t: 'ai'; cfg: Json; designId?: string }
   /** Lượt MC gần nhất lỗi gì (hết hạn mức, sai khoá…); `null` là lượt vừa rồi
    *  ổn. Thẻ MC ở bảng xem hiện câu này để người vận hành biết phải sửa gì. */
   | { t: 'ai-loi'; loi: string | null; designId?: string }
+  /** Sổ chi phí của buổi hiện tại (mỗi lượt gọi AI tốn bao nhiêu, số thật nhà
+   *  cung cấp báo về). Phát lại cả sổ sau mỗi lượt gọi. */
+  | { t: 'chi-phi'; so: SoChiPhi; designId?: string }
   /** Cài đặt giọng đọc đổi — áp nóng, KHÔNG tải lại trang. */
   | { t: 'voice'; cfg: Json }
   /** Người vận hành bấm nút của module (`ModuleUi.actions`). `id` tăng dần theo
    *  lần bấm để sân khấu chạy mỗi lần bấm đúng một lần. */
   | { t: 'action'; moduleId: string; op: string; id: number; designId?: string }
   | { t: 'live'; designId: string | null }
+  /** Nguồn sự kiện đổi cấu hình hoặc trạng thái (đang nối → đang nhận, lỗi…).
+   *  Phát mỗi khi đổi, để nút "Kết nối Studio" không phải đợi tải lại trang. */
+  | { t: 'source'; source: TrangThaiNguon }
   | { t: 'error'; message: string };
 
 /** Gửi lên backend. Thiết kế chỉ gửi lệnh do module sinh ra, kèm nhãn nguồn.

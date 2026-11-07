@@ -1,25 +1,42 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { cacMoc } from '@live/contracts';
 import type { Seat } from '@live/contracts';
 import {
+  giongChoViec,
   LOI_MC_MS,
   Slot,
+  tachTenTrongCau,
   useAsset,
   useLoiMc,
+  useNoi,
   useSlotSang,
   useSlotTrongSuot,
   useStage,
   useThietKe,
 } from '@live/stage-sdk';
 import type { DesignCard } from '@live/contracts';
-import { bienCss } from './geometry';
+import { bienCss, LANDSCAPE_GROUP_LIFT } from './geometry';
 import type { Huong } from './geometry';
 import { GHE_MAC_DINH, hallContentH, hallRowsFor } from './seats';
-import { dungGhe, HangGhe, TenKhan } from './parts/HangGhe';
+import { dungGhe, HangGhe, nguoiNong, TenKhan } from './parts/HangGhe';
+import { CHO_OM } from './parts/an-ui';
+import { giaiLaoCua, giayConLai } from './parts/cho-truyen';
 import { LoiDi } from './parts/LoiDi';
-import { AN_UI_MAC_DINH, AnUi, canhAnUi, docCauHinhAnUi, khachXinOm } from './parts/AnUi';
+import {
+  AN_UI_MAC_DINH,
+  AnUi,
+  CHAY_MS,
+  camOnLuotNay,
+  canhAnUi,
+  chonNguoiOm,
+  docCauHinhAnUi,
+  khachXinOm,
+  loiCamOn,
+} from './parts/AnUi';
 import { GoiYLenh } from './parts/GoiYLenh';
 import { VaoPhong } from './parts/VaoPhong';
 import { TungHoa } from './parts/TungHoa';
+import { LenhGhe } from './parts/LenhGhe';
 
 /** Lựa chọn của riêng phòng này, hiện thành thẻ "Khung phòng" ở bảng xem.
  *
@@ -144,6 +161,20 @@ export function Stage() {
   const s = useStage();
   const asset = useAsset();
   const loiMc = useLoiMc();
+  /** Câu MC tách thành đoạn để tô vàng tên người xem trong đó. Tên lấy từ
+   *  những ai đang có mặt trong phiên: ghế, top quà, feed gần đây. */
+  const doanMc = useMemo(() => {
+    if (loiMc === null) return [];
+    const p = s.session;
+    const ten = [
+      ...p.seats.map((x) => x.name),
+      ...p.topGivers.map((x) => x.name),
+      ...p.recentUsers.map((x) => x.name),
+      ...p.recentFeed.filter((f) => f.kind !== 'host').map((f) => f.name),
+    ];
+    return tachTenTrongCau(loiMc.text, ten);
+    // Chỉ tách lại khi câu đổi: phiên đổi mỗi nửa giây, câu thì không.
+  }, [loiMc]);
   /** Module sàn nhảy xin sáng slot `floor` suốt màn nhảy. */
   const sanSang = useSlotSang('floor');
   /** Dải chữ chạy có đang có gì để nói không. Module xin sáng slot suốt lúc
@@ -152,7 +183,24 @@ export function Stage() {
   const tickerSang = useSlotSang('ticker');
   /** Module trong khung xin bỏ nền: thôi vẽ màn chờ và nền khung, để lộ sảnh. */
   const khungTrong = useSlotTrongSuot('screen');
+  // Truyện có ảnh AI vẽ (mốc đã có ảnh) thì nhãn minh bạch ghi thêm điều đó.
+  //
+  // Tắt công tắc "Ảnh minh hoạ" là khung không còn hiện ảnh nữa, nên nhãn phải
+  // tắt theo: nhãn này nói với NGƯỜI XEM rằng khung đang có ảnh do AI vẽ —
+  // treo nó trên một khung chỉ có chữ là nói điều không có.
+  const truyen = s.config['story'];
+  const truyenCfg =
+    typeof truyen === 'object' && truyen !== null && !Array.isArray(truyen) ? truyen : null;
+  const coAnhTruyen =
+    s.enabled.includes('story') &&
+    truyenCfg !== null &&
+    truyenCfg['hienAnh'] !== false &&
+    cacMoc(truyenCfg['moc']).some((m) => m.anh !== '');
   const gio = useDongHo();
+  // Giờ nghỉ giữa hai truyện: đồng hồ lớn đếm ngược số giây tới truyện kế thay
+  // vì chỉ giờ treo tường — màn chờ có cái để nhìn, người xem biết còn phải
+  // đợi bao lâu nên ở lại. `gio` nhịp mỗi giây nên con số tự lùi theo.
+  const demTruyen = giayConLai(giaiLaoCua(truyen), Date.now());
   // Đồng hồ cho lượt người ra vào ở lối đi: chỉ cần đủ mịn để bắt đầu và kết
   // thúc một lượt, phần chạy là của CSS.
   const nhip = useNhip();
@@ -168,6 +216,8 @@ export function Stage() {
     ? canhAnUi(nhip, khachXinOm(s.session.recentFeed, nhip), cfgAnUi)
     : null;
   const beDuocOm = canh !== null && canh.nhanVat === 'be';
+  const noi = useNoi();
+  const camOn = useRef<{ luot: string; luc: number }>({ luot: '', luc: -Infinity });
   // Khung dọc là mặc định; người vận hành gạt công tắc ở bảng xem thì đổi ngay,
   // không tải lại trang.
   const huong: Huong = useThietKe()['khungNgang'] === true ? 'landscape' : 'portrait';
@@ -176,10 +226,51 @@ export function Stage() {
   const rows = hallRowsFor(GHE_MAC_DINH);
   const bien = bienCss(huong, rows);
   const ghe = useMemo(() => dungGhe(rows), [rows]);
+  // Người ảo do máy dựng có nick `mh…` (backend `bot.rs`).
+  const coNguoiAo = s.session.seats.some((x) => x.user.startsWith('mh'));
   const ngoi = useMemo(
     () => new Map(s.session.seats.map((x) => [x.i, x])),
     [s.session.seats],
   );
+  // Người đang chạy lên an ủi bé — đúng nhóm `AnUi` vẽ (cùng hàm, cùng tham
+  // số): ghế của họ để trống trong lúc họ ở trên sân khấu.
+  const vangAnUi = useMemo(
+    () =>
+      canh === null
+        ? new Set<string>()
+        : new Set(
+            chonNguoiOm(ngoi, ghe, canh.k, Math.min(canh.soNguoi, CHO_OM[canh.nhanVat].length), canh.nguoiXin).map(
+              (n) => n.user,
+            ),
+          ),
+    [canh?.k, canh?.nhanVat, canh?.soNguoi, canh?.nguoiXin, ngoi, ghe],
+  );
+
+  // MC cảm ơn người lên ôm, đúng lúc họ chạy tới nơi — như bản cũ. Không phải
+  // lượt nào cũng đọc (`camOnLuotNay`): khách tự gõ "ôm" thì cảm ơn mỗi phút,
+  // lượt tự động thì thỉnh thoảng thôi, không thì phòng thành cái loa. Mở cửa
+  // sổ giữa chừng lượt (đã quá lúc tới nơi) thì không đọc muộn.
+  const toiNoi = canh !== null && canh.t >= CHAY_MS && canh.t < CHAY_MS + 2_000;
+  const luot = canh === null ? '' : `${canh.k}:${canh.nguoiXin ?? ''}`;
+  useEffect(() => {
+    if (canh === null || !toiNoi || camOn.current.luot === luot) return;
+    camOn.current.luot = luot;
+    if (!camOnLuotNay(canh, camOn.current.luc, nhip)) return;
+    camOn.current.luc = nhip;
+    // Gọi tên khách THẬT; nhân vật ảo (nick `mh…`, xem `bot.rs`) thì cảm ơn chung.
+    const ten =
+      canh.tenXin !== undefined
+        ? [canh.tenXin]
+        : chonNguoiOm(ngoi, ghe, canh.k, canh.soNguoi)
+            .filter((n) => !n.user.startsWith('mh'))
+            .map((n) => [...ngoi.values()].find((x) => x.user === n.user)?.name ?? '');
+    // "Ai đọc gì" → an ủi bé (thay phiên); chưa giao thì giọng chào khách của
+    // dàn, như `thankVoice` của bản cũ; không có nữa thì giọng mặc định.
+    const giao = giongChoViec(s.ai?.vaiGiong?.anUi, '', Math.random);
+    const giong = giao !== '' ? giao : (s.voice.cast.find((g) => /chào|đáp|khách/i.test(g.role))?.id ?? '');
+    noi(loiCamOn(canh.k, ten, canh.nhanVat), giong);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [luot, toiNoi]);
 
   // Chưa có nguồn sự kiện TikTok nên phiên rỗng. Sân khấu vẫn phải lên hình đầy
   // đủ khi tắt hết module (quy ước 04 §1) — đây là trạng thái đó.
@@ -208,22 +299,25 @@ export function Stage() {
           <span className="dot" />
           LIVE
         </span>
-        {/* Lời minh bạch nằm ở DẢI TRÊN, không nằm trong khung chiếu: nó nói về
-            cả phòng chứ không riêng cái đang chiếu, và để trong khung thì nó
-            che mất hình. */}
-        <span className="chip stage-ai-label">
-          Nội dung do AI đề xuất{s.bot.enabled ? ' · có nhân vật minh hoạ' : ''}
-        </span>
-        <span className="stage-title">Phòng kể chuyện</span>
+        <span className="stage-title">Phòng kể truyện</span>
         <span className="chip">
           👥 {t.viewers} · ❤ {t.likes} · 🎁 {t.xu}
         </span>
         <Slot name="top-bar" />
       </header>
 
-      {!s.noiDuoc ? <div className="stage-offline">mất kết nối máy chủ</div> : null}
+      {/* Mất kết nối máy chủ: KHÔNG hiện lên khung — khung này đang phát ra
+          ngoài, người xem đọc được. Người vận hành thấy ở bảng xem thử. */}
 
       <section className="stage-screen" data-trong-suot={khungTrong}>
+        {/* Nhãn minh bạch kiểu bản cũ: ngồi ngoài khung, sát mép trên góc trái
+            — không che hình. "Có ảnh minh hoạ cốt truyện" chỉ khi khung đang có
+            ảnh AI vẽ cho truyện — không ghi điều không có. Lời minh bạch về cả
+            phòng là dòng mờ ở chân màn (`stage-honest`). */}
+        <span className="stage-ai-label">Truyện hay do AI đề xuất</span>
+        {coAnhTruyen ? (
+          <span className="stage-ai-label stage-ai-label-phai">Có ảnh minh hoạ cốt truyện</span>
+        ) : null}
         <div className="stage-screen-inner">
           {/* Màn chờ của bản cũ: lời chào, đồng hồ lớn, một câu giữ chân. Không
               có câu nào nhắc người vận hành bật module — màn này đang phát ra
@@ -232,10 +326,19 @@ export function Stage() {
           {khungTrong ? null : (
             <div className="stage-waiting">
               <span className="stage-waiting-sen" />
-              <p className="waiting-welcome">Chào cả nhà đến với Phòng kể chuyện</p>
-              <p className="waiting-clock">{gio}</p>
+              <p className="waiting-welcome">Chào cả nhà</p>
+              <p className="waiting-clock">
+                {demTruyen === null ? (
+                  gio
+                ) : (
+                  <>
+                    {demTruyen}
+                    <span className="waiting-clock-dv">giây</span>
+                  </>
+                )}
+              </p>
               <p className="waiting-note">
-                Chuyện sắp bắt đầu rồi, cả nhà ngồi lại nghe cùng nhau nha ❤
+                Truyện sắp bắt đầu rồi, cả nhà ngồi lại nghe cùng nhau nha ❤
               </p>
             </div>
           )}
@@ -279,7 +382,7 @@ export function Stage() {
 
       <section className="stage-hall">
         <div className="hall-content" style={{ height: `${hallContentH(rows)}cqw` }}>
-          <HangGhe ghe={ghe} rows={rows} ngoi={ngoi} asset={asset} />
+          <HangGhe ghe={ghe} rows={rows} ngoi={ngoi} asset={asset} vang={vangAnUi} />
           <LoiDi
             feed={s.session.recentFeed}
             now={nhip}
@@ -293,7 +396,7 @@ export function Stage() {
 
       <div className="stage-seat-names">
         <div className="hall-content" style={{ height: `${hallContentH(rows)}cqw` }}>
-          <TenKhan ghe={ghe} ngoi={ngoi} />
+          <TenKhan ghe={ghe} ngoi={ngoi} nong={nguoiNong(s.session.recentFeed, nhip)} />
         </div>
         <Slot name="seats" />
       </div>
@@ -327,9 +430,17 @@ export function Stage() {
         />
         <img className="stage-kid kid-boy" src={asset(CAU_BE)} alt="" draggable={false} />
       </div>
-      <AnUi canh={canh} ngoi={ngoi} ghe={ghe} asset={asset} />
+      <AnUi
+        canh={canh}
+        ngoi={ngoi}
+        ghe={ghe}
+        asset={asset}
+        lift={huong === 'landscape' ? LANDSCAPE_GROUP_LIFT : 0}
+      />
       {/* Sàn đang nhảy thì khán giả trong rạp hô "Tung hoa!", như bản cũ. */}
       <TungHoa dangNhay={sanSang} ngoi={ngoi} ghe={ghe} now={nhip} />
+      {/* Lệnh gõ về ghế: "chỗ của tôi", "ghế B4", "đánh Lan" (máy chủ đã đọc lệnh). */}
+      <LenhGhe feed={s.session.recentFeed} ghe={ghe} now={nhip} />
       <div className="slot-chat">
         <Slot name="chat" />
       </div>
@@ -341,8 +452,18 @@ export function Stage() {
           người đứng giữa sàn. Bản cũ cũng giấu (`hostSay && !dancing`). */}
       {loiMc === null || sanSang ? null : (
         <div className="stage-host" role="status" key={loiMc.at}>
-          <p>{loiMc.text}</p>
-          <span className="stage-host-bar" style={{ animationDuration: `${LOI_MC_MS}ms` }} />
+          <p>
+            {doanMc.map((d, i) =>
+              d.ten ? (
+                <b key={i} className="stage-host-ten">
+                  {d.chu}
+                </b>
+              ) : (
+                d.chu
+              ),
+            )}
+          </p>
+          <span className="stage-host-bar" style={{ animationDuration: `${loiMc.ms ?? LOI_MC_MS}ms` }} />
         </div>
       )}
 
@@ -379,6 +500,13 @@ export function Stage() {
             in lên sóng là bảo người xem làm một việc không chạy. Tắt cảnh an
             ủi thì không còn lệnh nào, dòng này biến mất luôn. */}
         <Slot name="bottom-bar" />
+        {/* Dòng minh bạch của bản cũ, nguyên chữ. "Có nhân vật minh họa" chỉ
+            khi đang có người ảo ngồi trong rạp — ghi lúc không có ai ảo là nói
+            sai về chính phòng mình. */}
+        <p className="stage-honest">
+          Phòng kể truyện & xem video{coNguoiAo ? ' · có nhân vật minh họa' : ''} · người dẫn &
+          giọng đọc dùng AI
+        </p>
       </footer>
     </div>
   );

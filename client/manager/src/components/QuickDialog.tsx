@@ -1,3 +1,4 @@
+import { hienO } from '@live/contracts';
 import { SlidersHorizontal } from 'lucide-react';
 import type { Json } from '@live/contracts';
 import type { ModuleState } from '../lib/api';
@@ -59,7 +60,7 @@ export function QuickDialog({ mods, states, disabled, onBat, onLuu }: Props) {
                   </div>
                 ) : null}
                 <div className="form">
-                  {r.ui.fields.map((f) => (
+                  {r.ui.fields.filter((f) => hienO(f, cfg)).map((f) => (
                     <ConfigRow
                       key={f.key}
                       moduleId={`q-${r.ui.id}`}

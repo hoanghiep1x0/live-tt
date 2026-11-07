@@ -14,7 +14,9 @@ export type Huong = 'portrait' | 'landscape';
 export const STAGE_H = (100 * 16) / 9;
 /** Đáy khung chiếu cách đỉnh màn 53,5% chiều cao. */
 export const SCREEN_BOTTOM_RATIO = 0.535;
-export const LANDSCAPE_W = 91;
+/** Khung ngang rộng gần hết màn (chừa mỗi bên ~2cqw): ảnh truyện là thứ người
+ *  xem nhìn nhiều nhất. */
+export const LANDSCAPE_W = 96;
 /** Đáy khung dọc dừng TRÊN mốc phần dưới chừng này, chừa khoảng trống cho dòng
  *  đua top và hàng bồ đoàn thở. Trước đây khung kéo xuống quá mốc 2,2cqw nên
  *  dòng đua dính sát mép khung. */
@@ -28,7 +30,9 @@ export const HALL_H = 172 - HALL_TOP;
  *  thì cụm dưới (dòng đua, hàng bồ đoàn, thanh tiến độ) rộng chỗ hơn. Lời minh
  *  bạch không còn nằm trong khung nữa, nó đã lên dải trên cạnh chữ LIVE. */
 export const OVERLAY_TOP = 9;
-/** Khung ngang nâng cao hơn mốc phần dưới một đoạn, cho cân đối. */
+/** Khung ngang nâng cao hơn mốc phần dưới một đoạn, cho cân đối. Khung to ra
+ *  thì lớn về phía trên, chừa chỗ cho nhãn AI trên mép khung. Hạ 3cqw so với
+ *  trước (chừng 15px ở cỡ cửa sổ thường): khung sát mép trên quá nhìn chật. */
 export const LANDSCAPE_LIFT = 14.3;
 /** Khung ngang: cụm top / tiến độ / dải chữ nâng lên cùng khung. */
 export const LANDSCAPE_GROUP_LIFT = 6.2;

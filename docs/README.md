@@ -14,6 +14,7 @@ Mã cũ ở các nhánh khác không theo quy ước này; nhánh này làm lạ
 | 04 | [Viết một thiết kế](04-viet-thiet-ke.md) | Mỗi thiết kế là một gói độc lập có assets riêng |
 | 05 | [Backend](05-backend.md) | HTTP, WebSocket, lưu trữ, khoá API, phục vụ OBS |
 | 06 | [Lộ trình chuyển đổi](06-lo-trinh.md) | Chuyển từng tính năng từ mã cũ sang, theo thứ tự |
+| 07 | [Cầu nối TikTok](07-cau-noi-tiktok.md) | Lấy dữ liệu live realtime không qua trình duyệt; backend tự bật cầu nối Node |
 
 ## Tài liệu theo phòng
 

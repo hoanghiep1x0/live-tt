@@ -12,14 +12,15 @@
 import type { LiveModule } from '@live/contracts';
 import { moduleChatBubbles } from '@live/mod-chat-bubbles';
 import { moduleDanceFloor } from '@live/mod-dance-floor';
+import { moduleDoChu } from '@live/mod-do-chu';
 import { moduleFollowThanks } from '@live/mod-follow-thanks';
 import { moduleGiftThanks } from '@live/mod-gift-thanks';
+import { moduleHostVideo } from '@live/mod-host-video';
 import { moduleLikesCounter } from '@live/mod-likes-counter';
 import { moduleStory } from '@live/mod-story';
 import { moduleTicker } from '@live/mod-ticker';
 import { moduleTopGivers } from '@live/mod-top-givers';
 import { moduleVuCong3d } from '@live/mod-vu-cong-3d';
-import { moduleWelcome } from '@live/mod-welcome';
 
 /** Bỏ kiểu cấu hình riêng của từng module để xếp chung một mảng. Ranh giới xoá
  *  kiểu duy nhất của danh sách: cấu hình thật luôn đi qua `schema` của chính
@@ -32,12 +33,13 @@ function xoaKieu<C, S>(m: LiveModule<C, S>): LiveModule {
 export const DANH_SACH_MODULE: readonly LiveModule[] = [
   xoaKieu(moduleStory),
   xoaKieu(moduleGiftThanks),
-  xoaKieu(moduleWelcome),
   xoaKieu(moduleChatBubbles),
   xoaKieu(moduleTopGivers),
   xoaKieu(moduleLikesCounter),
   xoaKieu(moduleFollowThanks),
   xoaKieu(moduleTicker),
   xoaKieu(moduleDanceFloor),
+  xoaKieu(moduleHostVideo),
   xoaKieu(moduleVuCong3d),
+  xoaKieu(moduleDoChu),
 ];

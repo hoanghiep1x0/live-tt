@@ -20,10 +20,12 @@ interface Props {
   voiceTrigger: ReactNode;
 }
 
-const TEN_NGUON: Record<SourceKind, string> = {
+/** Nguồn chọn được ở thanh trên. `webview` còn trong backend nhưng không dùng
+ *  (docs/07 §1) — nên không có trong danh sách. */
+const TEN_NGUON: Partial<Record<SourceKind, string>> = {
   tat: 'Tắt',
   mau: 'Mẫu',
-  bridge: 'Cầu nối',
+  bridge: 'TikTok (cầu nối)',
 };
 
 export function TopBar({
@@ -79,8 +81,13 @@ export function TopBar({
         <div className="grow" />
 
         {phien !== null ? (
-          <div className="conn" title="Số liệu phiên đang chạy">
-            👥 {phien.totals.viewers} · ❤ {phien.totals.likes} · 🎁 {phien.totals.xu}
+          <div
+            className="conn"
+            title="👥 đang xem · 👁 tổng lượt xem cả buổi · ❤ tổng tim · 🎁 xu — số do TikTok đếm"
+          >
+            👥 {phien.totals.viewers}
+            {phien.totals.views !== undefined && phien.totals.views > 0 ? ` · 👁 ${phien.totals.views}` : ''} · ❤{' '}
+            {phien.totals.likes} · 🎁 {phien.totals.xu}
           </div>
         ) : null}
 
@@ -102,6 +109,13 @@ export function TopBar({
                 {TEN_NGUON[k]}
               </option>
             ))}
+            {/* Cấu hình cũ còn nhớ nguồn không còn trong danh sách: vẫn hiện
+                đúng tên, không giả vờ là "Tắt". */}
+            {nguon !== null && TEN_NGUON[nguon.kind] === undefined ? (
+              <option value={nguon.kind} disabled>
+                Trang TikTok (cũ)
+              </option>
+            ) : null}
           </select>
         </label>
 

@@ -1,0 +1,21 @@
+{
+  "name": "@live/cau-noi",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Cầu nối TikTok LIVE → WebSocket JSON cho backend. Backend tự bật, không cần chạy tay (docs/07-cau-noi-tiktok.md)",
+  "scripts": {
+    "start": "node src/server.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "tiktok-live-connector": "2.5.0",
+    "ws": "8.22.1"
+  },
+  "devDependencies": {
+    "@types/ws": "8.18.1"
+  },
+  "engines": {
+    "node": ">=23.6"
+  }
+}

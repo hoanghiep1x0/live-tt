@@ -1,0 +1,15 @@
+{
+  // Cầu nối chạy trên Node (chạy thẳng TypeScript, Node ≥ 23.6 tự bỏ kiểu), không
+  // chạy trong trình duyệt — nên có tsconfig riêng, kiểu `node`, không DOM.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"]
+}

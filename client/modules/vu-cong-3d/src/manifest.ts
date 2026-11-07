@@ -28,6 +28,7 @@ const NHOM_MOI = {
 };
 
 const k = (nguon: 'cc0' | 'ccby', o: string, id: string): string => `model-1/makehuman-${nguon}/${o}/${id}`;
+const GOC_TRONG = { anhCheo: '', anhNghieng: '', anhCheoSau: '', anhSau: '', anhCheoP: '', anhNghiengP: '', anhCheoSauP: '' };
 /** Kho nhân vật dựng sẵn: mỗi người một bộ phối đẹp — đám đông lấy người từ đây (không bốc lung tung cả tủ). */
 const KHO_MAC_DINH = [
   { id: 'nv-cocktail', ten: 'Cocktail đen', mon: [k('ccby', 'lien', 'punkduck-black-cocktail-dress'), k('cc0', 'giay', 'toigo-stiletto-booties'), k('ccby', 'toc', 'punkduck-alpha7-long')] },
@@ -38,8 +39,20 @@ const KHO_MAC_DINH = [
   { id: 'nv-dam-quay', ten: 'Đầm quây trắng', mon: [k('ccby', 'lien', 'punkduck-tube-dress'), k('ccby', 'giay', 'madmanny-tight-leather-boots'), k('ccby', 'toc', 'elvs-wavy-bob')] },
   { id: 'nv-croptop', ten: 'Croptop + váy xếp ly', mon: [k('ccby', 'ao', 'punkduck-sleeveless-crop-top'), k('ccby', 'duoi', 'mtknife-pleated-mini-skirt'), k('cc0', 'giay', 'toigo-ankle-boots-female'), k('cc0', 'toc', 'culturalibre-hair-01')] },
   { id: 'nv-yem-do', ten: 'Đầm yếm đỏ', mon: [k('ccby', 'lien', 'elvs-halter-dress-mini'), k('cc0', 'giay', 'toigo-stiletto-booties'), k('ccby', 'toc', 'elvs-katherine-hair')] },
-].map((x) => ({ ...x, damDong: true, anh: '', anhCheo: '', anhNghieng: '', anhSau: '' }));
-const NHAN_VAT_MOI = { ten: 'Nhân vật mới', damDong: true, anh: '', anhCheo: '', anhNghieng: '', anhSau: '', mon: [] };
+].map((x) => ({ ...x, damDong: true, anh: '', ...GOC_TRONG, boAnh: [] }));
+const NHAN_VAT_MOI = { ten: 'Nhân vật mới', damDong: true, anh: '', ...GOC_TRONG, boAnh: [], mon: [] };
+const BO_ANH_MOI = { ten: 'Bộ mới', bat: true, anh: '', ...GOC_TRONG };
+/** 8 ô ảnh góc của một bộ ảnh động (bộ đầu của nhân vật, hoặc một bộ trong "Bộ đồ khác"). */
+const GOC_ANH = {
+  anh: z.string().default(''),
+  anhCheo: z.string().default(''),
+  anhNghieng: z.string().default(''),
+  anhCheoSau: z.string().default(''),
+  anhSau: z.string().default(''),
+  anhCheoP: z.string().default(''),
+  anhNghiengP: z.string().default(''),
+  anhCheoSauP: z.string().default(''),
+};
 
 export const schema = z.object({
   /** Từng người trong phòng (id trong `NHAN_VAT`): có mặt không, món tủ đồ riêng (`mon`, có thì mặc các món này),
@@ -76,6 +89,15 @@ export const schema = z.object({
   doVip: z.array(z.string()).default([]),
   /** Mặc đồ VIP ngần này phút rồi về đồ thường. */
   giuVipPhut: z.number().int().min(0).max(60).default(3),
+  /** Lệnh soi: khách gõ "<lenhSoi> <số>" → camera cận + đèn rọi người số đó `soiGiay` giây. */
+  soiBat: z.boolean().default(true),
+  lenhSoi: z.string().default('soi'),
+  soiGiay: z.number().int().min(5).max(120).default(20),
+  /** Hiện số thứ tự nhỏ trên đầu mỗi người trên sàn (để khách biết gõ số nào). */
+  hienSo: z.boolean().default(false),
+  /** Lệnh đổi đồ: khách gõ "<lenhDoiDo> <số>" → người ảnh động số đó đổi sang bộ đồ khác của mình. */
+  doiDoLenhBat: z.boolean().default(true),
+  lenhDoiDo: z.string().default('doi do'),
   /** Kho nhân vật: mỗi người một bộ phối sẵn (món tủ đồ). Đám đông và bộ VIP ngẫu nhiên lấy từ đây. */
   khoNhanVat: z
     .array(
@@ -83,12 +105,14 @@ export const schema = z.object({
         id: z.string().default(''),
         ten: z.string().default(NHAN_VAT_MOI.ten),
         damDong: z.boolean().default(true),
-        /** Ảnh động (GIF / PNG nền trong suốt): có thì nhân vật là tấm ảnh động trên sàn, bỏ qua `mon`. */
-        anh: z.string().default(''),
-        /** Cùng điệu nhảy ở các góc khác (người quay sang trái màn hình); thiếu thì lấy góc gần nhất. */
-        anhCheo: z.string().default(''),
-        anhNghieng: z.string().default(''),
-        anhSau: z.string().default(''),
+        /** Ảnh động (GIF / WebP nền trong suốt): có thì nhân vật là tấm ảnh động trên sàn, bỏ qua `mon`. `anh` là mặt
+         *  trước, 7 ô kia cùng điệu nhảy ở các góc 45° … 315°; thiếu thì lấy góc gần nhất / lật gương bên kia. */
+        ...GOC_ANH,
+        /** Bộ đồ khác của nhân vật ảnh động: mỗi bộ một bộ ảnh 8 góc (trang phục, phụ kiện vẽ liền vào ảnh). */
+        boAnh: z
+          .array(z.object({ id: z.string().default(''), ten: z.string().default(BO_ANH_MOI.ten), bat: z.boolean().default(true), ...GOC_ANH }))
+          .max(8)
+          .default([]),
         mon: z.array(z.string()).default([]),
       }),
     )
@@ -121,7 +145,7 @@ export const manifest: ModuleManifest<Config> = {
   icon: '🕺',
   summary: 'Vũ công 3D nhảy trên sàn, đổi trang phục, có quà thì cả nhóm đồng diễn',
   room: 'san-bar',
-  triggers: ['gift'],
+  triggers: ['gift', 'comment'],
   configVersion: 1,
   schema,
   slots: ['stage-3d'],
@@ -132,7 +156,8 @@ export const manifest: ModuleManifest<Config> = {
     { label: 'Thôi nhảy', op: NUT.thoi, icon: '⏹' },
     { label: 'Thay đồ VIP', op: NUT.thayDo, icon: '✨' },
   ],
-  // Thứ tự ô = thứ tự tab: Cài đặt (phản ứng khi có quà) · Vai chính · Đám đông · Điệu nhảy · Đồ chung · Thay đồ VIP.
+  // Thứ tự ô = thứ tự tab: Cài đặt (phản ứng khi có quà) · Vai chính · Đám đông · Điệu nhảy · Đồ chung · Thay đồ VIP ·
+  // Camera & số.
   // Trang phục, phụ kiện của từng người nằm ngay trong tab Vai chính / Đám đông: chọn người xong chọn đồ luôn.
   fields: [
     {
@@ -203,15 +228,44 @@ export const manifest: ModuleManifest<Config> = {
           label: 'Ảnh động (GIF) — thay cho nhân vật 3D',
           type: 'media',
           hint: 'Ảnh nền trong suốt, nhân vật người lớn đứng cả người, chính diện (vd GIF nhảy nhờ ChatGPT vẽ). Có ảnh thì người này đứng trên sàn thành tấm ảnh động quay về camera; để trống là nhân vật 3D mặc đồ bên dưới.',
-          popup: ['anhCheo', 'anhNghieng', 'anhSau'],
+          popup: ['anhCheo', 'anhNghieng', 'anhCheoSau', 'anhSau', 'anhCheoSauP', 'anhNghiengP', 'anhCheoP'],
         },
-        { key: 'anhCheo', label: 'Góc chéo 45° (quay sang trái màn hình)', type: 'media' },
-        { key: 'anhNghieng', label: 'Góc nghiêng 90° (quay sang trái màn hình)', type: 'media' },
+        { key: 'anhCheo', label: 'Góc 45° (quay sang trái màn hình)', type: 'media' },
+        { key: 'anhNghieng', label: 'Góc 90° (nghiêng, quay sang trái)', type: 'media' },
+        { key: 'anhCheoSau', label: 'Góc 135° (chéo sau, quay sang trái)', type: 'media' },
+        { key: 'anhSau', label: 'Góc 180° (sau lưng)', type: 'media' },
+        { key: 'anhCheoSauP', label: 'Góc 225° (chéo sau, quay sang phải)', type: 'media' },
+        { key: 'anhNghiengP', label: 'Góc 270° (nghiêng, quay sang phải)', type: 'media' },
         {
-          key: 'anhSau',
-          label: 'Phía sau lưng',
+          key: 'anhCheoP',
+          label: 'Góc 315° (quay sang phải màn hình)',
           type: 'media',
-          hint: 'Cùng điệu nhảy, cùng số khung, cùng cỡ người. Camera nhìn từ phía nào thì hiện đúng góc đó; góc bên phải lấy bằng lật gương.',
+          hint: 'Cùng điệu nhảy, cùng số khung, cùng cỡ người. Camera nhìn từ phía nào thì hiện đúng góc đó. Góc bên phải thiếu ảnh thì lật gương bên trái — chỉ đúng với dáng đối xứng.',
+        },
+        {
+          key: 'boAnh',
+          label: 'Bộ đồ khác (ảnh động)',
+          type: 'list',
+          max: 8,
+          moi: BO_ANH_MOI,
+          hint: 'Cùng nhân vật mặc bộ khác (trang phục + phụ kiện vẽ liền vào ảnh), mỗi bộ 8 góc như trên. Trên sàn mỗi người mặc ngẫu nhiên một bộ; có quà, tới giờ đổi đồ hoặc khách gõ lệnh đổi đồ thì đổi sang bộ khác.',
+          fields: [
+            { key: 'ten', label: 'Tên bộ', type: 'text' },
+            { key: 'bat', label: 'Mặc bộ này trên sàn', type: 'toggle', hint: 'Tắt thì người ảnh động không mặc bộ này (vẫn giữ ảnh trong kho).' },
+            {
+              key: 'anh',
+              label: 'Mặt trước',
+              type: 'media',
+              popup: ['anhCheo', 'anhNghieng', 'anhCheoSau', 'anhSau', 'anhCheoSauP', 'anhNghiengP', 'anhCheoP'],
+            },
+            { key: 'anhCheo', label: 'Góc 45° (quay sang trái màn hình)', type: 'media' },
+            { key: 'anhNghieng', label: 'Góc 90° (nghiêng, quay sang trái)', type: 'media' },
+            { key: 'anhCheoSau', label: 'Góc 135° (chéo sau, quay sang trái)', type: 'media' },
+            { key: 'anhSau', label: 'Góc 180° (sau lưng)', type: 'media' },
+            { key: 'anhCheoSauP', label: 'Góc 225° (chéo sau, quay sang phải)', type: 'media' },
+            { key: 'anhNghiengP', label: 'Góc 270° (nghiêng, quay sang phải)', type: 'media' },
+            { key: 'anhCheoP', label: 'Góc 315° (quay sang phải màn hình)', type: 'media' },
+          ],
         },
         {
           key: 'mon',
@@ -381,5 +435,29 @@ export const manifest: ModuleManifest<Config> = {
       hint: '0 là chỉ trong màn thay đồ, xong về đồ cũ.',
       tab: 'Thay đồ VIP',
     },
+    {
+      key: 'soiBat',
+      label: 'Khách gõ lệnh để soi một người',
+      type: 'toggle',
+      hint: 'Vd "soi 5": camera bay tới cận người số 5, đèn spot rọi theo người đó. Số 1–3 là vũ công chính (trái → phải), từ 4 là đám đông.',
+      tab: 'Camera & số',
+    },
+    { key: 'lenhSoi', label: 'Chữ lệnh', type: 'text', hint: 'Khách gõ chữ này + số người', tab: 'Camera & số' },
+    { key: 'soiGiay', label: 'Soi mỗi lần', type: 'number', unit: 'giây', min: 5, max: 120, tab: 'Camera & số' },
+    {
+      key: 'hienSo',
+      label: 'Hiện số trên đầu mỗi người',
+      type: 'toggle',
+      hint: 'Mặc định tắt: số vẫn có (1–3 vũ công chính trái → phải, rồi đám đông) để lệnh soi chạy, chỉ không hiện lên sàn. Bật khi muốn khách biết người mình thích là số mấy.',
+      tab: 'Camera & số',
+    },
+    {
+      key: 'doiDoLenhBat',
+      label: 'Khách gõ lệnh để đổi đồ một người',
+      type: 'toggle',
+      hint: 'Vd "đổi đồ 5": người ảnh động số 5 đổi sang bộ đồ khác của mình (cần có "Bộ đồ khác" trong kho nhân vật). Gõ có dấu hay không dấu đều được.',
+      tab: 'Camera & số',
+    },
+    { key: 'lenhDoiDo', label: 'Chữ lệnh đổi đồ', type: 'text', hint: 'Khách gõ chữ này + số người', tab: 'Camera & số' },
   ],
 };

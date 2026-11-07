@@ -1,6 +1,7 @@
 /** Giọng đọc của từng tính năng. Thuần, để test không cần trình duyệt. */
 
 import type { Effect } from './effects';
+import { mauCua, tenKetNoi } from './ket-noi-ai';
 import type { KetNoiAi } from './ket-noi-ai';
 import type { ConfigField } from './module';
 
@@ -36,6 +37,73 @@ export function loiGiong(g: GiongCoNha, kho: readonly KetNoiAi[]): string | null
   return null;
 }
 
+/** Giọng này thật ra phát ra từ đâu: dịch vụ đọc, miễn phí hay trả phí, đi
+ *  qua kết nối nào. Một kết nối như 9router chỉ là bộ chuyển — tên giọng mới
+ *  nói ai đọc (`edge-tts/…` là Microsoft Edge, `google-tts/…` là Google Dịch).
+ *  Trang quản lý và bảng xem thử cùng gọi hàm này để nói cùng một câu. Thuần. */
+export interface NguonGiong {
+  /** Dịch vụ đọc: "Microsoft Edge", "ElevenLabs"… */
+  dichVu: string;
+  /** `null` là chưa biết (kết nối tự cắm, model lạ). */
+  mienPhi: boolean | null;
+  /** Tên kết nối trong kho mà giọng đi qua. */
+  quaKetNoi: string;
+}
+
+/** Dịch vụ nhận ra được từ đầu tên giọng / model. */
+const THEO_TEN: readonly { dau: string; dichVu: string; mienPhi: boolean }[] = [
+  { dau: 'edge-tts/', dichVu: 'Microsoft Edge', mienPhi: true },
+  { dau: 'google-tts/', dichVu: 'Google Dịch', mienPhi: true },
+];
+
+/** Dịch vụ nhận ra được từ chính kết nối (mẫu nhà trong kho). */
+const THEO_MAU: Partial<Record<string, { dichVu: string; mienPhi: boolean }>> = {
+  elevenlabs: { dichVu: 'ElevenLabs', mienPhi: false },
+  openai: { dichVu: 'OpenAI', mienPhi: false },
+  vieneu: { dichVu: 'VieNeu', mienPhi: false },
+};
+
+export function nguonGiong(g: GiongCoNha, kho: readonly KetNoiAi[]): NguonGiong | null {
+  const p = kho.find((x) => x.id === g.provider);
+  if (p === undefined) return null;
+  const quaKetNoi = tenKetNoi(p);
+  const ten = (g.voice.trim() === '' ? (p.models.tts ?? '') : g.voice).trim().toLowerCase();
+  const theoTen = THEO_TEN.find((x) => ten.startsWith(x.dau));
+  if (theoTen !== undefined) return { dichVu: theoTen.dichVu, mienPhi: theoTen.mienPhi, quaKetNoi };
+  const mau = mauCua(p);
+  const theoMau = THEO_MAU[mau.ma];
+  if (theoMau !== undefined) return { ...theoMau, quaKetNoi };
+  return { dichVu: mau.ma === 'khac' ? quaKetNoi : mau.ten, mienPhi: null, quaKetNoi };
+}
+
+/** Một dòng ngắn để hiện: "Microsoft Edge · miễn phí · qua 9router". */
+export function chuNguon(n: NguonGiong | null): string {
+  if (n === null) return 'chưa có kết nối';
+  const gia = n.mienPhi === null ? '' : n.mienPhi ? ' · miễn phí' : ' · trả phí';
+  return n.dichVu === n.quaKetNoi ? `${n.dichVu}${gia}` : `${n.dichVu}${gia} · qua ${n.quaKetNoi}`;
+}
+
+/** Các giọng trong dàn đang đọc qua một kết nối — để thẻ kết nối nói được
+ *  "đang dùng cho Người dẫn truyện, bé gái" và người vận hành biết gỡ nó thì ai
+ *  câm. Thuần. */
+export function giongQua(cast: readonly GiongCoNha[], ketNoi: string): string[] {
+  return cast
+    .filter((g) => g.provider === ketNoi)
+    .map((g) => (g.role.trim() === '' ? g.id : g.role));
+}
+
+/** Giá trị ô giọng nghĩa là "tự đổi": mỗi câu đọc bằng một giọng khác trong
+ *  dàn, như bản cũ — lời chào, lời cảm ơn, đoạn truyện không cố định một giọng. */
+export const GIONG_XOAY = '*';
+
+/** Chọn giọng cho câu kế khi tính năng để "Tự đổi giọng": quay vòng cả dàn,
+ *  không bao giờ lặp liền một giọng (trừ khi dàn chỉ có một). `truoc` là giọng
+ *  câu trước. Thuần — `rand` truyền vào để test. */
+export function giongXoay(dan: readonly string[], truoc: string, rand: () => number): string {
+  const ds = dan.length > 1 ? dan.filter((g) => g !== truoc) : dan;
+  return ds[Math.floor(rand() * ds.length)] ?? '';
+}
+
 /** Đổi ô `voice` thành ô chọn với danh sách giọng của phiên. Ô khác giữ nguyên.
  *  Giọng đang chọn mà đã bị gỡ khỏi dàn thì vẫn hiện, ghi rõ, để người vận
  *  hành thấy nó hỏng chứ không lặng lẽ đọc bằng giọng khác. */
@@ -47,12 +115,13 @@ export function oChonGiong(
   if (f.type !== 'voice') return f;
   const options = [
     { value: '', label: 'Giọng mặc định của dàn' },
+    { value: GIONG_XOAY, label: 'Tự đổi giọng — mỗi câu một giọng trong dàn' },
     ...dan.map((g) => ({
       value: g.id,
       label: g.role.trim() === '' ? g.id : `${g.role} (${g.id})`,
     })),
   ];
-  if (typeof dang === 'string' && dang !== '' && !dan.some((g) => g.id === dang)) {
+  if (typeof dang === 'string' && dang !== '' && dang !== GIONG_XOAY && !dan.some((g) => g.id === dang)) {
     options.push({ value: dang, label: `${dang} (không còn trong dàn)` });
   }
   return { ...f, type: 'select', options };
@@ -116,4 +185,27 @@ export function tachVai(text: string, giongChinh: string, daGiong: boolean): Doa
   }
   day(text.length);
   return ra;
+}
+
+/** MC tự xưng "mình", không bao giờ "MC": đổi chữ "MC" đứng riêng thành
+ *  "mình" — đầu câu thì "Mình". Áp cho mọi câu đọc to và hiện chữ, kể cả mẫu
+ *  câu người vận hành tự lưu. Hàm thuần. */
+export function xungMinh(text: string): string {
+  return text.replace(/(^|[^\p{L}\p{N}])MC(?![\p{L}\p{N}])/gu, (_m, truoc: string, viTri: number) => {
+    const phiaTruoc = text.slice(0, viTri + truoc.length).trimEnd();
+    const dauCau = phiaTruoc === '' || /[.!?…:"“\n]$/u.test(phiaTruoc);
+    return `${truoc}${dauCau ? 'Mình' : 'mình'}`;
+  });
+}
+
+/** Cách kể của Kể chuyện: MC kể (AI diễn từng đoạn, mặc định) hay tự đọc. */
+export type CachKe = 'mc-day-du' | 'tu-doc';
+
+/** Cách kể đang dùng: ô `cachKe`; cấu hình cũ chưa có thì suy từ `nguoiKe`;
+ *  "mc-tiet-kiem" (chế độ đã bỏ) coi như MC — khớp `ke_truyen::cach_ke` của
+ *  máy chủ. Hàm thuần. */
+export function cachKeCua(o: { cachKe?: unknown; nguoiKe?: unknown }): CachKe {
+  if (o.cachKe === 'tu-doc') return 'tu-doc';
+  if (typeof o.cachKe === 'string') return 'mc-day-du';
+  return o.nguoiKe === 'tu-doc' ? 'tu-doc' : 'mc-day-du';
 }

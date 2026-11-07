@@ -4,8 +4,37 @@
     {
       "name": "manager",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "-w", "@live/manager"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "-w",
+        "@live/manager"
+      ],
       "port": 5180
+    },
+    {
+      "name": "xem-3d",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8771",
+        "--directory",
+        ".tmp/xem-3d"
+      ],
+      "port": 8771,
+      "autoPort": false
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "cargo",
+      "runtimeArgs": [
+        "run",
+        "--manifest-path",
+        "backend/Cargo.toml"
+      ],
+      "port": 47830,
+      "autoPort": false
     }
   ]
 }

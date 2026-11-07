@@ -43,7 +43,11 @@ export function kiemModule<C extends object, S>(m: LiveModule<C, S>): void {
   // Mặc định nằm trong schema, không ở `fields` — nên schema phải dựng nổi cấu
   // hình từ object rỗng, nếu không trang quản lý mở thẻ là nổ.
   const macDinh = man.schema.parse({}) as Record<string, unknown>;
-  for (const k of keys) {
+  // Ô phân vai giọng lưu ở cấu hình AI của phòng, không ở module — không cần mặc định.
+  const luuNgoai = new Set(
+    man.fields.filter((f) => f.type === 'vai-giong' || f.type === 'kho-truyen').map((f) => f.key),
+  );
+  for (const k of keys.filter((x) => !luuNgoai.has(x))) {
     expect(macDinh, `thiếu mặc định cho "${k}"`).toHaveProperty(k);
   }
 

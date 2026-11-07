@@ -6,19 +6,19 @@ import type { ModuleManifest } from '@live/contracts';
  *  kiểu thì người tặng mới thấy mình được nhắc tới thật, chứ nghe đúng một câu
  *  lặp lại là biết ngay máy đọc. */
 const CAM_ON = [
-  'Ui, {ten} tặng {qua} cho MC nè, cảm ơn bạn nhiều nhiều nha 🥰',
-  '{ten} ơi, {qua} xinh xỉu luôn á, MC thương bạn ghê ❤',
-  'Cả phòng ơi, vỗ tay cảm ơn {ten} giùm MC nha 👏🌸',
-  'MC vẫn còn cười tủm tỉm vì {qua} của {ten} nè 😊',
-  'Thêm một lần cảm ơn {ten} nha, chúc bạn hôm nay toàn chuyện vui 🍀',
+  'Ui, {ten} tặng {qua} cho mình nè, cảm ơn bạn nhiều nhiều nha 🥰',
+  '{ten} ơi, {qua} xinh xỉu luôn á, mình thương bạn ghê ❤',
+  'Cả phòng ơi, vỗ tay cảm ơn {ten} giùm mình nha 👏🌸',
+  'Mình vẫn còn cười tủm tỉm vì {qua} của {ten} nè 😊',
+  'Thêm một lần cảm ơn {ten} nha, chúc bạn hôm nay toàn điều vui 🍀',
 ].join('\n');
 
 /** Quà lớn thì MC phấn khích hẳn lên. */
 const CAM_ON_LON = [
-  'Trời ơi trời ơi! {ten} tặng {qua} luôn kìa cả nhà ơi! MC cảm ơn {ten} nhiều lắm lắm luôn 😍🎉',
-  'Ôi MC xúc động quá trời! {qua} của {ten} làm sáng rực cả phòng luôn á, thương {ten} ghê luôn 🥹❤',
+  'Trời ơi trời ơi! {ten} tặng {qua} luôn kìa cả nhà ơi! Mình cảm ơn {ten} nhiều lắm lắm luôn 😍🎉',
+  'Ôi mình xúc động quá trời! {qua} của {ten} làm sáng rực cả phòng luôn á, thương {ten} ghê luôn 🥹❤',
   'Cả phòng ơi vỗ tay thật to cho {ten} đi nè! Cảm ơn {ten} rối rít luôn á 👏👏🌸',
-  'MC vẫn còn run tay vì {qua} của {ten} đó nha, cảm ơn {ten} bao nhiêu cũng không đủ 😆💖',
+  'Mình vẫn còn run tay vì {qua} của {ten} đó nha, cảm ơn {ten} bao nhiêu cũng không đủ 😆💖',
   'Thêm một lần nữa nè: cảm ơn {ten} siêu siêu nhiều! Chúc {ten} hôm nay vui ơi là vui, may mắn ngập tràn 🍀✨',
 ].join('\n');
 

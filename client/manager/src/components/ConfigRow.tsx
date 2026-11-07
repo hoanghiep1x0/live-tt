@@ -130,6 +130,80 @@ export function ConfigRow(props: Props) {
       </div>
     );
   }
+  if (props.field.type === 'ket-noi') {
+    return (
+      <div className="form-row">
+        <label>{props.field.label}</label>
+        <span className="hint">
+          {typeof props.value === 'string' && props.value !== '' ? props.value : 'Mặc định của kho'} — chọn ở bảng
+          xem thử (nút ⚙ trên sân khấu), nơi có danh sách kết nối.
+        </span>
+      </div>
+    );
+  }
+  if (props.field.type === 'mc-ke-chuyen') {
+    return (
+      <div className="form-row">
+        <label>{props.field.label}</label>
+        <span className="hint">Chọn AI (API / Codex / Claude) ở bảng xem thử (nút ⚙ trên sân khấu).</span>
+      </div>
+    );
+  }
+  if (props.field.type === 'vai-giong' || props.field.type === 'kho-truyen') {
+    return (
+      <div className="form-row">
+        <label>{props.field.label}</label>
+        <span className="hint">Chỉnh ở bảng xem thử (nút ⚙ trên sân khấu).</span>
+      </div>
+    );
+  }
+  if (props.field.type === 'nguon-chu') {
+    const ten = props.value === 'codex' ? 'Codex (tài khoản ChatGPT)' : props.value === 'claude' ? 'Claude Code (tài khoản Claude)' : 'API';
+    return (
+      <div className="form-row">
+        <label>{props.field.label}</label>
+        <span className="hint">{ten} · đổi ở bảng xem thử (nút ⚙ trên sân khấu).</span>
+      </div>
+    );
+  }
+  if (props.field.type === 'truyen-sau') {
+    const sau = props.value !== null && typeof props.value === 'object' && !Array.isArray(props.value) ? props.value : {};
+    const ten = typeof sau['title'] === 'string' ? sau['title'] : '';
+    return (
+      <div className="form-row">
+        <label>{props.field.label}</label>
+        <span className="hint">
+          {ten === '' ? 'Đang chuẩn bị…' : ten} — xem và đổi ở bảng xem thử (nút ⚙ trên sân khấu).
+        </span>
+      </div>
+    );
+  }
+  if (props.field.type === 'nguon-anh') {
+    return (
+      <div className="form-row">
+        <label>{props.field.label}</label>
+        <span className="hint">
+          {props.value === true
+            ? 'muse.ai — tab trình duyệt trong app, miễn phí'
+            : 'API — kết nối vẽ ảnh trong kho, tính tiền mỗi ảnh'}{' '}
+          · đổi ở bảng xem thử (nút ⚙ trên sân khấu).
+        </span>
+      </div>
+    );
+  }
+  if (props.field.type === 'anh-truyen') {
+    // Vẽ ảnh cần xem ảnh ngay cạnh truyện — dựng ở bảng xem thử của sân khấu.
+    const n = Array.isArray(props.value) ? props.value.length : 0;
+    return (
+      <div className="form-row">
+        <label>{props.field.label}</label>
+        <span className="hint">
+          {n === 0 ? 'Chưa có ảnh.' : `${n} ảnh.`} AI tự làm khi bật “AI tự tạo ảnh”; xem tiến độ và
+          ảnh ở bảng xem thử (nút ⚙ trên sân khấu), tab Ảnh truyện của Kể chuyện.
+        </span>
+      </div>
+    );
+  }
   return <OThuong {...props} />;
 }
 

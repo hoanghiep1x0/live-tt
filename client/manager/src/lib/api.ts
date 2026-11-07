@@ -5,7 +5,7 @@
  *  gắn. Nhờ vậy khoá không bao giờ lọt vào bundle của trang.
  */
 
-import type { DesignInfo, Json, KieuNha, SessionView, ViecAi } from '@live/contracts';
+import type { DesignInfo, Json, KieuNguon, KieuNha, SessionView, TrangThaiNguon, ViecAi } from '@live/contracts';
 
 export interface ModuleState {
   enabled: boolean;
@@ -17,16 +17,12 @@ export interface DesignList {
   live: string | null;
 }
 
-export type SourceKind = 'tat' | 'mau' | 'bridge';
+/** Cùng kiểu với hợp đồng (`@live/contracts`): REST và tin WS `source` một dạng. */
+export type SourceKind = KieuNguon;
+export type SourceStatus = TrangThaiNguon;
 
-export interface SourceStatus {
-  kind: SourceKind;
-  url: string;
-  channel: string;
-  nhip: number;
-  running: boolean;
-  problem?: string;
-}
+/** Cầu nối backend tự bật (docs/07 §4). Khớp `bridge_url_mac_dinh` ở backend. */
+export const CAU_NOI_MAC_DINH = 'ws://127.0.0.1:8787/ws/live';
 
 /** Cùng kiểu với kho kết nối dùng chung ở `@live/contracts`. */
 export type ProviderKind = KieuNha;

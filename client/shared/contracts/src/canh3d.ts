@@ -29,28 +29,44 @@ export interface NhomDamDong {
   monBo?: readonly (readonly string[])[];
   /** Nhân vật ảnh động trong nhóm: đứng trên sàn thành tấm ảnh quay về camera, chạy khung của ảnh, đổi ảnh theo góc
    *  camera nếu có ảnh nhiều góc. Người trong nhóm chia nhau cả `monBo` lẫn `anh`. */
-  anh?: readonly (string | AnhGoc)[];
+  anh?: readonly (string | AnhGoc | NguoiAnh)[];
+}
+
+/** Nhân vật ảnh động có nhiều bộ đồ: mỗi bộ là một bộ ảnh nhiều góc (cùng điệu, cùng số khung). Trang phục, phụ kiện
+ *  vẽ liền vào ảnh nên mỗi bộ phối là một bộ ảnh riêng. Người trên sàn mặc một bộ, đổi bộ khi `VuCong3D.doiDo` đổi. */
+export interface NguoiAnh {
+  bo: readonly AnhGoc[];
 }
 
 /** Một nhân vật ảnh động nhiều góc (URL ảnh động mỗi góc). Thiếu góc nào thì lấy góc gần nhất có ảnh; góc bên kia lấy
  *  bằng lật gương. Ảnh chéo / nghiêng vẽ người quay sang trái màn hình. */
 export interface AnhGoc {
   truoc: string;
+  /** 45°, 90°, 135°: người quay sang trái màn hình (camera ở bên trái người đó). */
   cheo?: string;
   nghieng?: string;
   cheoSau?: string;
   sau?: string;
+  /** 315°, 270°, 225°: bên kia (quay sang phải màn hình). Thiếu thì lật gương góc bên trái. */
+  cheoP?: string;
+  nghiengP?: string;
+  cheoSauP?: string;
 }
 
-function laAnh(x: unknown): x is string | AnhGoc {
-  if (typeof x === 'string') return true;
+function laGoc(x: unknown): x is AnhGoc {
   const a = x as Partial<AnhGoc> | null;
   return (
     typeof a === 'object' &&
     a !== null &&
     typeof a.truoc === 'string' &&
-    [a.cheo, a.nghieng, a.cheoSau, a.sau].every((v) => v === undefined || typeof v === 'string')
+    [a.cheo, a.nghieng, a.cheoSau, a.sau, a.cheoP, a.nghiengP, a.cheoSauP].every((v) => v === undefined || typeof v === 'string')
   );
+}
+
+function laAnh(x: unknown): x is string | AnhGoc | NguoiAnh {
+  if (typeof x === 'string' || laGoc(x)) return true;
+  const n = x as Partial<NguoiAnh> | null;
+  return typeof n === 'object' && n !== null && Array.isArray(n.bo) && n.bo.length > 0 && n.bo.every(laGoc);
 }
 
 const laChuoi = (x: unknown): boolean => Array.isArray(x) && x.every((m) => typeof m === 'string');
@@ -101,6 +117,14 @@ export interface VuCong3D {
   /** Màn thay đồ VIP (quà lớn): thiết kế dựng cánh cửa quanh `nguoi`, đóng lại, bùng nổ, mở ra trong bộ `mon`
    *  (URL thư mục món, đã kèm lót) rồi mặc tới `den`. Id mới là diễn lại từ đầu. */
   thayDo?: ThayDo3D;
+  /** Khách gõ lệnh soi: camera cận + đèn rọi người số `so` (1–3 vũ công chính trái → phải, rồi đám đông) tới `den`
+   *  (ms, cùng đồng hồ với `Date.now()`). */
+  soi?: { so: number; khach: string; tu: number; den: number };
+  /** Hiện số thứ tự trên đầu mỗi người trên sàn. */
+  hienSo?: boolean;
+  /** Đổi bộ đồ người ảnh động (`NguoiAnh`): người số `so` (đánh số như `soi`), `so` = 0 là mọi người ảnh động. `id`
+   *  tăng mỗi lần đổi — thiết kế thấy id mới thì đổi một lần. */
+  doiDo?: { so: number; id: number };
 }
 
 export interface ThayDo3D {
@@ -161,6 +185,18 @@ export function docVuCong3D(raw: string | null | undefined): VuCong3D | null {
         ? { monRieng: v.monRieng }
         : {}),
       ...(laThayDo(v.thayDo) ? { thayDo: v.thayDo } : {}),
+      ...(typeof v.soi === 'object' &&
+      v.soi !== null &&
+      typeof v.soi.so === 'number' &&
+      typeof v.soi.khach === 'string' &&
+      typeof v.soi.tu === 'number' &&
+      typeof v.soi.den === 'number'
+        ? { soi: v.soi }
+        : {}),
+      ...(v.hienSo === true ? { hienSo: true } : {}),
+      ...(typeof v.doiDo === 'object' && v.doiDo !== null && typeof v.doiDo.so === 'number' && typeof v.doiDo.id === 'number'
+        ? { doiDo: v.doiDo }
+        : {}),
     };
   } catch {
     return null;

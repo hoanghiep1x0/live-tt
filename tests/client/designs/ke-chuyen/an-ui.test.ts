@@ -9,7 +9,15 @@ import { describe, expect, it } from 'vitest';
 import type { Seat } from '@live/contracts';
 import {
   AN_UI_MAC_DINH,
+  CAM_ON_KHACH_MS,
+  CAM_ON_TU_DONG_MS,
+  CHAY_MS,
+  OM_MS,
+  camOnLuotNay,
   canhAnUi,
+  loiCamOn,
+  loiPopup,
+  tenGon,
   docCauHinhAnUi,
   chonNguoiOm,
   khachXinOm,
@@ -178,5 +186,48 @@ describe('số người và cấu hình cảnh an ủi', () => {
 
   it('giá trị lưu hỏng thì về mặc định', () => {
     expect(docCauHinhAnUi({ anUiGiay: 'abc', anUiSoNguoi: 'ba', anUiAi: 1 })).toEqual(AN_UI_MAC_DINH);
+  });
+});
+
+describe('popup trên đầu và lời cảm ơn', () => {
+  const canh = (t: number, o: Partial<Parameters<typeof loiPopup>[0]> = {}) => ({
+    k: 3,
+    nhanVat: 'cau-be' as const,
+    t,
+    soNguoi: 2 as const,
+    ...o,
+  });
+
+  it('hai nhịp: đang ôm rồi cảm ơn, hết lượt thì tắt', () => {
+    expect(loiPopup(canh(0))).toBe('🤗 Cả phòng đang ôm cậu bé');
+    expect(loiPopup(canh(CHAY_MS + OM_MS))).toBe('Cậu bé cười rồi — cảm ơn cả nhà ❤');
+    expect(loiPopup(canh(TONG_MS))).toBeNull();
+  });
+
+  it('khách tự gõ "ôm" thì gọi đúng tên gọn của họ', () => {
+    const c = canh(100, { nguoiXin: 'u1', tenXin: 'Lâm Gia Hạo', nhanVat: 'be', soNguoi: 1 });
+    expect(loiPopup(c)).toBe('🤗 Hạo lên ôm bé');
+    expect(loiPopup({ ...c, t: CHAY_MS + OM_MS })).toBe('Bé cảm ơn Hạo ❤');
+  });
+
+  it('tên gọn: bỏ biểu tượng, tên mặc định của TikTok thì không gọi', () => {
+    expect(tenGon('M48🌸 đang du học 🇹🇼')).toBe('M48🌸');
+    expect(tenGon('user83920193')).toBe('');
+  });
+
+  it('lời cảm ơn gọi tên khách thật, không ai thì cảm ơn chung', () => {
+    expect(loiCamOn(0, ['Lan', 'Minh'], 'be')).toBe('Ui, Lan và Minh chạy lên ôm bé kìa, thương ghê');
+    expect(loiCamOn(0, [], 'cau-be')).toBe('Cảm ơn bạn đã chạy lên ôm cậu bé nha');
+  });
+
+  it('không phải lượt nào cũng đọc: khách mỗi phút, tự động thỉnh thoảng', () => {
+    const khach = canh(0, { nguoiXin: 'u1' });
+    expect(camOnLuotNay(khach, 0, CAM_ON_KHACH_MS - 1)).toBe(false);
+    expect(camOnLuotNay(khach, 0, CAM_ON_KHACH_MS)).toBe(true);
+    const doc = Array.from({ length: 30 }, (_, k) => camOnLuotNay(canh(0, { k }), 0, CAM_ON_TU_DONG_MS));
+    const n = doc.filter(Boolean).length;
+    expect(n).toBeGreaterThan(3);
+    expect(n).toBeLessThan(20);
+    expect(camOnLuotNay(canh(0, { k: doc.indexOf(true) }), 0, CAM_ON_TU_DONG_MS - 1)).toBe(false);
   });
 });

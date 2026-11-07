@@ -4,8 +4,11 @@
  *  gửi câu sang `POST /s/tts`, backend gắn khoá rồi gọi nhà cung cấp.
  */
 
-import { tachVai } from '@live/contracts';
+import { GIONG_XOAY, giongXoay, tachVai } from '@live/contracts';
 import type { DoanDoc, Priority, SfxName } from '@live/contracts';
+import { NHIP_MS, QuyenNoi } from './quyen-noi';
+import { canBo, choChen, nghiTruoc, quaCu } from './hang-doc';
+import type { MucDoc } from './hang-doc';
 
 // ---- Tiếng động: tổng hợp, không cần file ----
 
@@ -106,15 +109,50 @@ export const VOICE_MAC_DINH: VoiceCfg = {
 };
 
 /** Dài hơn thì nhà cung cấp cắt, mà đọc xong khán giả cũng quên mất chuyện gì. */
+/** Phòng của trang đang mở, đọc từ đường dẫn `/d/<id>/`. Trang khác (quản lý,
+ *  chạy thử) thì `undefined` — máy chủ chỉ không ghi sổ chi phí. */
+function phongCuaTrang(): string | undefined {
+  if (typeof location === 'undefined') return undefined;
+  return /^\/d\/([a-z0-9-]+)\//.exec(location.pathname)?.[1];
+}
+
 const MAX_TEXT = 400;
-/** Hàng chờ dài hơn thì bỏ câu cũ nhất: tin cũ đọc lên lúc này là lạc đề. */
-const MAX_HANG = 4;
 
 interface Cho {
   /** Các đoạn của một câu, mỗi đoạn một giọng. Cả câu là một mục trong hàng
    *  chờ: bỏ thì bỏ cả câu, không bao giờ cắt cụt giữa lời thoại. */
   doan: DoanDoc[];
   priority: Priority;
+  /** Mức trong hàng (`hang-doc.ts`): lời kể truyện đi trước câu chào. */
+  muc: MucDoc;
+  luc: number;
+  /** Gọi đúng một lần khi câu BẮT ĐẦU phát (hay bị bỏ / hỏng) — để khung
+   *  truyện đổi ảnh và chữ cùng lúc với giọng. */
+  batDau?: (() => void) | undefined;
+  /** Tiếng đã xin trước cho từng đoạn (lời kể): tới lượt là phát ngay. */
+  tai?: Promise<ArrayBuffer>[] | undefined;
+}
+
+/** Tuỳ chọn của một câu đọc. */
+export interface TuyDoc {
+  /** Câu thuộc mạch truyện: đọc trước mọi câu chào, câu chào đang dài thì nhường. */
+  truyen?: boolean;
+  /** Câu nói với khách (chào, đáp): chen vào khoảng nghỉ NGAY SAU đoạn đang
+   *  đọc, trước các đoạn kể còn chờ (`hang-doc.ts`). Không bao giờ đọc chồng
+   *  lên lời kể — hai giọng cùng lúc là khách mất mạch truyện lẫn lời chào. */
+  khach?: boolean;
+  /** Gọi khi câu bắt đầu phát (xem `Cho.batDau`). */
+  batDau?: () => void;
+}
+
+function motLan(f: (() => void) | undefined): (() => void) | undefined {
+  if (f === undefined) return undefined;
+  let da = false;
+  return () => {
+    if (da) return;
+    da = true;
+    f();
+  };
 }
 
 /** Bỏ emoji trước khi đưa cho máy đọc, nếu không nó đọc luôn cả tên emoji. */
@@ -145,46 +183,151 @@ function cacGiongMay(): Promise<SpeechSynthesisVoice[]> {
   });
 }
 
-/** Hàng chờ đọc. Một câu một lúc, không chồng tiếng. */
+/** Mọi hàng đọc đang sống trong cửa sổ này — để mất quyền nói là tắt hết. */
+const cacHang = new Set<HangGiong>();
+let quyen: QuyenNoi | null = null;
+
+/** Quyền đọc của cửa sổ này, dựng một lần khi có hàng đọc đầu tiên. Ngoài
+ *  trình duyệt (test) thì không bàn với ai, cứ nói. */
+function quyenNoi(): QuyenNoi | null {
+  if (quyen !== null || typeof window === 'undefined') return quyen;
+  const laObs =
+    'obsstudio' in window || new URLSearchParams(location.search).get('obs') === '1';
+  const bc = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('live-giong-doc');
+  const kenh =
+    bc === null
+      ? null
+      : {
+          postMessage: (t: unknown) => bc.postMessage(t),
+          nghe: (f: (t: unknown) => void) => {
+            bc.onmessage = (e) => f(e.data);
+          },
+        };
+  const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const q = new QuyenNoi(
+    kenh,
+    id,
+    laObs,
+    () => cacHang.forEach((h) => h.dung()),
+    (f, ms) => {
+      const h = setTimeout(f, ms);
+      return () => clearTimeout(h);
+    },
+    () => Date.now(),
+    () => document.visibilityState === 'visible',
+  );
+  q.gianh();
+  setInterval(() => q.nhip(), NHIP_MS);
+  // Người vận hành bấm vào cửa sổ nào thì cửa sổ đó nói (trừ khi có OBS).
+  window.addEventListener('focus', () => q.gianh());
+  window.addEventListener('pointerdown', () => q.gianh(), { capture: true });
+  window.addEventListener('pagehide', () => q.tra());
+  quyen = q;
+  return q;
+}
+
+/** Cửa sổ này có đang giữ quyền nói không (`quyen-noi.ts`). Mở một phòng ở
+ *  nhiều cửa sổ (OBS + bảng xem) thì chỉ cửa sổ đang nói mới nên ghi sổ sách
+ *  của phòng — không thì mỗi bình luận được cộng hai lần. Ngoài trình duyệt
+ *  (test) thì luôn có. */
+export function duocNoi(): boolean {
+  const q = quyenNoi();
+  return q === null || q.duocNoi();
+}
+
+/** Hàng chờ đọc. Một câu một lúc, không chồng tiếng — và cả máy chỉ một cửa
+ *  sổ được đọc (`quyen-noi.ts`). */
 export class HangGiong {
   private hang: Cho[] = [];
   private dangChay = false;
   private dungLai = false;
+  /** Tăng mỗi lần `dung()`: câu nào tải xong tiếng sau mốc đó thì không phát —
+   *  không thì bấm dừng giữa lúc đang tải, câu vẫn bật lên vài giây sau. */
+  private theHe = 0;
+  /** Giọng câu trước của "Tự đổi giọng", để câu sau không lặp liền. */
+  private giongTruoc = '';
   private am: { ctx: AudioContext; src: AudioBufferSourceNode } | null = null;
   private cfg: VoiceCfg = VOICE_MAC_DINH;
+  /** Mức câu vừa đọc xong — cho nhịp nghỉ giữa lời kể và câu chào. */
+  private mucTruoc: MucDoc | null = null;
+
+
+  constructor() {
+    cacHang.add(this);
+    quyenNoi();
+  }
 
   datCauHinh(c: VoiceCfg): void {
     this.cfg = c;
     if (!c.enabled) this.dung();
   }
 
-  noi(text: string, priority: Priority = 'normal', voiceId = ''): void {
-    if (!this.cfg.enabled) return;
-    const doan = tachVai(text, voiceId, this.cfg.multi)
+  /** `daGiong`: đọc nhiều giọng theo dấu `[id]` cho riêng câu này — lời kể
+   *  của MC. Bỏ trống thì theo cài đặt Đa giọng của dàn. `tuy`: câu thuộc mạch
+   *  truyện, và hàm gọi lúc câu bắt đầu phát. */
+  noi(text: string, priority: Priority = 'normal', voiceId = '', daGiong?: boolean, tuy: TuyDoc = {}): void {
+    const batDau = motLan(tuy.batDau);
+    // Không đọc được (tắt, hay cửa sổ khác đang giữ quyền nói): khung truyện
+    // vẫn đổi ngay, đừng để nó chờ một giọng sẽ không bao giờ tới.
+    if (!this.cfg.enabled || (quyen !== null && !quyen.duocNoi())) {
+      batDau?.();
+      return;
+    }
+    // "Tự đổi giọng": mỗi câu một giọng khác trong dàn. Chỉ khi phòng bật đa
+    // giọng — đơn giọng là cả phòng một giọng, như người vận hành đã chọn.
+    let giong = voiceId;
+    if (giong === GIONG_XOAY) {
+      giong = this.cfg.multi ? giongXoay(this.cfg.cast.map((g) => g.id), this.giongTruoc, Math.random) : '';
+      this.giongTruoc = giong;
+    }
+    const doan = tachVai(text, giong, daGiong ?? this.cfg.multi)
       .map((d) => ({ text: chuanHoa(d.text), voice: d.voice }))
       .filter((d) => d.text !== '');
-    if (doan.length === 0) return;
-
-    if (priority === 'high') {
-      // Câu quan trọng chen lên trước, nhưng không cắt ngang câu đang đọc —
-      // cắt giữa chừng nghe như máy hỏng.
-      this.hang.unshift({ doan, priority });
-    } else {
-      this.hang.push({ doan, priority });
+    if (doan.length === 0) {
+      batDau?.();
+      return;
     }
-    while (this.hang.length > MAX_HANG) {
-      // Bỏ câu thường cũ nhất; câu `high` được giữ.
-      const i = this.hang.findIndex((x) => x.priority !== 'high');
-      this.hang.splice(i < 0 ? 0 : i, 1);
+
+    // Câu nói với khách chen vào khoảng nghỉ sau đoạn đang đọc (mức `khach`),
+    // không đọc chồng: một giọng một lúc.
+    const muc: MucDoc =
+      tuy.truyen === true ? 'truyen' : tuy.khach === true ? 'khach' : priority === 'high' ? 'cao' : 'thuong';
+    const cho: Cho = { doan, priority, muc, luc: Date.now(), batDau };
+    // Lời kể và câu với khách: xin tiếng ngay lúc vào hàng — tới lượt là phát
+    // liền. Không thì giữa đoạn kể và câu chào hở ba, bốn giây chờ tải tiếng,
+    // phòng như bị đứng.
+    if ((muc === 'truyen' || muc === 'khach') && this.cfg.cast.length > 0) {
+      cho.tai = doan.map((d) => {
+        const t = this.taiTieng(d.text, d.voice);
+        t.catch(() => undefined);
+        return t;
+      });
+    }
+    // Câu quan trọng chen lên trước, nhưng lời kể vẫn đứng đầu.
+    this.hang.splice(choChen(this.hang, muc), 0, cho);
+    for (let i = canBo(this.hang); i >= 0; i = canBo(this.hang)) {
+      // Câu chào cũ bị đẩy ra khỏi hàng: bỏ luôn chữ.
+      this.hang.splice(i, 1);
     }
     void this.chay();
+  }
+
+  /** Đang đọc hoặc còn câu chờ. Lõi module đọc qua `ctx.dangNoi` để chạy theo
+   *  nhịp giọng — vd lớp học dừng đồng hồ trong lúc cô đọc đề. */
+  ban(): boolean {
+    return this.dangChay || this.hang.length > 0;
   }
 
   /** Dừng hẳn: câu đang đọc tắt, hàng chờ bỏ. Bản cũ thiếu đúng hàm này, nên
    *  tắt đọc rồi mà vẫn còn nghe tiếng một lúc. */
   dung(): void {
     this.dungLai = true;
+    this.theHe += 1;
+    // Câu bị bỏ vẫn báo "bắt đầu": khung truyện đổi ngay, không chờ giọng
+    // sẽ không bao giờ tới.
+    const bo = this.hang;
     this.hang = [];
+    for (const c of bo) c.batDau?.();
     if (this.am !== null) {
       try {
         this.am.src.stop();
@@ -204,17 +347,34 @@ export class HangGiong {
       while (this.hang.length > 0 && !this.dungLai && this.cfg.enabled) {
         const c = this.hang.shift();
         if (c === undefined) break;
-        for (const d of c.doan) {
-          if (this.dungLai || !this.cfg.enabled) break;
-          await this.doc(d.text, d.voice);
+        // Câu chào chờ quá lâu: bỏ hẳn, KHÔNG hiện chữ — chữ mà không có giọng
+        // là lệch nhịp (`quaCu` chỉ bỏ câu chào, không bao giờ bỏ lời kể).
+        if (quaCu(c, Date.now())) continue;
+        // Nhịp nghỉ giữa lời kể và câu chào sau nó.
+        const nghi = nghiTruoc(this.mucTruoc, c.muc);
+        if (nghi > 0) {
+          await new Promise((r) => setTimeout(r, nghi));
+          // Trong lúc nghỉ có lời kể mới chen lên đầu hàng: đọc lời kể trước —
+          // trừ câu với khách, nó vốn được chen vào đúng khoảng nghỉ này.
+          const dau = this.hang[0];
+          if (dau !== undefined && dau.muc === 'truyen' && c.muc !== 'truyen' && c.muc !== 'khach') {
+            this.hang.splice(choChen(this.hang, c.muc), 0, c);
+            continue;
+          }
         }
+        for (const [i, d] of c.doan.entries()) {
+          if (this.dungLai || !this.cfg.enabled) break;
+          await this.doc(d.text, d.voice, i === 0 ? c.batDau : undefined, c.tai?.[i]);
+        }
+        c.batDau?.();
+        this.mucTruoc = c.muc;
       }
     } finally {
       this.dangChay = false;
     }
   }
 
-  private async doc(text: string, voiceId: string): Promise<void> {
+  private async doc(text: string, voiceId: string, batDau?: () => void, tai?: Promise<ArrayBuffer>): Promise<void> {
     if (this.cfg.cast.length > 0) {
       // Đã có dàn giọng thì chỉ đọc bằng dàn. Giọng được gọi hỏng thì máy chủ
       // tự chuyển sang giọng đọc được kế tiếp trong dàn, như chuỗi giọng của
@@ -222,34 +382,53 @@ export class HangGiong {
       // tiếng Việt là nó đọc chữ Việt bằng giọng tiếng Anh, lên sóng còn tệ
       // hơn im lặng.
       try {
-        await this.docQuaApi(text, voiceId);
+        await this.docQuaApi(text, voiceId, batDau, tai);
       } catch (e) {
+        batDau?.();
         console.warn('[giọng đọc] dàn giọng không đọc được câu này:', e);
       }
       return;
     }
+    batDau?.();
     await this.docBangMay(text);
   }
 
-  /** Chỉ gửi id giọng: việc tra ra nhà cung cấp nào, giọng nào là của backend.
-   *  Sân khấu không cần biết dàn giọng được cấu hình ra sao. */
-  private async docQuaApi(text: string, voiceId: string): Promise<void> {
+  /** Xin tiếng của một câu từ máy chủ. */
+  private async taiTieng(text: string, voiceId: string): Promise<ArrayBuffer> {
     const res = await fetch('/s/tts', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text, voiceId, speed: this.cfg.speed }),
+      // `designId`: máy chủ ghi câu này vào sổ chi phí của đúng phòng.
+      body: JSON.stringify({ text, voiceId, speed: this.cfg.speed, designId: phongCuaTrang() }),
     });
     if (!res.ok) {
       const j: unknown = await res.json().catch(() => null);
       const m = (j as { error?: string } | null)?.error;
       throw new Error(m ?? `máy chủ trả ${res.status}`);
     }
+    return res.arrayBuffer();
+  }
 
-    const bytes = await res.arrayBuffer();
+  /** Chỉ gửi id giọng: việc tra ra nhà cung cấp nào, giọng nào là của backend.
+   *  Sân khấu không cần biết dàn giọng được cấu hình ra sao. `tai`: tiếng đã
+   *  xin trước. `batDau`: gọi đúng lúc tiếng bắt đầu phát. */
+  private async docQuaApi(
+    text: string,
+    voiceId: string,
+    batDau?: () => void,
+    tai?: Promise<ArrayBuffer>,
+  ): Promise<void> {
+    const theHe = this.theHe;
+    const bytes = await (tai ?? this.taiTieng(text, voiceId));
     const ac = mayAm();
     if (ac === null) throw new Error('trình duyệt không cho mở máy âm');
 
     const buf = await ac.decodeAudioData(bytes);
+    // Đã bấm dừng (hay mất quyền nói) trong lúc tải: bỏ câu này.
+    if (theHe !== this.theHe) {
+      batDau?.();
+      return;
+    }
     await new Promise<void>((xong) => {
       const src = ac.createBufferSource();
       src.buffer = buf;
@@ -267,6 +446,7 @@ export class HangGiong {
       };
       this.am = { ctx: ac, src };
       src.start();
+      batDau?.();
     });
   }
 

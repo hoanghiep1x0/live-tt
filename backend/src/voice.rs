@@ -107,6 +107,23 @@ impl VoiceCfg {
     }
 }
 
+/// Giọng nữ mặc định của dàn: giọng mặc định nếu là giọng nữ, không thì giọng
+/// nữ đầu tiên. Nhận theo tên giọng (HoaiMy, …Female…) hay vai ("nữ", "bé
+/// gái", "mẹ"…). Hàm thuần.
+pub fn giong_nu(cfg: &VoiceCfg) -> Option<String> {
+    let la_nu = |g: &CastVoice| {
+        let v = g.voice.to_lowercase();
+        let r = g.role.to_lowercase();
+        ["hoaimy", "female", "-nu"].iter().any(|w| v.contains(w))
+            || ["nữ", "bé gái", "cô gái", "mẹ", "bà "].iter().any(|w| r.contains(w))
+    };
+    cfg.cast
+        .iter()
+        .find(|g| g.id == cfg.mac_dinh && la_nu(g))
+        .or_else(|| cfg.cast.iter().find(|g| la_nu(g)))
+        .map(|g| g.id.clone())
+}
+
 pub fn read(layout: &Layout) -> VoiceCfg {
     match store::read_json(&layout.voice_file()) {
         Ok(Some(v)) => serde_json::from_value::<VoiceCfg>(v).unwrap_or_default().kep(),
@@ -124,6 +141,22 @@ pub fn write(layout: &Layout, cfg: VoiceCfg) -> Result<VoiceCfg, StoreError> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn giong_nu_uu_tien_giong_mac_dinh() {
+        let g = |id: &str, voice: &str, role: &str| CastVoice { id: id.into(), provider: "p".into(), voice: voice.into(), role: role.into() };
+        let mut c = VoiceCfg {
+            mac_dinh: "nam".into(),
+            cast: vec![g("nam", "edge-tts/vi-VN-NamMinhNeural", "Nam dẫn chuyện"), g("my", "edge-tts/vi-VN-HoaiMyNeural", "MC")],
+            ..VoiceCfg::default()
+        };
+        assert_eq!(giong_nu(&c).as_deref(), Some("my"), "mặc định là nam thì lấy giọng nữ đầu tiên");
+        c.cast.push(g("gg", "google-tts/vi", "Nữ Google"));
+        c.mac_dinh = "gg".into();
+        assert_eq!(giong_nu(&c).as_deref(), Some("gg"));
+        c.cast.retain(|x| x.id == "nam");
+        assert_eq!(giong_nu(&c), None);
+    }
 
     fn moi() -> (tempfile::TempDir, Layout) {
         let d = tempfile::tempdir().unwrap();

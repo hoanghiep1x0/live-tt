@@ -90,6 +90,13 @@ impl Layout {
         self.database_dir().join("voice.json")
     }
 
+    /// Nguồn sự kiện và phòng đang phát — nhớ qua các lần mở app. Không nhớ
+    /// thì mỗi lần app dựng lại là phòng tắt sóng, nguồn về "tắt", người vận
+    /// hành phải nối tay lại từ đầu.
+    pub fn nguon_file(&self) -> PathBuf {
+        self.database_dir().join("nguon.json")
+    }
+
     pub fn secrets_file(&self) -> PathBuf {
         self.database_dir().join("secrets.json")
     }

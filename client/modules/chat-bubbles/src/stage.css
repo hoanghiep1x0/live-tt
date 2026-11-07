@@ -23,9 +23,11 @@
 
 .mod-chat-bong {
   margin: 0;
-  padding: 1cqw 2.2cqw;
+  padding: 0.8cqw 1.8cqw;
   border-radius: 2.4cqw 2.4cqw 0.6cqw 2.4cqw;
-  font-size: 2.6cqw;
+  /* Lời nhắn nhỏ hơn tên (tên giữ 2,6cqw ở dưới): bóng gọn lại, che ít rạp
+     hơn, mà vẫn nhìn ra ngay ai đang nói. */
+  font-size: 2.1cqw;
   line-height: 1.3;
   font-weight: 500;
   color: #fff;
@@ -48,6 +50,7 @@
    nấc chứa đủ hai dòng chữ thật. */
 .mod-chat-bong b {
   margin-right: 0.4cqw;
+  font-size: 2.6cqw;
   font-weight: 700;
   color: var(--gold, #f2c45a);
 }
@@ -64,6 +67,8 @@
   text-shadow: none;
 }
 .mod-chat-bong.la-qua b {
+  /* Bóng quà vẫn một cỡ chữ như cũ: tên theo cỡ của bóng. */
+  font-size: inherit;
   color: #8a2a00;
 }
 

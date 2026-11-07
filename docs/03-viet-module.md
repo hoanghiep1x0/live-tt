@@ -124,6 +124,8 @@ Những điều `hooks` lo thay bạn:
 
 Cấm, theo quy ước 01 §5: `react`, `three`, `window`, `document`, `localStorage`, `fetch`,
 `Date.now()`, `Math.random()`. Thời gian và ngẫu nhiên tiêm qua `ctx.now` và `ctx.rand`.
+Lõi cần chạy theo nhịp giọng (vd dừng đồng hồ trong lúc cô giáo đọc đề) đọc `ctx.dangNoi` — hàng đọc của sân khấu
+đang đọc hoặc còn câu chờ — thay vì tự đoán câu dài bao lâu.
 `tsconfig.json` ở gốc **không** khai `lib: DOM`, nên chạm `document` là lỗi biên dịch ngay.
 
 `onConfig` là **bắt buộc** nếu module có cấu hình. Phòng đang live mà tải lại trang là mất khán giả.

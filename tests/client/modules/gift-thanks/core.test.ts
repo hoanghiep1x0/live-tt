@@ -158,7 +158,7 @@ describe('quà lớn', () => {
     expect(thuong).not.toContain('Trời ơi');
 
     runFeed(mod, s, qua({ coins: cfg.bigCoins }), ctx(cfg, 2_000));
-    expect(loiNoi(runTick(mod, s, 5_000, ctx(cfg, 5_000)))).toContain('MC xúc động');
+    expect(loiNoi(runTick(mod, s, 5_000, ctx(cfg, 5_000)))).toContain('mình xúc động');
   });
 });
 

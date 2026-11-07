@@ -9,21 +9,32 @@
 //! - `/ws`         bus phát sự kiện và cấu hình xuống
 
 pub mod ai;
+pub mod ai_cli;
+pub mod cli_goi;
+pub mod kho_da_ke;
+pub mod ke_truyen;
+pub mod anh_truyen;
+pub mod chi_phi;
 pub mod api;
 pub mod bot;
 pub mod designs;
 pub mod events;
 pub mod files;
 pub mod hanh_dong;
+pub mod khoi_dong;
+pub mod lenh;
 pub mod media;
+pub mod muse;
 pub mod guard;
 pub mod paths;
 pub mod secrets;
 pub mod session;
 pub mod settings;
+pub mod so;
 pub mod source;
 pub mod state;
 pub mod store;
+pub mod truyen_sau;
 pub mod tts;
 pub mod tu_do;
 pub mod voice;
@@ -31,7 +42,7 @@ pub mod ws;
 
 use std::sync::Arc;
 
-use axum::extract::Request;
+use axum::extract::{DefaultBodyLimit, Request};
 use axum::http::{header, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
@@ -48,6 +59,13 @@ pub fn router(st: Arc<AppState>) -> Router {
         .route("/api/designs", get(api::list_designs))
         .route("/api/session", get(api::get_session))
         .route("/api/source", get(api::get_source).put(api::put_source))
+        // Nguồn `webview`: trang quản lý trong app đẩy tin đọc từ trang TikTok.
+        .route("/api/source/day", post(api::post_source_day))
+        // Khoá Euler của cầu nối TikTok: chỉ ghi, đọc chỉ biết có hay chưa.
+        .route(
+            "/api/source/khoa",
+            get(api::get_khoa_cau_noi).put(api::put_khoa_cau_noi),
+        )
         .route("/api/secrets", get(api::list_secrets))
         .route(
             "/api/secrets/:provider",
@@ -57,6 +75,10 @@ pub fn router(st: Arc<AppState>) -> Router {
         .route("/api/voice", get(api::get_voice).put(api::put_voice))
         // Trang quản lý cũng gọi được, để bấm "Nghe thử" mà không phải mở sân khấu.
         .route("/api/tts", post(api::post_tts))
+        // Cầu nối muse.ai: vẽ ảnh bằng tab muse.ai đã đăng nhập trong app.
+        .route("/api/muse", get(muse::trang_thai))
+        .route("/api/muse/:design_id/ve", post(muse::post_ve))
+        .route("/api/muse/:design_id/ve-truyen", post(muse::post_ve_truyen))
         .route(
             "/api/live",
             get(api::get_live)
@@ -94,10 +116,39 @@ pub fn router(st: Arc<AppState>) -> Router {
         .route("/s/tts", post(api::post_tts))
         // Bảng xem thử nằm ngay trong trang sân khấu, mà trang đó không giữ
         // token. Vẫn qua lớp chặn Host và Origin như mọi thứ khác.
-        .route("/s/media/:design_id", post(media::nhan))
+        // Video người thật có thể vài chục MB: KHÔNG để axum chặn ở mức mặc
+        // định 2MB — nó trả văn bản thường, trang đọc JSON là nổ "Unexpected
+        // token 'F'", người vận hành không hiểu gì. Giới hạn thật nằm trong
+        // `media::TOI_DA`, và nó trả lỗi JSON đọc được.
+        .route(
+            "/s/media/:design_id",
+            post(media::nhan).layer(DefaultBodyLimit::max(media::TOI_DA)),
+        )
         .route("/s/media/:design_id/ai", post(media::tao_anh))
+        // Dọn ảnh AI vẽ không còn truyện nào dùng.
+        .route("/s/media/:design_id/don", post(media::don))
         .route("/s/viet/:design_id", post(ai::viet))
         .route("/s/providers", get(api::list_secrets_public))
+        // Ô "AI tạo ảnh" hỏi app có cầu nối muse.ai không (chỉ có ở app desktop).
+        .route("/s/muse", get(muse::trang_thai))
+        // Ô "AI viết truyện & dẫn chuyện": Codex / Claude Code đã cài, đăng nhập chưa.
+        .route("/s/ai-cli", get(ai_cli::get_trang_thai))
+        // Đăng nhập tài khoản Claude / Codex chạy NỀN trong máy chủ: bảng xem
+        // hiện lời công cụ in ra, có ô dán mã; tải lại trang vẫn giữ phiên.
+        // Kho truyện đã kể (giữ cả ảnh): xem lại, kể lại không tốn lượt nào.
+        .route(
+            "/s/thiet-ke/:design_id/link",
+            get(api::get_link_phat).put(api::put_link_phat),
+        )
+        .route("/s/truyen-kho/:design_id", get(kho_da_ke::get_kho))
+        .route("/s/truyen-kho/:design_id/ke-lai", post(kho_da_ke::post_ke_lai))
+        .route("/s/truyen-kho/:design_id/xoa", post(kho_da_ke::post_xoa))
+        // Lịch sử MC gửi / nhận qua Claude Code (session mỗi truyện).
+        .route("/s/ai-cli/lich-su", get(cli_goi::get_lich_su))
+        .route("/s/ai-cli/dang-nhap", get(ai_cli::get_dang_nhap))
+        .route("/s/ai-cli/dang-nhap/nhap", post(ai_cli::post_nhap))
+        .route("/s/ai-cli/dang-nhap/dung", post(ai_cli::post_dung))
+        .route("/s/ai-cli/dang-nhap/:cong", post(ai_cli::post_dang_nhap))
         // Cắm khoá ngay từ bảng xem thử, khỏi phải mở trang quản lý. Người
         // vận hành yêu cầu, và đây là đánh đổi có thật — ghi rõ ở đây để lần
         // sau đọc lại còn biết đã cân nhắc gì (docs/05-backend.md §5).
@@ -118,7 +169,15 @@ pub fn router(st: Arc<AppState>) -> Router {
         // khác hẳn khoá AI ở trên: người vận hành yêu cầu dọn tủ ngay từ bảng xem, và xoá nhầm chỉ mất một món đồ
         // (chép lại từ D:\Assets là xong), không tắt tính năng nào giữa lúc live. Bảng xem vẫn hỏi lại trước khi xoá.
         .route("/s/tu-do/:module_id", get(tu_do::liet_ke))
-        .route("/s/tu-do/:module_id/*rest", delete(tu_do::xoa));
+        .route("/s/tu-do/:module_id/*rest", delete(tu_do::xoa))
+        // Sổ bền của module (`so.rs`): tính năng tự ghi trong lúc chạy — lớp học
+        // nhớ câu đã hỏi, bảng vàng tuần. Sân khấu là nơi chạy lõi nên ghi từ đây.
+        .route(
+            "/s/so/:design_id/:module_id",
+            get(so::doc)
+                .put(so::ghi)
+                .layer(DefaultBodyLimit::max(so::SO_TOI_DA)),
+        );
 
     let files = Router::new()
         .route("/d/:id/", get(files::serve_root))

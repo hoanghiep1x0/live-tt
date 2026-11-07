@@ -872,3 +872,125 @@ async fn san_khau_khong_xoa_duoc_ket_noi() {
     assert_eq!(ma, StatusCode::METHOD_NOT_ALLOWED);
     assert!(live_backend::secrets::get(&Layout::new(&m.root), "mc").is_some());
 }
+
+// ---- Nguồn `webview`: trang TikTok trong app đẩy tin vào `POST /api/source/day` ----
+
+#[tokio::test]
+async fn day_nguon_bi_tu_choi_khi_nguon_khac() {
+    let m = moi();
+    // Nguồn mặc định là `tat`.
+    let (ma, j) = m
+        .api(
+            "POST",
+            "/api/source/day",
+            Some(json!([{ "kind": "join", "user": "an", "name": "An" }])),
+        )
+        .await;
+    assert_eq!(ma, StatusCode::BAD_REQUEST);
+    assert!(
+        j["error"].as_str().unwrap_or("").contains("Trang TikTok"),
+        "phải nói lý do bằng tiếng Việt: {j}"
+    );
+}
+
+#[tokio::test]
+async fn day_nguon_can_token() {
+    let m = moi();
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/source/day")
+        .header(header::HOST, HOST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from("[]"))
+        .unwrap();
+    let (ma, _, _) = m.goi(req).await;
+    assert_eq!(ma, StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn nguon_webview_cho_du_lieu_roi_nhan_su_kien() {
+    let m = moi();
+    m.api("POST", "/api/live", Some(json!({ "designId": "ke-chuyen" })))
+        .await;
+    let (ma, j) = m
+        .api(
+            "PUT",
+            "/api/source",
+            Some(json!({ "kind": "webview", "channel": "labeau_official" })),
+        )
+        .await;
+    assert_eq!(ma, StatusCode::OK);
+    assert_eq!(j["source"]["kind"], json!("webview"));
+    assert_eq!(j["source"]["channel"], json!("labeau_official"));
+    // Chưa có tin nào từ trang: chưa sáng xanh.
+    assert_eq!(j["source"]["running"], json!(false));
+    assert!(j["source"]["problem"].is_string());
+
+    let (ma, j) = m
+        .api(
+            "POST",
+            "/api/source/day",
+            Some(json!([
+                { "type": "status", "state": "dang-live", "message": "Đang nhận sự kiện từ trang TikTok" },
+                { "kind": "join", "user": "an", "name": "An", "ts": 1 },
+                { "kind": "gift", "user": "an", "name": "An", "gift": "Rose", "count": 3, "xuEach": 1, "ts": 1 },
+                { "type": "viewers", "count": 42 }
+            ])),
+        )
+        .await;
+    assert_eq!(ma, StatusCode::OK);
+    assert_eq!(j["source"]["running"], json!(true), "dang-live phải xoá lỗi: {j}");
+    assert!(j["source"].get("problem").is_none());
+
+    let (_, j) = m.api("GET", "/api/session", None).await;
+    let s = &j["session"];
+    assert_eq!(s["totals"]["viewers"], json!(42), "{s}");
+    assert_eq!(s["totals"]["xu"], json!(3), "{s}");
+
+    // Một tin đơn (không phải mảng) cũng nhận.
+    let (ma, _) = m
+        .api(
+            "POST",
+            "/api/source/day",
+            Some(json!({ "type": "status", "state": "loi", "message": "Chưa nhận được khung nào" })),
+        )
+        .await;
+    assert_eq!(ma, StatusCode::OK);
+    let (_, j) = m.api("GET", "/api/source", None).await;
+    assert_eq!(j["source"]["running"], json!(false));
+    assert_eq!(j["source"]["problem"], json!("Chưa nhận được khung nào"));
+
+    // Đổi nguồn rồi thì trang cũ đẩy tới bị từ chối.
+    m.api("PUT", "/api/source", Some(json!({ "kind": "tat" })))
+        .await;
+    let (ma, _) = m
+        .api("POST", "/api/source/day", Some(json!([])))
+        .await;
+    assert_eq!(ma, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn nguon_webview_offline_thi_don_phong() {
+    let m = moi();
+    m.api("POST", "/api/live", Some(json!({ "designId": "ke-chuyen" })))
+        .await;
+    m.api("PUT", "/api/source", Some(json!({ "kind": "webview", "channel": "a" })))
+        .await;
+    m.api(
+        "POST",
+        "/api/source/day",
+        Some(json!([{ "type": "viewers", "count": 9 }])),
+    )
+    .await;
+    let (_, j) = m
+        .api(
+            "POST",
+            "/api/source/day",
+            Some(json!({ "type": "status", "state": "offline" })),
+        )
+        .await;
+    // Không có lời báo thì lấy chính tên trạng thái.
+    assert_eq!(j["source"]["problem"], json!("offline"));
+    let (_, j) = m.api("GET", "/api/session", None).await;
+    assert_eq!(j["session"]["totals"]["viewers"], json!(0), "offline phải dọn phòng");
+}

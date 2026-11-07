@@ -309,7 +309,8 @@ type Down =
   | { t: 'session'; view: SessionView }
   | { t: 'config';  moduleId: string; config: Json; designId?: string }
   | { t: 'modules'; enabled: string[]; designId?: string }
-  | { t: 'live';    designId: string | null };
+  | { t: 'live';    designId: string | null }
+  | { t: 'source';  source: TrangThaiNguon };   // nguồn sự kiện đổi cấu hình / trạng thái
   // … cùng `design`, `bot`, `ai` (đều có `designId?`), `voice`, `error` — mã: contracts/src/wire.ts
 
 // Manager / thiết kế → backend
@@ -318,6 +319,11 @@ type Up =
   | { t: 'xem'; designId: string }
   | { t: 'ping' };
 ```
+
+**Tin `source`.** `TrangThaiNguon` = `{ kind, url, channel, nhip, running, problem? }` — đúng dạng
+`GET /api/source` trả. Backend phát mỗi khi cấu hình hoặc lỗi nguồn **đổi** (đổi nguồn, đang nối →
+đang nhận, kênh tắt live, thiếu Node…), để trang quản lý không chỉ đọc một lần lúc tải trang. Một nguồn
+chung cho mọi thiết kế: sân khấu bỏ qua tin này, nó chỉ cần `feed` / `session`. Xem 07 §7.
 
 Thiết kế chỉ nhận, không gửi lệnh lên. Muốn tác động thì qua `Effect` dạng `command`,
 do runtime trong thiết kế gửi lên kèm nhãn nguồn.

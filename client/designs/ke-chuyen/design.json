@@ -2,9 +2,9 @@
   "id": "ke-chuyen",
   "category": "ke-chuyen",
   "style": "mac-dinh",
-  "name": "Phòng kể chuyện",
+  "name": "Phòng kể truyện",
   "icon": "📖",
-  "summary": "AI MC đọc truyện, khán giả ngồi ghế hình quạt, top người tặng",
+  "summary": "AI kể truyện, khán giả ngồi ghế hình quạt, top người tặng",
   "version": "0.2.0",
   "canvas": {
     "width": 1080,
@@ -35,7 +35,6 @@
   "recommends": [
     "story",
     "gift-thanks",
-    "welcome",
     "chat-bubbles",
     "top-givers",
     "ticker",
@@ -49,21 +48,32 @@
       "passages": "Ngày xưa, có một cậu bé ham chơi. Một lần bị mẹ mắng, cậu giận dỗi bỏ nhà ra đi.\nCậu bé đi lang thang khắp nơi, chẳng nghĩ tới mẹ đang mỏi mắt chờ ở nhà.\nĐói và rét, cậu tìm về nhà nhưng không thấy mẹ đâu. Cậu ôm lấy cái cây mà khóc.\nCây xanh run rẩy. Từ các cành lá, những đài hoa bé tí trổ ra, nở trắng như mây.\nHoa tàn, quả xuất hiện, lớn nhanh, da căng mịn, xanh óng ánh.\nCây nghiêng cành, một quả to rơi vào tay cậu bé.\nCậu bé cắn một miếng thật to. Chát quá. Quả thứ hai rơi xuống, cậu cắn vào hạt. Cứng quá.\nQuả thứ ba rơi xuống. Cậu khẽ bóp quanh quả, lớp vỏ mềm dần rồi nứt ra một kẽ nhỏ.\nMột dòng sữa trắng sóng sánh trào ra, ngọt thơm như sữa mẹ.\nCậu ngước nhìn tán lá. Lá một mặt xanh bóng, mặt kia đỏ hoe như mắt mẹ khóc chờ con.\nCậu bé oà lên khóc. Cây xoà cành ôm cậu, như tay mẹ âu yếm vỗ về.",
       "secPerPassage": 16
     },
-    "welcome": {
-      "templates": "Chào {ten} ghé phòng nghe truyện nha!\nChào mừng {ten}, mời bạn ngồi nghe chuyện cùng cả nhà 🙏\n{ten} vào rồi kìa, chào bạn nha 🌸\nChào {ten}, chuyện đang tới đoạn hay đó nghen"
-    },
     "likes-counter": {
       "template": "Đã {phantram}% mục tiêu tim, cảm ơn cả phòng!"
     }
   },
   "seats": 84,
+  "seatRows": [8, 10, 12, 12, 14, 14],
+  "rowSeats": 14,
   "pointRate": 1,
   "crowd": {
     "names": [],
+    "greet": [
+      "Chào {ten} 👋",
+      "Chào mừng {ten} vào phòng 🙏",
+      "{ten} vào rồi kìa, chào bạn nha",
+      "Chào {ten}, ngồi nghe truyện cùng cả nhà nhé"
+    ],
+    "thanks": [
+      "Cảm ơn {ten} nhiều nha 🎉",
+      "{ten} dễ thương quá ❤",
+      "Cả phòng cảm ơn {ten} 🙏",
+      "Wow cảm ơn {ten}"
+    ],
     "lines": [
       "nghe hay quá ạ",
       "kể tiếp đi ạ",
-      "chuyện này hồi bé mẹ mình kể rồi",
+      "truyện này hồi bé mẹ mình kể rồi",
       "giọng đọc dễ nghe ghê",
       "mình mới vào, tới đoạn nào rồi ạ",
       "thương cậu bé quá",
@@ -72,9 +82,9 @@
       "nghe mà rưng rưng",
       "tối nào cũng ghé nghe",
       "chúc cả phòng ngủ ngon",
-      "mai kể chuyện Tấm Cám đi ạ",
+      "mai kể truyện Tấm Cám đi ạ",
       "ngồi nghe tới hết luôn",
-      "chuyện hay mà ít người biết ghê"
+      "truyện hay mà ít người biết ghê"
     ]
   },
   "entry": "dist/index.html",

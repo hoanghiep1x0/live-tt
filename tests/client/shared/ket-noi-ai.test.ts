@@ -76,3 +76,19 @@ describe('kho kết nối AI dùng chung', () => {
     expect(tenProvider({ id: 'la', kind: 'openai', baseUrl: 'https://x.y/v1' })).toBe('Kiểu OpenAI');
   });
 });
+
+describe('moTaKetNoi — ghi rõ AI nào đang làm', () => {
+  it('tên · nơi gọi · model của đúng việc', async () => {
+    const { moTaKetNoi } = await import('@live/contracts');
+    expect(
+      moTaKetNoi(
+        { id: 'tao-anh', name: 'Tạo Ảnh', kind: 'openai', baseUrl: 'https://openrouter.ai/api/v1', models: { image: 'google/gemini-2.5-flash-image' } },
+        'image',
+      ),
+    ).toBe('Tạo Ảnh · openrouter.ai · google/gemini-2.5-flash-image');
+  });
+  it('thiếu địa chỉ, thiếu model thì nói rõ', async () => {
+    const { moTaKetNoi } = await import('@live/contracts');
+    expect(moTaKetNoi({ id: 'x', kind: 'openai', models: {} }, 'image')).toBe('x · openai · model mặc định');
+  });
+});

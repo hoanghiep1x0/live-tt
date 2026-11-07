@@ -752,6 +752,24 @@ select.bx-o option {
   font-size: 11px;
 }
 
+/* Thẻ Kết nối AI và Giọng đọc: tên và trạng thái một hàng, chi tiết xuống hàng dưới
+   — chen giữa là chữ gãy hai dòng. */
+.bx-kho-ds-hai-hang li {
+  flex-wrap: wrap;
+  row-gap: 3px;
+}
+.bx-kho-ds-hai-hang li > b {
+  flex: 1;
+}
+.bx-kho-ds-hai-hang .bx-kho-viec {
+  order: 3;
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 1;
+}
+
 .bx-kho-trangthai {
   font-weight: 700;
   font-size: 11px;
@@ -1145,11 +1163,119 @@ select.bx-o option {
 .bx-mo-giong {
   margin: -4px 0 10px;
 }
+.bx-giong-nguon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 11px;
+}
+.bx-nhan-ket-noi {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(243, 211, 122, 0.55);
+  color: #f3d37a;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.bx-nhan-ket-noi[data-mien-phi='false'] {
+  border-color: rgba(140, 220, 160, 0.6);
+  color: #9be3b0;
+}
+.bx-nguon-chu {
+  margin-left: 4px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+.bx-giong-doi {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0.85;
+}
 
 .bx-the-loi {
   color: #ffb3a6;
   border-left: 2px solid #ff7a66;
   padding-left: 6px;
+}
+
+/* Ô "Ảnh theo truyện": mỗi mốc một thẻ, ảnh nhỏ bên trái, lời tả bên phải. */
+.bx-moc-tt {
+  flex: 1;
+  margin-left: 8px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+.bx-moc[data-tt='lech'] .bx-moc-tt {
+  color: #ffb3a6;
+  opacity: 1;
+}
+.bx-moc[data-tt='da-ve'] .bx-moc-tt {
+  color: #9ee3a8;
+}
+.bx-moc-than {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+.bx-moc-anh {
+  width: 96px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.bx-moc-anh[data-lech='true'] {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+.bx-moc-trong {
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  opacity: 0.6;
+}
+.bx-moc-chu {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+.bx-moc-chu .bx-o {
+  width: 100%;
+}
+.bx-ho-so {
+  margin: 4px 0 6px;
+  font-size: 12px;
+}
+/* Các ô trong một mục gập (vd "Nâng cao" của AI kể truyện): giãn như ô ngoài. */
+.bx-nang-cao {
+  display: grid;
+  gap: 14px;
+  margin: 10px 0 4px;
+}
+.bx-ho-so summary {
+  cursor: pointer;
+  opacity: 0.85;
+}
+.bx-ho-so p {
+  margin: 4px 0;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+.bx-moc-loi {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  opacity: 0.8;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Khung thử đồ 3D trên đầu tủ đồ (XemThuDo) */
@@ -1362,4 +1488,455 @@ select.bx-o option {
   border-color: #e74c3c;
   color: #fff;
   opacity: 1;
+}
+/* Nút tải file ngay trên thẻ (ô `media` trong `quick`). */
+.bx-q-tai {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.bx-q-tai-ten {
+  max-width: 120px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* Ô "AI tạo ảnh" (`nguon-anh`): công tắc hai phía muse.ai ↔ API, kèm dòng
+   "Đang dùng" nói rõ AI nào đang vẽ. */
+.bx-nguon-anh {
+  display: grid;
+  gap: 6px;
+}
+.bx-hai-phia {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.bx-hai-phia > button {
+  display: grid;
+  gap: 1px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.bx-hai-phia > button small {
+  font-weight: 400;
+  font-size: 11px;
+}
+.bx-hai-phia > button[aria-checked='true'] {
+  opacity: 1;
+  background: linear-gradient(180deg, #e9c77e, #b6873a);
+  color: #2a1d08;
+}
+.bx-hai-phia > button:disabled {
+  cursor: default;
+}
+.bx-dang-dung b {
+  color: #e9c77e;
+}
+
+/* Ba phía: ô "AI viết truyện & dẫn chuyện" (API / Codex / Claude Code). */
+.bx-hai-phia.bx-ba-phia {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* Hộp hướng dẫn đăng nhập Codex / Claude Code. */
+.bx-can-lam {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.bx-can-lam .bx-media-loi {
+  flex: 1;
+}
+.bx-huong-dan ol {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.bx-lenh {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.bx-lenh code {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 11.5px;
+  word-break: break-all;
+  color: #e9c77e;
+}
+
+
+/* Khối "MC kể chuyện": nhãn nhỏ cho từng phần. */
+.bx-mc-nhan {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  margin-top: 4px;
+}
+
+/* Thẻ "Kết nối AI", "Giọng đọc" thu gọn: nút nhỏ trên đầu thẻ, danh sách một
+   hàng chấm xanh / đỏ (chi tiết khi rê chuột). */
+.bx-kho-mo-nho {
+  flex: none;
+  pointer-events: auto;
+  padding: 3px 10px;
+  border-radius: 7px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: inherit;
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.bx-kho-mo-nho:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.bx-gon-ds {
+  position: relative;
+  z-index: 1;
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  cursor: pointer;
+}
+.bx-gon-ds li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bx-gon-ds li::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e06a5c;
+}
+.bx-gon-ds li[data-co='true']::before {
+  background: #9ee3a8;
+}
+
+/* "Ai đọc gì" (`vai-giong`): mỗi việc một hàng nút giọng, bấm để giao / bỏ. */
+.bx-vai-giong {
+  display: grid;
+  gap: 16px;
+}
+.bx-chon-nhieu {
+  position: relative;
+}
+.bx-chon-the {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  min-height: 36px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  cursor: text;
+}
+.bx-the-giong {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 9px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #e9c77e, #b6873a);
+  color: #2a1d08;
+  font-size: 12px;
+  font-weight: 600;
+  max-width: 100%;
+}
+.bx-the-giong button {
+  border: 0;
+  background: rgba(0, 0, 0, 0.15);
+  color: inherit;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+.bx-chon-tim {
+  flex: 1;
+  min-width: 90px;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  padding: 3px 2px;
+}
+.bx-chon-ds {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 220px;
+  overflow: auto;
+  padding: 4px;
+  border-radius: 10px;
+  background: #1d1812;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+}
+.bx-chon-ds > button {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.bx-chon-ds > button:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+.bx-chon-ds > button[aria-selected='true'] {
+  color: #f0d29a;
+  font-weight: 600;
+}
+.bx-chon-ds small {
+  font-size: 11px;
+  opacity: 0.55;
+}
+.bx-chon-dau {
+  color: #e9c77e;
+}
+.bx-canh-bao {
+  color: #f0b46a;
+}
+
+/* Hộp đăng nhập Claude / Codex: nút mở cửa sổ đăng nhập đứng đầu. */
+.bx-mo-dang-nhap {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.bx-mo-dang-nhap .bx-xong {
+  justify-self: start;
+}
+
+.bx-hang-nut {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.bx-hang-nut .bx-o {
+  flex: 1;
+  min-width: 0;
+}
+/* Lời công cụ đăng nhập in ra — như một khung dòng lệnh nhỏ. */
+.bx-cli {
+  margin: 0;
+  max-height: 200px;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #0b0906;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cfe8c6;
+  font: 11px/1.45 ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Trạng thái kết nối Codex / Claude: MỘT nút, nhãn chính là trạng thái —
+   bấm vào mở hộp đăng nhập. Màu theo tình trạng. */
+.bx-trang-thai {
+  padding: 3px 8px;
+  border-radius: 0;
+  border: 1px solid currentColor;
+  background: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  opacity: 0.75;
+  color: inherit;
+}
+.bx-trang-thai:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.bx-trang-thai[data-tot='1'] {
+  color: #8fd18a;
+  opacity: 1;
+}
+.bx-trang-thai[data-tot='0'] {
+  color: #f0b46a;
+  opacity: 1;
+}
+.bx-can-lam .bx-trang-thai {
+  margin-left: auto;
+}
+
+/* Hộp "Lịch sử CLI": mỗi lượt một dòng gập, mở ra xem gửi / nhận. */
+.bx-lich-su-cli {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.bx-muc-cli {
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+}
+.bx-muc-cli[data-loi='1'] {
+  border-color: rgba(240, 120, 90, 0.5);
+}
+.bx-muc-cli > summary {
+  cursor: pointer;
+  line-height: 1.5;
+}
+.bx-muc-cli > summary small {
+  display: block;
+  opacity: 0.6;
+}
+.bx-muc-cli[open] {
+  display: grid;
+  gap: 6px;
+}
+
+/* Bảng truyện đã kể: mỗi hàng một truyện, nút Xem mở modal. */
+.bx-bang-truyen {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.bx-bang-truyen td {
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  vertical-align: middle;
+}
+.bx-bang-truyen td:last-child {
+  width: 1%;
+  text-align: right;
+}
+.bx-bang-truyen small {
+  display: block;
+  font-size: 11px;
+  opacity: 0.6;
+}
+.bx-xem-truyen figure {
+  margin: 0 0 8px;
+}
+.bx-xem-truyen img {
+  width: 100%;
+  border-radius: 8px;
+  display: block;
+}
+.bx-xem-truyen figcaption {
+  font-size: 11px;
+  opacity: 0.6;
+  padding-top: 2px;
+}
+.bx-xem-truyen p {
+  margin: 0 0 6px;
+  line-height: 1.5;
+  font-size: 12.5px;
+}
+
+/* ---- Thẻ "Link phát sóng" ----
+   Một hàng = nhãn ngắn + ô link + nút. Ô link co giãn, nút không: link dài tới
+   đâu thì nút vẫn ở đúng chỗ, mắt quen tay bấm. */
+.bx-link-hang {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.bx-link-hang label {
+  flex: 0 0 44px;
+  font-size: 11.5px;
+  color: rgba(244, 239, 230, 0.72);
+}
+/* `flex-basis: 0` + `width: auto` để thắng `.bx-o { width: 100% }`: để nguyên
+   100% thì ô link chiếm trọn hàng và cái nút bị đẩy tràn ra ngoài mép bảng,
+   nhìn như thẻ không có nút. */
+.bx-o-link {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  padding: 4px 7px;
+  font-size: 11.5px;
+}
+/* Nút riêng, KHÔNG dùng `.bx-nut`: `.bx-nut` là nút nổi đóng/mở bảng, nó
+   `position: fixed` ở góc phải trên — mượn lại thì hai nút này bay lên nằm
+   chồng đúng chỗ nút đóng, còn hàng link thì trống trơn. */
+.bx-link-nut {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 7px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: inherit;
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.bx-link-nut:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+.bx-link-nut:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.bx-link-bao {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: rgba(244, 239, 230, 0.78);
 }

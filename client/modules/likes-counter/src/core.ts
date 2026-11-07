@@ -5,6 +5,8 @@ export interface State {
   config: Config;
   /** Mốc phần trăm đã báo. Giữ lại để không báo đi báo lại cùng một mốc. */
   mocDaBao: number;
+  /** Đã nhìn thấy tổng tim lần nào chưa. Lần đầu chỉ ghi mốc làm nền, không báo. */
+  daNhin: boolean;
 }
 
 /** Mốc tròn gần nhất đã đạt, ví dụ 62% với bước 25 là 50. */
@@ -15,7 +17,7 @@ function moc(likes: number, c: Config): number {
 
 export const core: ModuleCore<Config, State> = {
   init(config) {
-    return { config, mocDaBao: 0 };
+    return { config, mocDaBao: 0, daNhin: false };
   },
 
   hooks: {
@@ -26,6 +28,14 @@ export const core: ModuleCore<Config, State> = {
         // Đọc tổng tim từ phiên thay vì tự cộng dồn: TikTok gửi tổng của cả phiên,
         // tin số của họ chắc hơn tin phép cộng của mình khi có tin bị mất.
         const m = moc(ctx.session.totals.likes, state.config);
+        if (!state.daNhin) {
+          // Lần đầu thấy tổng tim: nối vào giữa buổi live (tổng TikTok đã có sẵn
+          // hàng chục nghìn), hay OBS tải lại trang. Mốc đã qua TRƯỚC lúc đó
+          // không phải chuyện vừa xảy ra — ghi làm nền, không đọc.
+          state.daNhin = true;
+          state.mocDaBao = Math.max(state.mocDaBao, m);
+          return [];
+        }
         if (m <= state.mocDaBao) return [];
         state.mocDaBao = m;
         return [

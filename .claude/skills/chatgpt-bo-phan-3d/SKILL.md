@@ -119,6 +119,37 @@ Ghi chú về độ đa dạng: với lời nhắc "clearly but naturally", hế
 tròn còn gần nhau khi nhìn nghiêng. Muốn khác hơn thì tả đặc điểm mạnh hơn trong cột PROFILE (vd. cao: "bridge clearly
 higher and projecting further than average"), giữ nguyên các câu khoá khung.
 
+## Mày (`brows`) — ChatGPT vẽ, Blender CHIẾU lên da (không khớp thanh trượt)
+
+Thẻ mày MPFB (12 mẫu) thô, lấn át dáng mắt khi ghép lên tượng → mày mới = nét ChatGPT vẽ, chiếu thẳng lên một lớp da mỏng
+(bản sao mặt da vùng mày, nổi 0,15 mm, UV = khung khuôn chính diện, bên −X soi gương). Nhìn chính diện trùng ảnh ChatGPT do
+dựng như vậy; góc khác mày bám da. Tự thử (mày MPFB làm ảnh mẫu → tách → chiếu → chụp lại) trùng ở 0° và 45°.
+
+- Khuôn `assets/parts/brows/_khuon/` (`bo_phan khuon … --loai brow --goc 0,45,90 --tung --sac`): da trần vùng mày + mắt +X.
+- Một lệnh: **`scripts/phong/san-bar/may-buoc.sh <tên> dung [--nam]`** (ảnh ChatGPT ở `~/Downloads/<tên>-0.png`): tách
+  (`bo_phan may-anh`: chỗ ảnh tối hơn khuôn, trên đỉnh tròng − 3,5 % khung, chỉ giữ mảng nét lớn), chụp khuôn có mày, cả
+  đầu `--khong-mi`, xuất GLB. Dùng: `--may-anh assets/parts/brows/<tên>` (thay `--may`).
+- Mi tạm bỏ (`--khong-mi`) khi duyệt mày — mi MPFB dày che dáng mắt.
+
+**P mày** (đính kèm `brows\_khuon\0.png`, mỗi kiểu một cuộc trò chuyện mới; thay <NỮ/NAM> và <MÔ TẢ>)
+> Image edit. Attached: a cut-out patch of a <woman's | man's> face around ONE eye and its brow ridge, straight front view,
+> orthographic, transparent background; it has NO eyebrow yet (the inner side, toward the nose, is on the left). Draw a
+> natural, realistic <female | male> eyebrow on the brow ridge above the eye: <MÔ TẢ>; made of fine individual hair strokes,
+> natural dark brown. Keep EVERYTHING else exactly the same: the canvas size and framing (no zoom, no shift, no crop), the
+> skin patch outline, the eye, the blue iris, lighting, skin colour and texture, transparent background (PNG alpha, not
+> black). Add only the eyebrow. No eyelashes, no makeup.
+
+| Kiểu | Giới | <MÔ TẢ> |
+|---|---|---|
+| `la-lieu` | nữ | a soft WILLOW-LEAF brow, medium-thin, starting just above the inner corner of the eye, rising gently to a soft low arch about two-thirds along, then tapering to a fine tail a little beyond the outer corner; fuller at the head, thinner at the tail |
+| `ngang-han` | nữ | a STRAIGHT Korean-style brow: soft, fairly full and almost flat, very slight lift at the tail, the same thickness most of the way, soft feathered head |
+| `cong-cao` | nữ | a HIGH ARCHED brow: clean defined shape, rising clearly to a high peak above the outer third of the iris, then a sharp tapered tail |
+| `manh` | nữ | a THIN groomed brow: slim even line with a gentle curve, light density |
+| `ngang-dam` | nam | a THICK STRAIGHT masculine brow: dense, wide, low and nearly flat, square-ish head, short blunt tail |
+| `kiem` | nam | a SWORD brow: thick at the head, rising in a straight slanted line toward the temple, ending in a sharp point |
+| `ram` | nam | a BUSHY natural brow: full, slightly untidy hairs pointing in natural directions, wide, soft edges |
+| `goc-canh` | nam | an ANGULAR masculine brow: medium-thick, straight then a low angled break above the outer third, firm tail |
+
 ## Mắt (`eyeshape`) — khác mũi ở đâu
 
 Dáng mắt nằm ở **khe mở mí** (viền mí trên + mí dưới + hai khoé), không ở mép bóng vùng như mũi. Lệnh: `bo_phan khop-mat`

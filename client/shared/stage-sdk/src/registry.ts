@@ -28,11 +28,15 @@ import { Stage as TopGiversStage } from '@live/mod-top-givers/stage';
 import { moduleTicker } from '@live/mod-ticker';
 import { Stage as TickerStage } from '@live/mod-ticker/stage';
 import { moduleDanceFloor } from '@live/mod-dance-floor';
+import { moduleHostVideo } from '@live/mod-host-video';
+import { Stage as HostVideoStage } from '@live/mod-host-video/stage';
 import { Stage as DanceFloorStage } from '@live/mod-dance-floor/stage';
 import { moduleStory, trongSuot as storyTrongSuot } from '@live/mod-story';
 import { Stage as StoryStage } from '@live/mod-story/stage';
 import { moduleVuCong3d } from '@live/mod-vu-cong-3d';
 import { Stage as VuCong3dStage } from '@live/mod-vu-cong-3d/stage';
+import { moduleDoChu } from '@live/mod-do-chu';
+import { Stage as DoChuStage } from '@live/mod-do-chu/stage';
 
 import { DANH_SACH_MODULE } from './danh-sach';
 import type { StageState } from './state';
@@ -52,6 +56,8 @@ export interface CtxChung {
   now: number;
   rand: () => number;
   session: SessionView;
+  /** Hàng đọc đang bận — xem `Ctx.dangNoi`. */
+  dangNoi?: boolean;
 }
 
 /** Một thể đang sống của module: giữ state bên trong, lộ ra đúng bốn cửa.
@@ -128,7 +134,10 @@ const PHAN_VE = new Map<string, PhanVe>([
   phan(moduleLikesCounter, { slot: 'target', Part: LikesCounterStage }),
   phan(moduleTicker, { slot: 'ticker', Part: TickerStage }),
   phan(moduleDanceFloor, { slot: 'floor', Part: DanceFloorStage }),
+  phan(moduleHostVideo, { slot: 'corner-right', Part: HostVideoStage }),
   phan(moduleVuCong3d, { slot: 'stage-3d', Part: VuCong3dStage }),
+  // Lớp học tự vẽ cả bảng đen: xin thiết kế cất màn chờ của nó đi.
+  phan(moduleDoChu, { slot: 'full', Part: DoChuStage, trongSuot: () => true }),
 ]);
 
 function dangKy(mod: LiveModule, part: PhanVe | undefined): DangKy {

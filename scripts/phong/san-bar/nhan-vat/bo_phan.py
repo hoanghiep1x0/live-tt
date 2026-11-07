@@ -45,6 +45,8 @@ def make_head(parts=()):
     bpy.ops.preferences.addon_enable(module="bl_ext.user_default.mpfb")
     from bl_ext.user_default.mpfb.services.humanservice import HumanService
     prof = profile.load(None); dinh = {}
+    if "--nam" in argv:                                               # đầu chuẩn nam (05 §6: gender 1, muscle 0.6) — bộ mắt nam
+        prof["macro"].update({"gender": 1.0, "muscle": 0.6})
     for p in parts:
         d = json.load(open(p, encoding="utf-8"))
         prof["targets"].update(d["targets"])
@@ -54,11 +56,111 @@ def make_head(parts=()):
     if dinh:
         ap_dinh(body, dinh)
     profile.add_skin(body, prof)
-    for kind, rel in (("Eyes", "eyes/high-poly/high-poly.mhclo"), ("Eyebrows", "eyebrows/eyebrow001/eyebrow001.mhclo"),
-                      ("Eyelashes", "eyelashes/eyelashes02/eyelashes02.mhclo")):
+    may, mi = opt("--may", "eyebrow001"), opt("--mi", "eyelashes02")      # mẫu mày, mi MPFB (bộ mắt: thử từng mẫu)
+    ds = [("Eyes", "eyes/high-poly/high-poly.mhclo"), ("Eyebrows", f"eyebrows/{may}/{may}.mhclo")]
+    if "--khong-mi" not in argv:                                      # --khong-mi: bỏ mi (xem riêng mày + dáng mắt)
+        ds.append(("Eyelashes", f"eyelashes/{mi}/{mi}.mhclo"))
+    for kind, rel in ds:
         HumanService.add_mhclo_asset(os.path.join(profile.ASSETS, *rel.split("/")), body, asset_type=kind,
                                      subdiv_levels=0, material_type="GAMEENGINE")
+    if "--may-anh" in argv:                                           # mày vẽ (ChatGPT) chiếu lên da thay cho thẻ mày MPFB
+        may_anh_lop(body, opt("--may-anh", None))
     return body
+
+
+def _lum(A):
+    return 0.3 * A[..., 0] + 0.59 * A[..., 1] + 0.11 * A[..., 2]
+
+
+def may_anh_tach(ra, anh, kjson, R=1024):
+    """Tách nét mày từ ảnh ChatGPT vẽ mày lên khuôn mày (da trần): mày = chỗ ảnh TỐI hơn khuôn, phía trên mắt.
+    Ghi <ra>/may.png (RGBA khung khuôn chính diện, alpha = độ đậm nét) + may.json."""
+    kd = os.path.dirname(kjson)
+    thu = lambda A: A[(np.arange(R) * A.shape[0] / R).astype(int)][:, (np.arange(R) * A.shape[1] / R).astype(int)]
+    A, K = thu(load_rgba(anh)), thu(load_rgba(os.path.join(kd, "0.png")))
+    d = _lum(K) - _lum(A)
+    cau = (K[..., 3] > 0.5) & ((K[..., 2] - K[..., 0]) > 0.15)        # tròng xanh lam của khuôn (da trán sáng giống lòng trắng)
+    ys = np.where(cau.sum(1) > 3)[0]; tren = int(ys.min()) if len(ys) else R // 2  # đỉnh tròng ≈ mép mí trên
+    m = np.clip((d - 0.04) / 0.14, 0, 1) * (K[..., 3] > 0.5)
+    m[max(0, tren - int(0.035 * R)):] = 0                             # bỏ mắt, mi, nếp mí (dưới đỉnh khe − 3,5 % khung)
+    # chỉ giữ mảng nét lớn (mày); bóng nếp mí / hốc mắt lẻ tẻ bị bỏ. Mảng nhỏ ≥ 15 % mảng lớn nhất vẫn giữ (mày đứt đoạn)
+    sub = 4; Ms = m[::sub, ::sub] > 0.15; H, W = Ms.shape; lab = np.zeros((H, W), int); cnt = [0]
+    for y0, x0 in zip(*np.where(Ms)):
+        if lab[y0, x0]:
+            continue
+        cnt.append(0); n_ = len(cnt) - 1; st = [(y0, x0)]; lab[y0, x0] = n_
+        while st:
+            y, x = st.pop(); cnt[n_] += 1
+            for yy in range(y - 2, y + 3):
+                for xx in range(x - 2, x + 3):
+                    if 0 <= yy < H and 0 <= xx < W and Ms[yy, xx] and not lab[yy, xx]:
+                        lab[yy, xx] = n_; st.append((yy, xx))
+    if len(cnt) > 1:
+        lon = max(cnt[1:]); giu_ = np.isin(lab, [i for i in range(1, len(cnt)) if cnt[i] >= 0.15 * lon])
+        giu_ = np.kron(giu_, np.ones((sub, sub), bool))[:R, :R]
+        for _ in range(3):                                            # nở 3 px quanh mảng giữ (mép sợi mảnh)
+            giu_ = giu_ | np.roll(giu_, 1, 0) | np.roll(giu_, -1, 0) | np.roll(giu_, 1, 1) | np.roll(giu_, -1, 1)
+        m = m * giu_
+    out = np.zeros((R, R, 4), np.float32); out[..., :3] = A[..., :3]; out[..., 3] = m
+    os.makedirs(ra, exist_ok=True)
+    save_rgba(out, os.path.join(ra, "may.png"))
+    ys, xs = np.where(m > 0.3)
+    json.dump({"loai": "may", "kieu": "anh", "khuon": kjson, "R": R, "nguon": anh,
+               "khung_px": [int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())] if len(xs) else None},
+              open(os.path.join(ra, "may.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+    print("MAY_TACH", ra, "điểm ảnh", int((m > 0.3).sum()))
+
+
+def may_anh_lop(body, d):
+    """Lớp mày: bản sao các mặt da vùng mày (cả hai bên), nổi 0,15 mm theo pháp tuyến, UV = chiếu thẳng khung khuôn chính diện
+    (bên −X lấy |x| → ảnh soi gương) → nhìn chính diện trùng ảnh ChatGPT. Bỏ thẻ mày MPFB."""
+    import bmesh
+    info = json.load(open(os.path.join(d, "may.json"), encoding="utf-8")); k = json.load(open(info["khuon"]))
+    R = info["R"]; M = load_rgba(os.path.join(d, "may.png"))[..., 3]
+    for o in list(bpy.data.objects):
+        if o.name.startswith("Body.") and "eyebrow" in o.name:
+            bpy.data.objects.remove(o, do_unlink=True)
+    dg = bpy.context.evaluated_depsgraph_get()
+    me = bpy.data.meshes.new_from_object(body.evaluated_get(dg)); me.transform(body.matrix_world)
+    bm = bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table(); bm.normal_update()
+    Md = M.copy()
+    for _ in range(6):                                                # nở mặt nạ ~6 px: giữ đủ mặt quanh nét
+        Md = np.maximum.reduce([Md, np.roll(Md, 1, 0), np.roll(Md, -1, 0), np.roll(Md, 1, 1), np.roll(Md, -1, 1)])
+    def px(P):
+        Q = np.array(P, float); Q[..., 0] = np.abs(Q[..., 0]); return khuon_px(Q, k, "0", R)
+    giu = []
+    for f in bm.faces:
+        if f.normal.y > -0.2:                                         # chỉ mặt quay ra trước
+            continue
+        X = px([v.co[:] for v in f.verts])
+        if ((X < 0) | (X >= R)).any():
+            continue
+        if Md[X[:, 1].astype(int), X[:, 0].astype(int)].max() > 0.02:
+            giu.append(f)
+    s = set(giu)
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f not in s], context="FACES")
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    bm.normal_update()
+    for v in bm.verts:
+        v.co += v.normal * 0.00015
+    uv = bm.loops.layers.uv.new("may")
+    for f in bm.faces:
+        for l in f.loops:
+            x, y = px(l.vert.co[:])
+            l[uv].uv = (x / R, 1 - y / R)
+    bm.to_mesh(me); bm.free()
+    while len(me.uv_layers) > 1:
+        me.uv_layers.remove(me.uv_layers[0])
+    me.materials.clear()
+    mt = bpy.data.materials.new("may_anh"); mt.use_nodes = True; nt = mt.node_tree
+    p = nt.nodes["Principled BSDF"]; p.inputs["Roughness"].default_value = 0.8
+    tx = nt.nodes.new("ShaderNodeTexImage"); tx.image = bpy.data.images.load(os.path.abspath(os.path.join(d, "may.png")))
+    nt.links.new(tx.outputs["Color"], p.inputs["Base Color"]); nt.links.new(tx.outputs["Alpha"], p.inputs["Alpha"])
+    if hasattr(mt, "surface_render_method"):
+        mt.surface_render_method = "BLENDED"
+    me.materials.append(mt)
+    ob = bpy.data.objects.new("Body.eyebrow_anh", me); bpy.context.scene.collection.objects.link(ob)
+    print("MAY_LOP", len(giu), "mặt")
 
 
 def ap_dinh(body, dinh):
@@ -569,8 +671,27 @@ def eye_alpha(body, chuan, vung=0.2):
     V = nhan_cau(body)[0]; c = V.mean(0)
     dz = P0[:, 2] - c[2]; e = np.hypot((P0[:, 0] - c[0]) / 0.025, dz / np.where(dz > 0, 0.017, 0.015))
     alpha *= 1 - ramp(e, 0.85, 1.0)
-    # mặt trong hốc mắt (sau nhãn cầu): thanh mắt kéo theo nhưng không phải da nhìn thấy — góc 45/90 lộ ra thành mảng đỏ (da
-    # mỏng bị đèn xuyên). Bỏ đỉnh KHÔNG nhìn thấy từ hướng nào phía trước (tia tới camera vướng da hoặc nhãn cầu)
+    return P0, names, D, _tron(body, _bo_mat_trong(body, P0, alpha))
+
+
+def brow_alpha(body, chuan=None):
+    """Vùng mày + mắt +X (khuôn để ChatGPT VẼ MÀY lên da trần): elip quanh giữa tâm nhãn cầu và mày MPFB mặc định —
+    ngang 34 mm, trên 24 mm (đủ cho mày cong cao), dưới 14 mm (lấy cả mắt để ChatGPT đặt mày đúng chỗ)."""
+    P0 = body_coords(body)
+    V = nhan_cau(body)[0]; ce = V.mean(0)
+    ob = next(o for o in bpy.data.objects if o.name.startswith("Body.") and "eyebrow" in o.name)
+    dg = bpy.context.evaluated_depsgraph_get(); m = ob.evaluated_get(dg).to_mesh()
+    B = np.array([ob.matrix_world @ v.co for v in m.vertices]); ob.evaluated_get(dg).to_mesh_clear()
+    B = B[B[:, 0] > 0]; c = (ce + B.mean(0)) / 2; c[0] = (ce[0] + B[:, 0].mean()) / 2
+    ramp = lambda x, a, b: np.clip((x - a) / (b - a), 0, 1)
+    dz = P0[:, 2] - c[2]; e = np.hypot((P0[:, 0] - c[0]) / 0.034, dz / np.where(dz > 0, 0.024, 0.014 + (c[2] - ce[2])))
+    alpha = (1 - ramp(e, 0.85, 1.0)) * (P0[:, 0] > 0) * (P0[:, 1] < c[1] + 0.02); alpha[13380:] = 0
+    return P0, [], None, _tron(body, _bo_mat_trong(body, P0, alpha))
+
+
+def _bo_mat_trong(body, P0, alpha):
+    """Mặt trong hốc mắt (sau nhãn cầu): thanh mắt kéo theo nhưng không phải da nhìn thấy — góc 45/90 lộ ra thành mảng đỏ
+    (da mỏng bị đèn xuyên). Bỏ đỉnh KHÔNG nhìn thấy từ hướng nào phía trước (tia tới camera vướng da hoặc nhãn cầu)."""
     from mathutils.bvhtree import BVHTree
     dg = bpy.context.evaluated_depsgraph_get(); Vs, Ps = [], []
     for o in (body, next(o for o in bpy.data.objects if o.name.startswith("Body.") and "high-poly" in o.name)):
@@ -589,7 +710,7 @@ def eye_alpha(body, chuan, vung=0.2):
         trong[v] = all(bvh.ray_cast(p + h * 2e-4, h, 0.5)[0] is not None for h in huong)
     alpha[trong] = 0
     print("HOC_MAT bỏ", int(trong.sum()), "đỉnh mặt trong")
-    return P0, names, D, _tron(body, alpha)
+    return alpha
 
 
 def nhan_cau(body, k=None, goc=("0", "45", "90")):
@@ -956,7 +1077,7 @@ def khuon(outdir, chuan, kjson, R, goc=KHUON_GOC, tung=False, sac=False, loai="n
     if kjson:                                                         # chụp lại theo đúng khuôn đã có (vùng, tâm, cỡ)
         k = json.load(open(kjson))
     else:                                                             # đầu chuẩn: tính vùng, tâm, cỡ khung rồi ghi lại
-        P0, _, _, alpha = (eye_alpha if loai == "eyes" else nose_alpha)(body, chuan)
+        P0, _, _, alpha = {"eyes": eye_alpha, "brow": brow_alpha}.get(loai, nose_alpha)(body, chuan)
         vung = [int(v) for v in np.where(alpha > 0)[0]]               # cả phần mờ (để vẽ); bóng khớp = alpha ≥ 0,5
         Pv = P0[alpha > 0.1]; c = (Pv.min(0) + Pv.max(0)) / 2
         ext = max(float(np.ptp((Pv - c) @ ax)) for g in goc for ax in khuon_truc(g)[1:])
@@ -995,7 +1116,9 @@ def khuon(outdir, chuan, kjson, R, goc=KHUON_GOC, tung=False, sac=False, loai="n
         nt.links.new(src, mix.inputs[2]); nt.links.new(mix.outputs[0], out.inputs["Surface"])
         print("ALPHA_MAT", mat.name)
     bpy.context.scene.collection.objects.link(ob); giu = {ob}
-    if loai == "eyes":                                                # + nhãn cầu bên +X (mi, mày: thư viện riêng — ẩn)
+    if "--hien-may" in argv:                                          # khuôn có mày (thử / so ảnh ChatGPT với mày đã dựng)
+        giu |= {o for o in bpy.data.objects if o.name.startswith("Body.") and "eyebrow" in o.name}
+    if loai in ("eyes", "brow"):                                      # + nhãn cầu bên +X (mi, mày: thư viện riêng — ẩn)
         eo = next(o for o in bpy.data.objects if o.name.startswith("Body.") and "high-poly" in o.name)
         me2 = bpy.data.meshes.new_from_object(eo.evaluated_get(dg)); bm = bmesh.new(); bm.from_mesh(me2)
         Mw = eo.matrix_world; giu_mat = nhan_cau(body, k)[3]; bm.faces.ensure_lookup_table()
@@ -1344,10 +1467,89 @@ def khop_khuon(pdir, tam_path, kjson, lam, vong, R, chi=KHUON_GOC, tu_part=None,
     print("KHOP", json.dumps(res, ensure_ascii=False))
 
 
+def xuat_dau(ra, cao=0.30):
+    """Xuất GLB phần đầu (thân cắt dưới đỉnh đầu `cao` m) + mắt, mày, mi đã khớp — để xem 3D trong trình duyệt."""
+    import bmesh
+    dg = bpy.context.evaluated_depsgraph_get(); body = bpy.data.objects["Body"]
+    top, _ = head_points(body); moi = []
+    for o in [o for o in bpy.data.objects if o.type == "MESH"]:
+        me = bpy.data.meshes.new_from_object(o.evaluated_get(dg)); me.transform(o.matrix_world)
+        if o is body:
+            bm = bmesh.new(); bm.from_mesh(me)
+            bmesh.ops.delete(bm, geom=[f for f in bm.faces if max(v.co.z for v in f.verts) < top - cao], context="FACES")
+            bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+            bm.to_mesh(me); bm.free()
+        if "high-poly" in o.name:                                     # mỗi mắt 2 lớp: nhãn cầu (có tròng) + vỏ giác mạc to hơn
+            bm = bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table()   # một chút → glTF đặc thì vỏ che kín tròng: bỏ vỏ
+            seen, comps = set(), []
+            for f in bm.faces:
+                if f.index in seen:
+                    continue
+                st, c = [f], []; seen.add(f.index)
+                while st:
+                    g = st.pop(); c.append(g)
+                    for e in g.edges:
+                        for h in e.link_faces:
+                            if h.index not in seen:
+                                seen.add(h.index); st.append(h)
+                comps.append(c)
+            bo = []
+            for ben in (1, -1):
+                lon = []
+                for c in comps:
+                    V = np.array([v.co[:] for f in c for v in f.verts]); ctr = V.mean(0)
+                    if len(c) > 100 and ctr[0] * ben > 0:
+                        lon.append((float(np.linalg.norm(V - ctr, axis=1).max()), c))
+                if len(lon) >= 2:
+                    bo += max(lon, key=lambda t: t[0])[1]
+            # giữ vỏ giác mạc làm lớp trong suốt BÓNG (bỏ hẳn thì mắt mất ánh ướt, trông như mắt búp bê chết)
+            gm = bpy.data.materials.new("giac_mac"); gm.use_nodes = True
+            p = gm.node_tree.nodes["Principled BSDF"]
+            p.inputs["Base Color"].default_value = (1, 1, 1, 1); p.inputs["Alpha"].default_value = 0.06
+            p.inputs["Roughness"].default_value = 0.03
+            if hasattr(gm, "surface_render_method"):
+                gm.surface_render_method = "BLENDED"
+            me.materials.append(gm); ci = len(me.materials) - 1
+            for f in bo:
+                f.material_index = ci
+            bm.to_mesh(me); bm.free(); print("GIAC_MAC_TRONG", len(bo), "mặt")
+        n = bpy.data.objects.new(o.name + "_x", me); bpy.context.scene.collection.objects.link(n); moi.append(n)
+        # da, nhãn cầu: ĐẶC (ảnh màu có kênh alpha → glTF ghi BLEND → trình xem nhìn xuyên da thấy họng, tròng bị trộn đè);
+        # mi, mày: tấm ảnh có alpha → giữ trong suốt
+        dac = not any(t in o.name.lower() for t in ("eyebrow", "eyelash"))
+        for mat in me.materials:
+            if mat is None or not mat.use_nodes or mat.name.startswith("giac_mac"):
+                continue
+            for nd in mat.node_tree.nodes:
+                if nd.type == "BSDF_PRINCIPLED" and dac:
+                    a = nd.inputs["Alpha"]
+                    for l in list(a.links):
+                        mat.node_tree.links.remove(l)
+                    a.default_value = 1.0
+            if dac and hasattr(mat, "surface_render_method"):
+                mat.surface_render_method = "DITHERED"
+            if dac and hasattr(mat, "blend_method"):
+                try:
+                    mat.blend_method = "OPAQUE"
+                except TypeError:
+                    pass
+    for o in bpy.context.scene.objects:
+        o.select_set(o in moi)
+    os.makedirs(os.path.dirname(os.path.abspath(ra)), exist_ok=True)
+    bpy.ops.export_scene.gltf(filepath=ra, export_format="GLB", use_selection=True, export_apply=True,
+                              export_image_format="JPEG", export_image_quality=85)
+    print("XUAT", ra, os.path.getsize(ra) // 1024, "KB")
+
+
 if MODE == "chup":
     parts = [argv[i + 1] for i, x in enumerate(argv) if x == "--part"]
     make_head(parts)
     chup(argv[1], [int(x) for x in opt("--views", "0,90").split(",")], int(opt("--R", 1024)), int(opt("--samples", 64)))
+elif MODE == "may-anh":                                               # bo_phan may-anh <ra> <ảnh ChatGPT> [--khuon brows/_khuon/khuon.json]
+    may_anh_tach(argv[1], argv[2], opt("--khuon", "assets/parts/brows/_khuon/khuon.json"))
+elif MODE == "xuat":                                                  # bo_phan xuat <ra.glb> [--part …] [--may …] [--mi …] [--nam]
+    make_head([argv[i + 1] for i, x in enumerate(argv) if x == "--part"])
+    xuat_dau(argv[1])
 elif MODE == "khop":
     khop(argv[1], opt("--chuan", "assets/parts/_dau-chuan/v1"), opt("--loai", "mui"), float(opt("--lam", 30)),
          int(opt("--vong", 6)))

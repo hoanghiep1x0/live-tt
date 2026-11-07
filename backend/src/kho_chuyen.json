@@ -1,0 +1,140 @@
+{
+  "nguon": "Kho chuyện bản cũ (D:/Live/client/src/data/kho-chuyen.json): truyện cổ tích kể lại bằng lời riêng và chuyện MC tự sáng tác, chia sẵn từng đoạn.",
+  "chuyenTiep": "Chờ xíu xíu, chuyển tiếp chuyện khác hay hay nè cả nhà ơi 😊",
+  "truyen": [
+    {
+      "ma": "vu-sua",
+      "ten": "Sự tích cây vú sữa",
+      "loai": "cha mẹ",
+      "doan": [
+        "Ngày xưa, ở một làng quê nhỏ, có cậu bé mải chơi lắm. Một hôm bị mẹ mắng, cậu giận dỗi bỏ nhà đi thật xa…",
+        "Ở nhà, ngày nào mẹ cũng ra đầu ngõ ngóng con. Mưa nắng mẹ vẫn đứng chờ… rồi hoá thành một cái cây.",
+        "Cậu bé lang thang khắp nơi, đói thì xin ăn, rét thì nằm co ro. Một đêm lạnh, cậu chợt nhớ mẹ da diết…",
+        "Cậu bé vội chạy về. Cổng vẫn đó, mái nhà vẫn đó… nhưng nhà trống trơn. \"Mẹ ơi! Mẹ ở đâu?\"",
+        "Không ai đáp. Chỉ có một cái cây lạ đứng đầu ngõ. Cậu ôm lấy thân cây, khóc nức nở: \"Mẹ ơi, con về rồi…\"",
+        "Nước mắt cậu rơi xuống gốc cây. Kỳ lạ thay, cây khẽ rung, rồi trổ hoa trắng muốt, kết thành quả tròn xanh…",
+        "Một quả chín rơi vào tay cậu. Cậu cắn thử: dòng sữa trắng ngọt lịm, thơm như sữa mẹ ngày nào.",
+        "Lá cây một mặt xanh, một mặt đỏ hoe như mắt mẹ khóc chờ con. Người làng gọi đó là cây vú sữa.",
+        "Ai đang ở xa nhà, tối nay nhớ gọi cho mẹ một tiếng nha 🙏"
+      ],
+      "tuSangTac": false
+    },
+    {
+      "ma": "trau-cau",
+      "ten": "Sự tích trầu cau",
+      "loai": "tình cảm gia đình",
+      "doan": [
+        "Ngày xưa có hai anh em nhà họ Cao, giống nhau như hai giọt nước, thương nhau lắm.",
+        "Người anh lấy vợ. Người em vẫn ở chung nhà, ba người sống vui vẻ, đầm ấm.",
+        "Một tối, người em về trước. Chị dâu nhìn nhầm, tưởng chồng, liền ra đón. Người anh về sau, thấy vậy mà buồn.",
+        "Người em thấy anh lạnh nhạt, tủi thân, lặng lẽ bỏ nhà ra đi. Đi mãi tới bờ sông thì ngồi khóc…",
+        "Mưa gió, đói lạnh, người em ngồi mãi bên bờ sông, rồi hoá thành một tảng đá vôi trắng.",
+        "Người anh hối hận, đi tìm em. Tới tảng đá, anh tựa vào khóc, rồi hoá thành một cây cau thẳng tắp.",
+        "Người vợ đi tìm chồng, tới nơi thì kiệt sức, hoá thành dây trầu quấn quanh cây cau.",
+        "Về sau, người ta thử nhai trầu, cau với vôi: miệng đỏ thắm. Từ đó miếng trầu thành đầu câu chuyện.",
+        "Có hiểu lầm thì nói ra với nhau nha cả nhà, đừng để lặng im 🙏"
+      ],
+      "tuSangTac": false
+    },
+    {
+      "ma": "tre-tram-dot",
+      "ten": "Cây tre trăm đốt",
+      "loai": "thiện – ác",
+      "doan": [
+        "Ngày xưa có anh Khoai hiền lành, làm thuê cho nhà phú ông giàu mà keo kiệt.",
+        "Phú ông hứa: \"Làm chăm ba năm, ta gả con gái cho.\" Anh Khoai tin, làm quần quật không nghỉ.",
+        "Ba năm trôi qua, phú ông lật lọng: \"Muốn cưới thì vào rừng tìm cây tre trăm đốt về đây!\"",
+        "Anh Khoai vào rừng tìm mãi, cây nào cũng chỉ vài chục đốt. Anh ngồi khóc giữa rừng…",
+        "Một ông Bụt hiện ra: \"Chặt đủ trăm đốt tre, rồi đọc: Khắc nhập, khắc nhập!\"",
+        "Anh làm theo. Trăm đốt tre dính liền thành một cây dài thật dài! Anh mừng quá, vác về làng.",
+        "Phú ông chạm vào cây tre. Anh Khoai đọc \"khắc nhập!\" — phú ông dính chặt, không gỡ ra được 😄",
+        "Phú ông van xin, hứa gả con gái thật. Anh đọc \"khắc xuất!\", tre rời từng đốt, phú ông được thả ra.",
+        "Đám cưới vui cả làng. Cả nhà thấy phú ông có đáng bị dính không? 😄"
+      ],
+      "tuSangTac": false
+    },
+    {
+      "ma": "an-khe",
+      "ten": "Ăn khế trả vàng",
+      "loai": "nhân quả",
+      "doan": [
+        "Ngày xưa có hai anh em. Cha mẹ mất, người anh tham lam chiếm hết của cải.",
+        "Người em chỉ được một túp lều và một cây khế. Em chăm cây khế mỗi ngày, cây sai trĩu quả.",
+        "Một hôm có con chim lớn bay đến ăn khế. Người em buồn: \"Chim ơi, nhà tôi chỉ có cây khế này thôi…\"",
+        "Chim nói: \"Ăn một quả, trả cục vàng. May túi ba gang, mang theo mà đựng.\"",
+        "Người em may túi ba gang. Chim chở ra đảo xa đầy vàng bạc. Em lấy vừa đủ túi rồi về.",
+        "Người anh nghe chuyện, đòi đổi cả gia tài lấy túp lều và cây khế. Chim lại đến, anh may túi mười hai gang.",
+        "Ra đảo, anh nhét đầy túi, còn giắt thêm vàng khắp người. Chim bay nặng quá, chao đảo giữa biển…",
+        "Chim nghiêng cánh. Người anh cùng túi vàng rơi xuống biển sâu. Người em sống yên vui với cây khế.",
+        "Túi ba gang thôi là đủ, cả nhà nhỉ 😊"
+      ],
+      "tuSangTac": false
+    },
+    {
+      "ma": "so-dua",
+      "ten": "Sọ Dừa",
+      "loai": "cổ tích Việt Nam",
+      "doan": [
+        "Có bà mẹ nghèo sinh ra một cậu bé tròn lông lốc như cái sọ dừa, đặt tên là Sọ Dừa.",
+        "Sọ Dừa xin đi chăn bò cho nhà phú ông. Ai cũng cười, vậy mà đàn bò con nào cũng béo tròn.",
+        "Ba cô con gái phú ông thay nhau mang cơm. Hai cô chị hắt hủi, chỉ cô út đối xử tử tế với Sọ Dừa.",
+        "Một trưa, cô út thấy một chàng trai khôi ngô thổi sáo cho bò ăn cỏ… rồi chàng biến mất, chỉ còn Sọ Dừa.",
+        "Sọ Dừa xin cưới cô út. Phú ông thách cưới thật nặng, vậy mà Sọ Dừa mang đủ lễ vật đến.",
+        "Ngày cưới, Sọ Dừa hiện nguyên hình là chàng trai tuấn tú. Hai cô chị vừa tiếc vừa ghen.",
+        "Chàng thi đỗ trạng nguyên, đi sứ xa, dặn vợ giữ con dao, hòn đá lửa và hai quả trứng gà.",
+        "Hai cô chị đẩy cô út xuống biển. Nhờ những món chồng dặn, cô sống sót trên đảo, rồi được chồng tìm thấy.",
+        "Đừng nhìn vẻ ngoài mà đoán người, cả nhà ha 😊"
+      ],
+      "tuSangTac": false
+    },
+    {
+      "ma": "thach-sanh",
+      "ten": "Thạch Sanh",
+      "loai": "thiện – ác",
+      "doan": [
+        "Thạch Sanh mồ côi, sống dưới gốc đa, chỉ có cái rìu. Được thiên thần dạy võ nghệ.",
+        "Lý Thông bán rượu thấy Thạch Sanh khoẻ mạnh, bèn kết nghĩa anh em để lợi dụng.",
+        "Làng có chằn tinh bắt người. Lý Thông lừa em đi canh miếu thay mình, mong em bị ăn thịt.",
+        "Thạch Sanh giết chằn tinh, được cung tên vàng. Lý Thông cướp công, mang đầu chằn tinh đi lĩnh thưởng.",
+        "Đại bàng bắt công chúa. Thạch Sanh bắn trúng nó, xuống hang cứu nàng. Lý Thông lấp hang nhốt em lại.",
+        "Trong hang, Thạch Sanh cứu thái tử con vua Thuỷ Tề, được tặng cây đàn thần.",
+        "Bị vu oan vào ngục, Thạch Sanh gảy đàn. Tiếng đàn làm công chúa đang câm bỗng nói được, kể hết sự thật.",
+        "Mười tám nước chư hầu kéo quân tới. Thạch Sanh đãi cả vạn quân bằng niêu cơm bé xíu, ăn mãi không hết.",
+        "Niêu cơm ăn mãi không hết đó, ai mà có thì sướng ha cả nhà 😄"
+      ],
+      "tuSangTac": false
+    },
+    {
+      "ma": "ba-bat-chao",
+      "ten": "Bà nội và bát cháo hành",
+      "loai": "truyện cảm động",
+      "doan": [
+        "Bé Na về quê nghỉ hè, nhà bà nội cuối con dốc đầy hoa dại.",
+        "Đêm đầu, Na sốt cao, nằm co trong chăn. Ngoài trời mưa rả rích, điện chập chờn.",
+        "Bà nội lúi húi dưới bếp. Một lúc sau, mùi hành phi thơm lừng bay lên tận gác.",
+        "Bà bưng bát cháo hành nóng, thổi từng thìa: \"Ăn đi con, ra mồ hôi là khỏi.\"",
+        "Na ăn hết bát, mồ hôi lấm tấm. Bà ngồi quạt cho Na tới khi cô bé ngủ say.",
+        "Sáng ra, Na khoẻ hẳn. Trên bàn có thêm một bát cháo, kèm mẩu giấy: \"Bà ra đồng, trưa bà về.\"",
+        "Nhiều năm sau, Na đã lớn, đi làm xa. Mỗi lần ốm, Na lại nấu cháo hành, mà không sao thơm bằng của bà.",
+        "Có món nào của bà, của mẹ mà cả nhà nhớ mãi không? Kể mình nghe với 🥰"
+      ],
+      "tuSangTac": true
+    },
+    {
+      "ma": "cha-va-chiec-xe",
+      "ten": "Chiếc xe đạp cũ của cha",
+      "loai": "cha mẹ",
+      "doan": [
+        "Nhà Tuấn nghèo, cha chở Tuấn đi học bằng chiếc xe đạp cũ kêu cót két.",
+        "Bạn bè đi xe máy, Tuấn ngại, toàn bảo cha dừng ở đầu ngõ trường cho đỡ xấu hổ.",
+        "Có hôm trời mưa to, cha vẫn đạp xe chờ Tuấn tan học ở đầu ngõ, áo mưa rách một bên vai.",
+        "Tuấn chạy ra, thấy cha ướt sũng một bên người, còn yên sau thì khô — cha che cho chỗ Tuấn ngồi.",
+        "Trên đường về, Tuấn ngồi im, lần đầu tiên ôm chặt lưng cha.",
+        "Hôm sau, Tuấn bảo: \"Mai cha cứ chở con vào tận cổng trường nha.\" Cha cười, không nói gì.",
+        "Giờ Tuấn đã có ô tô. Chiếc xe đạp cũ vẫn dựng góc sân, cha không cho ai bán.",
+        "Ai còn nhớ ai từng đưa đón mình đi học không, kể mình nghe nha 🙏"
+      ],
+      "tuSangTac": true
+    }
+  ]
+}

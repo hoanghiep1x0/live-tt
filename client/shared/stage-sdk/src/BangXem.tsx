@@ -1,25 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  KIEU_LAM_DUOC,
-  LOAI_PHONG,
-  MAU_NHA,
-  TAB_GIONG,
-  TEN_KIEU,
-  TINH_NANG_HE,
-  VIEC_AI,
-  batViec,
-  chonMau,
-  doiKieu,
-  loiNhap,
-  nanId,
-  nhapMoi,
-  nhapTu,
-  oChonGiong,
-  tenKetNoi,
-  tenViec,
-  thanGhi,
-  thuocPhong,
-} from '@live/contracts';
+import { batViec, chonMau, doiKieu, giongQua, hienO, KIEU_LAM_DUOC, LOAI_PHONG, loiNhap, MAU_NHA, nanId, nhapMoi, nhapTu, oChonGiong, TAB_GIONG, TEN_KIEU, tenKetNoi, tenViec, thanGhi, thuocPhong, TINH_NANG_HE, VIEC_AI } from '@live/contracts';
 import type { ConfigField, Json, KetNoiAi, KieuNha, NhapKetNoi, ViecAi } from '@live/contracts';
 import { AI_MAC_DINH, BOT_MAC_DINH } from './state';
 import { ONhanh, OConfig } from './OConfig';
@@ -27,6 +7,23 @@ import { SO_MODULE, timDangKy } from './registry';
 import { guiLenh } from './state';
 import { NutModule } from './NutModule';
 import { ModalGiong, TheGiong } from './GiongDoc';
+import { BangChiPhi } from './BangChiPhi';
+import {
+  nhaMacDinh,
+  O_BAT_ANH,
+  O_CO_ANH,
+  O_DAN,
+  O_GIONG_MC,
+  O_NHIP,
+  O_SANG_TAO,
+  O_TRAN,
+  oModel,
+  oNha,
+  suaAi,
+  useKhoAi,
+  useNhaAi,
+} from './mc-cfg';
+import type { NhaAi } from './mc-cfg';
 import { useHopThietKe, useLoaiPhong, useLuaChonThietKe, useStage, useThietKe } from './Stage';
 import './bang-xem.css';
 
@@ -146,10 +143,12 @@ function Modal({
   const roi = !s.noiDuoc;
   // Mở từ nút có hộp phụ (`popup`) trên thẻ: chỉ ô đó và các ô phụ của nó, không chia tab.
   const goc = o === undefined ? undefined : ui.fields.find((f) => f.key === o);
+  // Chỉ những ô đang có tác dụng với cấu hình hiện tại (`hienKhi`).
+  const oHien = ui.fields.filter((f) => hienO(f, cfg));
   const tabs =
     goc === undefined
-      ? chiaTab(ui.fields)
-      : [{ ten: '', fields: oNhanhCua(ui.fields, [goc.key, ...(goc.popup ?? [])]) }];
+      ? chiaTab(oHien)
+      : [{ ten: '', fields: oNhanhCua(oHien, [goc.key, ...(goc.popup ?? [])]) }];
   const tab = tabs.some((t) => t.ten === tabChon) ? tabChon : (tabs[0]?.ten ?? '');
   const oCuaTab = tabs.find((t) => t.ten === tab)?.fields ?? [];
 
@@ -213,6 +212,8 @@ function Modal({
                 moduleId={id}
                 field={oChonGiong(f, s.voice.cast, cfg[f.key])}
                 value={cfg[f.key] ?? null}
+                cfg={cfg}
+                suaKhac={(k, v) => suaCauHinh(id, k, v)}
                 disabled={roi}
                 onChange={(v) => suaCauHinh(id, f.key, v)}
               />
@@ -249,7 +250,10 @@ function The({ id, mo }: { id: string; mo: (o?: string) => void }) {
   const bat = s.enabled.includes(id);
   // Chỉ khoá khi mất nối máy chủ: chưa phát vẫn chỉnh được — lệnh áp vào chính phòng của trang (docs/02 §10).
   const roi = !s.noiDuoc;
-  const nhanh = oNhanhCua(ui.fields, ui.quick ?? []);
+  const nhanh = oNhanhCua(
+    ui.fields.filter((f) => hienO(f, cfg)),
+    ui.quick ?? [],
+  );
 
   return (
     <article className="bx-the" data-bat={bat}>
@@ -366,179 +370,6 @@ function TheThietKe() {
   );
 }
 
-function suaAi(key: string, v: Json): void {
-  const duoc = guiLenh({
-    t: 'command',
-    command: { op: 'set-ai', patch: { [key]: v } as Json },
-    by: 'nguoi',
-    reason: 'sửa MC từ bảng xem thử',
-  });
-  if (!duoc) console.warn('[xem thử] chưa nối được máy chủ');
-}
-
-const O_NHIP: ConfigField = {
-  key: 'everySec',
-  label: 'Nhịp khi MC không tự hẹn lượt sau',
-  short: 'Nhịp (giây)',
-  hint: 'Như bản cũ, mỗi lượt MC tự hẹn lượt sau 10–120 giây theo tình hình phòng (khách đang chờ thì nhanh, phòng im thì thưa). Ô này chỉ dùng cho lượt đầu và khi MC không hẹn.',
-  type: 'number',
-  min: 10,
-  max: 300,
-  unit: 'giây',
-};
-
-/** Một dòng kho kết nối AI, bản cho sân khấu: có địa chỉ để mở lại kết nối cũ,
- *  nhưng KHÔNG bao giờ có giá trị khoá. */
-type NhaAi = KetNoiAi;
-
-/** Đọc kho kết nối AI một lần lúc mở bảng. Cắm thêm khoá thì mở thẻ Kết nối
- *  AI ở đầu ngăn; sửa đầy đủ hay xoá thì sang trang quản lý. */
-function useNhaAi(): NhaAi[] {
-  const [ds] = useKhoAi();
-  return ds;
-}
-
-/** Kho kết nối kèm hàm tải lại, cho thẻ nào vừa cắm thêm khoá. */
-function useKhoAi(): [NhaAi[], () => void] {
-  const [ds, setDs] = useState<NhaAi[]>([]);
-  const tai = useCallback(() => {
-    void fetch('/s/providers')
-      .then((r) => (r.ok ? r.json() : { providers: [] }))
-      .then((j: { providers?: NhaAi[] }) => setDs(j.providers ?? []))
-      .catch(() => setDs([]));
-  }, []);
-  useEffect(tai, [tai]);
-  return [ds, tai];
-}
-
-/** Ô chọn kết nối, chỉ liệt kê kết nối làm được đúng loại việc này. Giá trị
- *  đang lưu mà không còn trong kho thì vẫn hiện, để người vận hành thấy nó hỏng
- *  chứ không lặng lẽ nhảy sang nhà khác. */
-/** Kết nối mà "Mặc định" sẽ dùng — cùng luật với `secrets::tim` ở backend:
- *  kết nối mang tên mặc định cũ nếu còn, không thì kết nối đầu tiên làm được
- *  việc này và có khoá. */
-function nhaMacDinh(ds: readonly NhaAi[], use: ViecAi, cu: string): NhaAi | undefined {
-  return (
-    ds.find((p) => p.id === cu) ??
-    [...ds].sort((a, b) => a.id.localeCompare(b.id)).find((p) => p.hasKey && p.uses.includes(use))
-  );
-}
-
-function oNha(
-  key: string,
-  label: string,
-  use: ViecAi,
-  macDinh: string,
-  ds: readonly NhaAi[],
-  dang: string,
-): ConfigField {
-  const hop = ds.filter((p) => p.uses.includes(use));
-  const md = nhaMacDinh(ds, use, macDinh);
-  const options = [
-    {
-      value: '',
-      label:
-        md === undefined
-          ? 'Mặc định — chưa có kết nối nào làm được việc này'
-          : `Mặc định — ${tenKetNoi(md)}`,
-    },
-    ...hop.map((p) => ({
-      value: p.id,
-      label: p.hasKey ? tenKetNoi(p) : `${tenKetNoi(p)} (thiếu khoá)`,
-    })),
-  ];
-  if (dang !== '' && !hop.some((p) => p.id === dang)) {
-    options.push({ value: dang, label: `${dang} (không có trong kho)` });
-  }
-  return {
-    key,
-    label,
-    short: label,
-    type: 'select',
-    options,
-    hint: 'Cắm thêm khoá ở thẻ Kết nối AI đầu ngăn này. Khoá không bao giờ về tới trang này.',
-  };
-}
-
-/** Model của tính năng này. Để trống là theo model mặc định của kết nối —
- *  gợi ý ghi luôn đó là model nào. */
-function oModel(
-  key: string,
-  label: string,
-  use: ViecAi,
-  nha: string,
-  ds: readonly NhaAi[],
-): ConfigField {
-  const md = ds.find((p) => p.id === nha)?.models[use];
-  return {
-    key,
-    label,
-    short: 'Model',
-    type: 'text',
-    hint:
-      md === undefined || md === ''
-        ? 'Để trống là theo model mặc định của kết nối.'
-        : `Để trống là dùng ${md} — model mặc định của kết nối.`,
-  };
-}
-
-const O_SANG_TAO: ConfigField = {
-  key: 'temperature',
-  label: 'Độ sáng tạo',
-  type: 'select',
-  options: [
-    { value: '', label: 'Theo nhà cung cấp' },
-    { value: '0.2', label: 'Chắc chắn — bám sát tin phòng' },
-    { value: '0.6', label: 'Cân bằng' },
-    { value: '0.9', label: 'Bay bổng — nói nhiều kiểu hơn' },
-  ],
-};
-
-const O_TRAN: ConfigField = {
-  key: 'maxTokens',
-  label: 'Độ dài tối đa một lượt',
-  type: 'number',
-  min: 100,
-  max: 4000,
-  unit: 'token',
-  hint: 'Thấp thì rẻ và gọn; MC chỉ nói tối đa 2 câu mỗi lượt nên 600 là đủ.',
-};
-
-const O_GIONG_MC: ConfigField = {
-  key: 'voiceId',
-  label: 'Giọng chính của MC',
-  type: 'voice',
-  hint: 'Chỉ dùng khi phòng bật Đa giọng (trang quản lý, nút Giọng đọc). Trong câu, [id-giọng] đổi giọng, [-] quay về giọng chính.',
-};
-
-const O_BAT_ANH: ConfigField = {
-  key: 'anhEnabled',
-  label: 'Cho nhờ AI vẽ ảnh',
-  type: 'toggle',
-  hint: 'Tắt thì nút vẽ ảnh ở ô ảnh/video không gọi đi đâu — khỏi lỡ tay tốn tiền.',
-};
-
-const O_CO_ANH: ConfigField = {
-  key: 'anhSize',
-  label: 'Kích thước ảnh',
-  type: 'select',
-  options: [
-    { value: '', label: 'Vuông 1024×1024' },
-    { value: '1536x1024', label: 'Ngang 1536×1024' },
-    { value: '1024x1536', label: 'Dọc 1024×1536' },
-    { value: '1792x1024', label: 'Ngang rộng 1792×1024' },
-    { value: '1024x1792', label: 'Dọc cao 1024×1792' },
-  ],
-  hint: 'Mỗi nhà nhận một bộ kích thước khác nhau; chọn sai thì nhà cung cấp báo lỗi.',
-};
-
-const O_DAN: ConfigField = {
-  key: 'extra',
-  label: 'Lời dặn thêm cho MC',
-  type: 'textarea',
-  hint: 'Ghép sau lời dặn gốc. Ví dụ: tên phòng, chủ đề tối nay, điều cần tránh',
-};
-
 /** Trang quản lý mở ở đâu. Sân khấu mở từ nút "Xem mẫu" của trang quản lý
  *  (tab mới, `rel="noopener"` — vẫn còn referrer), nên lấy luôn gốc đó thay vì
  *  ghi cứng một cổng. Mở thẳng trong OBS thì không có referrer: lúc ấy không
@@ -556,10 +387,24 @@ function trangQuanLy(kho: string): string | null {
 
 const NHO_QUAN_LY = 'bx-trang-quan-ly';
 
+/** Một gốc là chính máy chủ sân khấu (cùng cổng, chỉ khác tên: `localhost` với
+ *  `127.0.0.1`) thì không phải trang quản lý — về đó là trang 404. */
+function laMayChuSanKhau(goc: string): boolean {
+  try {
+    return new URL(goc).port === window.location.port;
+  } catch {
+    return true;
+  }
+}
+
 function gocQuanLy(): string | null {
   try {
     const u = new URL(document.referrer);
-    if (u.origin !== window.location.origin && /^https?:$/.test(u.protocol)) {
+    if (
+      u.origin !== window.location.origin &&
+      /^https?:$/.test(u.protocol) &&
+      !laMayChuSanKhau(u.origin)
+    ) {
       try {
         localStorage.setItem(NHO_QUAN_LY, u.origin);
       } catch {
@@ -572,7 +417,8 @@ function gocQuanLy(): string | null {
   }
   try {
     const nho = localStorage.getItem(NHO_QUAN_LY);
-    return nho !== null && /^https?:\/\/[^/]+$/.test(nho) ? nho : null;
+    // Giá trị nhớ nhầm từ trước (chính máy chủ sân khấu) thì bỏ.
+    return nho !== null && /^https?:\/\/[^/]+$/.test(nho) && !laMayChuSanKhau(nho) ? nho : null;
   } catch {
     return null;
   }
@@ -584,6 +430,114 @@ function gocQuanLy(): string | null {
  *  sách trả về không bao giờ có giá trị khoá, nên trang này không đọc lại được
  *  thứ vừa cắm. Đánh đổi của lối không-token ghi ở `backend/src/lib.rs`. Xoá
  *  kết nối vẫn phải sang trang quản lý. */
+/** Thẻ "Link phát sóng": link OBS để chép, link Studio đổi được ngay tại chỗ.
+ *
+ *  Người vận hành đang đứng ở phòng. Trước đây muốn đổi link Studio phải bỏ
+ *  phòng, mở trang quản lý, sửa rồi quay lại — giữa buổi live thì đó là mấy
+ *  chục giây khung không ai trông. Link OBS chỉ để CHÉP: nó là địa chỉ của
+ *  chính trang này, máy chủ sinh ra, không ai đặt tay được. */
+function TheLienKet() {
+  const s = useStage();
+  const id = s.cuaMinh;
+  /** Link OBS = địa chỉ trang sân khấu đang mở. Bỏ mọi tham số: dán vào OBS
+   *  phải là link sạch, không mang theo cờ xem thử của cửa sổ này. */
+  const obs = id === null ? '' : `${window.location.origin}/d/${id}/`;
+  const [studio, datStudio] = useState('');
+  const [goc, datGoc] = useState('');
+  const [bao, datBao] = useState('');
+
+  useEffect(() => {
+    if (id === null) return;
+    void fetch(`/s/thiet-ke/${encodeURIComponent(id)}/link`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { studioUrl?: string } | null) => {
+        const v = d?.studioUrl ?? '';
+        datStudio(v);
+        datGoc(v);
+      })
+      .catch(() => undefined);
+  }, [id]);
+
+  const chep = (chu: string, loi: string) => {
+    void navigator.clipboard
+      ?.writeText(chu)
+      .then(() => datBao(loi))
+      .catch(() => datBao('máy không cho chép'));
+  };
+
+  const luu = () => {
+    if (id === null) return;
+    const v = studio.trim();
+    datBao('đang lưu…');
+    void fetch(`/s/thiet-ke/${encodeURIComponent(id)}/link`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ studioUrl: v === '' ? null : v }),
+    })
+      .then(async (r) => {
+        const d = (await r.json().catch(() => null)) as { studioUrl?: string; error?: string } | null;
+        if (!r.ok) {
+          // Máy chủ chỉ nhận link https của tiktok.com; nói đúng lý do nó từ chối.
+          datBao(d?.error ?? 'không lưu được');
+          return;
+        }
+        const moi = d?.studioUrl ?? '';
+        datStudio(moi);
+        datGoc(moi);
+        datBao('đã lưu');
+      })
+      .catch(() => datBao('không lưu được'));
+  };
+
+  const doi = studio.trim() !== goc.trim();
+
+  return (
+    <article className="bx-the bx-the-link" data-bat={goc !== ''}>
+      <div className="bx-the-dau">
+        <span className="bx-icon">🔗</span>
+        <span className="bx-ten">
+          <b>Link phát sóng</b>
+          <small>{goc === '' ? 'chưa có link Studio' : 'đủ link OBS và Studio'}</small>
+        </span>
+      </div>
+
+      <div className="bx-link-hang">
+        <label htmlFor="bx-link-obs">OBS</label>
+        <input id="bx-link-obs" className="bx-o bx-o-link" readOnly value={obs} />
+        <button
+          type="button"
+          className="bx-link-nut"
+          onClick={() => chep(obs, 'đã chép link OBS')}
+        >
+          Chép
+        </button>
+      </div>
+
+      <div className="bx-link-hang">
+        <label htmlFor="bx-link-studio">Studio</label>
+        <input
+          id="bx-link-studio"
+          className="bx-o bx-o-link"
+          value={studio}
+          placeholder="https://www.tiktok.com/@nick/live"
+          onChange={(e) => {
+            datStudio(e.target.value);
+            datBao('');
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') luu();
+          }}
+        />
+        <button type="button" className="bx-link-nut" disabled={!doi} onClick={luu}>
+          Lưu
+        </button>
+      </div>
+
+      {bao === '' ? null : <p className="bx-link-bao">{bao}</p>}
+    </article>
+  );
+}
+
 function TheKhoAi({ mo }: { mo: () => void }) {
   const ds = useNhaAi();
   const s = useStage();
@@ -606,28 +560,32 @@ function TheKhoAi({ mo }: { mo: () => void }) {
           <b>Kết nối AI</b>
           <small>{tom}</small>
         </span>
+        <button type="button" className="bx-kho-mo-nho" onClick={mo}>
+          {ds.length === 0 ? 'Cắm khoá' : '+ Khoá'}
+        </button>
       </div>
 
+      {/* Gọn một hàng: tên + chấm xanh / đỏ. Chi tiết (làm việc gì, đọc cho ai)
+          khi rê chuột, đầy đủ trong hộp cấu hình. */}
       {ds.length === 0 ? null : (
-        <ul className="bx-kho-ds">
-          {ds.map((p) => (
-            <li key={p.id} data-co={p.hasKey}>
-              <b>{tenKetNoi(p)}</b>
-              <span className="bx-kho-viec">{p.uses.map(tenViec).join(' · ')}</span>
-              <span className="bx-kho-trangthai">{p.hasKey ? 'có khoá' : 'thiếu khoá'}</span>
-            </li>
-          ))}
+        <ul className="bx-gon-ds" onClick={mo}>
+          {ds.map((p) => {
+            // Kết nối đọc giọng nói luôn nó đang đọc cho ai — gỡ nó là ai câm.
+            const doc = giongQua(s.voice.cast, p.id);
+            const ta = `${p.uses.map(tenViec).join(' · ')}${doc.length === 0 ? '' : ` — đọc cho ${doc.join(', ')}`} · ${p.hasKey ? 'có khoá' : 'thiếu khoá'}`;
+            return (
+              <li key={p.id} data-co={p.hasKey} title={ta}>
+                {tenKetNoi(p)}
+              </li>
+            );
+          })}
         </ul>
       )}
-
-      <button type="button" className="bx-kho-mo" onClick={mo}>
-        {ds.length === 0 ? 'Cắm khoá đầu tiên' : 'Cắm thêm khoá'}
-      </button>
 
       {/* Không dặn dò gì thêm ở đây: thẻ chỉ nói tình trạng kho. Lời giải
           thích dài nằm trong modal, chỗ người vận hành đang thực sự cắm. */}
       {ai.enabled && ds.length > 0 && ds.every((p) => !p.hasKey) ? (
-        <p className="bx-the-nhac">MC đang bật nhưng chưa kết nối nào có khoá — MC sẽ im lặng.</p>
+        <p className="bx-the-nhac">Người dẫn đang bật nhưng chưa kết nối nào có khoá — sẽ im lặng.</p>
       ) : null}
     </article>
   );
@@ -762,7 +720,7 @@ function ModalKho({ dong }: { dong: () => void }) {
           <span className="bx-icon">🔑</span>
           <span className="bx-ten">
             <b>Kết nối AI</b>
-            <small>Cắm một lần, dùng chung cho MC, nhờ AI viết, vẽ ảnh và giọng đọc</small>
+            <small>Cắm một lần, dùng chung cho người dẫn, nhờ AI viết, vẽ ảnh và giọng đọc</small>
           </span>
           <button type="button" className="bx-x" onClick={dong} aria-label="Đóng">
             ✕
@@ -861,7 +819,7 @@ function ModalKho({ dong }: { dong: () => void }) {
                     ref={oTen}
                     className="bx-o bx-o-nho"
                     value={n.name}
-                    placeholder="MC"
+                    placeholder="người dẫn"
                     aria-label="Tên ngắn của kết nối"
                     onChange={(e) => setN({ ...n, name: e.target.value })}
                   />
@@ -977,7 +935,7 @@ function ModalKho({ dong }: { dong: () => void }) {
   );
 }
 
-/** Thẻ MC do AI dẫn.
+/** Thẻ Người dẫn do AI.
  *
  *  Khoá API KHÔNG có ở đây và không bao giờ đi qua đây: nó nằm trong kho khoá
  *  của backend (nhà cung cấp "mc"), thêm ở trang quản lý. Bản cũ để khoá trong
@@ -991,19 +949,19 @@ function TheMc({ mo }: { mo: () => void }) {
 
   return (
     <article className="bx-the bx-the-mc" data-bat={ai.enabled}>
-      <button type="button" className="bx-cham" aria-label="Cấu hình MC" onClick={mo} />
+      <button type="button" className="bx-cham" aria-label="Cấu hình người dẫn" onClick={mo} />
       <div className="bx-the-dau">
         <span className="bx-icon">🎙</span>
         <span className="bx-ten">
-          <b>MC do AI dẫn</b>
-          <small>Đọc tin phòng rồi nói chuyện với khách theo tên, kể chuyện từng nhịp</small>
+          <b>Người dẫn do AI</b>
+          <small>Đọc tin phòng rồi nói chuyện với khách theo tên, kể truyện từng nhịp</small>
         </span>
         <input
           type="checkbox"
           className="bx-cong"
           checked={ai.enabled}
           disabled={roi}
-          aria-label="Bật MC do AI dẫn"
+          aria-label="Bật người dẫn AI"
           onChange={(e) => suaAi('enabled', e.target.checked)}
         />
       </div>
@@ -1022,7 +980,7 @@ function TheMc({ mo }: { mo: () => void }) {
         />
       </div>
       {s.aiLoi === null || !ai.enabled ? null : (
-        <p className="bx-the-nhac bx-the-loi">Lượt MC vừa rồi lỗi: {s.aiLoi}</p>
+        <p className="bx-the-nhac bx-the-loi">Lượt vừa rồi lỗi: {s.aiLoi}</p>
       )}
       <p className="bx-the-nhac">
         Kết nối lấy từ kho AI dùng chung ở trang quản lý. Model, độ sáng tạo, độ dài và phần vẽ ảnh
@@ -1054,12 +1012,12 @@ function ModalMc({ dong }: { dong: () => void }) {
     ai.anhProvider.trim() === '' ? (nhaMacDinh(ds, 'image', 'anh')?.id ?? '') : ai.anhProvider.trim();
 
   return (
-    <div className="bx-tam" role="dialog" aria-modal aria-label="MC do AI dẫn">
+    <div className="bx-tam" role="dialog" aria-modal aria-label="Người dẫn do AI">
       <div className="bx-modal">
         <div className="bx-dau2">
           <span className="bx-icon">🎙</span>
           <span className="bx-ten">
-            <b>MC do AI dẫn</b>
+            <b>Người dẫn do AI</b>
             <small>Nhà cung cấp, model, nhịp và lời dặn thêm của riêng phòng này</small>
           </span>
           <button type="button" className="bx-x" onClick={dong} aria-label="Đóng">
@@ -1281,6 +1239,10 @@ export function BangXem() {
         </button>
       )}
 
+      {/* Chi phí của buổi, góc phải dưới. Ngăn ⚙ hay một hộp đang mở thì
+          nhường chỗ — chúng cùng nằm bên phải. */}
+      {dangMoModal || mo ? null : <BangChiPhi />}
+
       {!mo ? null : (
         <aside className="bx-ngan" aria-label="Xem thử tính năng">
           <div className="bx-ngan-dau">
@@ -1298,6 +1260,7 @@ export function BangXem() {
                 tính năng. Cùng cách xếp với trang quản lý, để người vận hành
                 không phải học hai bố cục. */}
             <h3 className="bx-muc">Tính năng chung</h3>
+            <TheLienKet />
             <TheKhoAi mo={() => setSuaKho(true)} />
             <TheGiong mo={() => setSuaGiong(true)} />
 
@@ -1311,18 +1274,30 @@ export function BangXem() {
                 <div key={p.id} className="bx-muc-phong">
                   <h3 className="bx-muc">Tính năng dành riêng cho “{p.name}”</h3>
                   <TheThietKe />
-                  {coMc ? <TheMc mo={() => setSuaMc(true)} /> : null}
-                  {coAo ? <TheNhanVatAo /> : null}
-                  {ds.length === 0 && !coMc && !coAo ? (
-                    <p className="bx-muc-trong">Chưa có tính năng nào riêng cho loại phòng này.</p>
-                  ) : (
-                    ds.map((m) => (
+                  {/* Tính năng chính của phòng (`theDau`) đứng trên thẻ MC. */}
+                  {ds
+                    .filter((m) => m.ui.theDau === true)
+                    .map((m) => (
                       <The
                         key={m.id}
                         id={m.id}
                         mo={(o) => setSua(o === undefined ? { id: m.id } : { id: m.id, o })}
                       />
-                    ))
+                    ))}
+                  {coMc ? <TheMc mo={() => setSuaMc(true)} /> : null}
+                  {coAo ? <TheNhanVatAo /> : null}
+                  {ds.length === 0 && !coMc && !coAo ? (
+                    <p className="bx-muc-trong">Chưa có tính năng nào riêng cho loại phòng này.</p>
+                  ) : (
+                    ds
+                      .filter((m) => m.ui.theDau !== true)
+                      .map((m) => (
+                        <The
+                          key={m.id}
+                          id={m.id}
+                          mo={(o) => setSua(o === undefined ? { id: m.id } : { id: m.id, o })}
+                        />
+                      ))
                   )}
                 </div>
               );

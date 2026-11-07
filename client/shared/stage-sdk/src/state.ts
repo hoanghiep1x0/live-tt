@@ -6,7 +6,7 @@
  */
 
 import { WS_PATH } from '@live/contracts';
-import type { Down, Json, SessionView, Up } from '@live/contracts';
+import type { Down, Json, SessionView, SoChiPhi, Up } from '@live/contracts';
 import { VOICE_MAC_DINH } from './audio';
 import type { VoiceCfg } from './audio';
 
@@ -25,11 +25,13 @@ export interface StageState {
   /** Nhân vật ảo: tắt bật và số lượng. Thiết kế đọc để biết có phải ghi dòng
    *  minh bạch ở chân màn không; bảng xem đọc để vẽ thẻ. */
   bot: BotCfg;
-  /** MC do AI dẫn. Chỉ phần người vận hành chỉnh — khoá API không bao giờ ra
+  /** Người dẫn do AI. Chỉ phần người vận hành chỉnh — khoá API không bao giờ ra
    *  khỏi backend. */
   ai: AiCfg;
   /** Lượt MC gần nhất lỗi gì, `null` là ổn. */
   aiLoi: string | null;
+  /** Sổ chi phí của buổi hiện tại ở phòng này, `null` là chưa có lượt gọi nào. */
+  chiPhi: SoChiPhi | null;
   noiDuoc: boolean;
   /** Các lần người vận hành bấm nút của module (`ModuleUi.actions`), cũ trước mới
    *  sau, giữ một đoạn ngắn. Runner chạy mỗi `id` đúng một lần. */
@@ -47,7 +49,7 @@ export interface HanhDong {
   op: string;
 }
 
-/** MC do AI dẫn. Câu MC về sân khấu qua feed (`kind: 'host'`), không phải qua
+/** Người dẫn do AI. Câu MC về sân khấu qua feed (`kind: 'host'`), không phải qua
  *  đây — đây chỉ là mấy nút chỉnh. */
 export interface AiCfg {
   enabled: boolean;
@@ -69,8 +71,37 @@ export interface AiCfg {
   anhEnabled: boolean;
   /** Kích thước ảnh, dạng `1024x1024`. Rỗng là vuông 1024. */
   anhSize: string;
-  /** Id giọng trong dàn để đọc câu MC. Rỗng là giọng mặc định của dàn. */
+  /** Id giọng trong dàn để đọc câu MC. Rỗng là giọng mặc định của dàn. Ở phòng
+   *  kể chuyện đây là giọng DẪN CHUYỆN — MC chính là người kể. */
   voiceId: string;
+  /** Ai đọc gì (máy chủ `ai::VaiGiong`). Rỗng là MC tự chọn trong cả dàn. */
+  vaiGiong: VaiGiong;
+}
+
+/** Phân vai giọng: mỗi việc một danh sách giọng, nhiều giọng thì thay phiên. */
+export interface VaiGiong {
+  /** Giọng giao cho nhân vật trong truyện — MC tự giao mỗi nhân vật một giọng. */
+  nhanVat: string[];
+  /** Chào khách mới vào. */
+  chao: string[];
+  /** Trò chuyện, đáp bình luận. */
+  dap: string[];
+  /** Cảm ơn quà — đọc thay giọng của tính năng Cảm ơn quà. */
+  qua: string[];
+  /** Cảm ơn người lên an ủi bé. */
+  anUi: string[];
+  /** Đã đặt mặc định / người vận hành đã chỉnh — máy không tự điền nữa. */
+  daDat?: boolean;
+}
+
+export const VAI_GIONG_TRONG: VaiGiong = { nhanVat: [], chao: [], dap: [], qua: [], anUi: [] };
+
+/** Một giọng cho việc `ds` (thay phiên, không lặp liền giọng `truoc`), hoặc ''
+ *  khi chưa giao giọng nào. Thuần — `rand` truyền vào để test. */
+export function giongChoViec(ds: readonly string[] | undefined, truoc: string, rand: () => number): string {
+  const c = ds ?? [];
+  const con = c.length > 1 ? c.filter((g) => g !== truoc) : c;
+  return con[Math.floor(rand() * con.length)] ?? '';
 }
 
 /** Mặc định TẮT: bật là tiêu tiền API của người vận hành, và là để một cái máy
@@ -92,6 +123,7 @@ export const AI_MAC_DINH: AiCfg = {
   anhEnabled: true,
   anhSize: '',
   voiceId: '',
+  vaiGiong: VAI_GIONG_TRONG,
 };
 
 /** Nhân vật ảo minh hoạ. Nội dung họ nói nằm ở `crowd` trong design.json của
@@ -112,6 +144,7 @@ export const PHIEN_RONG: SessionView = {
   startedAt: null,
   totals: { viewers: 0, likes: 0, gifts: 0, xu: 0, comments: 0 },
   topGivers: [],
+  topTuongTac: [],
   seats: [],
   recentUsers: [],
   recentFeed: [],
@@ -127,6 +160,7 @@ export const BAN_DAU: StageState = {
   bot: BOT_MAC_DINH,
   ai: AI_MAC_DINH,
   aiLoi: null,
+  chiPhi: null,
   noiDuoc: false,
   hanhDong: [],
   cuaMinh: null,
@@ -169,6 +203,8 @@ export function apTin(s: StageState, d: Down): StageState {
     }
     case 'ai-loi':
       return cuaToi(s, d.designId) ? { ...s, aiLoi: d.loi } : s;
+    case 'chi-phi':
+      return cuaToi(s, d.designId) ? { ...s, chiPhi: d.so } : s;
     case 'bot': {
       if (!cuaToi(s, d.designId)) return s;
       const c = d.cfg;
@@ -195,7 +231,14 @@ export function apTin(s: StageState, d: Down): StageState {
       const moi: HanhDong = { id: d.id, moduleId: d.moduleId, op: d.op };
       return { ...s, hanhDong: [...s.hanhDong, moi].slice(-20) };
     }
+    case 'source':
+      // Trạng thái nguồn là việc của trang quản lý; sân khấu chỉ cần feed / phiên.
+      return s;
     case 'error':
+      return s;
+    default:
+      // Loại tin mới hơn bản sân khấu đã build: bỏ qua, giữ nguyên trạng thái.
+      // Thiếu nhánh này thì `switch` trả `undefined` và sân khấu đang phát sập.
       return s;
   }
 }

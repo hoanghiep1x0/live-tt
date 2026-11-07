@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { Effect, FeedItem } from '@live/contracts';
 import { runFeed, runTick } from '@live/runtime';
-import { core, dongDua, hangDangSoi, hienDua, moduleTopGivers as mod, schema } from '@live/mod-top-givers';
+import {
+  core,
+  DOI_KIEU_MS,
+  dongDua,
+  hangDangSoi,
+  hienDua,
+  kieuDua,
+  moduleTopGivers as mod,
+  schema,
+} from '@live/mod-top-givers';
 import { ctx, kiemModule, nguoiTang } from '../_helper';
 
 const MAC_DINH = schema.parse({});
@@ -77,8 +86,10 @@ describe('dòng đua top', () => {
     });
   });
 
-  it('chưa ai tặng thì mời người xem lên top 1', () => {
-    expect(dongDua([], null, 0, 0)).toEqual({ name: '', xu: 0, rank: 1, lead: true });
+  it('chưa ai tặng thì KHÔNG hiện dòng nào', () => {
+    // Bản cũ cũng vậy: dải "Top 1 đang chờ bạn" nằm suốt buổi là lời mời chay.
+    expect(dongDua([], null, 0, 0)).toBeNull();
+    expect(dongDua([{ user: 'a', name: 'An', xu: 0, rank: 1 } as never], null, 0, 0)).toBeNull();
   });
 
   it('tới lượt nghỉ thì không có dòng nào', () => {
@@ -183,5 +194,15 @@ describe('báo đổi ngôi', () => {
       runTick(mod, s, 2, ctx(MAC_DINH, 2, 0, [nguoiTang('b', 'Bình', 500)])),
       'Bình đã dẫn từ lúc đang tắt, bật lại không phải tin mới',
     ).toEqual([]);
+  });
+});
+
+describe('dải đua thay phiên hai kiểu như bản cũ', () => {
+  it('dải mời lên top đổi vàng / đỏ theo nhịp; dải quà luôn đỏ', () => {
+    const moi = { name: '', xu: 0, rank: 1, lead: true as const };
+    expect(kieuDua(moi, 0)).toBe('vang');
+    expect(kieuDua(moi, DOI_KIEU_MS)).toBe('do');
+    expect(kieuDua(moi, DOI_KIEU_MS * 2)).toBe('vang');
+    expect(kieuDua({ name: 'Lan', xu: 10, rank: 2 }, 0)).toBe('do');
   });
 });

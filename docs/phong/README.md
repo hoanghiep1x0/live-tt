@@ -18,6 +18,7 @@ docs/phong/
 |---|---|---|---|
 | `san-bar` | Sàn bar | `hop-dem` → `san-bar-hop-dem`, `bai-bien` → `san-bar-bai-bien` | [san-bar/](san-bar/README.md) |
 | `ke-chuyen` | Phòng kể chuyện | mặc định → `ke-chuyen` (id có trước quy ước) | [04 — Viết thiết kế](../04-viet-thiet-ke.md) |
+| `lop-hoc` | Lớp học | `chu` → `lop-hoc-chu` | [lop-hoc/](lop-hoc/README.md) |
 
 ## Thêm loại hoặc kiểu mới
 

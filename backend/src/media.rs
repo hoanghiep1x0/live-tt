@@ -8,6 +8,7 @@
 //! Phục vụ lại ở `/u/<designId>/<tên file>`. Hai thiết kế không bao giờ đọc
 //! được file của nhau: mọi đường dẫn đi qua `safe_join`.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -23,7 +24,7 @@ use crate::paths::{safe_join, valid_id};
 use crate::state::AppState;
 
 /// Lớn hơn ngần này thì OBS tải về cũng khựng, mà ổ đĩa thì đầy nhanh.
-pub const TOI_DA: usize = 64 * 1024 * 1024;
+pub const TOI_DA: usize = 1024 * 1024 * 1024;
 
 /// Đuôi file nhận vào. Danh sách CHO PHÉP chứ không phải danh sách cấm: thêm
 /// một đuôi mới là một quyết định, còn quên chặn một đuôi lạ thì thành lỗ hổng.
@@ -126,7 +127,7 @@ pub const NHA_ANH: &str = "anh";
 
 const MODEL_MAC_DINH: &str = "gpt-image-1";
 /// Lời tả dài hơn ngần này là dán nhầm cả bài.
-const MAX_TA: usize = 1_000;
+const MAX_TA: usize = 2_000;
 
 #[derive(Debug, Deserialize)]
 pub struct XinAnh {
@@ -161,43 +162,151 @@ pub enum Anh {
     Link(String),
 }
 
+/// Địa chỉ vẽ ảnh từ địa chỉ của kết nối. Người vận hành hay dán nguyên đường
+/// dẫn trong tài liệu của nhà (`…/v1/images` hoặc `…/v1/images/generations`)
+/// thay vì địa chỉ gốc `…/v1` — nối thêm nữa là thành `/images/images/…`, nhà
+/// trả 404. Nhận cả ba kiểu. Hàm thuần.
+pub fn dia_chi_ve(base: &str) -> String {
+    let b = base.trim().trim_end_matches('/');
+    let b = b.strip_suffix("/images/generations").unwrap_or(b);
+    let b = b.strip_suffix("/images").unwrap_or(b);
+    format!("{b}/images/generations")
+}
+
+/// Một ảnh vừa vẽ, kèm lượt vẽ đó tốn bao nhiêu (`chi_phi.rs`).
+pub(crate) struct AnhVe {
+    pub byte: Vec<u8>,
+    pub dung: crate::chi_phi::Dung,
+    /// `None`: không biết giá.
+    pub usd: Option<f64>,
+}
+
+/// Tiền một lượt vẽ theo bảng giá OpenRouter của model đó (các trường là chuỗi
+/// USD): `image` cho mỗi ảnh, `image_output`/`image_token` cho mỗi token ảnh
+/// ra, `prompt` cho mỗi token vào. Bảng có giá theo token mà trả lời không có
+/// số token thì `None` — thà ghi "chưa rõ giá" còn hơn báo thiếu. Hàm thuần.
+pub fn usd_anh(gia: &serde_json::Value, d: &crate::chi_phi::Dung) -> Option<f64> {
+    let g = |k: &str| {
+        gia.get(k)
+            .and_then(|x| x.as_str().and_then(|s| s.parse::<f64>().ok()).or_else(|| x.as_f64()))
+            .unwrap_or(0.0)
+    };
+    let moi_anh = g("image");
+    let tok_ra = g("image_output").max(g("image_token"));
+    let tok_vao = g("prompt");
+    let can_token = tok_ra > 0.0 || tok_vao > 0.0;
+    if can_token && d.tok_ra == 0 && d.tok_vao == 0 {
+        return None;
+    }
+    if moi_anh == 0.0 && !can_token {
+        return None;
+    }
+    Some(moi_anh + tok_ra * d.tok_ra as f64 + tok_vao * d.tok_vao as f64)
+}
+
+/// Bảng giá model vẽ của OpenRouter, tải một lần mỗi giờ từ danh sách model
+/// công khai (không cần khoá). Chặn luồng.
+fn gia_openrouter(model: &str) -> Option<serde_json::Value> {
+    use std::sync::{Mutex, OnceLock};
+    use std::time::{Duration, Instant};
+    static BANG: OnceLock<Mutex<Option<(Instant, HashMap<String, serde_json::Value>)>>> = OnceLock::new();
+    let khoa = BANG.get_or_init(|| Mutex::new(None));
+    let mut g = khoa.lock().ok()?;
+    let cu = g.as_ref().is_some_and(|(luc, _)| luc.elapsed() < Duration::from_secs(3600));
+    if !cu {
+        let v: serde_json::Value = ureq::get("https://openrouter.ai/api/v1/models?output_modalities=image")
+            .call()
+            .ok()?
+            .body_mut()
+            .with_config()
+            .limit(8 * 1024 * 1024)
+            .read_json()
+            .ok()?;
+        let bang = v
+            .get("data")
+            .and_then(serde_json::Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|m| Some((m.get("id")?.as_str()?.to_string(), m.get("pricing")?.clone())))
+            .collect();
+        *g = Some((Instant::now(), bang));
+    }
+    g.as_ref()?.1.get(model).cloned()
+}
+
 /// Gọi nhà cung cấp rồi trả về đúng mấy byte ảnh. Chặn luồng.
-fn goi_tao_anh(
+pub(crate) fn goi_tao_anh(
     p: &crate::secrets::Provider,
     model: &str,
     ta: &str,
     co: &str,
-) -> Result<Vec<u8>, String> {
+) -> Result<AnhVe, String> {
     if p.base_url.is_empty() {
         return Err("nhà cung cấp ảnh chưa có địa chỉ".into());
     }
-    let url = format!("{}/images/generations", p.base_url.trim_end_matches('/'));
+    let url = dia_chi_ve(&p.base_url);
+    let model_that = if model.is_empty() { p.model_cho(crate::secrets::Use::Image) } else { model };
     let agent = ureq::Agent::config_builder()
         .timeout_global(Some(std::time::Duration::from_secs(120)))
         .max_redirects(0)
         .build()
         .new_agent();
 
+    // Không biến mã lỗi thành Err: nhà nói vì sao hỏng (sai model, hết tiền…)
+    // ngay trong thân trả lời, và người vận hành cần đọc đúng câu đó.
     let mut res = agent
         .post(&url)
+        .config()
+        .http_status_as_error(false)
+        .build()
         .header("Authorization", &format!("Bearer {}", p.key))
-        .send_json(&than_tao_anh(
-            if model.is_empty() { p.model_cho(crate::secrets::Use::Image) } else { model },
-            ta,
-            co,
-        ))
-        .map_err(|e| match e {
-            ureq::Error::StatusCode(ma) => format!("{url} trả mã {ma}"),
-            khac => format!("không gọi được {url}: {khac}"),
-        })?;
-    let v: serde_json::Value = res
+        .send_json(&than_tao_anh(model_that, ta, co))
+        .map_err(|e| format!("không gọi được {url}: {e}"))?;
+    let ma = res.status();
+    let than = res
         .body_mut()
-        .read_json()
-        .map_err(|e| format!("không đọc được trả lời: {e}"))?;
+        .with_config()
+        .limit(TOI_DA as u64 * 2)
+        .read_to_string()
+        .map_err(|e| format!("{url} trả mã {ma}, không đọc được trả lời: {e}"))?;
+    if !ma.is_success() {
+        return Err(format!("nhà cung cấp ảnh trả mã {ma}: {}", crate::ai::loi_nha(&than)));
+    }
+    let v: serde_json::Value =
+        serde_json::from_str(&than).map_err(|e| format!("không đọc được trả lời: {e}"))?;
 
-    match doc_anh(&v) {
+    // Ghi lại nhà trả gì ngoài ảnh (usage, cost…) — bỏ phần ảnh base64.
+    let mut gon = v.clone();
+    if let Some(ds) = gon.get_mut("data").and_then(serde_json::Value::as_array_mut) {
+        for d in ds.iter_mut().filter_map(serde_json::Value::as_object_mut) {
+            for k in ["b64_json", "url"] {
+                if d.get(k).and_then(serde_json::Value::as_str).is_some_and(|x| x.len() > 200) {
+                    d.insert(k.into(), json!("…"));
+                }
+            }
+        }
+    }
+    tracing::info!(model = %model_that, tra_loi = %gon.to_string().chars().take(600).collect::<String>(), "vẽ ảnh: nhà trả");
+
+    let dung = crate::chi_phi::dung_tu(&v);
+    let usd = dung.usd.or_else(|| {
+        if url.contains("openrouter.ai") {
+            gia_openrouter(model_that).and_then(|g| usd_anh(&g, &dung))
+        } else {
+            None
+        }
+    });
+    let byte = match doc_anh(&v) {
         Some(Anh::Base64(b64)) => {
             use base64::Engine;
+            base64::engine::general_purpose::STANDARD
+                .decode(b64.as_bytes())
+                .map_err(|e| format!("ảnh base64 hỏng: {e}"))
+        }
+        // Có nhà trả ảnh dạng `data:image/png;base64,…` trong ô url.
+        Some(Anh::Link(link)) if link.starts_with("data:") => {
+            use base64::Engine;
+            let b64 = link.split_once(',').map_or("", |(_, b)| b);
             base64::engine::general_purpose::STANDARD
                 .decode(b64.as_bytes())
                 .map_err(|e| format!("ảnh base64 hỏng: {e}"))
@@ -217,7 +326,8 @@ fn goi_tao_anh(
             Ok(byte)
         }
         None => Err("nhà cung cấp không trả về ảnh nào".into()),
-    }
+    }?;
+    Ok(AnhVe { byte, dung, usd })
 }
 
 /// Nhờ AI vẽ một ảnh rồi cất vào kho của thiết kế, trả về đường dẫn như file
@@ -254,10 +364,14 @@ pub async fn tao_anh(
     let model = cfg.anh_model.trim().to_string();
     let co = cfg.co_anh();
     let byte = match tokio::task::spawn_blocking(move || goi_tao_anh(&p, &model, &ta, &co)).await {
-        Ok(Ok(b)) => b,
+        Ok(Ok(anh)) => {
+            st.ghi_chi_phi(&design_id, crate::chi_phi::VE_ANH, &anh.dung, anh.usd);
+            anh.byte
+        }
         Ok(Err(e)) => {
             tracing::warn!("vẽ ảnh: {e}");
-            return loi(StatusCode::BAD_GATEWAY, "không vẽ được ảnh");
+            // Câu lỗi chỉ có địa chỉ và lời nhà cung cấp, không bao giờ có khoá.
+            return loi(StatusCode::BAD_GATEWAY, &format!("không vẽ được ảnh: {e}"));
         }
         Err(e) => {
             tracing::warn!("vẽ ảnh: tác vụ hỏng: {e}");
@@ -268,7 +382,9 @@ pub async fn tao_anh(
         return loi(StatusCode::BAD_GATEWAY, "nhà cung cấp trả về ảnh rỗng");
     }
 
-    let ten = ten_moi(crate::state::bay_gio_ms(), st.media_dem(), "png");
+    // Đầu `ai-`: chỉ ảnh AI vẽ mới bị dọn tự động. File người vận hành tự tải
+    // lên là của họ, máy không tự xoá.
+    let ten = format!("{DAU_AI}{}", ten_moi(crate::state::bay_gio_ms(), st.media_dem(), "png"));
     let thu_muc = st.layout.media_dir(&design_id);
     if tokio::fs::create_dir_all(&thu_muc).await.is_err() {
         return loi(StatusCode::INTERNAL_SERVER_ERROR, "không ghi được file");
@@ -282,6 +398,97 @@ pub async fn tao_anh(
 
     tracing::info!(thiet_ke = %design_id, %ten, co = byte.len(), "AI vẽ xong một ảnh");
     Json(json!({ "url": format!("/u/{design_id}/{ten}"), "name": ten })).into_response()
+}
+
+/// Cất ảnh AI vẽ vào kho của thiết kế, trả về đường dẫn `/u/…`. Chặn luồng —
+/// cho vòng ảnh truyện chạy nền (`anh_truyen`).
+pub(crate) fn cat_anh_ai(
+    layout: &crate::paths::Layout,
+    design_id: &str,
+    dem: u64,
+    byte: &[u8],
+    duoi: &str,
+) -> Result<String, String> {
+    if byte.is_empty() {
+        return Err("nhà cung cấp trả về ảnh rỗng".into());
+    }
+    if !duoi_hop_le(duoi) {
+        return Err(format!("kiểu ảnh không nhận: {duoi}"));
+    }
+    let ten = format!("{DAU_AI}{}", ten_moi(crate::state::bay_gio_ms(), dem, duoi));
+    let thu_muc = layout.media_dir(design_id);
+    std::fs::create_dir_all(&thu_muc).map_err(|e| format!("không tạo được thư mục ảnh: {e}"))?;
+    let path = safe_join(&thu_muc, &ten).ok_or("tên file không hợp lệ")?;
+    std::fs::write(&path, byte).map_err(|e| format!("không ghi được ảnh: {e}"))?;
+    Ok(format!("/u/{design_id}/{ten}"))
+}
+
+/// Tên ảnh AI vẽ bắt đầu bằng đây — dấu để dọn.
+pub const DAU_AI: &str = "ai-";
+/// Ảnh mới vẽ chưa kịp vào cấu hình (người vận hành còn đang xem) thì chưa
+/// dọn: ngần này là đủ để bấm lưu.
+const AN_TOAN_MS: u128 = 15 * 60 * 1000;
+
+/// Ảnh AI vẽ nào là rác: không file cấu hình nào của thiết kế còn nhắc tên nó,
+/// và đã nằm đó quá `AN_TOAN_MS`. Hàm thuần — `tuoi_ms` do nơi gọi đo.
+pub fn la_rac(ten: &str, tuoi_ms: u128, tham_chieu: &str) -> bool {
+    ten.starts_with(DAU_AI) && tuoi_ms >= AN_TOAN_MS && !tham_chieu.contains(ten)
+}
+
+/// Dọn ảnh AI vẽ không còn truyện nào dùng — xong một truyện, đổi truyện,
+/// vẽ lại một cảnh thì ảnh cũ thành rác trên đĩa. Chỉ xoá ảnh AI (`ai-…`),
+/// và chỉ khi mọi file `.json` của thiết kế đều không nhắc tới nó.
+pub async fn don(State(st): State<Arc<AppState>>, AxPath(design_id): AxPath<String>) -> Response {
+    if !valid_id(&design_id) {
+        return loi(StatusCode::BAD_REQUEST, "id thiết kế sai định dạng");
+    }
+    let layout = st.layout.clone();
+    let kq = tokio::task::spawn_blocking(move || don_dong_bo(&layout, &design_id)).await;
+    match kq {
+        Ok(Ok((xoa, giai_phong))) => Json(json!({ "xoa": xoa, "byte": giai_phong })).into_response(),
+        Ok(Err(e)) => {
+            tracing::warn!("dọn ảnh: {e}");
+            loi(StatusCode::INTERNAL_SERVER_ERROR, "không dọn được ảnh cũ")
+        }
+        Err(e) => {
+            tracing::warn!("dọn ảnh: tác vụ hỏng: {e}");
+            loi(StatusCode::INTERNAL_SERVER_ERROR, "không dọn được ảnh cũ")
+        }
+    }
+}
+
+pub(crate) fn don_dong_bo(layout: &crate::paths::Layout, design_id: &str) -> std::io::Result<(usize, u64)> {
+    let thu_muc = layout.media_dir(design_id);
+    let Some(goc) = thu_muc.parent() else { return Ok((0, 0)) };
+    // Mọi thứ cấu hình của thiết kế (module, thiết kế, phiên…) gộp làm một
+    // khối chữ: tên ảnh còn nằm ở đâu đó là còn dùng.
+    let mut tham_chieu = String::new();
+    for e in std::fs::read_dir(goc)?.flatten() {
+        let p = e.path();
+        if p.extension().and_then(|x| x.to_str()) == Some("json") {
+            tham_chieu.push_str(&std::fs::read_to_string(&p).unwrap_or_default());
+        }
+    }
+    let Ok(ds) = std::fs::read_dir(&thu_muc) else { return Ok((0, 0)) };
+    let bay_gio = std::time::SystemTime::now();
+    let (mut xoa, mut byte) = (0, 0);
+    for e in ds.flatten() {
+        let ten = e.file_name().to_string_lossy().to_string();
+        let Ok(md) = e.metadata() else { continue };
+        let tuoi = md
+            .modified()
+            .ok()
+            .and_then(|t| bay_gio.duration_since(t).ok())
+            .map_or(0, |d| d.as_millis());
+        if md.is_file() && la_rac(&ten, tuoi, &tham_chieu) && std::fs::remove_file(e.path()).is_ok() {
+            xoa += 1;
+            byte += md.len();
+        }
+    }
+    if xoa > 0 {
+        tracing::info!(thiet_ke = %design_id, xoa, byte, "dọn ảnh AI không còn dùng");
+    }
+    Ok((xoa, byte))
 }
 
 /// Phục vụ lại file đã tải lên.
@@ -357,6 +564,40 @@ mod tests {
         );
         assert_eq!(doc_anh(&json!({ "data": [] })), None);
         assert_eq!(doc_anh(&json!({ "loi": "het tien" })), None);
+    }
+
+    #[test]
+    fn dia_chi_ve_nhan_ca_duong_dan_dan_thua() {
+        for b in [
+            "https://openrouter.ai/api/v1",
+            "https://openrouter.ai/api/v1/",
+            "https://openrouter.ai/api/v1/images",
+            "https://openrouter.ai/api/v1/images/generations",
+        ] {
+            assert_eq!(dia_chi_ve(b), "https://openrouter.ai/api/v1/images/generations", "{b}");
+        }
+    }
+
+    #[test]
+    fn chi_don_anh_ai_cu_khong_con_ai_nhac() {
+        let cfg = r#"{"story":{"moc":[{"anh":"/u/ke-chuyen/ai-1-1.png"}]}}"#;
+        let lau = AN_TOAN_MS + 1;
+        assert!(!la_rac("ai-1-1.png", lau, cfg), "còn dùng");
+        assert!(la_rac("ai-2-2.png", lau, cfg), "truyện cũ");
+        assert!(!la_rac("ai-3-3.png", 1_000, cfg), "vừa vẽ, chưa kịp lưu");
+        assert!(!la_rac("17-1.png", lau, cfg), "file tự tải lên không bao giờ tự xoá");
+    }
+
+    #[test]
+    fn gia_anh_theo_bang_openrouter() {
+        use crate::chi_phi::Dung;
+        let qwen = json!({ "image": "0.003", "image_token": "0.00000718562874251497", "prompt": "0" });
+        let co_token = Dung { tok_ra: 1000, ..Dung::default() };
+        let x = usd_anh(&qwen, &co_token).unwrap();
+        assert!((x - (0.003 + 0.007_185_628_742_5)).abs() < 1e-9);
+        assert_eq!(usd_anh(&qwen, &Dung::default()), None, "bảng tính theo token mà không có số token");
+        assert_eq!(usd_anh(&json!({ "image": "0.04" }), &Dung::default()), Some(0.04));
+        assert_eq!(usd_anh(&json!({}), &co_token), None);
     }
 
     #[test]

@@ -77,7 +77,22 @@ export function dongDua(
   if (nhat !== undefined && nhat.xu > 0) {
     return { name: nhat.name, xu: nhat.xu, rank: 1, lead: true };
   }
-  return { name: '', xu: 0, rank: 1, lead: true };
+  // Chưa ai tặng quà thì KHÔNG hiện dải nào, như bản cũ: dải "Top 1 đang chờ
+  // bạn" nằm suốt buổi trên khung là lời mời chay, người xem chỉ thấy phòng
+  // đang xin quà.
+  return null;
+}
+
+/** Dải mời lên top / báo người dẫn đầu đổi kiểu sau ngần này. */
+export const DOI_KIEU_MS = 8_000;
+
+/** Kiểu của dải đua lúc `now`: dải báo QUÀ luôn đỏ, như bản cũ; dải mời lên
+ *  top / báo người dẫn đầu thì thay phiên vàng và đỏ, để người xem thấy cả hai
+ *  dáng của bản cũ chứ không chỉ một màu vàng nằm đó cả buổi. Thuần theo đồng
+ *  hồ: hai cửa sổ cùng phòng đổi màu cùng lúc. */
+export function kieuDua(dua: Dua, now: number): 'vang' | 'do' {
+  if (dua.lead !== true) return 'do';
+  return Math.floor(now / DOI_KIEU_MS) % 2 === 0 ? 'vang' : 'do';
 }
 
 /** Đèn soi lần lượt từng người trong top, nghỉ giữa hai lượt.

@@ -1,0 +1,31 @@
+[package]
+name = "live-desktop"
+version = "0.1.0"
+description = "Vỏ desktop: chạy máy chủ và trang quản lý trong một app, có trình duyệt riêng giữ đăng nhập"
+edition = "2021"
+
+[lib]
+name = "live_desktop"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Máy chủ chạy ngay trong app — cùng một mã với `cargo run` của backend.
+live-backend = { path = "../backend" }
+# Ảnh muse.ai đọc từ trang về dạng data URL (base64).
+base64 = "0.22.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# "unstable": nhiều khung web trong một cửa sổ (trang web đặt chồng lên hộp Trình duyệt).
+tauri = { version = "2", features = ["unstable"] }
+tokio = { version = "1", features = ["rt-multi-thread", "time", "sync"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

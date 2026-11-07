@@ -201,11 +201,48 @@ impl From<StoreError> for SecretError {
 
 type Kho = BTreeMap<String, Provider>;
 
+/// Mục riêng của cầu nối TikTok trong `secrets.json` (docs/07 §5). Tên bắt đầu
+/// bằng `_` nên không bao giờ trùng id kết nối AI (`nan_id` chỉ ra `[a-z0-9-]`),
+/// không hiện trong hộp Kết nối AI, không lọt vào `GET /s/providers`.
+const MUC_CAU_NOI: &str = "_cau-noi";
+
+/// Mục dành riêng (tên bắt đầu bằng `_`): không phải kết nối AI.
+fn la_muc_rieng(id: &str) -> bool {
+    id.starts_with('_')
+}
+
+fn doc_tho(layout: &Layout) -> serde_json::Map<String, Value> {
+    match store::read_json(&layout.secrets_file()) {
+        Ok(Some(Value::Object(m))) => m,
+        _ => serde_json::Map::new(),
+    }
+}
+
+/// Ghi kho kết nối AI, GIỮ NGUYÊN các mục riêng (khoá Euler…). Ghi đè cả file
+/// thì sửa một kết nối AI là mất khoá cầu nối.
+fn ghi(layout: &Layout, kho: &Kho) -> Result<(), SecretError> {
+    let mut ra: serde_json::Map<String, Value> =
+        doc_tho(layout).into_iter().filter(|(k, _)| la_muc_rieng(k)).collect();
+    for (id, p) in kho {
+        ra.insert(id.clone(), serde_json::to_value(p).unwrap_or(Value::Null));
+    }
+    store::write_json_atomic(&layout.secrets_file(), &Value::Object(ra))?;
+    Ok(())
+}
+
 fn doc(layout: &Layout) -> Kho {
-    let mut kho: Kho = match store::read_json(&layout.secrets_file()) {
-        Ok(Some(v)) => serde_json::from_value(v).unwrap_or_default(),
-        _ => Kho::new(),
-    };
+    // Đọc từng dòng: một dòng hỏng (hay một mục riêng) không làm mất cả kho.
+    let mut kho: Kho = doc_tho(layout)
+        .into_iter()
+        .filter(|(id, _)| !la_muc_rieng(id))
+        .filter_map(|(id, v)| match serde_json::from_value::<Provider>(v) {
+            Ok(p) => Some((id, p)),
+            Err(e) => {
+                tracing::warn!(%id, "bỏ qua kết nối hỏng trong kho khoá: {e}");
+                None
+            }
+        })
+        .collect();
     // Nắn địa chỉ ngay lúc đọc, không chỉ lúc ghi: người vận hành dán nguyên
     // endpoint (`…/v1/audio/speech`, `…/v1/messages`) là đúng theo tài liệu
     // của nhà cung cấp, và mọi chỗ gọi API (MC, viết, vẽ ảnh, giọng đọc) đều
@@ -300,7 +337,7 @@ pub fn set(layout: &Layout, ten: &str, than: &Value) -> Result<ProviderInfo, Sec
     };
     let info = thong_tin(id.to_string(), &p);
     kho.insert(id.to_string(), p);
-    store::write_json_atomic(&layout.secrets_file(), &serde_json::to_value(&kho).unwrap())?;
+    ghi(layout, &kho)?;
     Ok(info)
 }
 
@@ -308,9 +345,38 @@ pub fn remove(layout: &Layout, id: &str) -> Result<bool, SecretError> {
     let mut kho = doc(layout);
     let co = kho.remove(id).is_some();
     if co {
-        store::write_json_atomic(&layout.secrets_file(), &serde_json::to_value(&kho).unwrap())?;
+        ghi(layout, &kho)?;
     }
     Ok(co)
+}
+
+/// Khoá Euler Stream cho cầu nối TikTok (máy chủ ký bên thứ ba). Chỉ backend
+/// đọc, rồi truyền cho tiến trình cầu nối qua biến môi trường `EULER_API_KEY` —
+/// không bao giờ vào file cấu hình nguồn, vào URL hay xuống client.
+pub fn khoa_euler(layout: &Layout) -> Option<String> {
+    doc_tho(layout)
+        .get(MUC_CAU_NOI)
+        .and_then(|m| m.get("eulerKey"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|k| !k.is_empty())
+        .map(str::to_string)
+}
+
+/// Đặt khoá Euler. Rỗng là xoá — không có khoá cầu nối vẫn chạy, chỉ là giới
+/// hạn ký miễn phí. Trả có khoá hay không sau khi ghi.
+pub fn dat_khoa_euler(layout: &Layout, khoa: &str) -> Result<bool, SecretError> {
+    let mut k = khoa.to_string();
+    k.retain(|c| !c.is_whitespace() && !c.is_control());
+    kiem_khoa(&k)?;
+    let mut tho = doc_tho(layout);
+    if k.is_empty() {
+        tho.remove(MUC_CAU_NOI);
+    } else {
+        tho.insert(MUC_CAU_NOI.into(), serde_json::json!({ "eulerKey": k }));
+    }
+    store::write_json_atomic(&layout.secrets_file(), &Value::Object(tho))?;
+    Ok(!k.is_empty())
 }
 
 fn kiem_khoa(k: &str) -> Result<(), SecretError> {
@@ -555,6 +621,42 @@ mod tests {
         assert!(remove(&l, "vieneu").unwrap());
         assert!(list(&l).is_empty());
         assert!(!remove(&l, "vieneu").unwrap(), "xoá cái không có thì báo là không có");
+    }
+
+    #[test]
+    fn khoa_euler_o_muc_rieng_khong_lan_vao_ket_noi_ai() {
+        let (_d, l) = moi();
+        assert_eq!(khoa_euler(&l), None, "chưa đặt thì không có");
+        set(&l, "mc", &json!({ "kind": "anthropic", "key": "sk-ant-1" })).unwrap();
+        assert!(dat_khoa_euler(&l, " eu-123 \n").unwrap());
+        assert_eq!(khoa_euler(&l).as_deref(), Some("eu-123"));
+
+        // Không hiện thành một "kết nối AI", cả ở trang quản lý lẫn sân khấu.
+        let ds: Vec<String> = list(&l).into_iter().map(|p| p.id).collect();
+        assert_eq!(ds, vec!["mc".to_string()]);
+        assert_eq!(list_public(&l).len(), 1);
+
+        // Sửa / xoá kết nối AI không làm mất khoá cầu nối, và ngược lại.
+        set(&l, "vieneu", &json!({ "kind": "openai", "key": "sk-2" })).unwrap();
+        remove(&l, "vieneu").unwrap();
+        assert_eq!(khoa_euler(&l).as_deref(), Some("eu-123"));
+        assert_eq!(get(&l, "mc").unwrap().key, "sk-ant-1");
+
+        assert!(!dat_khoa_euler(&l, "").unwrap(), "rỗng là xoá");
+        assert_eq!(khoa_euler(&l), None);
+        assert_eq!(get(&l, "mc").unwrap().key, "sk-ant-1");
+    }
+
+    #[test]
+    fn mot_dong_hong_khong_lam_mat_ca_kho() {
+        let (_d, l) = moi();
+        store::write_json_atomic(
+            &l.secrets_file(),
+            &json!({ "mc": { "kind": "anthropic", "key": "k" }, "hong": { "kind": "khong-co" } }),
+        )
+        .unwrap();
+        let ds: Vec<String> = list(&l).into_iter().map(|p| p.id).collect();
+        assert_eq!(ds, vec!["mc".to_string()]);
     }
 
     #[test]

@@ -353,14 +353,35 @@ body {
   object-fit: cover;
   display: block;
 }
-/* Lời minh bạch ở dải trên, cạnh chữ LIVE. Nó nói về cả phòng — MC, giọng đọc,
-   nhân vật minh hoạ — chứ không riêng thứ đang chiếu trong khung, nên chỗ của
-   nó là dải trên chứ không phải trong khung. Để trong khung thì vừa che hình
-   vừa ăn mất chiều cao khung. */
+/* Nhãn minh bạch theo kiểu bản cũ (`.stage-ai-label` trong index.css): viên
+   chip viền vàng nằm NGOÀI khung, sát mép trên góc trái. Không che hình, không
+   ăn chiều cao khung. */
 .stage-ai-label {
-  font-size: 2cqw;
-  font-weight: 500;
-  color: var(--stage-soft);
+  position: absolute;
+  bottom: 100%;
+  left: var(--pad-screen, 0);
+  margin-bottom: 0.5cqw;
+  z-index: 6;
+  white-space: nowrap;
+  pointer-events: none;
+  font-size: 2.1cqw;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #fff4dc;
+  background: rgba(20, 10, 4, 0.7);
+  border: max(1px, 0.12cqw) solid rgba(242, 196, 90, 0.55);
+  padding: 0.3cqw 1.2cqw;
+  border-radius: 1.2cqw;
+}
+/* Nhãn thứ hai ("Có ảnh minh hoạ cốt truyện") sang mép PHẢI, đối diện nhãn
+   trái — hai viên chip rời, không dính nhau bằng dấu gạch. */
+.stage-ai-label-phai {
+  left: auto;
+  right: var(--pad-screen, 0);
+}
+/* Khung ngang thấp hơn, đỉnh khung sát vầng hào quang: nhích nhãn lên thêm. */
+.stage[data-orientation='landscape'] .stage-ai-label {
+  margin-bottom: 1.4cqw;
 }
 /* ---- Màn chờ: lúc chưa module nào chiếu gì lên khung ----
    Dựng theo màn chờ bản cũ (.stage-waiting / .waiting-* trong index.css): nền
@@ -377,7 +398,8 @@ body {
   justify-content: center;
   gap: 4cqw;
   text-align: center;
-  padding: 6cqw 5cqw;
+  /* Đáy chừa rộng: lời chào và đồng hồ ngồi cao, không đụng dải tên truyện. */
+  padding: 3cqw 5cqw 18cqw;
   color: var(--stage-soft);
   font-size: 2.6cqw;
   background: radial-gradient(
@@ -407,6 +429,17 @@ body {
   color: #fff;
   text-shadow: 0 0 3cqw rgba(255, 210, 120, 0.6);
   font-variant-numeric: tabular-nums;
+}
+/* Đơn vị của số đếm ngược: nhỏ và mờ hơn hẳn con số, để mắt đọc con số trước.
+   Không viết tắt "s" — màn này phát ra ngoài cho người xem, không phải bảng
+   điều khiển. */
+.waiting-clock-dv {
+  margin-left: 1.4cqw;
+  font-family: inherit;
+  font-size: 2.6cqw;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: rgba(255, 255, 255, 0.72);
 }
 .waiting-note {
   max-width: 86%;
@@ -463,10 +496,18 @@ body {
 .stage-host p {
   margin: 0;
   text-align: center;
-  font-size: 2.8cqw;
-  line-height: 1.5;
-  font-weight: 700;
+  /* Nhỏ hơn bản đầu (2,8cqw): câu dài hai dòng vẫn gọn trong thẻ, không che
+     thêm hàng ghế phía dưới. */
+  font-size: 2.3cqw;
+  line-height: 1.45;
+  font-weight: 600;
   color: #fff4dc;
+}
+/* Tên người xem trong lời MC: vàng, đậm hơn chữ thường — nhìn là biết MC
+   đang nói với ai. */
+.stage-host-ten {
+  color: var(--gold);
+  font-weight: 800;
 }
 /* Vạch vàng rút dần ở đáy thẻ: người xem thấy thẻ sắp hết chứ không bị tắt
    ngang giữa câu. Chạy đúng bằng quãng SDK giữ câu trên màn. */
@@ -507,7 +548,10 @@ body {
   align-items: flex-end;
   gap: 1.4cqw;
   pointer-events: none;
-  z-index: 2;
+  /* Trên popup an ủi (`.om-loi`, lớp 5): "Cả phòng đang ôm bé / Bé cười rồi"
+     không được đè lên viên "Top 1 đang chờ bạn". Khối này trong suốt ngoài các
+     ô top nên không che ảnh hai em hai bên. */
+  z-index: 6;
 }
 
 /* ---- Thanh tiến độ ---- */
@@ -873,6 +917,11 @@ body {
   object-fit: cover;
   border: 0.15cqw solid #ffe39a;
 }
+/* Người vừa bình luận / thả tim / tặng quà: chữ và viền vàng, như bản cũ. */
+.seat-tag.hot .seat-label {
+  color: var(--gold, #f2c45a);
+  border-color: var(--gold, #f2c45a);
+}
 /* So le: ghế lẻ trong hàng hạ nhãn xuống, tên hai ghế cạnh nhau không đè chữ. */
 .seat-tag.alt .seat-label {
   margin-top: 2.2cqw;
@@ -897,14 +946,16 @@ body {
   right: 0;
   top: calc(var(--hall-top) - 2cqw);
   height: 10cqw;
-  z-index: 7;
+  /* Dưới người ngồi (hàng ghế 1, nhãn tên 2): người nhảy đứng SAU hàng đầu,
+     không đè lên ai đang ngồi. */
+  z-index: 0;
   pointer-events: none;
 }
 /* Khung ngang: dải chữ chạy nâng theo cả cụm (`--group-lift`), sàn nhảy đứng
    nguyên thì người trên sàn hụt xuống, cách dải chữ một khoảng trống. Nâng sàn
    lên để đầu họ nằm ngay dưới dải chữ, hở chừng 0,8cqw. */
 .stage[data-orientation='landscape'] .slot-floor {
-  top: calc(var(--hall-top) - 6cqw);
+  top: calc(var(--hall-top) - 8cqw);
 }
 /* ---- Hai bạn nhỏ đứng hai bên thanh tiến độ ----
    Ảnh và CHỖ ĐỨNG của bản cũ (`KIDS` trong `comfort.ts`): bé gái ngồi thiền
@@ -1098,9 +1149,18 @@ body {
 }
 .slot-corner-right {
   position: absolute;
-  right: 3cqw;
-  bottom: 24cqw;
-  z-index: 3;
+  /* Ô dọc bên phải rạp — chỗ video người thật (`host-video`). Nằm SAU các hàng
+     ghế (`stage-hall` z-index 1, nhãn tên 2): video là nền phía sau rạp, không
+     nổi hẳn lên che chỗ ngồi. */
+  right: 1.5cqw;
+  /* Nằm HẲN trong vùng hàng ghế: mép trên của video phải thấp hơn hàng ghế
+     đầu, không thì nó nhô lên trên rạp. Nhỏ thôi — đây là một ô nhỏ góc rạp,
+     không phải màn chiếu. */
+  bottom: 26cqw;
+  width: 11cqw;
+  /* Dưới cùng của phần rạp: hàng ghế (1), chibi an ủi (0) và nhãn tên (2) đều
+     vẽ đè lên — chibi chạy qua là đi TRƯỚC video, không bị video che. */
+  z-index: -1;
 }
 .slot-full {
   position: absolute;
@@ -1141,6 +1201,12 @@ body {
 .stage-hints b {
   color: var(--gold);
   font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+/* Dòng minh bạch của bản cũ: nhỏ và nhạt hơn dòng lệnh — ghi chú, không phải lời mời. */
+.stage-honest {
+  margin: 0;
+  font-size: 1.8cqw;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 
@@ -1259,6 +1325,56 @@ body {
   }
 }
 
+/* Popup trên đầu người được ôm — đúng kiểu `stage-comfort-caption` của bản cũ:
+   ô tím đậm viền hồng, ở lề trái / phải, hẹp để không lấn khung chiếu. */
+.om-loi {
+  position: absolute;
+  /* Dưới hàng top (`.stage-tops`, lớp 6 — có viên "Top 1 đang chờ bạn"),
+     trên ảnh hai em (lớp 5 — cùng lớp, popup vẽ sau nên vẫn nổi trên). */
+  z-index: 5;
+  margin: 0;
+  box-sizing: border-box;
+  max-width: 22cqw;
+  width: max-content;
+  padding: 1cqw 1.6cqw;
+  transform: translateY(-100%);
+  border-radius: 3cqw;
+  text-align: center;
+  font-size: 2.3cqw;
+  line-height: 1.3;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(30, 22, 48, 0.86);
+  border: 0.3cqw solid rgba(255, 214, 230, 0.7);
+  box-shadow:
+    0 0.6cqw 2cqw rgba(0, 0, 0, 0.45),
+    0 0 2.4cqw rgba(255, 170, 200, 0.45);
+  animation: om-loi-hien 0.6s ease both;
+  pointer-events: none;
+}
+/* Neo vào ĐỈNH ĐẦU từng em, cùng công thức với ảnh (`.stage-be`, `.kid-boy`):
+   chân trừ chiều cao ảnh, rồi chừa một khoảng cho tim bay. Theo `--lower-top`
+   và `--group-lift` nên khung ngang nâng cả cụm thì popup lên theo. */
+.om-loi.ben-trai {
+  left: 1.5cqw;
+  top: calc(var(--lower-top) + 21.9cqw - 10.1cqw - var(--group-lift) - 6cqw);
+}
+.om-loi.ben-phai {
+  right: 1.5cqw;
+  top: calc(var(--lower-top) + 22.9cqw - 11.5cqw - var(--group-lift) - 6cqw);
+}
+@keyframes om-loi-hien {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-100% + 1.5cqw));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .om-loi {
+    animation: none;
+  }
+}
+
 .om-tim {
   position: absolute;
   /* Trên cùng cụm: tim bay mà bị hàng bồ đoàn che thì coi như không có. */
@@ -1323,8 +1439,9 @@ body {
 .stage-guide {
   position: absolute;
   left: 50%;
-  top: var(--screen-mid);
-  transform: translate(-50%, -50%);
+  /* Ngay DƯỚI khung chiếu, không che ảnh và phụ đề truyện. */
+  top: calc(var(--screen-top) + var(--screen-h) + 1.6cqw);
+  transform: translateX(-50%);
   z-index: 6;
   width: 62cqw;
   padding: 2.2cqw 3cqw 2.4cqw;
@@ -1393,5 +1510,133 @@ body {
 @keyframes guide-chay {
   to {
     transform: scaleX(0);
+  }
+}
+
+/* ---- Lệnh gõ về ghế (`parts/LenhGhe.tsx`) ----
+   "chỗ của tôi" / "ghế B4": vòng sáng quanh ghế, nhãn mã ghế + tên phía trên.
+   "đánh Lan": viên tên người gõ bay từ ghế mình tới ghế kia, nổ "bụp bụp",
+   rồi bay về. Cùng hệ toạ độ với `.tung-hoa`. */
+.lop-lenh-ghe {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+}
+.ghe-sang {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+.ghe-sang-vong {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6cqw;
+  height: 6cqw;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 0.35cqw solid #f3d37a;
+  box-shadow: 0 0 1.6cqw rgba(243, 211, 122, 0.9);
+  animation: ghe-sang-nhip 1s ease-in-out infinite;
+}
+.ghe-sang-chu {
+  position: absolute;
+  left: 50%;
+  bottom: 3.6cqw;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 0.3cqw 1.1cqw;
+  border-radius: 1cqw;
+  font-size: 2cqw;
+  font-weight: 700;
+  color: #fff4dc;
+  background: rgba(20, 10, 4, 0.82);
+  border: max(1px, 0.12cqw) solid rgba(242, 196, 90, 0.7);
+}
+.ghe-sang[data-loi='true'] .ghe-sang-vong {
+  border-color: #ff8a7a;
+  box-shadow: 0 0 1.6cqw rgba(255, 120, 100, 0.8);
+}
+.ghe-sang[data-loi='true'] .ghe-sang-chu {
+  border-color: rgba(255, 138, 122, 0.8);
+}
+@keyframes ghe-sang-nhip {
+  50% {
+    transform: translate(-50%, -50%) scale(1.18);
+    opacity: 0.7;
+  }
+}
+
+.treu {
+  position: absolute;
+  left: var(--x0);
+  top: var(--y0);
+  transform: translate(-50%, -50%);
+  animation-name: treu-bay;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+}
+.treu-ten {
+  display: block;
+  white-space: nowrap;
+  padding: 0.3cqw 1cqw;
+  border-radius: 1cqw;
+  font-size: 1.9cqw;
+  font-weight: 800;
+  color: #3a1d00;
+  background: #ffe39a;
+  box-shadow: 0 0.3cqw 0.8cqw rgba(0, 0, 0, 0.5);
+}
+.treu-bup {
+  position: absolute;
+  left: 50%;
+  top: -3cqw;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-style: normal;
+  font-size: 2.2cqw;
+  font-weight: 900;
+  color: #fff3c4;
+  text-shadow: 0 0 0.8cqw rgba(255, 90, 90, 0.9), 0 0.2cqw 0 #8a2a00;
+  opacity: 0;
+  animation-name: treu-bup;
+  animation-fill-mode: both;
+}
+/* 0–30%: bay tới · 30–70%: đánh (lắc) · 70–100%: bay về. */
+@keyframes treu-bay {
+  0% {
+    left: var(--x0);
+    top: var(--y0);
+  }
+  30%,
+  70% {
+    left: var(--x1);
+    top: var(--y1);
+  }
+  40%,
+  60% {
+    transform: translate(-50%, -50%) rotate(-12deg);
+  }
+  50% {
+    transform: translate(-50%, -50%) rotate(12deg);
+  }
+  100% {
+    left: var(--x0);
+    top: var(--y0);
+    opacity: 0.6;
+  }
+}
+@keyframes treu-bup {
+  0%,
+  30% {
+    opacity: 0;
+  }
+  35%,
+  65% {
+    opacity: 1;
+  }
+  70%,
+  100% {
+    opacity: 0;
   }
 }

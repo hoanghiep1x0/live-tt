@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { loiGiong, tenKetNoi } from '@live/contracts';
+import { chuNguon, loiGiong, nguonGiong, tenKetNoi } from '@live/contracts';
 import type { KetNoiAi } from '@live/contracts';
 import type { CastVoice, VoiceCfg } from './audio';
 import { useStage } from './Stage';
@@ -26,6 +26,26 @@ function useKho(): KetNoiAi[] {
   return ds;
 }
 
+/** Nhãn nguồn của một giọng: tên kết nối (đúng tên ở thẻ Kết nối AI) rồi dịch
+ *  vụ đọc và giá. Cùng tên ở hai thẻ thì nhìn là nối được giọng nào đi qua
+ *  kết nối nào. */
+function NhanNguon({ g, kho }: { g: CastVoice; kho: readonly KetNoiAi[] }) {
+  const n = nguonGiong(g, kho);
+  if (n === null) return <span className="bx-nguon-chu">chưa có kết nối</span>;
+  const gia = n.mienPhi === null ? '' : n.mienPhi ? ' · miễn phí' : ' · trả phí';
+  return (
+    <>
+      <span className="bx-nhan-ket-noi" data-mien-phi={n.mienPhi ?? undefined}>
+        {n.quaKetNoi}
+      </span>
+      <span className="bx-nguon-chu">
+        {n.dichVu === n.quaKetNoi ? '' : n.dichVu}
+        {gia}
+      </span>
+    </>
+  );
+}
+
 /** Thẻ dàn giọng ở mục dùng chung của ngăn xem thử. */
 export function TheGiong({ mo }: { mo: () => void }) {
   const s = useStage();
@@ -50,29 +70,27 @@ export function TheGiong({ mo }: { mo: () => void }) {
           <b>Giọng đọc</b>
           <small>{tom}</small>
         </span>
+        <button type="button" className="bx-kho-mo-nho" onClick={mo}>
+          {cast.length === 0 ? 'Thêm giọng' : 'Sửa'}
+        </button>
       </div>
+      {/* Gọn một hàng: vai + chấm xanh / đỏ; ★ là giọng mặc định. Chi tiết khi rê chuột. */}
       {cast.length === 0 ? null : (
-        <ul className="bx-kho-ds">
+        <ul className="bx-gon-ds" onClick={mo}>
           {cast.map((g) => {
             const loi = loiGiong(g, kho);
+            const nha = kho.find((p) => p.id === g.provider);
+            const ta = `${nha === undefined ? g.provider : tenKetNoi(nha)}${g.voice.trim() === '' ? '' : ` · ${g.voice}`} · ${loi ?? 'đọc được'}`;
             return (
-              <li key={g.id} data-co={loi === null}>
-                <b>{g.role.trim() === '' ? g.id : g.role}</b>
-                <span className="bx-kho-viec">
-                  {g.id === s.voice.default ? '★ ' : ''}
-                  {g.voice.trim() === '' ? '(model của kết nối)' : g.voice}
-                </span>
-                <span className="bx-kho-trangthai" title={loi ?? undefined}>
-                  {loi === null ? 'đọc được' : 'chưa đọc được'}
-                </span>
+              <li key={g.id} data-co={loi === null} title={`${g.role} · ${ta}`}>
+                {g.id === s.voice.default ? '★ ' : ''}
+                {/* Chỉ tên vai ngắn ("Nam dẫn chuyện — lời nhân vật nam" → "Nam dẫn chuyện"). */}
+                {(g.role.split(/\s[—–-]\s|,/)[0] ?? '').trim() || g.id}
               </li>
             );
           })}
         </ul>
       )}
-      <button type="button" className="bx-kho-mo" onClick={mo}>
-        {cast.length === 0 ? 'Thêm giọng đầu tiên' : 'Sửa dàn giọng'}
-      </button>
     </article>
   );
 }
@@ -178,6 +196,22 @@ export function ModalGiong({ dong }: { dong: () => void }) {
           </label>
           <label className="bx-dong">
             <span>
+              <b>Đa giọng</b>
+              <small>
+                {cfg.multi
+                  ? 'Mình tự chọn giọng theo vai từng câu; mỗi tính năng đọc bằng giọng của nó (chọn "Tự đổi giọng" là mỗi câu một giọng).'
+                  : 'Đang đơn giọng: cả phòng đọc bằng giọng mặc định ★, giọng riêng của từng tính năng bị bỏ qua.'}
+              </small>
+            </span>
+            <input
+              type="checkbox"
+              checked={cfg.multi}
+              aria-label="Đa giọng"
+              onChange={(e) => setCfg({ ...cfg, multi: e.target.checked })}
+            />
+          </label>
+          <label className="bx-dong">
+            <span>
               <b>Tốc độ đọc</b>
               <small>{cfg.speed.toFixed(2)}×</small>
             </span>
@@ -230,6 +264,9 @@ export function ModalGiong({ dong }: { dong: () => void }) {
                       <td className="bx-kho-stt">{x.id === cfg.default ? '★' : i + 1}</td>
                       <td>
                         <b>{x.role.trim() === '' ? x.id : x.role}</b>
+                        <small className="bx-giong-nguon">
+                          <NhanNguon g={x} kho={kho} />
+                        </small>
                         <small className="bx-giong-loi" data-loi={l !== null}>
                           {l ?? 'đọc được'}
                         </small>
@@ -267,7 +304,7 @@ export function ModalGiong({ dong }: { dong: () => void }) {
                 <input
                   className="bx-o bx-o-nho"
                   value={g.role}
-                  placeholder="MC dẫn chuyện, bé gái, chào khách…"
+                  placeholder="giọng dẫn truyện, bé gái, chào khách…"
                   aria-label="Vai của giọng"
                   onChange={(e) => sua(dang, { role: e.target.value })}
                 />
@@ -305,6 +342,12 @@ export function ModalGiong({ dong }: { dong: () => void }) {
                   onChange={(e) => sua(dang, { voice: e.target.value })}
                 />
               </label>
+              <p className="bx-giong-doi">
+                Đọc bằng: <b>{chuNguon(nguonGiong(g, kho))}</b>. Muốn đổi giọng miễn phí sang trả
+                phí: cắm khoá nhà đó (ElevenLabs, OpenAI…) ở thẻ Kết nối AI, rồi chọn kết nối ấy ở
+                ô Kết nối và điền tên giọng của nhà đó. Mọi tính năng đang dùng giọng{' '}
+                <b>{g.id}</b> đổi theo ngay khi lưu.
+              </p>
               {loi === null ? null : <p className="bx-kho-bao">{loi}</p>}
               <div className="bx-kho-nut">
                 <button

@@ -131,4 +131,28 @@ describe('tốc độ chạy', () => {
     expect(s.ketThuc).toBeLessThan(cu);
     expect(s.batDau).toBe(0);
   });
+
+  it('chuyển sang "chỉ top người tặng": lời người thường đang chờ không chạy nốt', () => {
+    const tatca = { ...MAC_DINH, source: 'tatca' as const };
+    const s = core.init(tatca);
+    runFeed(mod, s, noi('khach', 'Khách', 'chào cả nhà'), ctx(tatca, 0, 0, [HANH]));
+    expect(s.cho).toHaveLength(1);
+    const top = { ...tatca, source: 'top' as const };
+    core.onConfig!(s, top);
+    expect(s.cho).toEqual([]);
+    // Người trong top nhắn thì vẫn lên dải; người thường thì không.
+    runFeed(mod, s, noi('hanh', 'Hạnh', 'cảm ơn truyện hay', 2), ctx(top, 0, 0, [HANH]));
+    runFeed(mod, s, noi('khach', 'Khách', 'lại là tôi', 3), ctx(top, 0, 0, [HANH]));
+    expect(s.cho.map((x) => x.user)).toEqual(['hanh']);
+  });
+});
+
+describe('lệnh gõ', () => {
+  it('"gửi: …" chạy đúng lời nhắn, lệnh điều khiển phòng thì không lên dải', () => {
+    const s = core.init(MAC_DINH);
+    const c = ctx(s.config, 0, 0, [HANH]);
+    runFeed(mod, s, { ...noi('hanh', 'Hạnh', 'gửi: chúc cả nhà ngủ ngon'), lenh: { loai: 'gui', chu: 'chúc cả nhà ngủ ngon' } }, c);
+    runFeed(mod, s, { ...noi('hanh', 'Hạnh', 'ghế B4', 2), lenh: { loai: 'ghe', ma: 'B4', i: 11, ok: true } }, c);
+    expect(s.cho.map((x) => x.text)).toEqual(['chúc cả nhà ngủ ngon']);
+  });
 });

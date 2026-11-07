@@ -1,5 +1,5 @@
 import { boLenSong, CANH3D_ATTR, locTuDo, rngChuoi, TUOI_NGUOI_LON } from '@live/contracts';
-import type { VuCong3D } from '@live/contracts';
+import type { AnhGoc, VuCong3D } from '@live/contracts';
 import { moduleAssetUrl, useTuDo } from '@live/stage-sdk';
 import type { StagePartProps } from '@live/stage-sdk';
 import type { Config } from './manifest';
@@ -14,6 +14,15 @@ const LA_BO = new Set<string>(TRANG_PHUC.map((t) => t.id));
 function boNgauNhien(config: Config): string[] {
   const ds = boBat(config);
   return ds.length > 0 ? ds : TRANG_PHUC.map((t) => t.id);
+}
+
+/** 8 ô ảnh góc của một bộ ảnh động (ô trống thì bỏ — thiết kế lấy góc gần nhất). */
+type OGoc = 'anh' | 'anhCheo' | 'anhNghieng' | 'anhCheoSau' | 'anhSau' | 'anhCheoP' | 'anhNghiengP' | 'anhCheoSauP';
+function gocAnh(c: Pick<Config['khoNhanVat'][number], OGoc>): AnhGoc {
+  const o = (s: string): string | undefined => (s.trim() === '' ? undefined : s.trim());
+  const g = { cheo: o(c.anhCheo), nghieng: o(c.anhNghieng), cheoSau: o(c.anhCheoSau), sau: o(c.anhSau),
+    cheoP: o(c.anhCheoP), nghiengP: o(c.anhNghiengP), cheoSauP: o(c.anhCheoSauP) };
+  return { truoc: c.anh.trim(), ...Object.fromEntries(Object.entries(g).filter(([, v]) => v !== undefined)) };
 }
 
 /** Không vẽ gì: khai cho cảnh 3D của thiết kế biết dựng vũ công nào, mặc bộ nào, nhảy
@@ -38,15 +47,14 @@ export function Stage({ config, modState }: StagePartProps<Config, State>) {
   );
   // Kho nhân vật: bộ của từng người (đã kèm lót). Đám đông lấy người có "Có trong đám đông"; bộ VIP ngẫu nhiên bốc cả kho.
   const kho = config.khoNhanVat.map((c) => ({ damDong: c.damDong, bo: url(c.mon) })).filter((c) => c.bo.length > 0);
-  // nhân vật có ảnh động: vào đám đông thành tấm ảnh, không mặc món (và không vào bộ VIP)
+  // nhân vật có ảnh động: vào đám đông thành tấm ảnh, không mặc món (và không vào bộ VIP). Có "Bộ đồ khác" thì
+  // thành người nhiều bộ: bộ đầu là 8 ô của nhân vật, rồi các bộ khác (bộ thiếu mặt trước thì bỏ)
   const khoAnh = config.khoNhanVat
     .filter((c) => c.damDong && c.anh.trim() !== '')
-    .map((c) => ({
-      truoc: c.anh.trim(),
-      ...(c.anhCheo.trim() ? { cheo: c.anhCheo.trim() } : {}),
-      ...(c.anhNghieng.trim() ? { nghieng: c.anhNghieng.trim() } : {}),
-      ...(c.anhSau.trim() ? { sau: c.anhSau.trim() } : {}),
-    }));
+    .map((c) => {
+      const bo = [c, ...c.boAnh.filter((b) => b.bat && b.anh.trim() !== '')].map(gocAnh);
+      return bo.length > 1 ? { bo } : bo[0]!;
+    });
   const khoDam = config.khoNhanVat
     .filter((c) => c.damDong && c.anh.trim() === '')
     .map((c) => url(c.mon))
@@ -92,6 +100,9 @@ export function Stage({ config, modState }: StagePartProps<Config, State>) {
           ...(anh.length > 0 ? { anh } : {}),
         };
       }),
+    ...(modState.soi !== null ? { soi: modState.soi } : {}),
+    ...(config.hienSo ? { hienSo: true } : {}),
+    ...(modState.doiAnh !== null ? { doiDo: modState.doiAnh } : {}),
     ...(td !== null && vip.length > 0
       ? { thayDo: { id: td.id, nguoi: td.nguoi, khach: td.khach, mon: vip, tu: td.tu, den: td.den, moc: MAN_THAY_DO } }
       : {}),

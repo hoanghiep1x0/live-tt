@@ -50,7 +50,16 @@ export type Effect =
    *  `caption` mặc định bật: câu nói hiện luôn lên thẻ MC để người xem tắt
    *  tiếng vẫn theo được. Module nào đã tự vẽ chính câu đó lên màn thì đặt
    *  `false`, không màn sẽ ra hai lần một câu. */
-  | { kind: 'say'; text: string; voice?: string; priority?: Priority; caption?: boolean }
+  | {
+      kind: 'say';
+      text: string;
+      voice?: string;
+      priority?: Priority;
+      caption?: boolean;
+      /** Đọc nhiều giọng theo dấu `[id-giọng]` trong câu dù dàn đang để đơn
+       *  giọng — cho lời kể của MC, nơi lời thoại nhân vật có giọng riêng. */
+      daGiong?: boolean;
+    }
   | { kind: 'sfx'; sound: SfxName; volume?: number }
   /** Vẽ vào một slot. Thiết kế không có slot đó thì bỏ qua và ghi log, không lỗi. */
   | { kind: 'overlay'; slot: SlotName; ttlMs?: number }
@@ -73,7 +82,7 @@ export type RoomCommand =
   /** Nhân vật ảo: bật tắt và số lượng. Nội dung họ nói là của thiết kế
    *  (`crowd` trong design.json), lệnh này chỉ chỉnh số. */
   | { op: 'set-bot'; patch: Json }
-  /** MC do AI dẫn: bật tắt, nhịp xem lại phòng, model, lời dặn thêm. Khoá API
+  /** Người dẫn do AI: bật tắt, nhịp xem lại phòng, model, lời dặn thêm. Khoá API
    *  KHÔNG đi qua đây — nó nằm ở kho khoá của backend. */
   | { op: 'set-ai'; patch: Json }
   /** Bấm một nút `actions` của module. Không lưu gì: backend chỉ chuyển xuống sân

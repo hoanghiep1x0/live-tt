@@ -197,9 +197,12 @@
 
 /* ---- Dòng đua top ----
  * Dải đỏ viền vàng nằm ngay TRÊN hàng bồ đoàn: ai vừa tặng gì, đang hạng mấy.
- * Chuyển từ bản cũ (`.stage-race`, index.css dòng 489–548), bỏ bớt lớp tia
- * conic xoay — một hình 70×70cqw xoay liên tục là thứ đắt nhất trên sân khấu,
- * mà OBS còn phải ghép cả video truyện.
+ * Chuyển nguyên từ bản cũ (`.stage-race`, index.css dòng 489–548): hai kiểu —
+ * dải ĐỎ khi người trong top vừa tặng quà, dải VÀNG (`.la-dau`) khi mời lên
+ * top / báo người đang dẫn đầu — cùng lớp tia pháo hoa xoay chậm phía sau và
+ * ánh hắt đỏ / cam / hồng nhấp nháy lệch nhịp. Bản đầu bỏ lớp tia cho nhẹ máy;
+ * người vận hành muốn giữ đúng dáng bản cũ, nên đưa lại, kèm `will-change` để
+ * nó chạy trên luồng ghép hình.
  *
  * Neo theo `bottom: 100%` của chính hàng bồ đoàn, nên thiết kế nào cắm module
  * này vào slot `tops` cũng ra đúng chỗ, không phải đặt lại toạ độ.
@@ -212,6 +215,9 @@
   position: absolute;
   left: 50%;
   bottom: 100%;
+  /* Lớp xếp riêng như bản cũ (z-index 4): tia pháo hoa `z-index: -1` nằm sau
+     chữ nhưng không lọt ra sau cả sân khấu. */
+  z-index: 1;
   max-width: 92cqw;
   /* Nhấc lên giữa khoảng hở giữa đáy khung chiếu và hàng bồ đoàn, thay vì dính
      sát mép bảng. Neo theo `.mod-tops` (cao 100% ô slot) nên tắt hàng bồ đoàn
@@ -220,14 +226,18 @@
   padding: 0.5cqw 2.2cqw;
   border-radius: 3cqw;
   white-space: nowrap;
+  overflow: visible;
   font-size: 2.5cqw;
   line-height: 1.35;
   color: #fff;
   background: linear-gradient(90deg, rgba(150, 20, 40, 0.92), rgba(200, 60, 30, 0.92));
   border: 0.2cqw solid #ffcf6a;
-  /* Hiện rồi nằm yên (lõi giữ dòng này hàng phút), viền thở nhẹ cho khỏi chết
-     cứng một chỗ. */
-  animation: dua-vao 0.6s ease both, dua-sang 3.2s ease-in-out 0.6s infinite;
+  box-shadow: 0 0 2cqw rgba(255, 120, 60, 0.7);
+  transform: translateX(-50%);
+  /* Hiện rồi nằm yên (lõi giữ dòng này hàng phút), ánh hắt nhấp nháy nhẹ. */
+  animation:
+    dua-vao 0.6s ease both,
+    dua-sang 3.2s linear 0.6s infinite;
 }
 .mod-dua b {
   color: #ffe39a;
@@ -237,9 +247,39 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Chưa ai tặng: dòng vàng báo người đang dẫn đầu, dịu hơn dòng quà. */
+/* Tia sáng tỏa quanh như pháo hoa: tia mảnh, dày mỏng không đều, mờ dần ra
+   ngoài, xoay chậm và nhấp nháy. */
+.mod-dua::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: -1;
+  width: 70cqw;
+  height: 70cqw;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scaleY(0.32) rotate(0deg);
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 60, 60, 0) 0deg 5deg,
+    rgba(255, 70, 60, 0.22) 6.5deg,
+    rgba(255, 60, 60, 0) 8deg 13deg,
+    rgba(255, 140, 70, 0.16) 14deg,
+    rgba(255, 60, 60, 0) 15.5deg 23deg,
+    rgba(255, 80, 140, 0.18) 24.5deg,
+    rgba(255, 60, 60, 0) 26deg 30deg
+  );
+  -webkit-mask: radial-gradient(closest-side, transparent 22%, #000 38%, rgba(0, 0, 0, 0.5) 62%, transparent 100%);
+  mask: radial-gradient(closest-side, transparent 22%, #000 38%, rgba(0, 0, 0, 0.5) 62%, transparent 100%);
+  will-change: transform, opacity;
+  animation:
+    dua-tia 18s linear infinite,
+    dua-nhap-nhay 3.6s ease-in-out infinite;
+}
+/* Dải vàng: mời lên top / người đang dẫn đầu — dịu hơn dải quà. */
 .mod-dua.la-dau {
   background: linear-gradient(90deg, rgba(150, 100, 10, 0.94), rgba(210, 150, 30, 0.94));
+  box-shadow: 0 0 2cqw rgba(255, 210, 90, 0.45);
 }
 
 @keyframes dua-vao {
@@ -252,22 +292,90 @@
     transform: translate(-50%, 0) scale(1);
   }
 }
+/* Ánh đỏ mờ, tỏa rộng, không đều màu (đỏ / cam / hồng lệch chỗ, lệch nhịp) —
+   như ánh pháo hoa hắt quanh dòng chữ. */
 @keyframes dua-sang {
   0%,
   100% {
-    transform: translateX(-50%);
-    box-shadow: 0 0 2cqw rgba(255, 120, 60, 0.55);
+    box-shadow:
+      0 0 3cqw rgba(255, 50, 50, 0.12),
+      -3cqw -1cqw 5cqw rgba(255, 120, 60, 0.09),
+      3.4cqw 1.2cqw 6cqw rgba(255, 60, 130, 0.08);
   }
-  50% {
-    transform: translateX(-50%);
-    box-shadow: 0 0 3.6cqw rgba(255, 90, 60, 0.85);
+  13% {
+    box-shadow:
+      0 0 4.5cqw rgba(255, 40, 40, 0.21),
+      -4cqw -1.6cqw 6.5cqw rgba(255, 140, 60, 0.14),
+      2.4cqw 0.8cqw 4.5cqw rgba(255, 80, 140, 0.1);
+  }
+  27% {
+    box-shadow:
+      0 0 3.4cqw rgba(255, 60, 60, 0.14),
+      -2cqw 0.8cqw 4.5cqw rgba(255, 110, 50, 0.1),
+      4.6cqw -1.2cqw 7cqw rgba(255, 50, 120, 0.17);
+  }
+  41% {
+    box-shadow:
+      0 0 5.5cqw rgba(255, 35, 35, 0.23),
+      -4.6cqw 1.4cqw 7.5cqw rgba(255, 150, 70, 0.13),
+      3cqw 1.8cqw 6cqw rgba(255, 90, 150, 0.13);
+  }
+  52% {
+    box-shadow:
+      0 0 3cqw rgba(255, 55, 55, 0.13),
+      -2.6cqw -0.6cqw 5cqw rgba(255, 115, 55, 0.09),
+      2cqw -1cqw 4.5cqw rgba(255, 70, 120, 0.09);
+  }
+  67% {
+    box-shadow:
+      0 0 5cqw rgba(255, 40, 40, 0.2),
+      -5cqw -1.4cqw 8cqw rgba(255, 130, 60, 0.15),
+      5cqw 0.6cqw 7cqw rgba(255, 60, 140, 0.15);
+  }
+  81% {
+    box-shadow:
+      0 0 3.6cqw rgba(255, 60, 60, 0.15),
+      -2cqw 1.2cqw 5.5cqw rgba(255, 120, 50, 0.11),
+      3cqw -1.6cqw 5.5cqw rgba(255, 80, 120, 0.11);
+  }
+  91% {
+    box-shadow:
+      0 0 5cqw rgba(255, 35, 35, 0.22),
+      -3.6cqw -1cqw 6.5cqw rgba(255, 150, 60, 0.14),
+      4cqw 1.4cqw 6.5cqw rgba(255, 70, 150, 0.14);
+  }
+}
+@keyframes dua-tia {
+  to {
+    transform: translate(-50%, -50%) scaleY(0.32) rotate(360deg);
+  }
+}
+/* Nhấp nháy nhẹ, không gây lóa. */
+@keyframes dua-nhap-nhay {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  17% {
+    opacity: 0.55;
+  }
+  34% {
+    opacity: 0.35;
+  }
+  58% {
+    opacity: 0.6;
+  }
+  76% {
+    opacity: 0.42;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .mod-dua {
+    animation: dua-vao 0.6s ease both;
+  }
+  .mod-dua::before {
     animation: none;
-    transform: translateX(-50%);
-    box-shadow: 0 0 2cqw rgba(255, 120, 60, 0.6);
+    opacity: 0.6;
   }
 }

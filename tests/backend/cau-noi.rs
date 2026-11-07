@@ -42,7 +42,7 @@ async fn cau_noi_gia(ws: WebSocketUpgrade) -> Response {
             json!({ "kind": "comment", "user": "an", "name": "An", "text": "chào cả phòng" }),
             json!({ "kind": "gift", "user": "binh", "name": "Bình",
                     "gift": "Hoa sen", "count": 3, "xuEach": 10 }),
-            json!({ "type": "viewers", "count": 1234 }),
+            json!({ "type": "viewers", "count": 1234, "views": 64394 }),
             // Tin hỏng ở giữa: không được làm mất những tin sau.
             json!({ "kind": "gi-do-la" }),
             json!({ "kind": "like", "user": "an", "name": "An", "count": 7, "total": 500 }),
@@ -134,6 +134,7 @@ async fn nhan_duoc_su_kien_that_tu_cau_noi() {
         v.totals.viewers, 1234,
         "số người xem lấy từ cầu nối, không phải số ghế"
     );
+    assert_eq!(v.totals.views, 64394, "tổng lượt xem cả buổi lấy từ cầu nối");
     assert_eq!(v.top_givers[0].user, "binh");
 
     // Tin từ cầu nối là người THẬT: không được đánh dấu là nhân vật ảo, nếu

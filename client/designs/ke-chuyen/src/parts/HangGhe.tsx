@@ -14,7 +14,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import type { Seat } from '@live/contracts';
+import type { FeedItem, Seat } from '@live/contracts';
 import { rowName, seatLayout, tierOf } from '../seats';
 import { ANH_NGOI, anhCua, kieuChibi } from './ghe';
 import type { ChoNgoi } from './ghe';
@@ -37,11 +37,15 @@ export function HangGhe({
   rows,
   ngoi,
   asset,
+  vang,
 }: {
   ghe: ChoNgoi[];
   rows: number;
   ngoi: Map<number, Seat>;
   asset: (p: string) => string;
+  /** Người đang rời ghế một lúc (chạy lên an ủi bé): ghế của họ để trống tới
+   *  khi họ chạy về — không thì một người hiện hai nơi. */
+  vang?: ReadonlySet<string> | undefined;
 }) {
   // Backend báo "ghế này trống" là React bỏ thẻ ảnh ngay, người biến mất giữa
   // rạp. Giữ người vừa đứng dậy thêm `RA_MS` để họ đi ra, rồi mới bỏ thật.
@@ -94,7 +98,8 @@ export function HangGhe({
       {ghe.map((g) => {
         const ai = ngoi.get(g.flat);
         // Còn đang trên đường thì chưa vẽ người ngồi: họ phải đi tới nơi đã.
-        const chuaToi = ai !== undefined && dangToi.current.has(ai.user);
+        // Đang chạy lên an ủi bé cũng vậy: ghế trống tới lúc họ về.
+        const chuaToi = ai !== undefined && (dangToi.current.has(ai.user) || vang?.has(ai.user) === true);
         const cu = ai === undefined ? diRa.get(g.flat) : undefined;
         return (
           <div
@@ -181,8 +186,31 @@ function TenGhe({ ten, anh }: { ten: string; anh: string | undefined }) {
   );
 }
 
+/** Người vừa bình luận, thả tim hay tặng quà trong ngần này thì tên "nóng":
+ *  luôn hiện, chữ vàng, nổi lên trên — như `hot` (2,5 giây) của bản cũ. */
+const NONG_MS = 2_500;
+
+/** Ai đang "nóng" lúc `now`, theo feed của phiên. Thuần. */
+export function nguoiNong(feed: readonly FeedItem[], now: number): Set<string> {
+  const ra = new Set<string>();
+  for (const f of feed) {
+    if (now - f.at >= NONG_MS || f.user === undefined) continue;
+    if (f.kind === 'comment' || f.kind === 'like' || f.kind === 'gift') ra.add(f.user);
+  }
+  return ra;
+}
+
 /** Tên khán giả, nằm trên lớp riêng để không bị cuộn lệch khỏi ghế. */
-export function TenKhan({ ghe, ngoi }: { ghe: ChoNgoi[]; ngoi: Map<number, Seat> }) {
+export function TenKhan({
+  ghe,
+  ngoi,
+  nong,
+}: {
+  ghe: ChoNgoi[];
+  ngoi: Map<number, Seat>;
+  /** Người đang tương tác (`nguoiNong`). */
+  nong: ReadonlySet<string>;
+}) {
   const [luot, setLuot] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setLuot((x) => 1 - x), DOI_TEN_MS);
@@ -196,10 +224,15 @@ export function TenKhan({ ghe, ngoi }: { ghe: ChoNgoi[]; ngoi: Map<number, Seat>
         if (ai === undefined) return null;
         // So le như bản cũ: ghế thứ lẻ trong hàng hạ nhãn xuống một nấc, tên hai
         // ghế cạnh nhau không đè chữ lên nhau.
-        const le = Number(g.key.split('-')[1] ?? 0) % 2 === 1;
+        const i = Number(g.key.split('-')[1] ?? 0);
+        const dangNong = nong.has(ai.user);
         const lop = ['seat-tag'];
-        if (le) lop.push('alt');
-        if (g.flat % 2 === luot) lop.push('name-off');
+        if (dangNong) lop.push('hot');
+        if (i % 2 === 1) lop.push('alt');
+        // Ẩn hiện theo ô cờ (hàng + chỗ), như bản cũ: hai ghế kề nhau — cạnh
+        // nhau hay trước sau — không bao giờ cùng hiện tên. Người đang tương
+        // tác thì luôn hiện.
+        if (!dangNong && (g.r + i) % 2 === luot) lop.push('name-off');
         return (
           <span
             key={g.key}
@@ -207,8 +240,9 @@ export function TenKhan({ ghe, ngoi }: { ghe: ChoNgoi[]; ngoi: Map<number, Seat>
             style={{
               left: `${g.x}%`,
               top: `${g.y}cqw`,
-              // Hàng trước đè hàng sau, như bản cũ.
-              zIndex: g.r + 1,
+              // Hàng trước đè hàng sau, người đang tương tác nổi lên trên hết —
+              // như bản cũ.
+              zIndex: dangNong ? 100_000 : g.r + 1,
               // @ts-expect-error biến CSS tuỳ chỉnh
               '--seat-scale': g.scale,
             }}

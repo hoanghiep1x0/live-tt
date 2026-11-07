@@ -13,6 +13,9 @@ import {
   themList,
 } from '@live/contracts';
 import type { ConfigField, Json } from '@live/contracts';
+import { OAnhTruyen, OKetNoi, ONguonAnh, ONguonChu, OTruyenSau } from './AnhTruyen';
+import { OKhoTruyen } from './KhoTruyen';
+import { OMcKeChuyen, OVaiGiong } from './McKeChuyen';
 import { useDesignId } from './Stage';
 import { moduleAssetUrl } from './assets';
 import { useTuDo, xoaTuDo } from './tu-do';
@@ -23,8 +26,10 @@ interface Props {
   value: Json;
   disabled: boolean;
   onChange(value: Json): void;
-  /** Cấu hình chứa ô này (của module, hoặc của mục trong `roster` / `list`) — cho ô cần đọc ô anh em (`tu-do` → `boSan`). */
+  /** Cả cấu hình của module — cho ô cần đọc ô khác (`aiTheo`, `anh-truyen`). */
   cfg?: Readonly<Record<string, Json>> | undefined;
+  /** Sửa một ô KHÁC của cùng module — cho ô điều khiển cả cụm (`anh-truyen`). */
+  suaKhac?(key: string, value: Json): void;
   /** Id module thật khi ô nằm trong `roster` / `list` (lúc đó `moduleId` chỉ là tiền tố id DOM) — ô `tu-do` cần nó
    *  để đọc tủ đồ và asset của module. */
   modId?: string | undefined;
@@ -93,10 +98,13 @@ function chan(e: { stopPropagation(): void }): void {
  *  quyết — máy viết hộ chứ không viết thay. */
 function NhoAiViet({
   what,
+  context,
   disabled,
   onText,
 }: {
   what: string;
+  /** Chữ của các ô `aiTheo`, gửi kèm làm bối cảnh. */
+  context: string;
   disabled: boolean;
   onText(text: string): void;
 }) {
@@ -113,7 +121,7 @@ function NhoAiViet({
       const r = await fetch(`/s/viet/${designId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ what, extra: y }),
+        body: JSON.stringify({ what, extra: y, context }),
       });
       const j = (await r.json()) as { text?: string; error?: string };
       if (!r.ok || j.text === undefined) throw new Error(j.error ?? 'không nhờ được AI viết');
@@ -601,6 +609,18 @@ function OTuDo({ moduleId, field: f, value, cfg, disabled, onChange }: Props & {
   );
 }
 
+/** Bối cảnh cho "AI viết": chữ của các ô `aiTheo`, mỗi ô một khối có nhãn. */
+function boiCanh(f: ConfigField, cfg: Readonly<Record<string, Json>> | undefined): string {
+  if (f.aiTheo === undefined || cfg === undefined) return '';
+  return f.aiTheo
+    .map((k) => {
+      const v = cfg[k];
+      return typeof v === 'string' && v.trim() !== '' ? `${k}:\n${v.trim()}` : '';
+    })
+    .filter((x) => x !== '')
+    .join('\n\n');
+}
+
 export function OConfig({
   moduleId,
   field: f,
@@ -608,8 +628,58 @@ export function OConfig({
   disabled,
   onChange,
   cfg,
+  suaKhac,
   modId,
 }: Props & { moduleId: string }) {
+  if (f.type === 'nguon-anh') {
+    return (
+      <div className="bx-ds">
+        <label className="bx-ds-nhan" htmlFor={`xem-${moduleId}-${f.key}`}>
+          {f.label}
+        </label>
+        <ONguonAnh field={f} value={value} disabled={disabled} onChange={onChange} O={OConfig} />
+      </div>
+    );
+  }
+  if (f.type === 'mc-ke-chuyen') {
+    return (
+      <div className="bx-ds">
+        <span className="bx-ds-nhan">{f.label}</span>
+        <OMcKeChuyen field={f} value={value} cfg={cfg ?? {}} disabled={disabled} onChange={onChange} suaKhac={suaKhac} O={OConfig} />
+      </div>
+    );
+  }
+  if (f.type === 'kho-truyen') {
+    return <OKhoTruyen field={f} disabled={disabled} />;
+  }
+  if (f.type === 'vai-giong') {
+    return <OVaiGiong disabled={disabled} O={OConfig} />;
+  }
+  if (f.type === 'nguon-chu') {
+    return (
+      <div className="bx-ds">
+        <span className="bx-ds-nhan">{f.label}</span>
+        <ONguonChu field={f} value={value} disabled={disabled} onChange={onChange} />
+      </div>
+    );
+  }
+  if (f.type === 'truyen-sau') {
+    return (
+      <OTruyenSau field={f} value={value} cfg={cfg ?? {}} disabled={disabled} onChange={onChange} suaKhac={suaKhac} />
+    );
+  }
+  if (f.type === 'anh-truyen') {
+    return (
+      <OAnhTruyen
+        field={f}
+        value={value}
+        cfg={cfg ?? {}}
+        disabled={disabled}
+        onChange={onChange}
+        suaKhac={suaKhac}
+      />
+    );
+  }
   if (f.type === 'tu-do') {
     return (
       <OTuDo moduleId={modId ?? moduleId} field={f} value={value} cfg={cfg} disabled={disabled} onChange={onChange} />
@@ -707,6 +777,8 @@ export function OConfig({
         }}
       />
     );
+  } else if (f.type === 'ket-noi') {
+    o = <OKetNoi id={id} field={f} value={value} disabled={disabled} onChange={onChange} />;
   } else if (f.type === 'media') {
     o = <OMedia id={id} value={value} disabled={disabled} onChange={onChange} />;
   } else {
@@ -727,10 +799,81 @@ export function OConfig({
       <label htmlFor={id}>{nhan}</label>
       {o}
       {f.ai === undefined ? null : (
-        <NhoAiViet what={f.ai} disabled={disabled} onText={(t) => onChange(t)} />
+        <NhoAiViet
+          what={f.ai}
+          context={boiCanh(f, cfg)}
+          disabled={disabled}
+          onText={(t) => onChange(t)}
+        />
       )}
       {f.hint === undefined ? null : <span className="bx-goi">{f.hint}</span>}
     </div>
+  );
+}
+
+/** Nút tải file ngay trên thẻ (ô `media` nằm trong `quick`): bấm là chọn file,
+ *  tải lên kho của phòng rồi điền đường dẫn — khỏi mở hộp cấu hình. Cùng đường
+ *  tải với `OMedia` (`/s/media/<phòng>`). */
+function TaiNhanh({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: Json;
+  disabled: boolean;
+  onChange(v: Json): void;
+}) {
+  const designId = useDesignId();
+  const chon = useRef<HTMLInputElement>(null);
+  const [dang, setDang] = useState('');
+
+  async function gui(f: File): Promise<void> {
+    setDang('Đang tải…');
+    try {
+      const ext = f.name.split('.').pop() ?? '';
+      const r = await fetch(`/s/media/${designId}?ext=${encodeURIComponent(ext)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': f.type || 'application/octet-stream' },
+        body: f,
+      });
+      const j = (await r.json()) as { url?: string; error?: string };
+      if (!r.ok || j.url === undefined) throw new Error(j.error ?? 'không tải lên được');
+      onChange(j.url);
+      setDang('');
+    } catch (e) {
+      setDang(e instanceof Error ? e.message : 'không tải lên được');
+    }
+  }
+
+  const ten = chuHoac(value).split('/').pop() ?? '';
+  return (
+    <span className="bx-q-tai" onClick={chan}>
+      <input
+        ref={chon}
+        type="file"
+        accept="image/*,video/*"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          if (f !== undefined) void gui(f);
+        }}
+      />
+      <button
+        type="button"
+        className="bx-nho"
+        disabled={disabled || dang === 'Đang tải…'}
+        aria-label={label}
+        onClick={() => chon.current?.click()}
+      >
+        {dang === 'Đang tải…' ? dang : '⬆ Tải lên'}
+      </button>
+      <small className="bx-q-tai-ten" title={chuHoac(value)}>
+        {dang !== '' && dang !== 'Đang tải…' ? dang : ten === '' ? 'chưa có' : ten}
+      </small>
+    </span>
   );
 }
 
@@ -785,6 +928,8 @@ export function ONhanh({ field: f, value, disabled, onChange }: Props) {
         ))}
       </select>
     );
+  } else if (f.type === 'media') {
+    o = <TaiNhanh label={f.label} value={value} disabled={disabled} onChange={onChange} />;
   } else if (f.type === 'number') {
     o = (
       <input

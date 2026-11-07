@@ -3,6 +3,7 @@ export type {
   LiveEvent,
   FeedKind,
   FeedItem,
+  LenhGo,
   Seat,
   SessionView,
   Giver,
@@ -35,6 +36,7 @@ export {
   suaRoster,
   themList,
   thuocPhong,
+  hienO,
 } from './module';
 export type {
   Capability,
@@ -53,16 +55,42 @@ export type {
 } from './module';
 
 export { CANH3D_ATTR, KHU_VUC, docVuCong3D } from './canh3d';
-export type { AnhGoc, NhomDamDong, ThayDo3D, VuCong3D } from './canh3d';
+export type { AnhGoc, NguoiAnh, NhomDamDong, ThayDo3D, VuCong3D } from './canh3d';
 
-export { TAB_GIONG, boVai, ganGiong, khoaGiong, loiGiong, oChonGiong, tachVai } from './giong';
-export type { DoanDoc, GiongCoNha, GiongTrongDan } from './giong';
+export {
+  MOC_TOI_DA,
+  MOC_LUU_TOI_DA,
+  anhChoDoan,
+  cacMoc,
+  docNhanVat,
+  tinhTrangMoc,
+} from './anh-truyen';
+export type { MocAnh, NhanVat, TinhTrangMoc } from './anh-truyen';
+export type { CachKe } from './giong';
+
+export {
+  GIONG_XOAY,
+  TAB_GIONG,
+  boVai,
+  giongXoay,
+  xungMinh,
+  cachKeCua,
+  chuNguon,
+  ganGiong,
+  giongQua,
+  khoaGiong,
+  loiGiong,
+  nguonGiong,
+  oChonGiong,
+  tachVai,
+} from './giong';
+export type { DoanDoc, GiongCoNha, GiongTrongDan, NguonGiong } from './giong';
 
 export { designManifestSchema } from './design';
 export type { DesignCard, DesignManifest, DesignOption, DesignStatus, DesignInfo } from './design';
 
 export { WS_PATH, DEFAULT_PORT } from './wire';
-export type { Down, Up } from './wire';
+export type { Down, KhoanChiPhi, KieuNguon, SoChiPhi, TrangThaiNguon, Up } from './wire';
 
 export {
   KIEU_LAM_DUOC,
@@ -78,6 +106,7 @@ export {
   nhapMoi,
   nhapTu,
   tenKetNoi,
+  moTaKetNoi,
   tenProvider,
   tenViec,
   thanGhi,

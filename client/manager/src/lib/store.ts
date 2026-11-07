@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DesignInfo, Json } from '@live/contracts';
 import type { SessionView } from '@live/contracts';
-import { api, ApiError } from './api';
+import { api, ApiError, CAU_NOI_MAC_DINH } from './api';
 import type { ModuleState, SourceKind, SourceStatus } from './api';
 import { connect } from './ws';
 
@@ -46,6 +46,9 @@ export interface Manager {
   /** Bấm nút trên thẻ module, áp vào thiết kế đang phát. */
   bamNut(moduleId: string, op: string): void;
   doiNguon(kind: SourceKind): void;
+  /** Nút "Kết nối Studio": nghe kênh `nick` qua cầu nối TikTok. Không mở trang
+   *  TikTok nào — dữ liệu đi thẳng từ máy chủ TikTok qua cầu nối (docs/07 §7). */
+  noiKenh(nick: string): void;
 }
 
 export function useManager(): Manager {
@@ -61,6 +64,8 @@ export function useManager(): Manager {
 
   const liveRef = useRef<string | null>(null);
   liveRef.current = live;
+  const nguonRef = useRef<SourceStatus | null>(null);
+  nguonRef.current = nguon;
   const hen = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const choGhi = useRef(new Set<string>());
 
@@ -124,6 +129,9 @@ export function useManager(): Manager {
                 // Mất mạng thì lớp hiện trạng đã báo, không cần toast thêm.
               }
             })();
+          } else if (d.t === 'source') {
+            // Đang nối → đang nhận, lỗi nguồn… đổi tức thì, không đợi tải lại.
+            setNguon(d.source);
           } else if ('designId' in d && d.designId !== undefined) {
             // Tin của một phòng đang xem thử (chưa phát): của cửa sổ xem thử,
             // không phải của phòng đang phát mà trang này đang hiện.
@@ -264,9 +272,35 @@ export function useManager(): Manager {
     (kind: SourceKind) => {
       void (async () => {
         try {
-          const { source } = await api.setSource({ kind });
+          // Gửi kèm kênh và địa chỉ đang có: chỉ gửi `{kind}` là kênh bị xoá
+          // trắng mỗi lần đổi qua lại.
+          const cu = nguonRef.current;
+          const { source } = await api.setSource({
+            kind,
+            channel: cu?.channel ?? '',
+            url: cu?.url ?? CAU_NOI_MAC_DINH,
+          });
           setNguon(source);
           noi(kind === 'tat' ? 'Đã tắt nguồn sự kiện' : 'Đã đổi nguồn sự kiện');
+        } catch (e) {
+          bat(e);
+        }
+      })();
+    },
+    [bat, noi],
+  );
+
+  const noiKenh = useCallback(
+    (nick: string) => {
+      void (async () => {
+        try {
+          const { source } = await api.setSource({
+            kind: 'bridge',
+            channel: nick,
+            url: nguonRef.current?.url ?? CAU_NOI_MAC_DINH,
+          });
+          setNguon(source);
+          noi(`Đang nối tới live của @${nick}…`);
         } catch (e) {
           bat(e);
         }
@@ -344,5 +378,6 @@ export function useManager(): Manager {
     luuCauHinh,
     bamNut,
     doiNguon,
+    noiKenh,
   };
 }
