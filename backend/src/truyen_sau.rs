@@ -102,12 +102,23 @@ pub const THE_LOAI: [&str; 10] = [
 ];
 /// Truyện QUEN THUỘC theo thể loại — máy chủ chọn sẵn tên, AI chỉ kể lại đúng
 /// truyện đó. Bản cũ kể hay vì MC kể truyện người nghe đã biết và yêu (Tấm Cám,
-/// Thỏ và Rùa, Trạng Quỳnh…); để AI tự chọn thì nó hay "không nhớ chắc" rồi bịa
+/// Thạch Sanh, Trạng Quỳnh…); để AI tự chọn thì nó hay "không nhớ chắc" rồi bịa
 /// truyện lạ. Hết danh mục mới cho AI tự sáng tác.
-pub const DANH_MUC: [(&str, &[&str]); 10] = [
-    (
-        "cổ tích Việt Nam",
-        &[
+///
+/// Mỗi thể loại hai danh sách: truyện Việt Nam (`viet`) và truyện nước ngoài
+/// (`ngoai`). Phòng ƯU TIÊN truyện Việt: còn truyện Việt chưa kể ở bất kỳ thể
+/// loại nào thì không kể truyện nước ngoài — truyện nước ngoài chỉ là phần dự
+/// trữ khi truyện Việt đã kể hết, không bị cấm hẳn.
+pub struct DanhMuc {
+    pub loai: &'static str,
+    pub viet: &'static [&'static str],
+    pub ngoai: &'static [&'static str],
+}
+
+pub const DANH_MUC: [DanhMuc; 10] = [
+    DanhMuc {
+        loai: "cổ tích Việt Nam",
+        viet: &[
             "Tấm Cám",
             "Thánh Gióng",
             "Sơn Tinh Thủy Tinh",
@@ -121,12 +132,16 @@ pub const DANH_MUC: [(&str, &[&str]); 10] = [
             "Sự tích cây nêu ngày Tết",
             "Cóc kiện trời",
             "Sự tích Hồ Ba Bể",
+            "Sọ Dừa",
+            "Sự tích trái sầu riêng",
+            "Sự tích Hòn Trống Mái",
         ],
-    ),
-    (
-        "nhân quả",
-        &[
-            "Ăn khế trả vàng",
+        ngoai: &[],
+    },
+    DanhMuc {
+        loai: "nhân quả",
+        viet: &["Ăn khế trả vàng", "Của Thiên trả Địa", "Sự tích con khỉ", "Sự tích bộ lông con quạ"],
+        ngoai: &[
             "Ba lưỡi rìu",
             "Con ngỗng đẻ trứng vàng",
             "Bà tiên và hai cô gái",
@@ -135,20 +150,25 @@ pub const DANH_MUC: [(&str, &[&str]); 10] = [
             "Người cha và kho báu trong vườn nho",
             "Ông lão đánh cá và con cá vàng",
         ],
-    ),
-    (
-        "ngụ ngôn",
-        &[
-            "Thỏ và Rùa",
+    },
+    DanhMuc {
+        loai: "ngụ ngôn",
+        viet: &[
             "Ếch ngồi đáy giếng",
             "Đẽo cày giữa đường",
             "Thầy bói xem voi",
+            "Chân, Tay, Tai, Mắt, Miệng",
+            "Trí khôn của ta đây",
+            "Mèo lại hoàn mèo",
+            "Đeo nhạc cho mèo",
+        ],
+        ngoai: &[
+            "Thỏ và Rùa",
             "Kiến và Châu Chấu",
             "Sư tử và chuột nhắt",
             "Con quạ và con cáo",
             "Chuột thành phố và chuột đồng quê",
             "Hai con dê qua cầu hẹp",
-            "Chân, Tay, Tai, Mắt, Miệng",
             "Rùa và hai con ngỗng",
             "Vẽ rắn thêm chân",
             "Ôm cây đợi thỏ",
@@ -157,22 +177,21 @@ pub const DANH_MUC: [(&str, &[&str]); 10] = [
             "Quạ và bình nước",
             "Cáo mượn oai hổ",
         ],
-    ),
-    (
-        "cha mẹ",
-        &[
-            "Sự tích cây vú sữa",
+    },
+    DanhMuc {
+        loai: "cha mẹ",
+        viet: &["Sự tích cây vú sữa", "Sự tích hoa cúc trắng", "Sự tích ba cô gái", "Tích Chu"],
+        ngoai: &[
             "Mạnh mẫu ba lần dời nhà",
             "Hoàng Hương quạt nồng ấp lạnh",
             "Lão Lai mặc áo hoa múa vui cha mẹ",
             "Tử Lộ đội gạo nuôi cha mẹ",
             "Diêm Tử lấy sữa nai cho cha mẹ",
-            "Sự tích hoa cúc trắng",
         ],
-    ),
-    (
-        "truyện cười",
-        &[
+    },
+    DanhMuc {
+        loai: "truyện cười",
+        viet: &[
             "Lợn cưới áo mới",
             "Tam đại con gà",
             "Treo biển",
@@ -180,12 +199,22 @@ pub const DANH_MUC: [(&str, &[&str]); 10] = [
             "Con rắn vuông",
             "Trạng Quỳnh và món mầm đá",
             "Thằng Bờm có cái quạt mo",
-            "Thầy bói xem voi",
+            "Trạng Lợn",
+            "Đánh chết cái nết không chừa",
+            "Ba Giai Tú Xuất",
         ],
-    ),
-    (
-        "truyện hài trẻ con có tương tác",
-        &[
+        ngoai: &[],
+    },
+    DanhMuc {
+        loai: "truyện hài trẻ con có tương tác",
+        viet: &[
+            "Chú dê đen",
+            "Dê con nhanh trí",
+            "Bác gấu đen và hai chú thỏ",
+            "Chú vịt xám",
+            "Cậu bé mũi dài",
+        ],
+        ngoai: &[
             "Củ cải khổng lồ",
             "Ba chú heo con",
             "Cô bé tóc vàng và ba chú gấu",
@@ -195,33 +224,33 @@ pub const DANH_MUC: [(&str, &[&str]); 10] = [
             "Chú bé bánh gừng",
             "Mèo đi hia",
         ],
-    ),
-    (
-        "thiện – ác",
-        &[
-            "Thạch Sanh",
-            "Cây tre trăm đốt",
+    },
+    DanhMuc {
+        loai: "thiện – ác",
+        viet: &["Thạch Sanh", "Cây tre trăm đốt", "Tấm Cám", "Sọ Dừa"],
+        ngoai: &[
             "Cô bé Lọ Lem",
             "Nàng Bạch Tuyết và bảy chú lùn",
             "Cô bé quàng khăn đỏ",
             "Người đẹp và quái vật",
-            "Tấm Cám",
         ],
-    ),
-    (
-        "tình cảm gia đình",
-        &[
+    },
+    DanhMuc {
+        loai: "tình cảm gia đình",
+        viet: &[
             "Sự tích trầu cau",
             "Sự tích bánh chưng bánh giầy",
-            "Câu truyện bó đũa",
+            "Câu chuyện bó đũa",
             "Hai anh em chia lúa",
             "Sự tích hòn Vọng Phu",
             "Sự tích ông Công ông Táo",
         ],
-    ),
-    (
-        "truyện cảm động",
-        &[
+        ngoai: &[],
+    },
+    DanhMuc {
+        loai: "truyện cảm động",
+        viet: &["Tích Chu", "Sự tích hoa cúc trắng", "Sự tích hòn Vọng Phu", "Sự tích cây vú sữa"],
+        ngoai: &[
             "Cô bé bán diêm",
             "Chú lính chì dũng cảm",
             "Hoàng tử hạnh phúc",
@@ -230,58 +259,80 @@ pub const DANH_MUC: [(&str, &[&str]); 10] = [
             "Nàng tiên cá",
             "Chú chó Hachiko",
         ],
-    ),
-    (
-        "nhân cách – tri thức",
-        &[
+    },
+    DanhMuc {
+        loai: "nhân cách – tri thức",
+        viet: &[
             "Nguyễn Hiền - Cậu bé chăn trâu đỗ Trạng",
             "Mạc Đĩnh Chi và bài phú hoa sen giếng ngọc",
             "Lương Thế Vinh cân voi",
             "Cao Bá Quát luyện chữ",
+            "Chu Văn An - người thầy muôn đời",
+            "Em bé thông minh",
+            "Trần Quốc Toản bóp nát quả cam",
+            "Thần đồng Lê Quý Đôn",
+        ],
+        ngoai: &[
             "Có công mài sắt, có ngày nên kim",
             "Tư Mã Quang đập vỡ chum cứu bạn",
             "Khổng Dung nhường lê",
-            "Chu Văn An - người thầy muôn đời",
         ],
-    ),
+    },
 ];
 
-/// Tên truyện quen thuộc kế tiếp chưa kể: đúng thể loại `loai` trước; thể loại
-/// đó hết thì lấy ở thể loại khác (vẫn là truyện quen, hơn là bịa). Trả cả thể
-/// loại của truyện. So tên đã chuẩn hoá, coi trùng cả khi tên này chứa tên kia
-/// ("Anh thợ đẽo cày giữa đường" ~ "Đẽo cày giữa đường"). Hàm thuần.
+/// Tên truyện quen thuộc kế tiếp chưa kể. Truyện Việt Nam trước hết: đúng thể
+/// loại `loai` trước, thể loại đó hết truyện Việt thì lấy truyện Việt ở thể
+/// loại khác; chỉ khi MỌI truyện Việt đã kể mới tới truyện nước ngoài (cũng
+/// theo thứ tự đó). Trả cả thể loại của truyện. So tên đã chuẩn hoá, coi trùng
+/// cả khi tên này chứa tên kia ("Anh thợ đẽo cày giữa đường" ~ "Đẽo cày giữa
+/// đường"). Hàm thuần.
 pub fn chon_danh_muc(loai: &str, cam: &[String]) -> Option<(&'static str, &'static str)> {
     let da: Vec<String> = cam.iter().map(|t| chuan(t)).filter(|t| !t.is_empty()).collect();
     let chua_ke = |ten: &str| {
         let t = chuan(ten);
         !da.iter().any(|d| *d == t || d.contains(&t) || t.contains(d.as_str()))
     };
-    let dau = DANH_MUC.iter().position(|(l, _)| *l == loai).unwrap_or(0);
-    (0..DANH_MUC.len())
-        .map(|i| DANH_MUC[(dau + i) % DANH_MUC.len()])
-        .find_map(|(l, ds)| ds.iter().find(|t| chua_ke(t)).map(|t| (*t, l)))
+    let dau = DANH_MUC.iter().position(|d| d.loai == loai).unwrap_or(0);
+    let tim = |lay: fn(&DanhMuc) -> &'static [&'static str]| {
+        (0..DANH_MUC.len())
+            .map(|i| &DANH_MUC[(dau + i) % DANH_MUC.len()])
+            .find_map(|d| lay(d).iter().find(|t| chua_ke(t)).map(|t| (*t, d.loai)))
+    };
+    tim(|d| d.viet).or_else(|| tim(|d| d.ngoai))
 }
 
-/// Nhóm ưu tiên, xen vào sau mỗi thể loại: nhân quả → cha mẹ → thiện ác.
+/// Nhóm ưu tiên của bản cũ (D:\Live): NHÂN QUẢ · CHA MẸ · THIỆN ÁC, xen lần lượt.
 pub const UU_TIEN: [&str; 3] = ["nhân quả", "cha mẹ", "thiện – ác"];
 
-/// Thể loại của truyện thứ `n` (đếm từ 0) trong phòng: mỗi thể loại 2 truyện
-/// rồi xen 1 truyện nhóm ưu tiên, như bản cũ ("sau mỗi thể loại KHÁC").
+/// Thể loại của truyện thứ `n` (đếm từ 0) trong phòng — đúng cách chia của
+/// bản cũ: xoay vòng 10 thể loại, mỗi thể loại kể 2 truyện; sau mỗi thể loại
+/// KHÁC nhóm ưu tiên thì xen thêm 1 truyện nhóm ưu tiên, lần lượt nhân quả →
+/// cha mẹ → thiện ác, rồi mới sang thể loại kế. Bản thân ba thể loại ưu tiên
+/// không xen thêm sau chúng.
 ///
-/// Ba thể loại ưu tiên cũng nằm trong vòng xoay chính, nên truyện xen phải
-/// khác thể loại của khối TRƯỚC nó lẫn khối SAU nó — không thì ra ba truyện
-/// cùng thể loại liền nhau. Hàm thuần.
+/// Truyện xen tới lượt trùng thể loại của khối NGAY SAU nó (vd xen "nhân quả"
+/// rồi khối kế là "nhân quả") thì lấy nhóm ưu tiên kế trong vòng — không thì
+/// ra ba truyện cùng thể loại liền nhau. Hàm thuần.
 pub fn the_loai_thu(n: usize) -> &'static str {
-    let khoi = n / 3;
-    let goc = THE_LOAI[khoi % THE_LOAI.len()];
-    if n % 3 < 2 {
-        return goc;
+    let (mut vi_tri, mut luot) = (0usize, 0usize);
+    for khoi in 0.. {
+        let goc = THE_LOAI[khoi % THE_LOAI.len()];
+        if n < vi_tri + 2 {
+            return goc;
+        }
+        vi_tri += 2;
+        if UU_TIEN.contains(&goc) {
+            continue;
+        }
+        let sau = THE_LOAI[(khoi + 1) % THE_LOAI.len()];
+        let k = (0..UU_TIEN.len()).map(|d| (luot + d) % UU_TIEN.len()).find(|&k| UU_TIEN[k] != sau).unwrap_or(luot);
+        if n == vi_tri {
+            return UU_TIEN[k];
+        }
+        vi_tri += 1;
+        luot = (k + 1) % UU_TIEN.len();
     }
-    let sau = THE_LOAI[(khoi + 1) % THE_LOAI.len()];
-    (0..UU_TIEN.len())
-        .map(|i| UU_TIEN[(khoi + i) % UU_TIEN.len()])
-        .find(|l| *l != goc && *l != sau)
-        .unwrap_or(goc)
+    unreachable!()
 }
 
 /// Khung giờ Việt Nam (UTC+7) và giọng truyện hợp giờ — như bản cũ. Hàm thuần.
@@ -533,9 +584,9 @@ const DAN_VIET: &str = r#"Bạn là MC của một phòng live kể truyện tr�
 Luật:
 - Thể loại: đúng như trong <the_loai>.
 - Hợp khung giờ trong <gio>.
-- CHỈ kể truyện CÓ THẬT, truyện quen thuộc người nghe đã biết (cổ tích, ngụ ngôn, truyện cười dân gian, gương danh nhân, truyện thiếu nhi kinh điển Việt Nam và thế giới). TUYỆT ĐỐI không tự nghĩ ra truyện mới, không ghép truyện, không đổi tên truyện có sẵn thành tên khác.
+- CHỈ kể truyện CÓ THẬT, truyện quen thuộc người nghe đã biết (cổ tích, ngụ ngôn, truyện cười dân gian, gương danh nhân, truyện thiếu nhi kinh điển). ƯU TIÊN truyện Việt Nam: người nghe là người Việt, thích nghe truyện của mình; truyện nước ngoài chỉ thỉnh thoảng, khi đã kể nhiều truyện Việt. TUYỆT ĐỐI không tự nghĩ ra truyện mới, không ghép truyện, không đổi tên truyện có sẵn thành tên khác.
 - Có <truyen_can_ke>: kể lại ĐÚNG truyện đó bằng lời của mình — giữ trọn cốt truyện gốc, các tình tiết đắt giá và câu nói nổi tiếng mà người nghe chờ đợi; không bịa chi tiết sai, không đổi kết. Chi tiết dữ trong bản gốc thì kể nhẹ đi cho hợp trẻ con, nhưng không bỏ ý. "ten" giữ nguyên tên trong <truyen_can_ke>.
-- Không có <truyen_can_ke>: tự chọn MỘT truyện có thật khác hợp <the_loai>, chưa có trong <da_ke> — tên truyện phải là tên thật của truyện đó. Không nhớ chắc truyện nào thì chọn truyện khác mà bạn nhớ rõ, đừng bịa.
+- Không có <truyen_can_ke>: tự chọn MỘT truyện có thật khác hợp <the_loai>, chưa có trong <da_ke>, chọn truyện Việt Nam trước (cổ tích, truyện cười dân gian, gương danh nhân Việt…), chỉ lấy truyện nước ngoài khi không còn truyện Việt nào hợp — tên truyện phải là tên thật của truyện đó. Không nhớ chắc truyện nào thì chọn truyện khác mà bạn nhớ rõ, đừng bịa.
 - "tuSangTac" luôn là false.
 - TUYỆT ĐỐI không trùng truyện nào trong <da_ke> (kể cả đổi tên).
 - Kể ĐỦ cốt truyện, ĐÚNG THỨ TỰ TRƯỚC SAU: đoạn 1 là mở đầu, đoạn cuối là kết. Không kể ngược, không nhảy cóc, không hồi tưởng, không đảo chỗ hai đoạn. Đọc lần lượt từ đoạn 1 tới đoạn cuối phải ra đúng cốt truyện gốc.
@@ -1018,34 +1069,38 @@ mod tests {
 
     #[test]
     fn xoay_vong_the_loai_moi_loai_hai_truyen_xen_uu_tien() {
-        let ds: Vec<&str> = (0..9).map(the_loai_thu).collect();
+        let ds: Vec<&str> = (0..14).map(the_loai_thu).collect();
         assert_eq!(
             ds,
             vec![
-                // Truyện xen (ô thứ ba mỗi khối) tránh thể loại của khối trước
-                // lẫn khối sau: khối sau là "nhân quả" nên xen "cha mẹ".
+                // Sau cổ tích xen một truyện ưu tiên; tới lượt "nhân quả" mà
+                // khối kế cũng là nhân quả nên lấy "cha mẹ".
                 "cổ tích Việt Nam", "cổ tích Việt Nam", "cha mẹ",
-                "nhân quả", "nhân quả", "cha mẹ",
+                // Thể loại ưu tiên: không xen thêm.
+                "nhân quả", "nhân quả",
                 "ngụ ngôn", "ngụ ngôn", "thiện – ác",
+                "cha mẹ", "cha mẹ",
+                "truyện cười", "truyện cười", "nhân quả",
+                "truyện hài trẻ con có tương tác",
             ]
         );
-        // Không bao giờ có BA truyện cùng thể loại liền nhau trong cả vòng xoay.
-        let dai: Vec<&str> = (0..120).map(the_loai_thu).collect();
+        let dai: Vec<&str> = (0..300).map(the_loai_thu).collect();
+        // Không bao giờ có BA truyện cùng thể loại liền nhau.
         for w in dai.windows(3) {
             assert!(!(w[0] == w[1] && w[1] == w[2]), "ba truyện {} liền nhau", w[0]);
         }
-        // Mỗi khối ba truyện có đúng một truyện thuộc nhóm ưu tiên xen vào.
-        for k in dai.chunks(3) {
-            assert!(UU_TIEN.contains(&k[2]), "truyện xen phải thuộc nhóm ưu tiên: {}", k[2]);
-        }
-        // Cả 10 thể loại đều tới lượt, không kẹt ở vài thể loại.
+        // Một vòng đủ 10 thể loại: 20 truyện + 7 truyện xen (sau 7 thể loại
+        // không ưu tiên) = 27; mỗi thể loại không ưu tiên đúng 2 truyện.
+        let vong = &dai[..27];
         for l in THE_LOAI {
-            assert!(dai.contains(&l), "thể loại {l} không bao giờ tới lượt");
+            let so = vong.iter().filter(|x| **x == l).count();
+            if UU_TIEN.contains(&l) {
+                assert!(so > 2, "{l} là ưu tiên phải được xen thêm");
+            } else {
+                assert_eq!(so, 2, "{l} kể đúng 2 truyện mỗi vòng");
+            }
         }
-        // Cả ba thể loại ưu tiên đều được xen.
-        for l in UU_TIEN {
-            assert!(dai.chunks(3).any(|k| k[2] == l), "không bao giờ xen {l}");
-        }
+        assert_eq!(the_loai_thu(27), "cổ tích Việt Nam", "hết vòng quay lại cổ tích");
     }
 
     #[test]
@@ -1266,21 +1321,26 @@ Hai.",
     #[test]
     fn danh_muc_chon_truyen_quen_chua_ke() {
         let cam = |ds: &[&str]| ds.iter().map(|s| s.to_string()).collect::<Vec<_>>();
-        assert_eq!(chon_danh_muc("ngụ ngôn", &[]), Some(("Thỏ và Rùa", "ngụ ngôn")));
+        assert_eq!(chon_danh_muc("ngụ ngôn", &[]), Some(("Ếch ngồi đáy giếng", "ngụ ngôn")));
         // Trùng cả khi tên đã kể chứa tên danh mục; không phân biệt hoa thường.
         assert_eq!(
-            chon_danh_muc("ngụ ngôn", &cam(&["thỏ và rùa", "Ếch ngồi đáy giếng", "Anh thợ đẽo cày giữa đường"])),
+            chon_danh_muc("ngụ ngôn", &cam(&["ếch ngồi đáy giếng", "Anh thợ đẽo cày giữa đường"])),
             Some(("Thầy bói xem voi", "ngụ ngôn"))
         );
-        // Thể loại hết truyện: sang thể loại kế, vẫn là truyện quen.
-        let het: Vec<String> = DANH_MUC[2].1.iter().map(|s| s.to_string()).collect();
-        assert_eq!(chon_danh_muc("ngụ ngôn", &het).map(|x| x.1), Some("cha mẹ"));
+        // Thể loại hết truyện Việt: sang truyện Việt ở thể loại kế, chưa tới
+        // truyện nước ngoài của thể loại này.
+        let het: Vec<String> = DANH_MUC[2].viet.iter().map(|s| s.to_string()).collect();
+        assert_eq!(chon_danh_muc("ngụ ngôn", &het), Some(("Sự tích cây vú sữa", "cha mẹ")));
+        // Kể hết MỌI truyện Việt: lúc đó mới tới truyện nước ngoài, đúng thể loại trước.
+        let viet: Vec<String> = DANH_MUC.iter().flat_map(|d| d.viet.iter().map(|s| s.to_string())).collect();
+        assert_eq!(chon_danh_muc("ngụ ngôn", &viet), Some(("Thỏ và Rùa", "ngụ ngôn")));
         // Kể hết mọi danh mục: không còn gì — để AI sáng tác.
-        let tat_ca: Vec<String> = DANH_MUC.iter().flat_map(|(_, ds)| ds.iter().map(|s| s.to_string())).collect();
+        let tat_ca: Vec<String> =
+            DANH_MUC.iter().flat_map(|d| d.viet.iter().chain(d.ngoai.iter()).map(|s| s.to_string())).collect();
         assert_eq!(chon_danh_muc("ngụ ngôn", &tat_ca), None);
-        // Thể loại nào trong vòng xoay cũng có danh mục.
+        // Thể loại nào trong vòng xoay cũng có danh mục, và có truyện Việt.
         for l in THE_LOAI {
-            assert!(DANH_MUC.iter().any(|(d, _)| *d == l), "{l} chưa có danh mục");
+            assert!(DANH_MUC.iter().any(|d| d.loai == l && !d.viet.is_empty()), "{l} chưa có truyện Việt");
         }
     }
 }
