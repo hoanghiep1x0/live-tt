@@ -90,7 +90,7 @@ export const LUA_CHON: readonly DesignCard[] = [
     id: 'an-ui',
     name: 'Cảnh an ủi',
     icon: '🫂',
-    summary: 'Khán giả chạy lên ôm bé và cậu bé; chỉ chạy khi Nhân vật ảo đang bật',
+    summary: 'Khán giả đang ngồi ghế chạy lên ôm bé và cậu bé',
     toggle: {
       key: 'anUi',
       label: 'Bật cảnh an ủi',
@@ -257,9 +257,12 @@ export function Stage() {
     // bỏ, hai giọng cùng lúc nghe ra cái máy chứ không ra người dẫn truyện.
     noi(cau, giong);
   }, [s.session.recentFeed, chaoBat, chaoGiay, noi]);
-  // Cảnh an ủi đi cùng nhân vật ảo: tắt nhân vật ảo là tắt luôn cảnh này,
-  // kể cả lượt khách gõ "ôm".
-  const batAnUi = thietKe['anUi'] !== false && s.bot.enabled;
+  // Cảnh an ủi CHẠY ĐỘC LẬP với nhân vật ảo. Trước đây nó buộc chung công tắc
+  // đó, mà chủ phòng tắt nhân vật ảo mặc định — nên cảnh này không bao giờ
+  // chạy. Người chạy lên ôm bốc từ những ai đang NGỒI GHẾ (`chonNguoiOm`), và
+  // khán giả thật cũng ngồi ghế, nên không cần nhân vật ảo. Rạp trống thì
+  // `chonNguoiOm` trả rỗng và không ai chạy lên.
+  const batAnUi = thietKe['anUi'] !== false;
   const cfgAnUi = docCauHinhAnUi(thietKe);
   // Khách gõ "ôm" thì chính họ chạy lên, và lượt đó đè lên lượt định kỳ.
   const canh = batAnUi
