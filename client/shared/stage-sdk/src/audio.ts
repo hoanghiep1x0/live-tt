@@ -7,6 +7,7 @@
 import { GIONG_XOAY, giongXoay, tachVai } from '@live/contracts';
 import type { DoanDoc, Priority, SfxName } from '@live/contracts';
 import { NHIP_MS, QuyenNoi } from './quyen-noi';
+import { guiQuyen, ngheQuyen } from './kenh-quyen';
 import { canBo, choChen, nghiTruoc, quaCu } from './hang-doc';
 import type { MucDoc } from './hang-doc';
 
@@ -185,6 +186,19 @@ function cacGiongMay(): Promise<SpeechSynthesisVoice[]> {
 
 /** Mọi hàng đọc đang sống trong cửa sổ này — để mất quyền nói là tắt hết. */
 const cacHang = new Set<HangGiong>();
+
+/** Cửa sổ này có hàng đọc nào đang đọc hay còn câu chờ không.
+ *
+ *  Để phần vẽ biết mà GIỮ khung: kể xong đoạn cuối là máy chủ mở giờ nghỉ
+ *  ngay, nhưng giọng còn đang đọc dở đoạn ấy — kéo màn chờ lên lúc đó là cắt
+ *  ngang câu cuối của truyện. */
+export function conDangDoc(): boolean {
+  for (const h of cacHang) {
+    if (h.ban()) return true;
+  }
+  return false;
+}
+
 let quyen: QuyenNoi | null = null;
 
 /** Quyền đọc của cửa sổ này, dựng một lần khi có hàng đọc đầu tiên. Ngoài
@@ -194,15 +208,20 @@ function quyenNoi(): QuyenNoi | null {
   const laObs =
     'obsstudio' in window || new URLSearchParams(location.search).get('obs') === '1';
   const bc = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('live-giong-doc');
-  const kenh =
-    bc === null
-      ? null
-      : {
-          postMessage: (t: unknown) => bc.postMessage(t),
-          nghe: (f: (t: unknown) => void) => {
-            bc.onmessage = (e) => f(e.data);
-          },
-        };
+  // Bàn quyền nói qua HAI đường: `BroadcastChannel` (cửa sổ cùng trình duyệt,
+  // tới ngay cả khi mất nối máy chủ) và máy chủ (`kenh-quyen.ts` — cửa sổ ở
+  // trình duyệt KHÁC). Một tin tới hai lần cũng không sao: `QuyenNoi` xét theo
+  // id và mốc giành, nhận lại tin cũ ra đúng kết quả cũ.
+  const kenh = {
+    postMessage: (t: unknown) => {
+      bc?.postMessage(t);
+      guiQuyen(t);
+    },
+    nghe: (f: (t: unknown) => void) => {
+      if (bc !== null) bc.onmessage = (e) => f(e.data);
+      ngheQuyen(f);
+    },
+  };
   const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const q = new QuyenNoi(
     kenh,
@@ -399,7 +418,12 @@ export class HangGiong {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       // `designId`: máy chủ ghi câu này vào sổ chi phí của đúng phòng.
-      body: JSON.stringify({ text, voiceId, speed: this.cfg.speed, designId: phongCuaTrang() }),
+      body: JSON.stringify({
+        text,
+        voiceId,
+        speed: this.cfg.speed,
+        designId: phongCuaTrang(),
+      }),
     });
     if (!res.ok) {
       const j: unknown = await res.json().catch(() => null);

@@ -119,6 +119,28 @@ fn xu_ly_cua(st: &Arc<AppState>, raw: &str, dang_xem: &mut Option<String>) -> Ve
             None => vec![],
         },
         Some("command") => lam_lenh(st, &v),
+        // Tin quyền nói của một sân khấu (`stage-sdk/src/quyen-noi.ts`): chuyển
+        // tới MỌI trang đang nối. Cửa sổ ở hai trình duyệt khác nhau không nghe
+        // được nhau qua `BroadcastChannel`, nên trước đây cả hai cùng đọc to —
+        // người xem nghe lặp giọng. Máy chủ không xét gì, chỉ chuyển; tin to
+        // bất thường thì bỏ.
+        Some("quyen-noi") => {
+            if let Some(tin) = v.get("tin").filter(|t| t.is_object() && t.to_string().len() <= 512) {
+                st.broadcast(json!({ "t": "quyen-noi", "tin": tin }));
+            }
+            vec![]
+        }
+        // Sân khấu tự đọc một đoạn truyện thay MC: máy chủ ghi tiến độ để MC
+        // quay lại kể tiếp từ đoạn sau, không kể lại (`ke_truyen::bao_tu_doc`).
+        Some("tu-doc") => {
+            let id = thiet_ke_cua(st, &v).or_else(|| st.live());
+            let ten = v.get("ten").and_then(Value::as_str);
+            let doan = v.get("doan").and_then(Value::as_u64).and_then(|d| usize::try_from(d).ok());
+            if let (Some(id), Some(ten), Some(doan)) = (id, ten, doan) {
+                crate::ke_truyen::bao_tu_doc(st, &id, ten, doan);
+            }
+            vec![]
+        }
         _ => vec![],
     }
 }
@@ -322,5 +344,43 @@ mod tests {
             r#"{"t":"command","by":"nguoi","designId":"../x","command":{"op":"set-module","moduleId":"a","on":true}}"#,
         );
         assert!(ra.is_empty(), "id hỏng thì như không có id — chưa phát phòng nào nên im lặng");
+    }
+
+    #[test]
+    fn tin_quyen_noi_chuyen_toi_moi_trang() {
+        let s = st();
+        let mut rx = s.subscribe();
+        let tin = r#"{"t":"quyen-noi","tin":{"t":"toi","id":"a1","obs":false,"luc":5}}"#;
+        assert!(xu_ly(&s, tin).is_empty(), "không trả riêng: đi qua bus tới mọi cửa sổ");
+        let m = rx.try_recv().expect("phải chuyển tới mọi trang");
+        assert_eq!(m, json!({ "t": "quyen-noi", "tin": { "t": "toi", "id": "a1", "obs": false, "luc": 5 } }));
+        // Không phải object, hay to bất thường: bỏ.
+        xu_ly(&s, r#"{"t":"quyen-noi","tin":"x"}"#);
+        let to = format!(r#"{{"t":"quyen-noi","tin":{{"id":"{}"}}}}"#, "a".repeat(600));
+        xu_ly(&s, &to);
+        assert!(rx.try_recv().is_err());
+    }
+
+    #[test]
+    fn san_khau_tu_doc_thi_mc_ke_tiep_tu_doan_sau() {
+        let s = st_co("ke-chuyen");
+        let lenh = |c: &str| xu_ly(&s, &format!(r#"{{"t":"command","by":"nguoi","designId":"ke-chuyen","command":{c}}}"#));
+        lenh(r#"{"op":"set-module","moduleId":"story","on":true}"#);
+        lenh(r#"{"op":"set-config","moduleId":"story","patch":{"title":"Tấm Cám","passages":"Một.\nHai.\nBa."}}"#);
+        let dau = crate::anh_truyen::dau_truyen("Tấm Cám", &["Một.".into(), "Hai.".into(), "Ba.".into()]);
+        assert_eq!(s.tien_do_ke("ke-chuyen", &dau).tiep, 0);
+
+        // Tin của truyện khác (truyện đã đổi): bỏ.
+        assert!(xu_ly(&s, r#"{"t":"tu-doc","designId":"ke-chuyen","ten":"Thạch Sanh","doan":1}"#).is_empty());
+        assert_eq!(s.tien_do_ke("ke-chuyen", &dau).tiep, 0);
+
+        // Đúng truyện: sân khấu đã tự đọc đoạn 2 → MC kể tiếp đoạn 3.
+        xu_ly(&s, r#"{"t":"tu-doc","designId":"ke-chuyen","ten":"Tấm Cám","doan":1}"#);
+        assert_eq!(s.tien_do_ke("ke-chuyen", &dau).tiep, 2);
+
+        // Phòng tự đọc (không có MC): máy chủ không giữ tiến độ, không đụng.
+        lenh(r#"{"op":"set-config","moduleId":"story","patch":{"cachKe":"tu-doc"}}"#);
+        xu_ly(&s, r#"{"t":"tu-doc","designId":"ke-chuyen","ten":"Tấm Cám","doan":2}"#);
+        assert_eq!(s.tien_do_ke("ke-chuyen", &dau).tiep, 2);
     }
 }

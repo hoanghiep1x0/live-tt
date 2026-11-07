@@ -5,10 +5,8 @@ import {
   cauCho,
   CUNG,
   dangGiuDoanCuoi,
-  GIAI_LAO_TOI_THIEU_MS,
   GIU_DOAN_CUOI_MS,
   giaiLaoCua,
-  giayConLai,
   loiChao,
   tenTruyenSau,
   thuTuCho,
@@ -16,7 +14,7 @@ import {
 
 const nghi = (tu: number, lyDo = 'chuyen') => ({ giaiLao: { truyenSau: 'Sọ Dừa', lyDo, tu } });
 
-describe('đếm ngược tới truyện kế', () => {
+describe('giờ nghỉ giữa hai truyện', () => {
   it('đọc ô giaiLao của module Kể truyện', () => {
     expect(giaiLaoCua(nghi(1_000))).toEqual({ truyenSau: 'Sọ Dừa', lyDo: 'chuyen', tu: 1_000, han: 0 });
     expect(giaiLaoCua({ giaiLao: { truyenSau: 'A', lyDo: 'chuyen', tu: 5, han: 22_000 } })?.han).toBe(22_000);
@@ -25,47 +23,16 @@ describe('đếm ngược tới truyện kế', () => {
     expect(giaiLaoCua({ giaiLao: { tu: 0 } })).toBeNull();
   });
 
-  it('đếm số giây còn lại, làm tròn lên', () => {
-    const g = giaiLaoCua(nghi(1_000));
-    // Mốc đo tính từ sau quãng giữ đoạn cuối — trong quãng đó chưa đếm gì.
-    expect(giayConLai(g, 1_000 + GIU_DOAN_CUOI_MS)).toBe(
-      (GIAI_LAO_TOI_THIEU_MS - GIU_DOAN_CUOI_MS) / 1000,
-    );
-    expect(giayConLai(g, 1_000 + 10_400)).toBe(30);
-    expect(giayConLai(g, 1_000 + 10_600)).toBe(30, 'nửa giây lẻ vẫn là 30, không nhảy xuống 29');
-  });
-
-  it('đếm theo giờ chờ máy chủ đã chốt, không phải mốc tối thiểu', () => {
-    const g = giaiLaoCua({ giaiLao: { truyenSau: 'A', lyDo: 'chuyen', tu: 1_000, han: 20_000 } });
-    expect(giayConLai(g, 1_000 + GIU_DOAN_CUOI_MS)).toBe(15);
-    expect(giayConLai(g, 1_000 + 20_000)).toBeNull('hết hạn thì thôi đếm');
-  });
-
   it('mấy giây đầu còn giữ đoạn cuối: chưa đếm, chưa kéo màn chờ lên', () => {
     const g = giaiLaoCua(nghi(1_000));
     expect(dangGiuDoanCuoi(g, 1_000)).toBe(true);
     expect(dangGiuDoanCuoi(g, 1_000 + GIU_DOAN_CUOI_MS - 1)).toBe(true);
     expect(dangGiuDoanCuoi(g, 1_000 + GIU_DOAN_CUOI_MS)).toBe(false);
-    expect(giayConLai(g, 1_000)).toBeNull('đang giữ đoạn cuối thì chưa có đồng hồ');
     // Nghỉ vì sự cố thì không có đoạn cuối nào vừa kể xong để mà giữ.
     expect(dangGiuDoanCuoi(giaiLaoCua(nghi(1_000, 'anh')), 1_000)).toBe(false);
     expect(dangGiuDoanCuoi(null, 1_000)).toBe(false);
   });
 
-  it('hết giờ tối thiểu thì thôi đếm, trả về đồng hồ thường', () => {
-    const g = giaiLaoCua(nghi(1_000));
-    expect(giayConLai(g, 1_000 + GIAI_LAO_TOI_THIEU_MS)).toBeNull();
-    expect(giayConLai(g, 9_999_999)).toBeNull();
-  });
-
-  it('nghỉ vì sự cố thì không đếm — không biết bao giờ xong', () => {
-    expect(giayConLai(giaiLaoCua(nghi(1_000, 'anh')), 1_000)).toBeNull();
-    expect(giayConLai(giaiLaoCua(nghi(1_000, 'ket-noi')), 1_000)).toBeNull();
-  });
-
-  it('không trong giờ nghỉ thì không đếm', () => {
-    expect(giayConLai(null, 1_000)).toBeNull();
-  });
 });
 
 describe('tên truyện sắp kể trên màn chờ', () => {

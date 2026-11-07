@@ -80,3 +80,40 @@ export function anhChoDoan(moc: readonly MocAnh[], i: number, doan: readonly str
   }
   return ra;
 }
+
+/** Khung truyện hiện gì: ảnh minh hoạ, đồng hồ "truyện đã kể bao lâu", hay cả hai. */
+export interface KhungHien {
+  anh: boolean;
+  dongHo: boolean;
+}
+
+/** Truyện `ten` (bắt đầu lúc `batDau`) bốc trúng ảnh hay đồng hồ — "Ảnh hoặc
+ *  đồng hồ ngẫu nhiên". Bốc theo băm của tên và mốc bắt đầu chứ không theo
+ *  `Math.random`: mọi cửa sổ đang mở (OBS, cửa sổ phòng, bảng xem) ra CÙNG một
+ *  kết quả, dựng lại trang cũng không đổi giữa truyện; truyện kể lại lần sau
+ *  có mốc mới nên có thể ra kiểu khác. Hàm thuần. */
+export function bocAnhHayDongHo(ten: string, batDau: number): 'anh' | 'dong-ho' {
+  let h = 0x811c9dc5;
+  for (const c of `${ten.trim()}|${batDau}`) {
+    h ^= c.codePointAt(0) ?? 0;
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0) % 2 === 0 ? 'anh' : 'dong-ho';
+}
+
+/** Khung truyện hiện gì, đọc từ cấu hình Kể truyện THÔ (JSON xuống sân khấu,
+ *  không qua zod — ô thiếu là `undefined`).
+ *
+ *  - Bật "Ảnh hoặc đồng hồ ngẫu nhiên" (`anhHoacDongHo`): mỗi truyện bốc một
+ *    trong hai (`bocAnhHayDongHo`), hai công tắc riêng không còn tác dụng.
+ *  - Không thì theo hai công tắc riêng; chỉ TẮT khi gạt thật (`=== false`),
+ *    cấu hình cũ không mang khoá thì vẫn hiện như trước. Hàm thuần. */
+export function khungHien(cfg: Record<string, unknown>): KhungHien {
+  if (cfg['anhHoacDongHo'] === true) {
+    const ten = typeof cfg['title'] === 'string' ? cfg['title'] : '';
+    const batDau = typeof cfg['batDau'] === 'number' ? cfg['batDau'] : 0;
+    const anh = bocAnhHayDongHo(ten, batDau) === 'anh';
+    return { anh, dongHo: !anh };
+  }
+  return { anh: cfg['hienAnh'] !== false, dongHo: cfg['hienDongHo'] !== false };
+}

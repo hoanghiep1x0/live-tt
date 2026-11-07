@@ -12,6 +12,7 @@ import {
   suaRoster,
   themList,
 } from '@live/contracts';
+import { bo, ghep, goiY, laMoi, tach, them } from './chon-them';
 import type { ConfigField, Json } from '@live/contracts';
 import { OAnhTruyen, OKetNoi, ONguonAnh, ONguonChu, OTruyenSau } from './AnhTruyen';
 import { OKhoTruyen } from './KhoTruyen';
@@ -409,6 +410,108 @@ function idMoi(): string {
 
 /** `list`: bảng gọn mọi mục (tên, bật / tắt, Sửa, Bỏ) và nút Thêm ở trên; dưới là một thẻ duy nhất cho mục đang sửa
  *  (các ô của mục) — chọn trong bảng xong sửa ngay bên dưới. Danh sách dài (kho nhân vật hàng chục người, mỗi người một tủ đồ) không phải kéo qua từng thẻ. */
+/** Ô chọn nhiều mục: gõ để tìm, Enter để thêm mục chưa có trong danh sách.
+ *
+ *  Mục đã chọn hiện thành thẻ bấm được để bỏ. Gợi ý lấy từ `f.options`; chữ
+ *  gõ vào mà không khớp gợi ý nào thì có dòng "thêm …" để tự tạo mục mới —
+ *  người vận hành không bị bó trong danh sách có sẵn. */
+function OChonThem({
+  moduleId,
+  field: f,
+  value,
+  disabled,
+  onChange,
+}: {
+  moduleId: string;
+  field: ConfigField;
+  value: Json | undefined;
+  disabled?: boolean;
+  onChange: (v: Json) => void;
+}) {
+  const [go, datGo] = useState('');
+  const [mo, datMo] = useState(false);
+  const daChon = tach(value);
+  const nguon = (f.options ?? []).map((x) => x.label || x.value);
+  const yy = goiY(nguon, daChon, go);
+  const moi = laMoi(nguon, daChon, go);
+  const id = `xem-${moduleId}-${f.key}`;
+
+  const chon = (x: string) => {
+    onChange(ghep(them(daChon, x)));
+    datGo('');
+  };
+
+  // Dùng ĐÚNG bộ khung của mọi ô khác (`bx-hang` + `label` + `bx-goi`). Bản
+  // đầu mình tự bịa lớp `bx-dong-doc` và `bx-chu-them` — không có trong CSS,
+  // nên hàng rơi về `.bx-dong` xếp NGANG: nhãn vỡ thành ba dòng, ô nhập teo
+  // lại còn hai chữ.
+  return (
+    <div className="bx-hang">
+      <label htmlFor={id}>{f.label}</label>
+      {daChon.length === 0 ? null : (
+        <div className="bx-the-chon">
+          {daChon.map((x) => (
+            <button
+              key={x}
+              type="button"
+              className="bx-the-mot"
+              disabled={disabled}
+              title={`Bỏ "${x}"`}
+              onClick={() => onChange(ghep(bo(daChon, x)))}
+            >
+              {x} <span aria-hidden="true">×</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="bx-chon-them">
+        <input
+          id={id}
+          className="bx-o"
+          value={go}
+          disabled={disabled}
+          placeholder={daChon.length === 0 ? 'Để trống là xoay vòng mọi thể loại' : 'Gõ để tìm hoặc thêm…'}
+          onFocus={() => datMo(true)}
+          onChange={(e) => {
+            datGo(e.target.value);
+            datMo(true);
+          }}
+          onKeyDown={(e) => {
+            // Enter thêm thứ đang gõ; không gõ gì thì lấy gợi ý đầu.
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              const x = go.trim() !== '' ? go : (yy[0] ?? '');
+              if (x !== '') chon(x);
+            }
+            if (e.key === 'Escape') datMo(false);
+          }}
+          // Bấm vào gợi ý rồi mới đóng, nếu không nút chưa kịp nhận cú bấm.
+          onBlur={() => setTimeout(() => datMo(false), 150)}
+        />
+        {!mo || (yy.length === 0 && !moi) ? null : (
+          <ul className="bx-goi-y">
+            {moi ? (
+              <li>
+                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => chon(go)}>
+                  + thêm “{go.trim()}”
+                </button>
+              </li>
+            ) : null}
+            {yy.slice(0, 12).map((x) => (
+              <li key={x}>
+                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => chon(x)}>
+                  {x}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {f.hint === undefined ? null : <span className="bx-goi">{f.hint}</span>}
+    </div>
+  );
+}
+
 function ODanhSachMuc({ moduleId, modId, field: f, value, disabled, onChange }: Props & { moduleId: string }) {
   const ds = mucList(value);
   const day = f.max !== undefined && ds.length >= f.max;
@@ -684,6 +787,9 @@ export function OConfig({
     return (
       <OTuDo moduleId={modId ?? moduleId} field={f} value={value} cfg={cfg} disabled={disabled} onChange={onChange} />
     );
+  }
+  if (f.type === 'chon-them') {
+    return <OChonThem moduleId={moduleId} field={f} value={value} disabled={disabled} onChange={onChange} />;
   }
   if (f.type === 'list') {
     return <ODanhSachMuc moduleId={moduleId} modId={modId} field={f} value={value} disabled={disabled} onChange={onChange} />;

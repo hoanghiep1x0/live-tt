@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { anhChoDoan, boVai } from '@live/contracts';
+import { anhChoDoan, boVai, cachKeCua, khungHien } from '@live/contracts';
+import { duocNoi, guiLenh } from '@live/stage-sdk';
 import type { StagePartProps } from '@live/stage-sdk';
 import type { Config } from './manifest';
 import type { State } from './core';
-import { catDoan, chuPhuDe, dongHo } from './core';
+import { catDoan, chuPhuDe, dongHo, loiChaoKhung } from './core';
 import { trongSuot as trongSuotCua } from './manifest';
 import './stage.css';
 
@@ -122,6 +123,24 @@ export function Stage({ config, modState }: StagePartProps<Config, State>) {
   }, [giuToi]);
   const dangGiu = giuToi > 0 && bayGio < giuToi && Date.now() < giuToi;
 
+  // MC vắng quá lâu nên lõi tự đọc đoạn này (`loiKe` trống — đoạn MC kể luôn
+  // kèm lời kể): báo máy chủ, để MC quay lại kể tiếp từ đoạn SAU. Không báo
+  // thì máy chủ vẫn tưởng MC ở đoạn cũ, MC kể lại đúng mấy đoạn vừa đọc, khung
+  // lùi theo — người xem nghe một đoạn hai lần. Chỉ cửa sổ đang giữ quyền nói
+  // mới báo: cửa sổ im không chờ giọng nên chạy đoạn nhanh hơn tiếng thật.
+  // Giờ nghỉ thì KHÔNG báo gì: lõi đã dừng đoạn, báo tiếp là đẩy tiến độ của
+  // máy chủ đi trong lúc khung không hề kể.
+  const tuDoc =
+    cachKeCua(config) !== 'tu-doc' &&
+    config.giaiLao === null &&
+    modState.daDoc &&
+    modState.loiKe === null &&
+    modState.doan >= 0;
+  useEffect(() => {
+    if (!tuDoc || !duocNoi()) return;
+    guiLenh({ t: 'tu-doc', ten: config.title, doan: modState.doan });
+  }, [tuDoc, config.title, modState.doan]);
+
   // Giờ nghỉ: KHÔNG vẽ thẻ truyện — để lộ màn chờ của thiết kế ("Chào cả nhà"
   // + đồng hồ) phía sau, chỉ đặt thêm dải giới thiệu truyện sắp kể. Module
   // không biết thiết kế vẽ màn chờ thế nào; thiết kế không biết gì về truyện.
@@ -154,10 +173,20 @@ function KhungTruyen({ config, modState }: Pick<StagePartProps<Config, State>, '
   // chứ không qua zod, nên ô thiếu là `undefined`. Hiểu `undefined` là tắt thì
   // mọi phòng đang chạy mất sạch ảnh ngay lần dựng đầu — chỉ TẮT khi người
   // vận hành thật sự gạt công tắc.
-  const tatAnh = config.hienAnh === false;
+  //
+  // Bật "Ảnh hoặc đồng hồ ngẫu nhiên" thì mỗi truyện bốc một trong hai
+  // (`khungHien`), hai công tắc riêng tạm không có tác dụng.
+  const hien = khungHien(config as unknown as Record<string, unknown>);
+  const tatAnh = !hien.anh;
   const media =
     config.transparentBg || tatAnh ? '' : anhMoc !== '' ? anhMoc : config.media.trim() || anhDau;
   const coHinh = media !== '';
+  // Truyện bốc trúng ảnh mà chưa có ảnh nào (đang vẽ, hay vẽ hỏng): hiện đồng
+  // hồ thay, khung không trống trơn.
+  const hienDongHo = hien.dongHo || (config.anhHoacDongHo === true && !coHinh);
+  /** Khung lấy ĐỒNG HỒ làm nội dung chính: không hình, mà đồng hồ đang bật. */
+  const dongHoTo = hienDongHo && !coHinh && config.title !== '';
+  const gioMay = useGioMay(dongHoTo);
 
   // Tải sẵn ảnh của mọi mốc trong truyện: tới đoạn là ảnh có ngay trong bộ nhớ.
   const dsAnh = config.moc.map((m) => m.anh).filter((a) => a !== '').join('|');
@@ -170,13 +199,21 @@ function KhungTruyen({ config, modState }: Pick<StagePartProps<Config, State>, '
   }, [dsAnh]);
 
   return (
-    <div className="mod-truyen" data-co-hinh={coHinh} data-trong-suot={trongSuot}>
+    <div
+      className="mod-truyen"
+      data-co-hinh={coHinh}
+      data-trong-suot={trongSuot}
+      // Khung không hình mà có đồng hồ: module TỰ vẽ nền cho nó. Không nhờ
+      // thiết kế bỏ trong suốt được — cùng một công tắc ấy kéo luôn màn chờ
+      // "Chào cả phòng" lên sau khung, giữa lúc truyện đang kể.
+      data-dong-ho-to={dongHoTo}
+    >
       {/* Chưa có hình: KHÔNG trải nền đổi màu (nền tím trông rẻ) — khung trong
           suốt, lộ sảnh phía sau. Khung vẫn không đứng im: dải sáng quét và
           đồng hồ đếm giờ của truyện luôn chạy. */}
-      {/* So với `false` chứ KHÔNG phải `!config.hienDongHo` — xem chú thích
-          của `tatAnh` ở trên: cấu hình cũ không mang khoá này. */}
-      {config.hienDongHo === false ? null : (
+      {/* `hienDongHo` tính ở trên từ `khungHien`: cấu hình cũ không mang khoá
+          `hienDongHo` thì vẫn hiện như trước. */}
+      {!hienDongHo || dongHoTo ? null : (
         <DongHoTruyen batDau={config.batDau} ten={config.title} />
       )}
 
@@ -193,12 +230,36 @@ function KhungTruyen({ config, modState }: Pick<StagePartProps<Config, State>, '
 
       {config.title === '' && doan === null ? null : (
         <div className="mod-truyen-chu">
+          {/* Khung không hình mà bật "Đồng hồ truyện": lời chào và GIỜ MÁY đứng
+              NGAY TRÊN tên truyện, trong cùng khối chữ đáy khung — chủ phòng
+              khoanh đúng chỗ này. Tên truyện và lời truyện giữ nguyên chỗ cũ. */}
+          {!dongHoTo ? null : (
+            <div className="mod-truyen-cho">
+              <p className="mod-truyen-chao">{loiChaoKhung(config.title)}</p>
+              <p className="mod-truyen-gio">{gioMay}</p>
+            </div>
+          )}
           {config.title === '' ? null : <h2 className="mod-truyen-ten">{config.title}</h2>}
           {doan === null ? null : <p className="mod-truyen-doan">{boVai(doan)}</p>}
         </div>
       )}
     </div>
   );
+}
+
+/** Giờ máy (giờ:phút:giây), nhịp mỗi giây — người xem đọc nó như đồng hồ treo
+ *  tường, y hệt màn chờ của thiết kế. `chay` tắt thì thôi hẹn giờ, khỏi dựng
+ *  lại khung mỗi giây trong khi không ai nhìn. */
+function useGioMay(chay: boolean): string {
+  const doc = (): string => new Date().toLocaleTimeString('vi-VN', { hour12: false });
+  const [gio, datGio] = useState(doc);
+  useEffect(() => {
+    if (!chay) return;
+    datGio(doc());
+    const id = setInterval(() => datGio(doc()), 1000);
+    return () => clearInterval(id);
+  }, [chay]);
+  return gio;
 }
 
 /** Đồng hồ góc khung: truyện đã kể được bao lâu. Mốc từ máy chủ (`batDau`);

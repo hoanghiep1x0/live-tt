@@ -3,16 +3,6 @@
  *  Tách ra để test chạy được ở Node (quy ước 01 §5). Màn chờ vẽ ở `Stage.tsx`.
  */
 
-/** Giờ nghỉ đổi truyện ngắn nhất, PHẢI khớp `GIAI_LAO_TOI_THIEU_MS` ở
- *  `backend/src/truyen_sau.rs`.
- *
- *  Máy chủ nghỉ ít nhất ngần này rồi mới mở truyện mới; phòng đang sôi động
- *  (còn người chờ được chào hay được đáp) thì nghỉ thêm, nhiều nhất 90 giây.
- *  Đếm ngược theo mốc NGẮN NHẤT: đếm theo mốc dài thì gần như lần nào truyện
- *  cũng vào sớm hơn số đang đếm, người xem nhìn con số nhảy cóc. Đếm theo mốc
- *  ngắn thì tới 0 là thôi đếm, truyện vào ngay sau đó. */
-export const GIAI_LAO_TOI_THIEU_MS = 40_000;
-
 /** Khung giữ đoạn cuối thêm ngần này rồi mới nhường chỗ cho màn chờ. PHẢI khớp
  *  `GIU_DOAN_CUOI_MS` ở `backend/src/truyen_sau.rs`. */
 export const GIU_DOAN_CUOI_MS = 5_000;
@@ -43,19 +33,6 @@ export function giaiLaoCua(cfg: unknown): GiaiLao | null {
     tu,
     han: typeof o['han'] === 'number' && o['han'] > 0 ? o['han'] : 0,
   };
-}
-
-/** Còn mấy giây nữa tới truyện kế. `null` là đừng đếm: không trong giờ nghỉ,
- *  nghỉ vì sự cố (không biết bao giờ xong — đếm ngược rồi đứng ở 0 thì nhìn
- *  như hỏng), hay đã hết giờ tối thiểu mà truyện chưa vào.
- *
- *  Hàm thuần: hai cửa sổ cùng xem một phòng đếm giống nhau. */
-export function giayConLai(g: GiaiLao | null, now: number): number | null {
-  if (g === null || g.lyDo !== 'chuyen') return null;
-  if (dangGiuDoanCuoi(g, now)) return null;
-  const con = g.tu + (g.han > 0 ? g.han : GIAI_LAO_TOI_THIEU_MS) - now;
-  if (con <= 0) return null;
-  return Math.ceil(con / 1000);
 }
 
 /** Mấy giây ĐẦU của giờ nghỉ đổi truyện: khung còn giữ đoạn cuối và ảnh của
@@ -119,13 +96,13 @@ export const CUNG = ['mình', 'tớ', 'chúng mình', 'cả nhà'] as const;
 /** Câu giữ chân dưới đồng hồ. `{nha}` là chỗ điền cách gọi; mấy câu không có
  *  `{nha}` là lối RỦ NGHE CÙNG MC — cố ý trộn vào cho đỡ đều. */
 export const CAU_CHO = [
-  'Truyện sắp bắt đầu rồi, {nha} ngồi lại nghe cùng {cung} nha ❤',
-  'Chút xíu nữa thôi, ngồi lại nghe cùng {cung} nha ❤',
-  '{nha} ngồi xuống đây, chuyện hay sắp kể rồi nè 😊',
+  'Truyện sắp bắt đầu rồi, {nha} ngồi lại nghe cùng {cung} ❤',
+  'Chút xíu nữa thôi, ngồi lại nghe cùng {cung} ❤',
+  '{nha} ngồi xuống đây, chuyện hay sắp kể rồi 😊',
   'Truyện mới sắp lên rồi, {nha} nghe tiếp cùng {cung} nào ❤',
-  'Đừng đi đâu nha, {nha} ở lại nghe trọn câu chuyện cùng {cung} nhé 😊',
+  'Đừng đi đâu, {nha} ở lại nghe trọn câu chuyện cùng {cung} 😊',
   'Chuẩn bị xíu thôi, lát nữa {nha} nghe cùng {cung} cho vui 😊',
-  'Sắp kể rồi nè, {nha} ở lại nghe cùng {cung} nha ❤',
+  'Sắp kể rồi, {nha} ở lại nghe cùng {cung} ❤',
 ] as const;
 
 /** Lời chào trên màn chờ: "Chào cả nhà", "Chào bạn"… Hàm thuần. */

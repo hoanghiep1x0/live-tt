@@ -102,9 +102,14 @@
 }
 
 /* Đệm trên vừa đủ cho dải tối tan vào hình. Để quá dày thì chỗ tối nhất nằm
-   dưới chân chữ, còn chữ thì ngồi trên quãng còn trong veo — nhìn bạc màu. */
+   dưới chân chữ, còn chữ thì ngồi trên quãng còn trong veo — nhìn bạc màu.
+
+   Đệm DƯỚI dày hơn đệm trên: khối chữ neo ở đáy khung, nên muốn chữ ngồi cao
+   hơn một chút — đọc trên điện thoại đỡ sát mép, và khỏi đè lên viền khung —
+   thì nới đệm dưới ra. Hai khoảng trên và dưới chữ vì thế không bằng nhau
+   trên giấy, nhưng trên màn thì nhìn cân, vì mép dưới còn viền khung ăn vào. */
 .mod-truyen-chu {
-  padding: 5.5cqmin 5.7cqmin 5.4cqmin;
+  padding: 6.4cqmin 5.7cqmin 8.6cqmin;
 }
 .mod-truyen-chu::before {
   /* Phải TỐI SẴN ngay chỗ dòng đầu tiên đứng. Dải chuyển từ trong veo tới tối
@@ -127,8 +132,10 @@
 }
 
 .mod-truyen-ten {
-  margin: 0 0 1.6cqmin;
-  font-size: 7.8cqmin;
+  /* Cách lời truyện đúng bằng một quãng thở, không dính sát như trước: tên và
+     lời là hai thứ khác nhau, mắt phải thấy chỗ ngắt. */
+  margin: 0 0 2.8cqmin;
+  font-size: 8.8cqmin;
   font-weight: 700;
   color: var(--gold, #f2c45a);
   text-shadow: 0 0 0.5cqmin rgba(0, 0, 0, 0.9), 0 0.3cqmin 1cqmin rgba(0, 0, 0, 0.85);
@@ -136,8 +143,10 @@
 
 .mod-truyen-doan {
   margin: 0;
-  font-size: 5cqmin;
-  line-height: 1.45;
+  /* Phụ đề phát lên TikTok, người xem cầm điện thoại: chữ to và dòng thưa thì
+     đọc kịp trong quãng mỗi đoạn hiện trên màn. */
+  font-size: 5.8cqmin;
+  line-height: 1.55;
   font-weight: 600;
   /* Chữ nằm trên ảnh sáng tối đủ kiểu: bóng dày để luôn đọc được. */
   text-shadow:
@@ -228,6 +237,54 @@
 
 /* Đồng hồ góc khung: truyện đã kể được bao lâu. Số chạy từng giây nên khung
    không bao giờ đứng im, kể cả khi trong suốt, chưa có hình. */
+/* Khung chưa có hình mà bật "Đồng hồ truyện": module tự trải nền cho đồng hồ
+   đứng lên, đúng dáng màn chờ lúc mới mở phòng. Nền của RIÊNG module, không
+   nhờ thiết kế: công tắc trong suốt của thiết kế kéo luôn màn chờ "Chào cả
+   phòng" lên sau khung, mà truyện thì đang kể dở. */
+.mod-truyen[data-dong-ho-to='true'] {
+  background:
+    radial-gradient(120% 90% at 50% 38%, rgba(255, 210, 120, 0.16), rgba(255, 210, 120, 0) 62%),
+    linear-gradient(180deg, rgba(38, 20, 8, 0.92), rgba(14, 7, 3, 0.95));
+}
+
+/* Khối đồng hồ: lời chào + giờ máy, đứng NGAY TRÊN tên truyện bên trong khối
+   chữ đáy khung (`.mod-truyen-chu`) — đúng chỗ chủ phòng khoanh. Nằm chung khối
+   nên luôn bám sát tên truyện, truyện dài hay ngắn cũng không hở. */
+.mod-truyen-cho {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.6cqmin;
+  /* Quãng hở giữa đồng hồ và tên truyện. 10cqmin ≈ 24px ở khung xem thử (khung
+     cao ~240px) — chủ phòng chốt đồng hồ cao thêm 15px so với mức 4cqmin cũ. */
+  margin-bottom: 10.2cqmin;
+  text-align: center;
+}
+.mod-truyen-chao {
+  /* Cách giờ máy thêm một quãng cho thoáng — chủ phòng muốn riêng dòng này
+     đứng cao hơn, không dính vào đồng hồ. */
+  /* Cách đồng hồ 8,6cqmin ≈ 21px ở khung xem thử — chủ phòng nâng riêng dòng
+     này thêm 15px so với mức 2,4cqmin trước, cho thoáng. */
+  margin: 0 0 8.6cqmin;
+  max-width: 100%;
+  font-size: 6cqmin;
+  font-weight: 700;
+  color: var(--gold, #f2c45a);
+  text-shadow: 0 0.3cqmin 1cqmin rgba(0, 0, 0, 0.75);
+}
+/* Giờ máy: chữ số đều bề ngang (`tabular-nums`) nên con số không nhảy qua lại
+   mỗi giây. Cùng kiểu với đồng hồ màn chờ của thiết kế. */
+.mod-truyen-gio {
+  margin: 0;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 13cqmin;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  text-shadow: 0 0 4cqmin rgba(255, 210, 120, 0.6), 0 0.4cqmin 1.4cqmin rgba(0, 0, 0, 0.8);
+}
 .mod-truyen-dong-ho {
   position: absolute;
   top: 3cqmin;

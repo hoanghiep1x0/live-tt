@@ -67,6 +67,33 @@ export function OKhoTruyen({ field: f, disabled }: { field: ConfigField; disable
       .finally(() => setDangLam(''));
   };
 
+  /** Xoá sạch lịch sử: bấm lần đầu chỉ HỎI LẠI, bấm lần hai mới xoá.
+   *
+   *  Không dùng `confirm()` của trình duyệt: hộp đó khoá cả trang, mà trang
+   *  này đang là sân khấu đang phát. Hỏi ngay tại nút thì người vận hành vẫn
+   *  thấy phòng chạy sau lưng. */
+  const [hoiXoa, setHoiXoa] = useState(false);
+  useEffect(() => {
+    if (!hoiXoa) return;
+    // Hỏi rồi bỏ đó thì tự rút lại — đừng để một nút "xoá hết" nằm chờ sẵn.
+    const h = setTimeout(() => setHoiXoa(false), 8_000);
+    return () => clearTimeout(h);
+  }, [hoiXoa]);
+
+  const xoaHet = () => {
+    setDangLam('xoa-het');
+    setLoi('');
+    void fetch(`/s/truyen-kho/${id}/xoa-het`, { method: 'POST' })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? 'lỗi');
+        setHoiXoa(false);
+        setXem(null);
+        tai();
+      })
+      .catch((e: unknown) => setLoi(e instanceof Error ? e.message : 'không gọi được máy chủ'))
+      .finally(() => setDangLam(''));
+  };
+
   const ngan = o.current?.closest('.bx-ngan') ?? null;
   const tong = ds === null ? 0 : ds.reduce((n, t) => n + dem(t).anh, 0);
 
@@ -79,6 +106,34 @@ export function OKhoTruyen({ field: f, disabled }: { field: ConfigField; disable
         <p className="bx-goi">Chưa có truyện nào trong kho. Kể xong một truyện là nó được cất vào đây kèm ảnh.</p>
       ) : (
         <>
+          <div className="bx-kho-xoa">
+            {hoiXoa ? (
+              <>
+                <span className="bx-kho-hoi">Xoá hết {ds.length} truyện và sổ đã kể? Không lấy lại được.</span>
+                <button
+                  type="button"
+                  className="bx-muc-bo bx-muc-nguy"
+                  disabled={disabled || dangLam !== ''}
+                  onClick={xoaHet}
+                >
+                  {dangLam === 'xoa-het' ? 'Đang xoá…' : 'Xoá hết'}
+                </button>
+                <button type="button" className="bx-muc-bo" onClick={() => setHoiXoa(false)}>
+                  Thôi
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="bx-muc-bo"
+                disabled={disabled || dangLam !== ''}
+                title="Xoá sạch lịch sử để phòng được kể lại những truyện này"
+                onClick={() => setHoiXoa(true)}
+              >
+                Xoá lịch sử
+              </button>
+            )}
+          </div>
           <table className="bx-bang-truyen">
             <tbody>
               {ds.map((t) => {

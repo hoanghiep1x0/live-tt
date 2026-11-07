@@ -109,6 +109,12 @@ export const core: ModuleCore<Config, State> = {
     const ds = catDoan(state.config.passages);
     if (ds.length === 0 || state.hetTruyen) return [];
 
+    // GIỜ NGHỈ: khung đã nhường chỗ cho màn chờ (xem `stage.tsx`), nên đoạn
+    // cũng phải dừng. Không dừng thì màn hình hiện "Chào cả nhà" mà giọng vẫn
+    // đọc truyện, và lúc hết giờ nghỉ khung quay lại ở đoạn khác hẳn đoạn vừa
+    // nghe — chữ, ảnh và giọng lệch nhau hẳn một quãng.
+    if (state.config.giaiLao !== null) return [];
+
     if (cachKeCua(state.config) !== 'tu-doc') {
       if (state.batDau === 0) state.batDau = now;
       // MC đang kể (hoặc mới mở, chờ MC vào): đoạn do MC chuyển. Vắng quá
@@ -166,6 +172,24 @@ export const core: ModuleCore<Config, State> = {
     return state;
   },
 };
+
+/** Mấy cách gọi cả phòng cho lời chào trên đồng hồ. Một buổi mấy tiếng mà câu
+ *  nào cũng y hệt thì người xem nghe ra cái máy ngay. */
+export const CHAO_KHUNG: readonly string[] = ['Chúc Nghe Truyện Vui vẻ'];
+
+/** Lời chào đứng trên đồng hồ trong khung truyện.
+ *
+ *  Xoay vòng theo TÊN TRUYỆN chứ không bốc ngẫu nhiên: cùng một truyện thì mọi
+ *  cửa sổ (sân khấu, OBS, bảng xem thử) đọc ra cùng một câu, và câu ấy đứng yên
+ *  suốt truyện thay vì nhảy lung tung mỗi giây đồng hồ đập.
+ *
+ *  Hàm thuần.
+ */
+export function loiChaoKhung(ten: string): string {
+  let h = 0;
+  for (let i = 0; i < ten.length; i += 1) h = (h * 31 + ten.charCodeAt(i)) % 100_003;
+  return CHAO_KHUNG[h % CHAO_KHUNG.length] ?? CHAO_KHUNG[0] ?? '';
+}
 
 /** "mm:ss" (hay "h:mm:ss") từ số giây. Hàm thuần. */
 export function dongHo(giay: number): string {

@@ -13,6 +13,7 @@ import type {
 } from '@live/contracts';
 import { connectStage, BAN_DAU } from './state';
 import type { StageState } from './state';
+import { conDangDoc } from './audio';
 import { partsCho, slotTrongSuot, timDangKy } from './registry';
 import { useRunner } from './runner';
 import type { KetQuaChay, LoiMc } from './runner';
@@ -160,8 +161,10 @@ export function useSlotSang(slot: SlotName): boolean {
 /** Module ở slot này xin bỏ nền: thiết kế thôi vẽ màn chờ và nền khung của
  *  slot, để lộ phòng phía sau. Thiết kế không cần biết module nào xin. */
 export function useSlotTrongSuot(slot: SlotName): boolean {
-  const { s } = useContext(Ctx);
-  return slotTrongSuot(slot, s.enabled, s.config as Record<string, Json>);
+  const { s, chay } = useContext(Ctx);
+  // `chay.now` đổi mỗi nhịp nên hàm này được tính lại đều — nhờ vậy lúc giọng
+  // đọc xong câu cuối, khung nhường chỗ cho màn chờ ngay nhịp sau.
+  return slotTrongSuot(slot, s.enabled, s.config as Record<string, Json>, conDangDoc());
 }
 
 /** Id thiết kế đang vẽ. Bảng xem cần nó để gửi file tải lên đúng kho của
@@ -199,6 +202,7 @@ export function Slot({ name }: { name: SlotName }) {
             state={s}
             modState={chay.modState.get(p.id)}
             now={chay.now}
+            dangDoc={conDangDoc()}
           />
         );
       })}

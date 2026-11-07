@@ -49,6 +49,9 @@ export interface StagePartProps<C = Json, S = unknown> {
   modState: S;
   /** Giờ hiện tại. Tiêm vào để phần vẽ theo thời gian cũng chạy lại được. */
   now: number;
+  /** Giọng của cửa sổ này còn đang đọc (hay còn câu chờ) không. Phần vẽ dùng
+   *  để giữ khung tới khi đọc hết câu, đừng đổi màn giữa chừng. */
+  dangDoc: boolean;
 }
 
 /** Ngữ cảnh chung, thiếu đúng phần cấu hình — cấu hình là của từng module. */
@@ -82,7 +85,7 @@ export interface DangKy {
   Part?: ComponentType<StagePartProps>;
   /** Module đang xin thiết kế bỏ nền của slot — màn chờ, nền khung — để lộ
    *  phòng phía sau. Đọc theo cấu hình đầy đủ, vì thường là một công tắc. */
-  trongSuot?: (config: Json) => boolean;
+  trongSuot?: (config: Json, dangDoc: boolean) => boolean;
   /** Cấu hình đầy đủ: mặc định của schema, phủ bằng thứ đã lưu.
    *
    *  Backend chỉ lưu những khoá người vận hành đã đổi, nên cấu hình thô luôn
@@ -98,7 +101,7 @@ export interface DangKy {
 interface PhanVe {
   slot: SlotName;
   Part: ComponentType<StagePartProps>;
-  trongSuot?: (config: Json) => boolean;
+  trongSuot?: (config: Json, dangDoc: boolean) => boolean;
 }
 
 /** Ghép phần vẽ với module của nó. Nhận chính module object nên kiểu cấu hình
@@ -109,7 +112,7 @@ function phan<C, S>(
   p: {
     slot: SlotName;
     Part: ComponentType<StagePartProps<C, S>>;
-    trongSuot?: (config: C) => boolean;
+    trongSuot?: (config: C, dangDoc: boolean) => boolean;
   },
 ): [string, PhanVe] {
   return [
@@ -119,7 +122,7 @@ function phan<C, S>(
       Part: p.Part as unknown as ComponentType<StagePartProps>,
       ...(p.trongSuot === undefined
         ? {}
-        : { trongSuot: p.trongSuot as unknown as (config: Json) => boolean }),
+        : { trongSuot: p.trongSuot as unknown as (config: Json, dangDoc: boolean) => boolean }),
     },
   ];
 }
@@ -206,8 +209,9 @@ export function slotTrongSuot(
   slot: SlotName,
   enabled: readonly string[],
   config: Readonly<Record<string, Json>>,
+  dangDoc = false,
 ): boolean {
   return partsCho(slot, enabled).some(
-    (p) => p.trongSuot !== undefined && p.trongSuot(p.hopCauHinh(config[p.id] ?? {})),
+    (p) => p.trongSuot !== undefined && p.trongSuot(p.hopCauHinh(config[p.id] ?? {}), dangDoc),
   );
 }

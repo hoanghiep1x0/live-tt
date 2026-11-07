@@ -70,6 +70,9 @@ export interface FeedItem {
    *  CHỒNG lên lời kể, nhỏ tiếng hơn — khách không phải chờ hết đoạn; không kể
    *  thì đọc bình thường, to rõ. Chỉ chồng khi khác giọng người đang kể. */
   khach?: boolean;
+  /** Câu CHÀO người mới vào (khác câu ĐÁP bình luận): sân khấu vẫn đọc,
+   *  nhưng không hiện lên thẻ giữa màn. */
+  chao?: boolean;
 }
 
 /** Lệnh gõ trong bình luận. Lệnh dùng mã ghế chỉ có ở thiết kế khai `seatRows`. */

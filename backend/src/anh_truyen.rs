@@ -571,28 +571,29 @@ fn ve_moc(st: &AppState, id: &str, n: Nhanh, cfg: &Value, i: usize) -> Result<()
     Ok(ghi(st, id, n, json!({ "moc": ds, "anhLoi": "" }))?)
 }
 
-/// Cả muse.ai lẫn API đều hỏng với truyện ĐANG KỂ. KHÔNG đóng live: đóng là
-/// phòng im, màn chờ đứng đó, khách bỏ đi. Thay vào đó mở GIỜ NGHỈ ("anh"):
-/// khung hiện màn chờ + "Truyện tiếp theo", MC chào khách, trò chuyện; vòng ảnh
-/// vẫn tự thử lại (lùi dần). Vẽ được là `ai.rs` đóng giờ nghỉ và kể tiếp; quá
-/// 24 giờ thì thôi chờ, kể không ảnh. Truyện SAU hỏng thì chưa làm gì: chuyển
-/// sang rồi nó thành truyện đang kể, hỏng nữa mới nghỉ.
+/// Cả muse.ai lẫn API đều hỏng với truyện ĐANG KỂ: GHI LỖI RỒI KỂ TIẾP, không
+/// ảnh.
+///
+/// Bản trước mở một GIỜ NGHỈ "anh" và đứng chờ tới khi vẽ được (tối đa 24
+/// giờ). Nghe thì cẩn thận, chạy thì tai hại: khoá API hết hạn một cái là
+/// phòng treo ở màn chờ hàng giờ, người xem vào thấy "Chào cả nhà" mãi rồi
+/// lướt đi. Truyện không ảnh vẫn là truyện; im lặng mới là hỏng.
+///
+/// Vòng vẽ vẫn tự thử lại (lùi dần), nên ảnh nào vẽ được sau đó vẫn hiện vào
+/// đúng đoạn của nó — chỉ là phòng không chờ nó nữa.
 fn nghi_vi_anh(st: &AppState, id: &str, n: Nhanh) {
     if n != Nhanh::Hien {
         return;
     }
     let Some(cfg) = cfg_story(st, id) else { return };
-    // Đang nghỉ vì ảnh rồi: giữ mốc bắt đầu, không mở lại (mỗi lần thử hỏng
-    // mà mở lại là không bao giờ tới hạn 24 giờ).
+    let ten = cfg.get("title").and_then(Value::as_str).unwrap_or_default().to_string();
+    // Phòng đang mắc kẹt trong giờ nghỉ "anh" của bản cũ thì mở ra ngay.
     if crate::truyen_sau::giai_lao(&cfg).is_some_and(|(_, ly_do, _)| ly_do == "anh") {
+        tracing::info!(thiet_ke = %id, %ten, "bỏ giờ nghỉ chờ ảnh của bản cũ — kể tiếp không ảnh");
+        crate::truyen_sau::dat_giai_lao(st, id, None, crate::state::bay_gio_ms(), 0);
         return;
     }
-    let ten = cfg.get("title").and_then(Value::as_str).unwrap_or_default().to_string();
-    tracing::warn!(thiet_ke = %id, %ten, "ảnh truyện: muse.ai và API đều hỏng — giờ nghỉ tới khi vẽ được");
-    let so_nguoi = st
-        .session_view()
-        .map_or(0, |v| v.totals.viewers);
-    crate::truyen_sau::dat_giai_lao(st, id, Some((&ten, "anh")), crate::state::bay_gio_ms(), so_nguoi);
+    tracing::warn!(thiet_ke = %id, %ten, "ảnh truyện: muse.ai và API đều hỏng — kể tiếp KHÔNG ảnh, không dừng phòng");
 }
 
 /// Ảnh truyện đang kể đã ổn trở lại (lần vẽ gần nhất không lỗi, hay không

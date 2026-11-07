@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { cacMoc } from '@live/contracts';
 import type { Seat } from '@live/contracts';
 import {
   giongChoViec,
@@ -11,6 +10,7 @@ import {
   useNoi,
   useSlotSang,
   useSlotTrongSuot,
+  duocNoi,
   useStage,
   useThietKe,
 } from '@live/stage-sdk';
@@ -20,7 +20,7 @@ import type { Huong } from './geometry';
 import { GHE_MAC_DINH, hallContentH, hallRowsFor } from './seats';
 import { dungGhe, HangGhe, nguoiNong, TenKhan } from './parts/HangGhe';
 import { CHO_OM } from './parts/an-ui';
-import { cauCho, giaiLaoCua, giayConLai, loiChao, tenTruyenSau, thuTuCho } from './parts/cho-truyen';
+import { cauCho, giaiLaoCua, loiChao, tenTruyenSau, thuTuCho } from './parts/cho-truyen';
 import { LoiDi } from './parts/LoiDi';
 import {
   AN_UI_MAC_DINH,
@@ -35,6 +35,7 @@ import {
 } from './parts/AnUi';
 import { GoiYLenh } from './parts/GoiYLenh';
 import { VaoPhong } from './parts/VaoPhong';
+import { aiCanChao, CACH_MAC_DINH_GIAY, cauChao, soChaoMoi } from './parts/chao-vao';
 import { TungHoa } from './parts/TungHoa';
 import { LenhGhe } from './parts/LenhGhe';
 
@@ -57,6 +58,31 @@ export const LUA_CHON: readonly DesignCard[] = [
         type: 'toggle',
         value: false,
         hint: 'Tắt là khung dọc 9:16 như mặc định; bật thì khung nằm ngang 16:9 và cụm top nâng lên theo',
+      },
+    ],
+  },
+  {
+    id: 'chao-vao',
+    name: 'Chào khách vào phòng',
+    icon: '👋',
+    summary: 'Giọng chào ngay lúc khách bước vào, đọc song song với lời kể',
+    toggle: {
+      key: 'chaoVao',
+      label: 'Bật chào khách',
+      type: 'toggle',
+      value: true,
+    },
+    fields: [
+      {
+        key: 'chaoVaoGiay',
+        label: 'Hai lời chào cách nhau',
+        short: 'Cách (giây)',
+        type: 'number',
+        unit: 'giây',
+        min: 0,
+        max: 60,
+        value: CACH_MAC_DINH_GIAY,
+        hint: 'Phòng đông thì mỗi 4 giây có năm sáu người vào; chào liên tục sẽ thành tiếng ồn và đè mất lời kể. Để 0 là chào mọi người, không giãn cách.',
       },
     ],
   },
@@ -183,25 +209,13 @@ export function Stage() {
   const tickerSang = useSlotSang('ticker');
   /** Module trong khung xin bỏ nền: thôi vẽ màn chờ và nền khung, để lộ sảnh. */
   const khungTrong = useSlotTrongSuot('screen');
-  // Truyện có ảnh AI vẽ (mốc đã có ảnh) thì nhãn minh bạch ghi thêm điều đó.
-  //
-  // Tắt công tắc "Ảnh minh hoạ" là khung không còn hiện ảnh nữa, nên nhãn phải
-  // tắt theo: nhãn này nói với NGƯỜI XEM rằng khung đang có ảnh do AI vẽ —
-  // treo nó trên một khung chỉ có chữ là nói điều không có.
   const truyen = s.config['story'];
-  const truyenCfg =
-    typeof truyen === 'object' && truyen !== null && !Array.isArray(truyen) ? truyen : null;
-  const coAnhTruyen =
-    s.enabled.includes('story') &&
-    truyenCfg !== null &&
-    truyenCfg['hienAnh'] !== false &&
-    cacMoc(truyenCfg['moc']).some((m) => m.anh !== '');
   const gio = useDongHo();
-  // Giờ nghỉ giữa hai truyện: đồng hồ lớn đếm ngược số giây tới truyện kế thay
-  // vì chỉ giờ treo tường — màn chờ có cái để nhìn, người xem biết còn phải
-  // đợi bao lâu nên ở lại. `gio` nhịp mỗi giây nên con số tự lùi theo.
+  // Màn chờ KHÔNG đếm ngược tới truyện kế. Chủ phòng chốt: "khách ghét đếm
+  // giây" — con số tụt dần biến quãng nghỉ thành quãng phải chịu đựng, và lúc
+  // máy chủ soạn truyện lâu hơn dự tính thì nó đứng ở 0, nhìn như treo. Đồng hồ
+  // treo tường thì chỉ là khung cảnh, không hứa hẹn gì.
   const nghiCho = giaiLaoCua(truyen);
-  const demTruyen = giayConLai(nghiCho, Date.now());
   // Màn chờ đổi cách gọi người nghe mỗi lượt chờ — khi thì gọi cả phòng, khi
   // thì gọi riêng người đang ngồi xem. Một buổi mấy tiếng mà câu nào cũng y
   // hệt là người xem nghe ra máy ngay.
@@ -215,6 +229,34 @@ export function Stage() {
   // Lượt an ủi đang diễn ra. Thuần theo đồng hồ nên hai cửa sổ xem cùng phòng
   // thấy cùng một lượt.
   const thietKe = useThietKe();
+
+  // CHÀO KHÁCH VÀO PHÒNG bằng làn giọng RIÊNG, song song với lời kể: khách
+  // vừa bấm vào đã nghe có người chào mình. Lời chào của MC vẫn còn đó, nhưng
+  // nó đi theo lượt MC nên luôn muộn — cái này là tức thì.
+  const soChao = useRef(soChaoMoi());
+  /** Giọng người vận hành đã giao cho việc "chào" (`ai.vaiGiong.chao`). */
+  const chaoGiongDs = (): string[] => {
+    const ai = s.ai as unknown as { vaiGiong?: { chao?: unknown } } | undefined;
+    const ds = ai?.vaiGiong?.chao;
+    return Array.isArray(ds) ? ds.filter((x): x is string => typeof x === 'string') : [];
+  };
+  const chaoBat = thietKe['chaoVao'] !== false;
+  const chaoGiay = typeof thietKe['chaoVaoGiay'] === 'number' ? thietKe['chaoVaoGiay'] : CACH_MAC_DINH_GIAY;
+  const noi = useNoi();
+  useEffect(() => {
+    if (!chaoBat || !duocNoi()) return;
+    const nhom = aiCanChao(s.session.recentFeed, Date.now(), soChao.current, chaoGiay);
+    const cau = cauChao(nhom.map((f) => f.name));
+    if (cau === '') return;
+    // Giọng chào xoay vòng theo danh sách người vận hành giao cho việc "chào"
+    // (`vaiGiong.chao`); chưa giao thì để trống cho dàn tự chọn.
+    const ds = chaoGiongDs();
+    const giong = ds.length === 0 ? '' : (ds[soChao.current.dem % ds.length] ?? '');
+    // Vào HÀNG ĐỌC CHÍNH: lời chào đọc SAU câu kể đang dở, không chồng lên nó.
+    // Trước đây nó có làn riêng chạy song song — chủ phòng nghe thử rồi chốt
+    // bỏ, hai giọng cùng lúc nghe ra cái máy chứ không ra người dẫn truyện.
+    noi(cau, giong);
+  }, [s.session.recentFeed, chaoBat, chaoGiay, noi]);
   // Cảnh an ủi đi cùng nhân vật ảo: tắt nhân vật ảo là tắt luôn cảnh này,
   // kể cả lượt khách gõ "ôm".
   const batAnUi = thietKe['anUi'] !== false && s.bot.enabled;
@@ -224,7 +266,6 @@ export function Stage() {
     ? canhAnUi(nhip, khachXinOm(s.session.recentFeed, nhip), cfgAnUi)
     : null;
   const beDuocOm = canh !== null && canh.nhanVat === 'be';
-  const noi = useNoi();
   const camOn = useRef<{ luot: string; luc: number }>({ luot: '', luc: -Infinity });
   // Khung dọc là mặc định; người vận hành gạt công tắc ở bảng xem thì đổi ngay,
   // không tải lại trang.
@@ -319,13 +360,12 @@ export function Stage() {
 
       <section className="stage-screen" data-trong-suot={khungTrong}>
         {/* Nhãn minh bạch kiểu bản cũ: ngồi ngoài khung, sát mép trên góc trái
-            — không che hình. "Có ảnh minh hoạ cốt truyện" chỉ khi khung đang có
-            ảnh AI vẽ cho truyện — không ghi điều không có. Lời minh bạch về cả
-            phòng là dòng mờ ở chân màn (`stage-honest`). */}
+            — không che hình. Lời minh bạch về cả phòng là dòng mờ ở chân màn
+            (`stage-honest`).
+
+            Nhãn "Có ảnh minh hoạ cốt truyện" ở mép phải đã BỎ: chủ phòng chốt
+            là người xem nhìn thấy ảnh rồi, ghi thêm chỉ tổ chật mép khung. */}
         <span className="stage-ai-label">Truyện hay do AI đề xuất</span>
-        {coAnhTruyen ? (
-          <span className="stage-ai-label stage-ai-label-phai">Có ảnh minh hoạ cốt truyện</span>
-        ) : null}
         <div className="stage-screen-inner">
           {/* Màn chờ của bản cũ: lời chào, đồng hồ lớn, một câu giữ chân. Không
               có câu nào nhắc người vận hành bật module — màn này đang phát ra
@@ -335,16 +375,7 @@ export function Stage() {
             <div className="stage-waiting">
               <span className="stage-waiting-sen" />
               <p className="waiting-welcome">{loiChao(thuTu)}</p>
-              <p className="waiting-clock">
-                {demTruyen === null ? (
-                  gio
-                ) : (
-                  <>
-                    {demTruyen}
-                    <span className="waiting-clock-dv">giây</span>
-                  </>
-                )}
-              </p>
+              <p className="waiting-clock">{gio}</p>
               <p className="waiting-note">{cauCho(thuTu)}</p>
               {tenSau === '' ? null : (
                 <p className="waiting-next">

@@ -373,12 +373,6 @@ body {
   padding: 0.3cqw 1.2cqw;
   border-radius: 1.2cqw;
 }
-/* Nhãn thứ hai ("Có ảnh minh hoạ cốt truyện") sang mép PHẢI, đối diện nhãn
-   trái — hai viên chip rời, không dính nhau bằng dấu gạch. */
-.stage-ai-label-phai {
-  left: auto;
-  right: var(--pad-screen, 0);
-}
 /* Khung ngang thấp hơn, đỉnh khung sát vầng hào quang: nhích nhãn lên thêm. */
 .stage[data-orientation='landscape'] .stage-ai-label {
   margin-bottom: 1.4cqw;
@@ -429,17 +423,6 @@ body {
   color: #fff;
   text-shadow: 0 0 3cqw rgba(255, 210, 120, 0.6);
   font-variant-numeric: tabular-nums;
-}
-/* Đơn vị của số đếm ngược: nhỏ và mờ hơn hẳn con số, để mắt đọc con số trước.
-   Không viết tắt "s" — màn này phát ra ngoài cho người xem, không phải bảng
-   điều khiển. */
-.waiting-clock-dv {
-  margin-left: 1.4cqw;
-  font-family: inherit;
-  font-size: 2.6cqw;
-  font-weight: 600;
-  letter-spacing: 0;
-  color: rgba(255, 255, 255, 0.72);
 }
 .waiting-note {
   max-width: 86%;
@@ -502,11 +485,13 @@ body {
 .stage-host {
   position: absolute;
   left: 50%;
-  /* Đáy thẻ nằm NGAY TRÊN đầu người đứng trên sàn, thẻ nở ngược lên trên.
-     Người trên sàn cao 8,1cqw, chân ở quãng 134,5cqw nên đỉnh đầu ở 126,4cqw —
-     neo đáy thẻ ở 125,6cqw là vừa hở. Trước đây thẻ neo bằng ĐỈNH ở
-     `--hall-top + 1,4cqw` nên nó trùm từ vai họ xuống. */
-  top: calc(var(--hall-top) - 1.5cqw);
+  /* Đáy thẻ nằm TRÊN đầu người đứng trên sàn, chừa một khoảng hở rộng hơn
+     trước — chủ phòng thấy thẻ này và hàng top (`.stage-tops`) sà thấp quá,
+     nhiều khoảng trống phía trên. Người trên sàn cao 8,1cqw, chân ở quãng
+     134,5cqw nên đỉnh đầu ở 126,4cqw; neo đáy thẻ ở 122,1cqw (hở thêm 3,5cqw so
+     với mức cũ 125,6cqw) đẩy thẻ lên mà vẫn không chạm đầu họ. Trước đây thẻ
+     neo bằng ĐỈNH ở `--hall-top + 1,4cqw` nên nó trùm từ vai họ xuống. */
+  top: calc(var(--hall-top) - 5cqw);
   transform: translate(-50%, -100%);
   /* Trên CẢ sàn nhảy (slot-floor, lớp 7): thẻ chỉ rộng 62cqw mà người trên sàn
      đứng ngay giữa, nên hai thứ luôn chồng nhau. Lời MC là chữ phải đọc được,
@@ -569,7 +554,9 @@ body {
 /* ---- Hàng vinh danh top ---- */
 .stage-tops {
   position: absolute;
-  top: calc(var(--lower-top) + 7cqw - var(--group-lift));
+  /* Nhích lên so với mốc cũ (`+ 7cqw`): chủ phòng thấy hàng top sà thấp, cách
+     xa khung ảnh phía trên quá. */
+  top: calc(var(--lower-top) + 4cqw - var(--group-lift));
   left: 0;
   right: 0;
   height: 12cqw;

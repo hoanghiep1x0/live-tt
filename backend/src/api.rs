@@ -201,9 +201,10 @@ pub async fn put_link_phat(
         );
         tracing::info!(thiet_ke = %design_id, kenh = %n, "bảng xem thử đổi link Studio: nối sang kênh mới");
     }
-    // Đếm lại số liệu CHỈ khi sang kênh khác. Nối lại cùng một kênh thì buổi
-    // live vẫn là buổi ấy — xoá tim, quà, bảng top của nó là xoá oan.
-    let da_dem_lai = nick_moi && duoc_noi && st.lam_moi_phien(&design_id);
+    // Bấm "Kết nối" là ĐẾM LẠI TỪ 0, kể cả khi link không đổi gì. Người vận
+    // hành bấm nút này chính vì con số đang sai — giữ lại số cũ thì bấm xong
+    // nhìn như không có gì xảy ra, mà đó đúng là thứ họ kêu.
+    let da_dem_lai = doi_kenh && st.lam_moi_phien(&design_id);
 
     let mac_dinh = crate::designs::obs_mac_dinh(st.port, &design_id);
     Ok(Json(json!({
@@ -213,6 +214,7 @@ pub async fn put_link_phat(
         "studioUrl": s.studio_url,
         "kenhDangNghe": st.nguon().cfg.channel,
         "daNoiKenh": doi_kenh,
+        "kenhMoi": nick_moi,
         "daDemLai": da_dem_lai,
         // Có giá trị nghĩa là: đã cất link, nhưng CHƯA nối kênh, vì phòng này
         // không phải phòng đang phát. Trang nói thẳng ra chứ đừng để người

@@ -20,35 +20,37 @@ import type { FeedItem, Seat } from '@live/contracts';
 import { AISLES_X } from '../seats';
 import { ANH_DUNG, anhCua } from './ghe';
 import type { ChoNgoi } from './ghe';
-import { cacLuot } from './di-lai';
-import type { LuotDi } from './di-lai';
+import { cacLuot, choDen } from './di-lai';
+import type { Diem, LuotDi } from './di-lai';
 
-export { cacLuot, DI_MS, loiGan, tenNgan } from './di-lai';
-export type { LuotDi } from './di-lai';
+export { cacLuot, CAO_NGUOI, choDen, DI_MS, loiGan, tenNgan } from './di-lai';
+export type { Diem, LuotDi } from './di-lai';
 
 function MotNguoi({
   luot,
   now,
-  cho,
   cao,
   asset,
 }: {
   luot: LuotDi;
   now: number;
-  /** Ghế của người này, nếu biết. Không biết thì chỉ đi dọc lối. */
-  cho: { x: number; y: number } | undefined;
   /** Chiều cao lòng rạp, để biết đáy rạp ở đâu. */
   cao: number;
   asset: (p: string) => string;
 }) {
   const [tre] = useState(() => -Math.max(0, now - luot.tu));
-  const loiX = AISLES_X[luot.loi] ?? 50;
-  // Không biết ghế thì đứng ngay ở lối, đi mỗi chiều dọc.
-  const goc = cho ?? { x: loiX, y: 6 };
+  // Chốt điểm đến VÀ lối đi MỘT LẦN lúc gắn, trong cùng một lần chụp.
+  //
+  // Backend có thể xếp ghế cho người này giữa chừng, và lúc ấy cả `cho` lẫn
+  // `loi` đều đổi. Chốt mỗi `cho` thì người đứng ở chỗ cũ mà quãng rẽ `--ra-loi`
+  // lại tính theo lối mới — họ rẽ hụt qua cả màn hình.
+  const [neo] = useState(() => ({ cho: luot.cho, loi: luot.loi }));
+  const loiX = AISLES_X[neo.loi] ?? 50;
+  const goc: Diem = neo.cho;
   // Nhãn tên nằm TRONG cùng thẻ với người, nên nó đi theo trên đầu — bản cũ
   // cũng vậy (`stage-walk-labels`). Lối sát mép thì nhãn lệch vào trong cho
   // khỏi bị cắt chữ.
-  const lechNhan = luot.loi === 0 ? '-12%' : luot.loi === AISLES_X.length - 1 ? '-88%' : '-50%';
+  const lechNhan = neo.loi === 0 ? '-12%' : neo.loi === AISLES_X.length - 1 ? '-88%' : '-50%';
   return (
     <span
       className={luot.vao ? 'loi-di vao' : 'loi-di ra'}
@@ -95,19 +97,12 @@ export function LoiDi({
     if (g !== undefined) choCu.current.set(ai.user, { x: g.x, y: g.y });
   }
 
-  const luot = cacLuot(feed, now, (ai) => choCu.current.get(ai));
+  const luot = cacLuot(feed, now, (ai) => choDen(ai, choCu.current.get(ai), ghe));
   if (luot.length === 0) return null;
   return (
     <div className="lop-loi-di" aria-hidden>
       {luot.map((l) => (
-        <MotNguoi
-          key={l.key}
-          luot={l}
-          now={now}
-          cho={choCu.current.get(l.ai)}
-          cao={cao}
-          asset={asset}
-        />
+        <MotNguoi key={l.key} luot={l} now={now} cao={cao} asset={asset} />
       ))}
     </div>
   );

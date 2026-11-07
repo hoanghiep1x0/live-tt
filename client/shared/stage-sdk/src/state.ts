@@ -9,6 +9,7 @@ import { WS_PATH } from '@live/contracts';
 import type { Down, Json, SessionView, SoChiPhi, Up } from '@live/contracts';
 import { VOICE_MAC_DINH } from './audio';
 import type { VoiceCfg } from './audio';
+import { datGuiQuyen, nhanQuyen } from './kenh-quyen';
 
 export interface StageState {
   /** Thiết kế đang phát theo backend. Khác id của mình thì mình chỉ là bản xem trước. */
@@ -141,11 +142,13 @@ export const AI_MAC_DINH: AiCfg = {
 export interface BotCfg {
   enabled: boolean;
   count: number;
+  /** Cho máy chủ tự bật nhân vật ảo khi mất nguồn dữ liệu. Mặc định TẮT. */
+  tuBatKhiMatNguon?: boolean;
 }
 
 /** Mặc định TẮT: dựng người xem giả mà người vận hành chưa bảo là tự ý làm
  *  thay họ một việc có thể bị hiểu là lừa khán giả. */
-export const BOT_MAC_DINH: BotCfg = { enabled: false, count: 12 };
+export const BOT_MAC_DINH: BotCfg = { enabled: false, count: 12, tuBatKhiMatNguon: false };
 
 /** Phiên rỗng: thứ sân khấu thấy khi chưa phát phòng nào, hoặc phòng chưa có ai.
  *  Sân khấu phải lên hình đầy đủ ở trạng thái này. */
@@ -265,7 +268,10 @@ let thietKe: string | null = null;
 /** Gửi một lệnh lên backend. Backend mới là nơi quyết có làm hay không. */
 export function guiLenh(up: Up): boolean {
   if (socket === null || socket.readyState !== WebSocket.OPEN) return false;
-  const gui = up.t === 'command' && thietKe !== null && up.designId === undefined ? { ...up, designId: thietKe } : up;
+  const gui =
+    (up.t === 'command' || up.t === 'tu-doc') && thietKe !== null && up.designId === undefined
+      ? { ...up, designId: thietKe }
+      : up;
   socket.send(JSON.stringify(gui));
   return true;
 }
@@ -292,17 +298,26 @@ export function connectStage(nhan: (s: StageState) => void, designId: string | n
 
     ws.onopen = () => {
       cho = CHO_DAU;
+      datGuiQuyen((tin) => guiLenh({ t: 'quyen-noi', tin }));
       dat({ ...s, noiDuoc: true });
       if (designId !== null) ws?.send(JSON.stringify({ t: 'xem', designId } satisfies Up));
     };
     ws.onmessage = (e: MessageEvent<string>) => {
       try {
-        dat(apTin(s, JSON.parse(e.data) as Down));
+        const tin = JSON.parse(e.data) as Down;
+        // Tin quyền nói đi thẳng tới `audio.ts`, không đụng trạng thái — nó
+        // tới mỗi hai giây, dựng lại cả sân khấu vì nó là phí.
+        if (tin.t === 'quyen-noi') {
+          nhanQuyen(tin.tin);
+          return;
+        }
+        dat(apTin(s, tin));
       } catch {
         // Tin lạ thì bỏ. Sân khấu đang live không được sập vì một tin hỏng.
       }
     };
     ws.onclose = () => {
+      datGuiQuyen(null);
       dat({ ...s, noiDuoc: false });
       if (dong) return;
       hen = setTimeout(mo, cho);

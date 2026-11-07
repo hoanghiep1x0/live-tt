@@ -153,8 +153,9 @@ export function DesignCard({
           }}
         />
         {/* Bấm là backend nghe kênh trong link qua cầu nối TikTok (docs/07 §7).
-            KHÔNG mở trang TikTok nào: dữ liệu đi thẳng từ máy chủ TikTok, chạy
-            được cả trong app lẫn trình duyệt thường. Mọi thiết kế dùng chung
+            Dữ liệu đi thẳng từ máy chủ TikTok, chạy được cả trong app lẫn
+            trình duyệt thường. Trong app thì mở sẵn thêm tab trang live của
+            kênh (ẩn, tắt tiếng) cho MC gõ chát (`noiKenh`). Mọi thiết kế dùng chung
             nguồn này — phòng nào đang phát thì nhận dữ liệu.
             Xanh = đang thật sự nhận dữ liệu từ đúng kênh trong link. */}
         <button

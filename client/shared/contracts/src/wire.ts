@@ -85,7 +85,10 @@ export type Down =
   /** Nguồn sự kiện đổi cấu hình hoặc trạng thái (đang nối → đang nhận, lỗi…).
    *  Phát mỗi khi đổi, để nút "Kết nối Studio" không phải đợi tải lại trang. */
   | { t: 'source'; source: TrangThaiNguon }
-  | { t: 'error'; message: string };
+  | { t: 'error'; message: string }
+  /** Tin "quyền nói" của một sân khấu, máy chủ chuyển tới mọi trang — để cả
+   *  máy chỉ MỘT sân khấu đọc to, kể cả sân khấu mở ở trình duyệt khác. */
+  | { t: 'quyen-noi'; tin: unknown };
 
 /** Gửi lên backend. Thiết kế chỉ gửi lệnh do module sinh ra, kèm nhãn nguồn.
  *
@@ -96,6 +99,12 @@ export type Down =
 export type Up =
   | { t: 'command'; command: RoomCommand; by: CommandSource; reason?: string; designId?: string }
   | { t: 'xem'; designId: string }
+  /** Sân khấu vừa TỰ ĐỌC đoạn `doan` (đếm từ 0) của truyện `ten` thay MC
+   *  (MC vắng quá lâu): máy chủ ghi tiến độ để MC kể tiếp từ đoạn sau, không
+   *  kể lại đoạn phòng đã đọc. */
+  | { t: 'tu-doc'; ten: string; doan: number; designId?: string }
+  /** Tin "quyền nói" (`stage-sdk/src/quyen-noi.ts`) cho máy chủ chuyển tiếp. */
+  | { t: 'quyen-noi'; tin: unknown }
   | { t: 'ping' };
 
 export const WS_PATH = '/ws';

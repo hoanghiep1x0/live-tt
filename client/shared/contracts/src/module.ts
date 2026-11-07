@@ -33,6 +33,10 @@ export type ConfigFieldType =
    *  `options`, ô của mỗi mục lấy từ `fields`. Giá trị là object `{ <mục>: { <ô>: … } }`;
    *  mục hay ô thiếu thì module tự hiểu là mặc định. */
   | 'roster'
+  /** Chọn NHIỀU mục: gõ để tìm trong `options`, và tự THÊM mục chưa có trong
+   *  danh sách. Giá trị là một chuỗi, các mục ngăn bằng dấu phẩy — nhờ vậy
+   *  máy chủ đọc nó như một ô chữ thường, không phải biết gì về danh sách. */
+  | 'chon-them'
   /** Danh sách mục người vận hành tự thêm / xoá — vd các nhóm đám đông. Mỗi mục một
    *  thẻ chứa các ô `fields`; giá trị là mảng object, mỗi object có `id` riêng. Bấm Thêm
    *  là chép `moi`. `max` là số mục tối đa. */

@@ -31,6 +31,13 @@ export const schema = z.object({
     .default([]),
   /** Bật thì AI tự làm ảnh cho truyện (máy chủ, `anh_truyen.rs`). */
   anhTuDong: z.boolean().default(false),
+  /** Bật thì chỉ kể các thể loại ở `theLoai`; tắt thì xoay vòng 10 thể loại
+   *  như cũ. Tách khỏi `theLoai` để tắt đi vẫn GIỮ danh sách đã chọn — bật
+   *  lại là dùng ngay, không phải gõ lại. */
+  theoTheLoai: z.boolean().default(false),
+  /** Thể loại truyện người vận hành muốn nghe, ngăn bằng dấu phẩy. Chỉ có
+   *  hiệu lực khi `theoTheLoai` bật. */
+  theLoai: z.string().max(200).default(''),
   /** Khung chiếu CÓ hiện ảnh minh hoạ hay không.
    *
    *  Khác `anhTuDong` (vẽ hay không vẽ): tắt ô này là thôi hiện, ảnh đã vẽ vẫn
@@ -43,6 +50,10 @@ export const schema = z.object({
    *  Tắt để khung sạch, hoặc khi không muốn người xem thấy truyện đã dài bao
    *  nhiêu. Chỉ là chuyện hiện hay giấu: mốc `batDau` vẫn chạy như thường. */
   hienDongHo: z.boolean().default(true),
+  /** Mỗi truyện bốc ngẫu nhiên hiện ẢNH hoặc ĐỒNG HỒ (`khungHien` ở
+   *  contracts) — khung đổi kiểu theo truyện cho đỡ nhàm. Bật thì hai công tắc
+   *  `hienAnh` / `hienDongHo` không còn tác dụng. */
+  anhHoacDongHo: z.boolean().default(false),
   /** Vẽ bằng tab muse.ai đã đăng nhập trong app desktop thay cho kết nối vẽ
    *  ảnh (máy chủ `muse.rs`): đưa nguyên cốt truyện, muse vẽ một mạch đủ ảnh. */
   anhMuse: z.boolean().default(false),
@@ -123,13 +134,33 @@ export type Config = z.infer<typeof schema>;
 
 /** Tab truyện đang kể: tên và các đoạn — tự chuyển truyện đã tự lo, ít khi sửa tay. */
 const TAB_TRUYEN = 'Truyện';
+
+/** 10 thể loại phòng xoay vòng khi ô "Thể loại truyện" để trống. PHẢI khớp
+ *  `THE_LOAI` ở `backend/src/truyen_sau.rs` — đây chỉ là danh sách GỢI Ý cho
+ *  ô chọn, người vận hành gõ thêm thể loại nào cũng được. */
+export const THE_LOAI = [
+  'cổ tích Việt Nam',
+  'nhân quả',
+  'ngụ ngôn',
+  'cha mẹ',
+  'truyện cười',
+  'truyện hài trẻ con có tương tác',
+  'thiện – ác',
+  'tình cảm gia đình',
+  'truyện cảm động',
+  'nhân cách – tri thức',
+] as const;
 const TAB_ANH = 'Ảnh truyện';
 
 /** Báo cho thiết kế: bật nền trong suốt thì bỏ màn chờ và nền khung phía dưới,
  *  không thì chúng lộ ra đè lên phụ đề. */
 /** Truyện đã có hình nào chưa: video/ảnh chung, hay một mốc ảnh AI đã vẽ. */
 export const coHinhNao = (config: Config): boolean =>
-  config.media.trim() !== '' || config.moc.some((m) => m.anh !== '');
+  // Tắt "Ảnh minh hoạ" là khung KHÔNG còn hình nào, dù `moc` đầy ảnh đã vẽ —
+  // `stage.tsx` giấu hết. Quên chỗ này thì thiết kế tưởng khung có hình nên
+  // kéo màn chờ lên phía sau, mà khung lại trong suốt: người xem thấy "Chào
+  // cả nhà" chồng lên lúc truyện đang kể.
+  config.hienAnh !== false && (config.media.trim() !== '' || config.moc.some((m) => m.anh !== ''));
 
 /** Khung trong suốt: lộ sảnh phía sau, thiết kế cất màn chờ của nó đi. Khi
  *  người vận hành bật, hoặc ĐANG có truyện mà chưa có hình nào — thay cho nền
@@ -139,16 +170,26 @@ export const coHinhNao = (config: Config): boolean =>
  *  `stage.tsx`). Trong lúc ấy thiết kế phải CHƯA kéo màn chờ lên, nếu không
  *  truyện không ảnh sẽ lộ ngay màn chờ qua khung trong suốt. */
 const GIU_DOAN_CUOI_MS = 5_000;
+/** Giữ khung lâu nhất ngần này, dù giọng vẫn báo đang đọc. */
+const GIU_TOI_DA_MS = 90_000;
 
-const dangGiuDoanCuoi = (config: Config, now: number): boolean => {
+/** Khung còn giữ đoạn cuối: trong mấy giây đầu của giờ nghỉ, HOẶC chừng nào
+ *  giọng còn đang đọc. Chặn trên `GIU_TOI_DA_MS` để một lượt đọc kẹt không
+ *  giữ màn chờ lại mãi. */
+const dangGiuDoanCuoi = (config: Config, now: number, dangDoc = false): boolean => {
   const g = config.giaiLao;
   if (g === null || g.lyDo !== 'chuyen') return false;
   const da = now - g.tu;
-  return da >= 0 && da < GIU_DOAN_CUOI_MS;
+  if (da < 0) return false;
+  if (da < GIU_DOAN_CUOI_MS) return true;
+  return dangDoc && da < GIU_TOI_DA_MS;
 };
 
-export const trongSuot = (config: Config, now: number = Date.now()): boolean =>
-  (config.giaiLao === null || dangGiuDoanCuoi(config, now)) &&
+/** `dangDoc`: giọng của cửa sổ còn đang đọc. Kể xong đoạn cuối là máy chủ mở
+ *  giờ nghỉ NGAY, nhưng giọng còn đọc dở đoạn ấy — kéo màn chờ lên lúc đó là
+ *  cắt ngang câu cuối của truyện. Giữ khung tới khi đọc xong. */
+export const trongSuot = (config: Config, dangDoc = false): boolean =>
+  (config.giaiLao === null || dangGiuDoanCuoi(config, Date.now(), dangDoc)) &&
   (config.transparentBg || (config.title.trim() !== '' && !coHinhNao(config)));
 
 export const manifest: ModuleManifest<Config> = {
@@ -224,6 +265,31 @@ export const manifest: ModuleManifest<Config> = {
       type: 'toggle',
       tab: TAB_TRUYEN,
       hint: 'Đồng hồ góc khung đếm truyện đã kể được bao lâu. Tắt thì khung sạch, truyện vẫn chạy như thường.',
+    },
+    {
+      key: 'anhHoacDongHo',
+      label: 'Ảnh hoặc đồng hồ ngẫu nhiên',
+      type: 'toggle',
+      // Không khai `tab`: rơi về tab đầu ("Cài đặt"). Nó quyết cách khung
+      // hiện chứ không phải nội dung truyện, nên để cạnh các ô cài đặt chung.
+      hint: 'Mỗi truyện bốc ngẫu nhiên: khi hiện ảnh minh hoạ, khi hiện đồng hồ — đổi theo truyện cho khung đỡ nhàm. Bật thì hai công tắc Ảnh minh hoạ và Đồng hồ truyện tạm không có tác dụng. Truyện bốc trúng ảnh mà chưa có ảnh thì hiện đồng hồ.',
+    },
+    {
+      key: 'theoTheLoai',
+      label: 'Kể theo thể loại chọn sẵn',
+      short: 'Theo thể loại',
+      type: 'toggle',
+      // Không khai `tab`: về tab đầu ("Cài đặt"). Đây là cách phòng CHỌN
+      // truyện, không phải nội dung truyện đang kể.
+      hint: 'Tắt thì phòng xoay vòng 10 thể loại như mặc định. Bật thì chỉ kể những thể loại bạn chọn bên dưới.',
+    },
+    {
+      key: 'theLoai',
+      hienKhi: [{ theoTheLoai: [true] }],
+      label: 'Thể loại truyện',
+      type: 'chon-them',
+      options: THE_LOAI.map((x) => ({ value: x, label: x })),
+      hint: 'Gõ để tìm trong 10 thể loại sẵn có, hoặc gõ thể loại của riêng bạn rồi bấm "thêm" — AI tự tìm truyện. Chọn nhiều thì chúng thay phiên nhau.',
     },
     {
       key: 'khoTruyen',

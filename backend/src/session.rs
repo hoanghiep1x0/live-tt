@@ -88,6 +88,12 @@ pub struct FeedItem {
     /// không kể thì đọc bình thường.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub khach: Option<bool>,
+    /// Câu CHÀO người mới vào (khác câu ĐÁP bình luận). Sân khấu vẫn đọc nó,
+    /// nhưng KHÔNG hiện lên thẻ giữa màn: thẻ ấy để dành cho trao đổi với
+    /// khách. Người mới vào đã có lời báo ở góc và giọng chào riêng
+    /// (`chao-vao.ts`) lo rồi — hiện thêm ở giữa là che mất khung truyện.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chao: Option<bool>,
     /// Câu MC này là lời KỂ đoạn thứ mấy của truyện (đếm từ 0, `ke_truyen.rs`).
     /// Module Kể chuyện bắt nó để chuyển đoạn và hiện lời kể làm phụ đề.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -120,6 +126,7 @@ impl FeedItem {
             ke: None,
             truyen: None,
             khach: None,
+            chao: None,
             lenh: None,
         }
     }
@@ -190,6 +197,28 @@ pub struct Session {
     /// Sơ đồ hàng ghế thiết kế khai (`seatRows`). Không khai thì phòng không có
     /// mã ghế, và các lệnh "ghế B4", "chỗ…", "đánh…" không được đọc.
     so_do: Option<crate::lenh::SoDoGhe>,
+    /// Tin TỔNG kế tiếp của TikTok (tim, lượt xem) được LẤY NGUYÊN, kể cả khi
+    /// nhỏ hơn số đang giữ.
+    ///
+    /// Bình thường tổng chỉ được phép tăng (`max`), để tin tới trễ không kéo
+    /// số lùi. Nhưng vừa nối lại nguồn thì con số đang giữ là của buổi live
+    /// TRƯỚC — giữ `max` là nó đứng mãi ở số cũ, bấm "Kết nối" bao nhiêu lần
+    /// cũng không về số thật của buổi đang chạy.
+    /// MỐC của tổng TikTok: con số hiện trên sân khấu = tổng TikTok báo TRỪ
+    /// mốc này. Chưa có mốc thì hiện thẳng tổng.
+    ///
+    /// Sinh ra vì nút "Kết nối". Tổng TikTok đếm là tổng tích luỹ của cả buổi
+    /// live BÊN HỌ, nối lại bao nhiêu lần nó vẫn báo đúng con số cũ — nên dù
+    /// phiên có dựng lại, tin kế tiếp kéo số về y như trước và người vận hành
+    /// thấy "bấm xong chẳng có gì xảy ra". Đặt mốc tại lúc bấm thì số về 0
+    /// rồi đếm lên theo đúng tim mới của khán giả.
+    moc_tim: Option<u64>,
+    moc_luot: Option<u64>,
+    /// Tin tổng KẾ TIẾP sẽ trở thành mốc. Hai cờ RIÊNG: tin tim và tin lượt
+    /// xem tới độc lập nhau, chung một cờ thì tin nào tới trước cũng ăn mất
+    /// cờ của tin kia.
+    dat_moc_tim: bool,
+    dat_moc_luot: bool,
     /// Mốc giờ gần nhất phiên được biết (tin vừa tới, hay nhịp thu hồi ghế).
     /// `view()` không nhận giờ từ ngoài, mà bảng vinh danh theo tương tác thì
     /// cần biết ai còn trong phòng — nên phiên tự giữ lấy mốc này.
@@ -211,6 +240,10 @@ impl Session {
             gan_day: VecDeque::new(),
             next_id: 1,
             nguoi_xem_ngoai: None,
+            moc_tim: None,
+            moc_luot: None,
+            dat_moc_tim: false,
+            dat_moc_luot: false,
             so_do: None,
             luc_nay: now,
         }
@@ -296,7 +329,25 @@ impl Session {
     /// Nhận tổng lượt xem từ nguồn. Lấy `max`: con số này chỉ tăng, tin đến
     /// lệch thứ tự không được kéo nó lùi.
     pub fn dat_luot_xem(&mut self, n: u64) {
-        self.totals.views = self.totals.views.max(n);
+        if self.dat_moc_luot {
+            self.dat_moc_luot = false;
+            self.moc_luot = Some(n);
+        }
+        if self.moc_luot.is_some_and(|g| n < g) {
+            self.moc_luot = Some(n);
+        }
+        self.totals.views = self.totals.views.max(n - self.moc_luot.unwrap_or(0));
+    }
+
+    /// Đếm lại từ 0: tin TỔNG kế tiếp của TikTok thành mốc, con số trên sân
+    /// khấu tính từ đó. Gọi khi người vận hành bấm "Kết nối" (xem `moc_tim`).
+    pub fn dem_lai_tu_dau(&mut self) {
+        self.dat_moc_tim = true;
+        self.dat_moc_luot = true;
+        self.moc_tim = None;
+        self.moc_luot = None;
+        self.totals.likes = 0;
+        self.totals.views = 0;
     }
 
     /// Buổi live kết thúc: trả hết ghế, xoá danh sách khách, số người xem về 0.
@@ -509,7 +560,22 @@ impl Session {
                 // tim vọt lên cao hơn thật). Không có tổng mới cộng dồn. Tổng
                 // không bao giờ lùi nên lấy max. Đúng như bản cũ.
                 self.totals.likes = match total {
-                    Some(t) => self.totals.likes.max(*t),
+                    Some(t) => {
+                        if self.dat_moc_tim {
+                            self.dat_moc_tim = false;
+                            self.moc_tim = Some(*t);
+                        }
+                        // TikTok đếm lại từ đầu (buổi live mới bên họ) thì mốc
+                        // cũ to hơn số hiện tại — hạ mốc xuống, nếu không số
+                        // tim treo ở 0 suốt buổi.
+                        if self.moc_tim.is_some_and(|g| *t < g) {
+                            self.moc_tim = Some(*t);
+                        }
+                        let moi = t - self.moc_tim.unwrap_or(0);
+                        // Trong một quãng đếm, số không bao giờ lùi: tin tới
+                        // trễ không được kéo nó tụt rồi nhảy lên lại.
+                        self.totals.likes.max(moi)
+                    }
                     None => self.totals.likes.saturating_add(u64::from(*count)),
                 };
                 if let Some(v) = self.viewers.get_mut(&ev.who.user) {
@@ -592,6 +658,7 @@ impl Session {
         ke: Option<u32>,
         truyen: bool,
         khach: bool,
+        chao: bool,
     ) -> FeedItem {
         let id = self.id_moi();
         let mut item = FeedItem::moi(id, now, "host", "MC", text);
@@ -599,6 +666,7 @@ impl Session {
         item.ke = ke;
         item.truyen = (truyen || ke.is_some()).then_some(true);
         item.khach = khach.then_some(true);
+        item.chao = chao.then_some(true);
         self.feed.push_back(item.clone());
         while self.feed.len() > FEED_GIU {
             self.feed.pop_front();
@@ -1033,6 +1101,51 @@ mod tests {
             false,
         );
         assert_eq!(s.totals().likes, 903);
+
+        // BẤM "KẾT NỐI": về 0 rồi đếm lên theo tim MỚI. Tổng TikTok báo vẫn là
+        // tổng tích luỹ cũ (903…), nên phải trừ mốc — không thì tin đầu tiên
+        // kéo số về đúng 903 và người vận hành thấy bấm xong chẳng có gì đổi.
+        s.dem_lai_tu_dau();
+        assert_eq!(s.totals().likes, 0, "bấm xong là thấy về 0 ngay");
+        s.apply(&LiveEvent::new("a", "A", P::Like { count: 2, total: Some(905) }), 0, false);
+        assert_eq!(s.totals().likes, 0, "tin đầu chỉ đặt mốc, chưa có tim mới nào");
+        s.apply(&LiveEvent::new("a", "A", P::Like { count: 7, total: Some(912) }), 0, false);
+        assert_eq!(s.totals().likes, 7, "đếm đúng số tim mới từ lúc bấm");
+        // Tin tới trễ không kéo số lùi.
+        s.apply(&LiveEvent::new("a", "A", P::Like { count: 1, total: Some(906) }), 0, false);
+        assert_eq!(s.totals().likes, 7);
+    }
+
+    #[test]
+    fn tiktok_dem_lai_tu_dau_thi_ha_moc_chu_khong_treo_o_0() {
+        let mut s = phien();
+        s.apply(&LiveEvent::new("a", "A", P::Like { count: 1, total: Some(900) }), 0, false);
+        s.dem_lai_tu_dau();
+        s.apply(&LiveEvent::new("a", "A", P::Like { count: 1, total: Some(900) }), 0, false);
+        assert_eq!(s.totals().likes, 0);
+        // Kênh mở buổi live MỚI: TikTok đếm lại từ đầu, tổng tụt về số nhỏ.
+        // Mốc cũ 900 mà giữ nguyên thì số tim treo ở 0 suốt buổi.
+        s.apply(&LiveEvent::new("a", "A", P::Like { count: 3, total: Some(3) }), 0, false);
+        s.apply(&LiveEvent::new("a", "A", P::Like { count: 5, total: Some(8) }), 0, false);
+        assert_eq!(s.totals().likes, 5, "hạ mốc theo buổi mới rồi đếm tiếp");
+    }
+
+    #[test]
+    fn noi_lai_nguon_thi_luot_xem_cung_ve_so_that() {
+        let mut s = phien();
+        s.dat_luot_xem(5_000);
+        assert_eq!(s.totals().views, 5_000);
+        // Buổi khác, ít người hơn: không nối lại thì số cũ giữ nguyên.
+        s.dat_luot_xem(30);
+        assert_eq!(s.totals().views, 5_000);
+        s.dem_lai_tu_dau();
+        assert_eq!(s.totals().views, 0, "bấm Kết nối là về 0");
+        s.dat_luot_xem(5_000);
+        assert_eq!(s.totals().views, 0, "tin đầu chỉ đặt mốc");
+        s.dat_luot_xem(5_040);
+        assert_eq!(s.totals().views, 40, "đếm lượt xem mới từ lúc bấm");
+        s.dat_luot_xem(5_010);
+        assert_eq!(s.totals().views, 40, "tin tới trễ không kéo lùi");
     }
 
     #[test]
@@ -1076,7 +1189,7 @@ mod tests {
     fn cau_mc_vao_feed_de_luot_sau_doc_lai_duoc() {
         let mut s = Session::new("ke-chuyen", 4, 1.0, 0);
         s.apply(&vao("an"), 1_000, false);
-        let it = s.mc_noi(2_000, "Chào An nha".into(), Some("vieneu:mai".into()), None, false, true);
+        let it = s.mc_noi(2_000, "Chào An nha".into(), Some("vieneu:mai".into()), None, false, true, false);
         assert_eq!(it.khach, Some(true));
         assert_eq!(it.truyen, None, "lời chào không thuộc mạch truyện");
         assert_eq!(it.kind, "host");

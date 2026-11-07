@@ -109,13 +109,16 @@ pub(crate) fn mo(app: &AppHandle, tabs: &Arc<Tabs>, id: &str, url: &str) -> Resu
     let window = app.get_window(CUA_SO).ok_or("Cửa sổ chính chưa sẵn sàng")?;
     let ds = tabs.clone();
     let id2 = id.clone();
-    let builder = WebviewBuilder::new(nhan(&id), WebviewUrl::External(url.clone())).on_document_title_changed(
+    let mut builder = WebviewBuilder::new(nhan(&id), WebviewUrl::External(url.clone())).on_document_title_changed(
         move |_, title| {
             if let Some(t) = ds.0.lock().expect("khoá tab hỏng").get_mut(&id2) {
                 t.title = title;
             }
         },
     );
+    if let Some(js) = script_nap_san(&id) {
+        builder = builder.initialization_script(js);
+    }
     tabs.0
         .lock()
         .expect("khoá tab hỏng")
@@ -141,6 +144,18 @@ pub fn tab_dong(app: AppHandle, tabs: tauri::State<'_, Arc<Tabs>>, id: String) -
     }
     Ok(())
 }
+
+/// Đoạn mã nạp vào tab `id` trước mọi script của trang. Tab kênh
+/// (`kenh-<nick>`) là trang live của CHÍNH kênh đang phát: phải nạp
+/// `tat_tieng.js` — TẮT TIẾNG mọi video của trang. Thiếu nó thì trang phát
+/// luồng live của kênh có tiếng: lời MC vang lại trễ vài giây, LIVE Studio thu
+/// tiếng máy là dội cả vào live — người xem nghe lặp giọng. Hàm thuần.
+pub fn script_nap_san(id: &str) -> Option<&'static str> {
+    id.starts_with("kenh-").then_some(TAT_TIENG_JS)
+}
+
+/// Đoạn tắt tiếng trang live, nạp vào tab kênh (`script_nap_san`).
+const TAT_TIENG_JS: &str = include_str!("tat_tieng.js");
 
 /// Ô địa chỉ: đi tới một trang trong tab đang chọn.
 #[tauri::command]
@@ -213,6 +228,16 @@ pub fn tab_ds(app: AppHandle, tabs: tauri::State<'_, Arc<Tabs>>) -> Vec<TabInfo>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tab_kenh_nap_capture_de_tat_tieng_trang_live() {
+        let js = script_nap_san("kenh-abc").expect("tab kênh phải nạp capture.js");
+        assert!(js.contains("m.muted = true"), "capture.js phải tắt tiếng video của trang");
+        assert!(js.contains("AudioContext"), "tiếng Web Audio cũng phải tắt");
+        // Tab thường (muse, trang khác): không đụng tới.
+        assert!(script_nap_san("muse").is_none());
+        assert!(script_nap_san("tab-1").is_none());
+    }
 
     #[test]
     fn mo_moi_trang_http() {

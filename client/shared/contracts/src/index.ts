@@ -61,11 +61,13 @@ export {
   MOC_TOI_DA,
   MOC_LUU_TOI_DA,
   anhChoDoan,
+  bocAnhHayDongHo,
   cacMoc,
   docNhanVat,
+  khungHien,
   tinhTrangMoc,
 } from './anh-truyen';
-export type { MocAnh, NhanVat, TinhTrangMoc } from './anh-truyen';
+export type { KhungHien, MocAnh, NhanVat, TinhTrangMoc } from './anh-truyen';
 export type { CachKe } from './giong';
 
 export {

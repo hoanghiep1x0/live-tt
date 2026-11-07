@@ -443,6 +443,8 @@ interface LinkPhat {
   studioUrl: string | null;
   kenhDangNghe?: string;
   daNoiKenh?: boolean;
+  /** Nick trong link khác kênh đang nghe (đổi kênh), hay chỉ nối lại kênh cũ. */
+  kenhMoi?: boolean;
   daDemLai?: boolean;
   /** Có tên phòng khác nghĩa là: đã cất link, nhưng CHƯA nối kênh. */
   phongDangPhat?: string | null;
@@ -511,9 +513,7 @@ function TheLienKet() {
         const kenh = (d.kenhDangNghe ?? '').trim();
         datBao(
           d.daNoiKenh === true
-            ? d.daDemLai === true
-              ? `đã nối sang @${kenh} — số liệu buổi đếm lại từ 0`
-              : `đang nối lại @${kenh}, lấy dữ liệu mới`
+            ? `${d.kenhMoi === true ? 'đã nối sang' : 'đã nối lại'} @${kenh}${d.daDemLai === true ? ' — số liệu đếm lại từ 0' : ''}`
             : khoa === 'studioUrl' && khac !== ''
               ? `đã lưu link, CHƯA nối kênh — "${khac}" mới là phòng đang phát`
               : khoa === 'obsUrl' && t === ''
@@ -1262,6 +1262,22 @@ function TheNhanVatAo() {
           onChange={(v) => suaBot('count', v)}
         />
       </div>
+      <label className="bx-dong" htmlFor="bx-bot-mat-nguon">
+        <span>
+          <b>Tự bật khi mất nguồn</b>
+          <small>
+            Mất dữ liệu TikTok quá 20 giây thì máy chủ tự bật nhân vật ảo cho phòng đỡ trống, nối lại thì tự tắt. Để
+            tắt thì không bao giờ tự bật — bạn tắt là tắt hẳn.
+          </small>
+        </span>
+        <input
+          id="bx-bot-mat-nguon"
+          type="checkbox"
+          checked={bot.tuBatKhiMatNguon === true}
+          disabled={roi}
+          onChange={(e) => suaBot('tuBatKhiMatNguon', e.target.checked)}
+        />
+      </label>
       <p className="bx-the-nhac">
         Họ không tặng quà và không lên bảng top. Tắt thì họ đi ra dần chứ không biến mất một lúc.
       </p>

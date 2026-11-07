@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { boVai, xungMinh } from '@live/contracts';
 import type { Effect, Json, SlotName } from '@live/contracts';
 import { HangGiong, playSfx } from './audio';
+import type { TuyDoc } from './audio';
 import { SO_MODULE, timDangKy } from './registry';
 import type { TheSong } from './registry';
 import { giongChoViec } from './state';
@@ -216,12 +217,15 @@ export function useRunner(s: StageState): KetQuaChay {
       }
       // Câu nói với khách (chào, đáp): chen vào khoảng nghỉ ngay sau đoạn
       // đang đọc — không đọc chồng lên lời kể, cũng không xếp sau cả truyện.
+      //
+      // Câu CHÀO (`f.chao`) thì KHÔNG hiện lên thẻ giữa màn: thẻ ấy để dành
+      // cho trao đổi với khách. Người mới vào đã có lời báo ở góc và giọng
+      // chào riêng lo rồi — hiện thêm ở giữa là che mất khung truyện.
       if (f.khach === true) {
         const text = xungMinh(f.text);
-        giong.current?.noi(text, 'normal', f.voice ?? '', undefined, {
-          khach: true,
-          batDau: () => setLoiMc(loiMcMoi(text)),
-        });
+        const tuy: TuyDoc = { khach: true };
+        if (f.chao !== true) tuy.batDau = () => setLoiMc(loiMcMoi(text));
+        giong.current?.noi(text, 'normal', f.voice ?? '', undefined, tuy);
         continue;
       }
       const say: Extract<Effect, { kind: 'say' }> = { kind: 'say', text: xungMinh(f.text) };

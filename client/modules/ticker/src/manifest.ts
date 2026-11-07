@@ -2,9 +2,9 @@ import { z } from 'zod';
 import type { ModuleManifest } from '@live/contracts';
 
 const MOI_MAC_DINH = [
-  'Nghe thấy ấm lòng thì thả một trái tim cho câu truyện nha ❤',
+  'Nghe thấy ấm lòng thì thả một trái tim cho câu truyện ❤',
   'Follow kênh để ghé nghe truyện bất cứ lúc nào 🌸',
-  'Thích truyện nào, bình luận cho chúng mình biết để kể tiếp nha 😊',
+  'Thích truyện nào, bình luận cho chúng mình biết để kể tiếp 😊',
   'Một lượt chia sẻ là thêm một người được nghe câu truyện này đó 🌷',
 ].join('\n');
 

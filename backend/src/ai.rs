@@ -344,13 +344,14 @@ Giọng MC:
 - Đáp phải DÍNH vào đúng câu họ vừa nói ("dangCho[].noi"): nhắc lại ý đó bằng lời của bạn rồi mới nói tiếp. Không hiểu họ nói gì, hay câu đó chỉ là biểu tượng / chữ vô nghĩa thì CHÀO tên họ một câu ấm áp, KHÔNG đoán bừa ý. Không bao giờ đáp một câu chung chung có thể dán vào bất cứ ai. Người không có trong "dangCho" và "vuaVao" thì đừng nhắc tên — họ không nói gì, nhắc tên là tự nghĩ ra truyện.
 - Nghe câu trả lời của khách cho câu MC vừa hỏi và đáp đúng điều họ nói. Ai trò truyện nhiều thì dành cho họ nhiều chú ý hơn.
 - "choChao" là true (có người vừa vào): lượt này PHẢI có một câu "noi" chào họ, viec "chao", và câu ấy BẮT ĐẦU bằng chữ "Chào" — chào NGAY lượt này, không để sang lượt sau. Khách vào mà không ai chào là họ ra ngay.
-- Chào ĐÚNG những tên trong "vuaVao", KHÔNG gọi tên người không có trong đó. Một hai người thì chào riêng từng người cho ấm ("Chào Vy vào phòng nha"); ba người trở lên thì GỘP HẾT tên ấy vào MỘT câu ("Chào Vy, Lan, Hùng vừa vào phòng, ngồi nghe truyện cùng cả nhà nha") — đừng để ai sang lượt sau, phòng đông thì lượt sau họ đã ra khỏi phòng rồi.
+- Chào ĐÚNG những tên trong "vuaVao", KHÔNG gọi tên người không có trong đó. Câu chào NGẮN, đừng dài dòng: một hai người thì "Chào Vy vào phòng"; ba người trở lên thì GỘP HẾT tên vào MỘT câu và chỉ thế thôi — "Chào Vy, Lan, Hùng vào phòng", KHÔNG thêm lời mời, lời chúc hay từ đệm phía sau. Đừng để ai sang lượt sau, phòng đông thì lượt sau họ đã ra khỏi phòng rồi.
+- MỘT CÂU CHỈ LÀM MỘT VIỆC. Câu chào thì chỉ chào, câu đáp thì chỉ đáp — ĐỪNG ghép chào với đáp vào cùng một câu (SAI: "Chào Vy vào phòng nha, hi lại bạn nè"). Người vừa vào và người vừa nhắn là hai việc khác nhau: chào là một lệnh "noi" riêng (viec "chao"), đáp là một lệnh "noi" riêng nữa. Người VỪA VÀO mà cũng vừa nhắn thì chỉ chào thôi, để lượt sau đáp.
 - Câu chào phải ĐA DẠNG, mỗi lần một kiểu, không lặp câu đã dùng trong "mcVuaNoi": lúc chỉ "Chào Vy vào phòng nha", lúc thêm một lời mời ("Chào Vy vào phòng, ngồi nghe truyện cùng cả nhà nha"), lúc thêm một LỜI CHÚC hợp giờ.
 - Giờ lúc này là "gio" (giờ Việt Nam), buổi là "buoi" trong tin phòng. Lời chúc PHẢI hợp đúng buổi đó — không đoán, không chúc "cà phê sáng" lúc tối.
 - Lời chúc đổi liên tục, đừng lạm dụng "chúc một ngày an lành". Gợi ý xoay vòng: sáng — "chúc bạn buổi sáng nhiều năng lượng", "cà phê sáng thật thơm nha"; trưa — "ăn trưa ngon miệng", "nghỉ trưa thật ngon giấc"; chiều — "chiều nay việc gì cũng suôn sẻ", "tan làm về nhà bình an"; tối — "bữa cơm tối thật ấm", "tối nay ngủ thật ngon, mơ đẹp"; khuya — "khuya rồi, nghe truyện cho dễ ngủ nha". Thêm câu vui: "cười nhiều cho trẻ mãi", "lúc nào cũng có truyện hay để nghe".
 - "choChao" là false: ĐỪNG chào — vừa chào xong hoặc chưa ai mới vào. Người vào sau sẽ được chào ở lượt sau, không dồn.
 - Phòng vắng (≤3 người): trò truyện nhiều hơn, kể ít hơn. Phòng đông: gom tên, chào gộp.
-- Thỉnh thoảng (2–4 phút) hỏi một người một câu vui; lâu lâu trêu nhẹ một người. Lời chúc đổi kiểu, không lặp trong nửa giờ, hợp giờ trong ngày.
+- HOẠ HOẰN (8–10 phút một lần, không hơn) hỏi một người một câu vui; lâu lâu trêu nhẹ một người. Lời chúc đổi kiểu, không lặp trong nửa giờ, hợp giờ trong ngày.
 - Xưng "mình" (đầu câu viết "Mình") — GIỮ NGUYÊN cách tự xưng này cả buổi, đừng đổi sang "tớ"/"chúng mình" giữa chừng, nghe như hai người khác nhau. KHÔNG BAO GIỜ tự gọi mình là "MC".
 - Gọi người nghe có HAI LỐI, dùng CẢ HAI, đổi qua đổi lại, đừng lượt nào cũng một từ:
   (a) Nói với CẢ PHÒNG: {DAM_DONG} — ấm, đông vui, hợp lúc chào, lúc mời thả tim.
@@ -364,12 +365,12 @@ Giọng MC:
 Kể truyện — BẠN là người kể (khi "truyen" có "ke"):
 - "truyen.ke.keTiep" là ĐOẠN KẾ TIẾP cần kể. Mỗi lượt kể đúng đoạn đó bằng lệnh "ke": diễn lại bằng lời kể của bạn — có hình ảnh, cảm xúc, nhịp điệu như kể cho trẻ nghe trước giờ ngủ; giữ đúng ý và chi tiết của đoạn, không thêm tình tiết, không nhảy đoạn, không kể gộp hai đoạn, KHÔNG kể trước việc của đoạn sau và không quay lại đoạn đã kể. 1–2 câu, dưới 220 ký tự. Lời kể hiện làm phụ đề trong khung truyện.
 - Giọng: "giong" của lệnh "ke" là giọng DẪN CHUYỆN (nhóm "ke-chuyen"), giữ một giọng suốt truyện. Lời thoại của nhân vật trong đoạn thì bọc dấu giọng: [id-giọng] lời thoại [-] — id lấy trong "danGiong", chọn giọng hợp nhân vật (trẻ con, cô bé, cậu bé → giọng trẻ con; đàn ông → giọng nam; mẹ, bà → giọng nữ), mỗi nhân vật giữ một giọng. Ví dụ: Cậu bé gọi to: [be-gai] Mẹ ơi, mẹ đâu rồi! [-] Chỉ có gió đáp lại.
-- MẠCH TRUYỆN LUÔN ĐI TRƯỚC: đang kể thì lượt nào cũng phải có "ke" — truyện không bao giờ dừng vì chào hỏi. Có khách chờ đáp thì cùng lượt thêm MỘT câu "noi" thật ngắn (dưới 60 ký tự), nói tự nhiên như người dẫn truyện xen một lời hỏi thăm rồi kể tiếp (vd "Lan ơi nghe tới đây hồi hộp ghê ha"); máy đọc lời kể trước, nghỉ một nhịp rồi mới đọc câu chào, xong mới sang đoạn kế. Nhiều người thì gom tên vào một câu; không cần chào ai cũng được — chào có thể để lượt sau. Thỉnh thoảng (2–3 đoạn một lần) xen một câu "noi" ngắn mời khách đoán đoạn sau hay hỏi cảm nghĩ; tối đa một câu đố mỗi truyện. Câu đố, câu hỏi luôn đi CÙNG lượt với "ke" đoạn kế — không bao giờ một lượt chỉ có câu hỏi mà bỏ kể.
+- MẠCH TRUYỆN LUÔN ĐI TRƯỚC: đang kể thì lượt nào cũng phải có "ke" — truyện không bao giờ dừng vì chào hỏi. Có khách chờ đáp thì cùng lượt thêm MỘT câu "noi" thật ngắn (dưới 60 ký tự), nói tự nhiên như người dẫn truyện xen một lời hỏi thăm rồi kể tiếp (vd "Lan ơi nghe tới đây hồi hộp ghê ha"); máy đọc lời kể trước, nghỉ một nhịp rồi mới đọc câu chào, xong mới sang đoạn kế. Nhiều người thì gom tên vào một câu; không cần chào ai cũng được — chào có thể để lượt sau. HỎI Ý KIẾN PHÒNG LÀ CHUYỆN HIẾM: trong một truyện, nhiều nhất MỘT lần xen câu "noi" mời khách đoán đoạn sau hay hỏi cảm nghĩ, và một câu đố — gộp lại vẫn không quá hai câu hỏi cho cả truyện. Người vào phòng là để NGHE TRUYỆN; cứ vài đoạn lại bị hỏi "cả nhà thấy thế nào" thì mạch truyện đứt, và câu hỏi hoá ra lời của cái máy. Không có gì để hỏi thì đừng hỏi — cứ kể tiếp. Câu đố, câu hỏi luôn đi CÙNG lượt với "ke" đoạn kế — không bao giờ một lượt chỉ có câu hỏi mà bỏ kể.
 - "truyen.ke.daKeXong" là vừa kể hết: lượt này KHÔNG kể.
   - Có "truyen.ke.chuyenTiep" (truyện sau đã sẵn): nói một câu "noi" chuyển tiếp như bản cũ — khép truyện thật gọn (một ý ấm áp, không giảng đạo lý) rồi nói câu chuyển tiếp "chuyenTiep.cau" ("Chờ xíu xíu, chuyển tiếp truyện khác hay hay nè cả nhà ơi 😊"). Truyện mới lên sau câu này một nhịp nghỉ. Khoảng 1 trong 2–3 truyện (không phải truyện nào cũng nói) ghép thêm lời mời thả tim nhẹ nhàng, mỗi lần một cách nói (vd "Truyện hay thì thả tim cho mình với nhé ❤") — chỉ mời thả tim, không nhắc quà, tiền. KHÔNG nói "Hết truyện rồi". Truyện mới tự lên khung ngay sau câu này.
   - Không có "chuyenTiep": nói một câu "noi" khép truyện ấm áp, ý nghĩa chạm nhẹ, không giảng đạo lý, có thể mời thả tim. Lượt sau nếu còn "keTiep" thì kể lại từ đầu, mở bằng một câu như "Mình kể lại truyện … cho cả nhà mới vào nghe nha".
 - "truyen.ke.chuyenTiep" xuất hiện cả lúc KHÔNG "daKeXong" (truyện đã khép từ trước, giờ truyện sau mới sẵn): lượt này chỉ một câu "noi" báo chuyển tiếp đúng kiểu "chuyenTiep.cau", không kể, không khép lại truyện cũ lần nữa.
-- "truyen.ke.nghiGiuaTruyen": GIỜ NGHỈ giữa hai truyện (40–90 giây tuỳ phòng vắng hay sôi động, gồm vài lượt). Khung đang hiện màn chờ "Chào cả nhà" kèm dải "Truyện tiếp theo: …" ("nghiGiuaTruyen.truyenSau"). Lượt này KHÔNG kể, không nhắc lại câu chuyển tiếp, chưa mở truyện mới. Dành trọn cho khách: chào người trong "vuaVao", đáp người trong "dangCho" đúng ý họ; không có ai thì hỏi cả nhà thấy truyện vừa rồi thế nào, rủ đoán, hay rủ thả tim nhẹ nhàng. 1–2 câu "noi" ngắn, ấm, tự nhiên. "sapHet" là true (lượt này có thể là lượt cuối của giờ nghỉ): thêm một câu nhá trước truyện kế cho tò mò (gợi một chi tiết hấp dẫn, KHÔNG kể trước kết truyện), vd "Lát nữa là truyện … , có một chuyện lạ lắm nha cả nhà". Có "lyDo" ("anh": đang chuẩn bị hình cho truyện): giờ nghỉ có thể dài, chưa biết bao lâu — cứ trò chuyện ấm áp, rủ cả nhà ngồi chơi, hỏi han, kể chuyện vui ngắn, nhá trước truyện "truyenSau"; KHÔNG hứa giờ cụ thể, KHÔNG nói chuyện kỹ thuật (lỗi, kết nối, ảnh hỏng). "henGiay" 15–20.
+- "truyen.ke.nghiGiuaTruyen": GIỜ NGHỈ giữa hai truyện (40–90 giây tuỳ phòng vắng hay sôi động, gồm vài lượt). Khung đang hiện màn chờ "Chào cả nhà" kèm dải "Truyện tiếp theo: …" ("nghiGiuaTruyen.truyenSau"). Lượt này KHÔNG kể, không nhắc lại câu chuyển tiếp, chưa mở truyện mới. Dành trọn cho khách: chào người trong "vuaVao", đáp người trong "dangCho" đúng ý họ; không có ai thì hỏi cả nhà thấy truyện vừa rồi thế nào, rủ đoán, hay rủ thả tim nhẹ nhàng. HỎI Ý KIẾN PHÒNG CHỈ MỘT LẦN mỗi giờ nghỉ: "daHoi" là true nghĩa là đã hỏi rồi — lượt này ĐỪNG hỏi nữa, chuyển sang rủ thả tim, nhá trước truyện kế, hay kể một câu vui ngắn. Hỏi đi hỏi lại cùng một câu thì phòng thành cái máy hỏi. 1–2 câu "noi" ngắn, ấm, tự nhiên. "sapHet" là true (lượt này có thể là lượt cuối của giờ nghỉ): thêm một câu nhá trước truyện kế cho tò mò (gợi một chi tiết hấp dẫn, KHÔNG kể trước kết truyện), vd "Lát nữa là truyện … , có một chuyện lạ lắm nha cả nhà". Có "lyDo" ("anh": đang chuẩn bị hình cho truyện): giờ nghỉ có thể dài, chưa biết bao lâu — cứ trò chuyện ấm áp, rủ cả nhà ngồi chơi, hỏi han, kể chuyện vui ngắn, nhá trước truyện "truyenSau"; KHÔNG hứa giờ cụ thể, KHÔNG nói chuyện kỹ thuật (lỗi, kết nối, ảnh hỏng). "henGiay" 15–20.
 - "truyen.ke.choTruyenSau": truyện vừa kể xong, truyện mới ("choTruyenSau.truyenSau") đang vẽ nốt ảnh — chưa tới một phút rưỡi. ĐỪNG để phòng im: mỗi lượt một câu "noi" ngắn — hỏi khách cảm nghĩ về truyện vừa rồi, rủ đoán, đáp người đang chat, nhá trước tên truyện sắp kể ("Lát nữa mình kể truyện … hay lắm nha"). KHÔNG nói câu chuyển tiếp, KHÔNG kể lại truyện cũ. "henGiay" 15–20. Lượt khép truyện mà có "choTruyenSau" thì khép truyện rồi nhá trước truyện sắp kể.
 - "truyen.ke.moDau" là đoạn ĐẦU của truyện: lượt này có HAI câu tách riêng — một câu "noi" dẫn vào truyện, rồi lệnh "ke" kể đoạn 1. Có "moDau.truyenTruoc" (vừa chuyển từ truyện khác sang) thì câu "noi" mở đúng kiểu bản cũ: "Mình kể thêm truyện …" kèm tên truyện mới ("truyen.ten"), mỗi lần một cách nói. "moDau.chuyenMcKe" là truyện tự sáng tác: câu "noi" nói rõ "truyện mình tự kể nha", không gán là cổ tích. Đổi giọng dẫn truyện cho hợp truyện mới.
 - Lời "ke" CHỈ là lời kể truyện — nó hiện làm phụ đề trong khung truyện. TUYỆT ĐỐI không đưa vào "ke": lời dẫn của bạn ("Mình kể thêm truyện…", "Chờ xíu xíu…", "cả nhà ơi"), lời chào, đáp khách, mời thả tim, câu hỏi khách. Mấy câu đó luôn đi bằng "noi".
@@ -404,6 +405,40 @@ Không có gì đáng nói thì {"lenh": [], "henGiay": 40} — im lặng một 
 const CHO_DAP_MS: i64 = 150_000;
 /// Một người đã được MC gọi tên thì ngần này sau mới được đáp lại.
 const DAP_LAI_SAU_MS: i64 = 60_000;
+/// Đã chào một người rồi thì ngần này sau mới được chào lại.
+///
+/// Giữ bằng SỔ RIÊNG của phiên (`AppState::chao_roi`), không dò trong feed:
+/// feed chỉ giữ 60 mục gần nhất, phòng đông thì câu chào trôi mất sau vài
+/// giây và người ấy bị chào lại mỗi lượt.
+pub const CHAO_LAI_SAU_MS: i64 = 10 * 60_000;
+
+/// Tên rút về phần ĐỌC ĐƯỢC để so khớp: bỏ hết ký tự trang trí, còn chữ và
+/// số, viết thường, mỗi khoảng trắng một dấu cách.
+///
+/// Tên TikTok hay có vương miện, trái tim, dấu chấm xen giữa ("♕P.H.hoa ❤️").
+/// MC đọc tên thì bỏ mấy thứ ấy đi ("Chào P.H.hoa vào phòng"), nên so khớp
+/// nguyên văn KHÔNG BAO GIỜ trúng — và người ấy bị chào lại mỗi lượt. Hàm thuần.
+pub fn nhan_ten(s: &str) -> String {
+    let mut ra = String::new();
+    for c in s.chars() {
+        if c.is_alphanumeric() {
+            ra.extend(c.to_lowercase());
+        } else if !ra.ends_with(' ') {
+            ra.push(' ');
+        }
+    }
+    ra.trim().to_string()
+}
+
+/// Câu `cau` có gọi tên `ten` không, so theo phần đọc được và theo RANH GIỚI
+/// TỪ — không có ranh giới thì tên "An" trúng cả trong "Lan". Hàm thuần.
+pub fn co_goi_ten(cau: &str, ten: &str) -> bool {
+    let t = nhan_ten(ten);
+    if t.is_empty() {
+        return false;
+    }
+    format!(" {} ", nhan_ten(cau)).contains(&format!(" {t} "))
+}
 
 /// Người vào phòng trong ngần này mà MC chưa chào thì còn nằm trong "vuaVao".
 const VUA_VAO_MS: i64 = 120_000;
@@ -546,7 +581,7 @@ pub fn ban_chup_tu(view: &Value, now: i64, tu: i64, chu_phong: &str) -> Value {
         let da_dap = feed.iter().any(|g| {
             kind(g) == "host"
                 && at(g) >= at(f)
-                && chu(g).to_lowercase().contains(&name.to_lowercase())
+                && co_goi_ten(&chu(g), &name)
         });
         if da_dap {
             continue;
@@ -559,7 +594,7 @@ pub fn ban_chup_tu(view: &Value, now: i64, tu: i64, chu_phong: &str) -> Value {
             kind(g) == "host"
                 && g.get("ke").is_none()
                 && now - at(g) < DAP_LAI_SAU_MS
-                && chu(g).to_lowercase().contains(&name.to_lowercase())
+                && co_goi_ten(&chu(g), &name)
         });
         if vua_goi {
             continue;
@@ -588,7 +623,7 @@ pub fn ban_chup_tu(view: &Value, now: i64, tu: i64, chu_phong: &str) -> Value {
         let da_chao = feed.iter().any(|g| {
             kind(g) == "host"
                 && at(g) >= at(f)
-                && chu(g).to_lowercase().contains(&name.to_lowercase())
+                && co_goi_ten(&chu(g), &name)
         });
         if da_chao {
             continue;
@@ -814,8 +849,21 @@ pub fn ap_vai(mut luot: LuotMc, vai: &VaiGiong, dan_chuyen: Option<&str>, giong_
             Some("dap") if !dap.is_empty() => dap.clone(),
             _ => chao.iter().chain(dap.iter()).cloned().collect(),
         };
-        if !ds.is_empty() && !c.giong.as_ref().is_some_and(|g| ds.contains(g)) {
-            c.giong = Some(ds[c.chu.chars().count() % ds.len()].clone());
+        if !ds.is_empty() {
+            if !c.giong.as_ref().is_some_and(|g| ds.contains(g)) {
+                c.giong = Some(ds[c.chu.chars().count() % ds.len()].clone());
+            }
+            continue;
+        }
+        // Chưa phân vai giọng nào cho chào lẫn đáp: TỰ lấy giọng dẫn truyện,
+        // đừng để nguyên thứ AI ghi. AI có quyền ghi "khong-co" (câu hiện chữ
+        // mà không đọc) — hợp lý với câu nền, nhưng câu CHÀO và ĐÁP mà im thì
+        // khách nói một mình, đúng cái người vận hành kêu "chào không thành
+        // tiếng". Giọng nào cũng hơn không có giọng.
+        if !c.giong.as_ref().is_some_and(|g| giong_co.contains(g)) {
+            if let Some(d) = &dan {
+                c.giong = Some(d.clone());
+            }
         }
     }
     if let Some(k) = luot.ke.as_mut() {
@@ -1324,6 +1372,13 @@ pub fn thieu_nha(chon: &str, viec: &str) -> String {
 /// Kể truyện; nối lại được, hay mất quá `GIAI_LAO_SU_CO_MS` (24 giờ), thì tắt
 /// lại — chỉ tắt cái chính mình đã bật. Trả: phòng có đang mất nguồn không.
 fn canh_mat_nguon(st: &AppState, id: &str, dang_phat: bool, now: i64, mat: &mut HashMap<String, i64>) -> bool {
+    // Người vận hành chưa cho phép thì ĐỪNG tự bật nhân vật ảo. Họ tắt là họ
+    // đã quyết; bật lại sau lưng thì công tắc kia thành vô nghĩa. (Kênh chưa
+    // lên sóng cũng tính là mất nguồn, nên đường này bật gần như suốt buổi.)
+    if !st.bot_config(id).tu_bat_khi_mat_nguon {
+        mat.remove(id);
+        return false;
+    }
     let nguon = st.nguon();
     let mat_nguon = dang_phat && nguon.cfg.kind != crate::source::SourceKind::Tat && nguon.problem.is_some();
     let da_bat = st
@@ -1425,16 +1480,33 @@ pub async fn chay(st: Arc<AppState>) {
                 if st.ai_dang_loi(&id) {
                     continue;
                 }
-                let som = st
-                    .session_view()
-                    .and_then(|v| serde_json::to_value(v).ok())
-                    .is_some_and(|v| {
-                        khach_cho_chao(
-                            &v,
-                            crate::state::bay_gio_ms(),
-                            &st.nguon().cfg.channel,
-                        )
-                    });
+                // Sân khấu có giọng chào riêng thì ĐỪNG kéo lượt MC lên sớm vì
+                // khách mới: nó chào rồi. Không chặn ở đây thì phòng đông kéo
+                // lượt MC mỗi vài giây, vừa tốn tiền AI vừa chào chồng lên
+                // tiếng chào của sân khấu.
+                let san_khau_chao = st
+                    .design_config(&id)
+                    .ok()
+                    .is_some_and(|c| c.get("chaoVao").and_then(Value::as_bool) != Some(false));
+                // Phòng đông: thẻ MC nói với khách đã có giãn cách tối thiểu
+                // (`cach_the_mc`). Vừa hiện một thẻ mà vẫn kéo lượt lên sớm thì
+                // câu nói ra cũng bị chặn — tốn một lượt gọi AI để không ai
+                // nghe thấy gì.
+                let cach_the = crate::ke_truyen::cach_the_mc(
+                    st.session_view().map_or(0, |v| v.totals.viewers),
+                );
+                let som = !san_khau_chao
+                    && !st.the_mc_gan_day(&id, crate::state::bay_gio_ms(), cach_the)
+                    && st
+                        .session_view()
+                        .and_then(|v| serde_json::to_value(v).ok())
+                        .is_some_and(|v| {
+                            khach_cho_chao(
+                                &v,
+                                crate::state::bay_gio_ms(),
+                                &st.nguon().cfg.channel,
+                            )
+                        });
                 if !som {
                     continue;
                 }
@@ -1486,6 +1558,45 @@ pub async fn chay(st: Arc<AppState>) {
             // Nick chủ kênh: tin của chính mình không đưa cho MC.
             let chu_phong = st.nguon().cfg.channel.clone();
             let mut chup = ban_chup_tu(&view, now, st.truyen_bat_dau(&id).unwrap_or(i64::MIN), &chu_phong);
+            // Sân khấu đã có GIỌNG CHÀO RIÊNG (thẻ "Chào khách vào phòng" của
+            // thiết kế, `chao-vao.ts`): nó chào ngay lúc khách bước vào, nên
+            // MC chào nữa là khách bị chào HAI LẦN. Giấu luôn "vuaVao" khỏi
+            // bản chụp — MC không biết có ai mới thì không chào, dành lượt cho
+            // trao đổi.
+            let san_khau_chao = st
+                .design_config(&id)
+                .ok()
+                .is_some_and(|c| c.get("chaoVao").and_then(Value::as_bool) != Some(false));
+            if san_khau_chao {
+                chup["vuaVao"] = Value::Array(Vec::new());
+                chup["choChao"] = Value::Bool(false);
+            }
+
+            // Bỏ khỏi "vuaVao" những người buổi này đã chào rồi. Bộ lọc trong
+            // `ban_chup_tu` chỉ dò được trong feed (60 mục gần nhất), nên một
+            // mình nó không đủ: phòng đông thì câu chào trôi mất sau vài giây
+            // và người ấy bị chào lại mỗi lượt.
+            if let Some(ds) = chup.get("vuaVao").and_then(Value::as_array).cloned().filter(|_| !san_khau_chao) {
+                let ten: Vec<String> = ds
+                    .iter()
+                    .filter_map(|x| x.get("ten").and_then(Value::as_str))
+                    .map(str::to_string)
+                    .collect();
+                let con = st.loc_chua_chao(ten, now);
+                let giu: Vec<Value> = ds
+                    .into_iter()
+                    .filter(|x| {
+                        x.get("ten").and_then(Value::as_str).is_some_and(|t| con.iter().any(|c| c == t))
+                    })
+                    .collect();
+                let rong = giu.is_empty();
+                chup["vuaVao"] = Value::Array(giu);
+                // Không còn ai mới thì lượt này KHÔNG phải lượt chào nữa.
+                if rong {
+                    chup["choChao"] = Value::Bool(false);
+                }
+            }
+
             // Chát chào khách vào phòng, nếu người vận hành đã bật và còn nhịp.
             // Đứng TRƯỚC lượt gọi AI và không bao giờ chặn lượt ấy: chát là
             // thứ có thì tốt, hỏng thì MC vẫn phải kể tiếp như không có gì.
@@ -1592,6 +1703,14 @@ pub async fn chay(st: Arc<AppState>) {
             let sau_san = sau_ten.clone().filter(|_| bao_chuyen);
             let cho_sau = sau_ten.filter(|_| !duoc && het.is_some());
             let dang_cho = cho_sau.is_some();
+            // Đang trong một GIỜ NGHỈ nào đó (đổi truyện, chờ ảnh, hay sự cố)
+            // và mốc mở của nó — để đếm số câu MC đã nói trong chính giờ nghỉ
+            // ấy, xem `ke_truyen::CAU_MOI_GIO_NGHI`.
+            let trong_nghi = nghi_giua || dang_cho || dang_nghi_su_co;
+            let moc_nghi = truyen
+                .as_ref()
+                .and_then(crate::truyen_sau::giai_lao)
+                .map_or_else(|| het.map_or(0, |td| td.bao_luc), |(_, _, tu)| tu);
             let truoc = truyen
                 .as_ref()
                 .filter(|_| tu_chuyen)
@@ -1619,7 +1738,12 @@ pub async fn chay(st: Arc<AppState>) {
                     so_da_ke,
                 );
                 if nghi_giua {
-                    b["nghiGiuaTruyen"] = json!({ "truyenSau": ten_sau, "sapHet": sap_het_nghi });
+                    // `daHoi`: lượt nghỉ này không phải lượt ĐẦU của giờ nghỉ,
+                    // tức MC đã có dịp hỏi ý kiến phòng rồi. Hỏi lại mỗi lượt
+                    // thì cùng một câu hỏi lặp ba bốn lần trong một giờ nghỉ.
+                    let da_hoi = het.is_some_and(|td| td.da_nghi);
+                    b["nghiGiuaTruyen"] =
+                        json!({ "truyenSau": ten_sau, "sapHet": sap_het_nghi, "daHoi": da_hoi });
                 }
                 if let Some((ten, ly_do)) = &nghi_su_co {
                     b["nghiGiuaTruyen"] = json!({ "truyenSau": ten, "lyDo": ly_do });
@@ -1717,7 +1841,7 @@ pub async fn chay(st: Arc<AppState>) {
                             loi2.lock().expect("khoá lỗi MC hỏng").remove(&id);
                             st2.bao_ai(&id, None);
                         }
-                        let luot = match kq {
+                        let mut luot = match kq {
                             KetQuaLuot::San(l) => l,
                             KetQuaLuot::Ai(tra) => {
                                 st2.ghi_chi_phi(&id, crate::chi_phi::MC, &tra.dung, tra.usd);
@@ -1736,19 +1860,105 @@ pub async fn chay(st: Arc<AppState>) {
                         // Lượt mở truyện: câu "noi" là lời dẫn vào truyện — thuộc
                         // mạch truyện, đọc ngay trước đoạn đầu.
                         let noi_la_mo = mo_dau && luot.ke.is_some();
+                        // Cắt bớt câu nói với khách: mỗi câu là một lần khung
+                        // truyện phải nhường chỗ, ba câu liền là mạch truyện
+                        // đứt hẳn một quãng. Phần lớn lượt chỉ còn một câu.
+                        let toi_da = crate::ke_truyen::so_cau_voi_khach(
+                            crate::state::bay_gio_ms().unsigned_abs(),
+                        );
+                        if luot.noi.len() > toi_da {
+                            tracing::info!(
+                                thiet_ke = %id,
+                                bo = luot.noi.len() - toi_da,
+                                giu = toi_da,
+                                "bớt câu nói với khách cho đỡ đứt mạch truyện"
+                            );
+                            luot.noi.truncate(toi_da);
+                        }
+                        // Xoay vòng từ đệm theo TỪNG CÂU, không reset mỗi lượt
+                        // MC — reset thì lượt nào cũng mở đầu bằng "nha".
+                        // Giãn cách tối thiểu giữa hai thẻ MC NÓI VỚI KHÁCH,
+                        // co theo độ đông. Lời dẫn truyện không tính.
+                        let cach_the = crate::ke_truyen::cach_the_mc(
+                            st2.session_view().map_or(0, |v| v.totals.viewers),
+                        );
+                        let mut dem_tu_dem: usize = so_chu;
                         for c in luot.noi {
-                            let c = CauMc { chu: crate::ke_truyen::xung_minh(&c.chu), ..c };
+                            if crate::ke_truyen::la_noi_voi_khach(&c.chu, c.viec.as_deref())
+                                && !st2.duoc_the_mc(
+                                    &id,
+                                    crate::state::bay_gio_ms(),
+                                    cach_the,
+                                )
+                            {
+                                tracing::info!(
+                                    thiet_ke = %id,
+                                    cach_giay = cach_the / 1000,
+                                    "bỏ thẻ MC nói với khách: phòng đông, chưa đủ giãn cách"
+                                );
+                                continue;
+                            }
+                            // CHẶN CỨNG câu hỏi ném ra cả phòng khi vừa hỏi
+                            // cách đây chưa lâu. Lời nhắc có dặn, nhưng dặn thì
+                            // AI nhớ vài lượt rồi quên — mà thẻ MC hỏi "cả nhà
+                            // thấy thế nào" hiện dày là thứ chủ phòng kêu nhiều
+                            // nhất. Bỏ câu hỏi thôi, lời kể lượt này vẫn chạy.
+                            if crate::ke_truyen::hoi_ca_phong(&c.chu, c.viec.as_deref())
+                                && !st2.duoc_hoi_phong(&id, crate::state::bay_gio_ms())
+                            {
+                                tracing::info!(
+                                    thiet_ke = %id,
+                                    "bỏ câu MC hỏi cả phòng: vừa hỏi cách đây chưa lâu"
+                                );
+                                continue;
+                            }
+                            // CHẶN CỨNG số thẻ MC trong một giờ nghỉ. Giờ nghỉ
+                            // gọi MC mỗi ≤20 giây để chuyển truyện đúng lúc, nên
+                            // không chặn thì nghỉ 90 giây là sáu cái thẻ liên
+                            // tiếp. Lượt vẫn chạy, chỉ câu nói bị bỏ.
+                            if trong_nghi
+                                && c.viec.as_deref() != Some("dap")
+                                && !st2.duoc_noi_trong_nghi(
+                                    &id,
+                                    moc_nghi,
+                                    crate::ke_truyen::CAU_MOI_GIO_NGHI,
+                                )
+                            {
+                                tracing::info!(
+                                    thiet_ke = %id,
+                                    "bỏ câu MC: giờ nghỉ này đã đủ số thẻ"
+                                );
+                                continue;
+                            }
+                            // Bớt chữ "nha": giữ nhiều nhất một từ đệm mỗi câu
+                            // và đổi nó qua "nhé" / "nghen" / "nhá". Làm bằng
+                            // mã chứ không dặn AI — dặn thì nó nhớ vài lượt
+                            // rồi quên, mà "nha" đi cuối gần như mọi câu.
+                            //
+                            // CHỈ áp cho lời MC tự nói, KHÔNG áp cho lời kể
+                            // (`luot.ke`): chữ "nha" trong truyện là của
+                            // truyện, sửa vào là sửa nội dung.
+                            dem_tu_dem = dem_tu_dem.wrapping_add(1);
+                            let chu = crate::ke_truyen::bot_tu_dem(
+                                &crate::ke_truyen::xung_minh(&c.chu),
+                                dem_tu_dem,
+                            );
+                            let c = CauMc { chu, ..c };
                             so_chu += c.chu.chars().count();
                             // Câu nói với khách (chào, đáp): nếu đúng lúc đang
                             // đọc lời kể thì sân khấu đọc CHỒNG lên, nhỏ tiếng
                             // hơn giọng kể — khách được chào ngay, truyện không
                             // phải dừng chờ. Không kể thì đọc bình thường, to rõ.
                             let chao = matches!(c.viec.as_deref(), Some("chao") | Some("dap"));
+                            // CHÀO người mới khác ĐÁP bình luận: câu chào vẫn
+                            // được đọc, nhưng không hiện lên thẻ giữa màn —
+                            // thẻ ấy dành cho trao đổi với khách.
+                            let la_chao = c.viec.as_deref() == Some("chao");
                             let g = c.giong.or_else(|| giong_md.clone());
                             if dang_phat {
-                                st2.mc_noi(c.chu, g, None, noi_la_mo, chao);
+                                st2.mc_noi(c.chu, g, None, noi_la_mo, chao, la_chao);
                             } else {
-                                st2.mc_noi_xem_thu(&id, c.chu, g, None, noi_la_mo, chao);
+                                st2.mc_noi_xem_thu(&id, c.chu, g, None, noi_la_mo, chao, la_chao);
                             }
                         }
                         let so_chu_noi = so_chu;
@@ -1756,8 +1966,20 @@ pub async fn chay(st: Arc<AppState>) {
                         // Đoạn nào là theo tiến độ máy chủ giữ, không theo AI.
                         let mut da_ke = false;
                         let mut vua_het = false;
-                        if let Some(mut td) = tien_do {
+                        if let Some(td_luc_hoi) = tien_do {
+                            // Đọc lại tiến độ: trong lúc chờ AI, sân khấu có thể đã
+                            // tự đọc tiếp vài đoạn thay MC (`ke_truyen::bao_tu_doc`).
+                            // Khi đó lời kể AI vừa viết là của đoạn ĐÃ ĐỌC — bỏ, đừng
+                            // đọc lại lần hai; lượt sau MC kể từ đoạn mới.
+                            let mut td = st2.tien_do_ke(&id, &td_luc_hoi.dau);
+                            let da_tu_doc = td.tiep != td_luc_hoi.tiep || td.vua_xong != td_luc_hoi.vua_xong;
                             match luot.ke {
+                                // Lượt khép truyện cũng vậy: AI viết theo tiến độ cũ.
+                                _ if da_tu_doc => {
+                                    if luot.ke.is_some() {
+                                        tracing::info!(thiet_ke = %id, "bỏ lời kể đoạn sân khấu đã tự đọc");
+                                    }
+                                }
                                 // Đang giờ nghỉ (hỏng ảnh): AI lỡ kể thì bỏ, giữ đoạn cho sau giờ nghỉ.
                                 Some(c) if td.tiep < cac_doan.len() && !dang_nghi_su_co => {
                                     so_chu += c.chu.chars().count();
@@ -1770,9 +1992,9 @@ pub async fn chay(st: Arc<AppState>) {
                                     if let Some(d) = dan {
                                         let g = giong_md.clone();
                                         if dang_phat {
-                                            st2.mc_noi(d, g, None, true, false);
+                                            st2.mc_noi(d, g, None, true, false, false);
                                         } else {
-                                            st2.mc_noi_xem_thu(&id, d, g, None, true, false);
+                                            st2.mc_noi_xem_thu(&id, d, g, None, true, false, false);
                                         }
                                     }
                                     let c = CauMc { chu: ke_chu, ..c };
@@ -1780,9 +2002,9 @@ pub async fn chay(st: Arc<AppState>) {
                                     let g = c.giong.or_else(|| giong_md.clone());
                                     let k = Some(u32::try_from(i).unwrap_or(u32::MAX));
                                     if dang_phat {
-                                        st2.mc_noi(c.chu, g, k, true, false);
+                                        st2.mc_noi(c.chu, g, k, true, false, false);
                                     } else {
-                                        st2.mc_noi_xem_thu(&id, c.chu, g, k, true, false);
+                                        st2.mc_noi_xem_thu(&id, c.chu, g, k, true, false, false);
                                     }
                                     td.da_ke(i, cac_doan.len(), lap);
                                     if td.vua_xong {
@@ -1825,8 +2047,11 @@ pub async fn chay(st: Arc<AppState>) {
                             crate::ke_truyen::hen_luot_ke(so_chu_ke, so_chu_noi, tre) + crate::ke_truyen::NGHI_HET_TRUYEN
                         } else if da_ke {
                             // Mạch truyện liền: đoạn kế tới đúng lúc đoạn này
-                            // (và câu chào xen giữa, nếu có) vừa đọc xong.
+                            // (và câu chào xen giữa, nếu có) vừa đọc xong, CỘNG
+                            // một quãng hở 3–5 giây để lời chào khách vừa vào
+                            // chen được vào giữa hai đoạn.
                             crate::ke_truyen::hen_luot_ke(so_chu_ke, so_chu_noi, tre)
+                                + crate::ke_truyen::nghi_giua_doan(now.unsigned_abs())
                         } else if bao_chuyen {
                             // Vừa báo chuyển tiếp: đọc xong câu đó, nghỉ một nhịp
                             // rồi tới lượt chào khách giữa hai truyện.
@@ -2119,6 +2344,82 @@ mod tests {
             { "kind": "join", "at": now - VUA_VAO_MS - 1, "name": "Vy", "user": "vy.99" },
         ]});
         assert!(!khach_cho_chao(&v, now, ""));
+    }
+
+    #[test]
+    fn chua_phan_vai_thi_cau_chao_van_phai_co_giong() {
+        // Chưa giao giọng nào cho chào/đáp mà AI ghi "khong-co" (không đọc):
+        // câu chào im tiếng, khách nói một mình. Phải tự lấy giọng dẫn.
+        let luot = LuotMc {
+            noi: vec![
+                CauMc { chu: "Chào Vy nha".into(), giong: Some("khong-co".into()), viec: Some("chao".into()) },
+                CauMc { chu: "Vy nói hay ghê".into(), giong: None, viec: Some("dap".into()) },
+            ],
+            ..LuotMc::default()
+        };
+        let co = vec!["mc".to_string(), "nam-minh".to_string()];
+        let ra = ap_vai(luot, &VaiGiong::default(), Some("mc"), &co);
+        assert_eq!(ra.noi[0].giong.as_deref(), Some("mc"), "câu chào phải có giọng thật");
+        assert_eq!(ra.noi[1].giong.as_deref(), Some("mc"), "câu đáp phải có giọng thật");
+
+        // Đã phân vai thì vẫn theo phân vai, không đụng tới.
+        let luot = LuotMc {
+            noi: vec![CauMc { chu: "Chào Vy nha".into(), giong: Some("khong-co".into()), viec: Some("chao".into()) }],
+            ..LuotMc::default()
+        };
+        let vai = VaiGiong { chao: vec!["nam-minh".into()], ..VaiGiong::default() };
+        assert_eq!(ap_vai(luot, &vai, Some("mc"), &co).noi[0].giong.as_deref(), Some("nam-minh"));
+    }
+
+    #[test]
+    fn loi_nhac_bat_chi_hoi_y_kien_phong_mot_lan() {
+        let (dan, _) = dan_va_loi(&AiCfg::default(), &json!({}), DAN_GOC);
+        assert!(dan.contains("HỎI Ý KIẾN PHÒNG CHỈ MỘT LẦN"));
+        assert!(dan.contains("daHoi"), "phải nói rõ đọc ô nào để biết đã hỏi chưa");
+    }
+
+    #[test]
+    fn mot_cau_la_phan_lon_han_truoc() {
+        // Nâng ba lần: 70 → 80 → 88. Ở 80 vẫn còn cứ bốn lượt một lần ra hai
+        // thẻ liền nhau, chủ app thấy nhiều quá.
+        assert_eq!(crate::ke_truyen::TRONG_SO_CAU[0], 88);
+        let mut dem = [0usize; crate::ke_truyen::CAU_TOI_DA];
+        for i in 0..6_000u64 {
+            dem[crate::ke_truyen::so_cau_voi_khach(1_794_000_000_000 + i * 977) - 1] += 1;
+        }
+        assert!(dem[0] * 100 / 6_000 >= 80, "một câu phải chiếm gần hết: {dem:?}");
+        assert!(dem[2] * 100 / 6_000 <= 4, "ba câu phải rất hiếm: {dem:?}");
+    }
+
+    #[test]
+    fn loi_nhac_cam_ghep_chao_voi_dap_vao_mot_cau() {
+        let (dan, _) = dan_va_loi(&AiCfg::default(), &json!({}), DAN_GOC);
+        assert!(dan.contains("MỘT CÂU CHỈ LÀM MỘT VIỆC"));
+        assert!(dan.contains("hi lại bạn nè"), "phải có ví dụ SAI cụ thể");
+    }
+
+    #[test]
+    fn so_khop_ten_bo_qua_ky_tu_trang_tri() {
+        // Đúng ca đã làm hỏng phòng thật: tên có vương miện và trái tim, MC
+        // đọc tên thì bỏ chúng đi, so nguyên văn không bao giờ trúng.
+        assert_eq!(nhan_ten("♕P.H.hoa ❤️"), "p h hoa");
+        assert!(co_goi_ten("Chào P.H.hoa vào phòng, chúc bạn ăn trưa ngon miệng nha", "♕P.H.hoa ❤️"));
+        assert!(co_goi_ten("Chào Dolly Dee, P.H.hoa, ngồi nghe truyện cùng cả nhà nha", "♕P.H.hoa ❤️"));
+        assert!(co_goi_ten("Chào lion nha", "lion🐯"));
+        assert!(co_goi_ten("Chào Quốc Khánh vào phòng", "Quốc Khánh"));
+    }
+
+    #[test]
+    fn so_khop_ten_theo_ranh_gioi_tu_khong_trung_bua() {
+        // Không có ranh giới từ thì "An" trúng cả trong "Lan" — MC chào Lan
+        // xong, An coi như đã được chào.
+        assert!(!co_goi_ten("Chào Lan vào phòng nha", "An"));
+        assert!(co_goi_ten("Chào An vào phòng nha", "An"));
+        assert!(!co_goi_ten("Chào Vy nha", "Vy Anh"));
+        assert!(co_goi_ten("Chào Vy Anh nha", "Vy Anh"));
+        // Tên chỉ toàn biểu tượng: không rút ra chữ nào, đừng coi là đã gọi.
+        assert!(!co_goi_ten("Chào cả nhà", "❤️❤️"));
+        assert_eq!(nhan_ten("❤️❤️"), "");
     }
 
     #[test]

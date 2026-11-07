@@ -145,6 +145,7 @@ pub fn router(st: Arc<AppState>) -> Router {
         .route("/s/truyen-kho/:design_id", get(kho_da_ke::get_kho))
         .route("/s/truyen-kho/:design_id/ke-lai", post(kho_da_ke::post_ke_lai))
         .route("/s/truyen-kho/:design_id/xoa", post(kho_da_ke::post_xoa))
+        .route("/s/truyen-kho/:design_id/xoa-het", post(kho_da_ke::post_xoa_het))
         // Lịch sử MC gửi / nhận qua Claude Code (session mỗi truyện).
         .route("/s/ai-cli/lich-su", get(cli_goi::get_lich_su))
         .route("/s/ai-cli/dang-nhap", get(ai_cli::get_dang_nhap))

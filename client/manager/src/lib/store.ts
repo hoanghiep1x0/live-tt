@@ -11,6 +11,7 @@ import type { SessionView } from '@live/contracts';
 import { api, ApiError, CAU_NOI_MAC_DINH } from './api';
 import type { ModuleState, SourceKind, SourceStatus } from './api';
 import { connect } from './ws';
+import { docOThemTab, laApp, tabWeb } from './desktop';
 
 /** Chờ gõ xong rồi mới ghi. Gõ một câu cảm ơn mà mỗi ký tự một lần ghi đĩa
  *  thì vừa tốn vừa làm thiết kế đang live nhận cấu hình nửa vời. */
@@ -46,8 +47,9 @@ export interface Manager {
   /** Bấm nút trên thẻ module, áp vào thiết kế đang phát. */
   bamNut(moduleId: string, op: string): void;
   doiNguon(kind: SourceKind): void;
-  /** Nút "Kết nối Studio": nghe kênh `nick` qua cầu nối TikTok. Không mở trang
-   *  TikTok nào — dữ liệu đi thẳng từ máy chủ TikTok qua cầu nối (docs/07 §7). */
+  /** Nút "Kết nối Studio": nghe kênh `nick` qua cầu nối TikTok — dữ liệu đi
+   *  thẳng từ máy chủ TikTok (docs/07 §7). Trong app thì mở sẵn luôn tab trang
+   *  live của kênh (ẩn, đã tắt tiếng) cho MC gõ chát vào. */
   noiKenh(nick: string): void;
 }
 
@@ -303,6 +305,19 @@ export function useManager(): Manager {
           noi(`Đang nối tới live của @${nick}…`);
         } catch (e) {
           bat(e);
+        }
+        // Tab trang live của kênh: MC gõ chát vào đây (`desktop/src/chat_tiktok.rs`
+        // chỉ tìm, không tự mở). Mở sẵn lúc bấm kết nối để khỏi phải vào hộp
+        // Trình duyệt mở tay. Vỏ nạp `tat_tieng.js` cho tab kênh, nên trang
+        // không phát tiếng live của chính kênh — không lặp giọng MC. Tab đã
+        // mở thì vỏ để nguyên (không tải lại, không mất đăng nhập).
+        const tab = laApp() ? docOThemTab(nick, Date.now()) : null;
+        if (tab !== null) {
+          try {
+            await tabWeb.mo(tab.id, tab.url);
+          } catch (e) {
+            noi(`Chưa mở được trang live để chát: ${e instanceof Error ? e.message : String(e)}`, true);
+          }
         }
       })();
     },

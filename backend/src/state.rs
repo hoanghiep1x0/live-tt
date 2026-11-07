@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use serde::Serialize;
 use serde_json::{json, Map, Value};
@@ -38,6 +38,21 @@ pub struct ModuleState {
 pub struct AppState {
     pub layout: Layout,
     pub port: u16,
+    /// Sổ "đã chào ai, lúc nào" của buổi đang chạy — khoá là tên đã rút về
+    /// phần đọc được (`ai::nhan_ten`), giá trị là mốc ms.
+    ///
+    /// Phải là sổ riêng chứ KHÔNG dò trong feed: feed chỉ giữ 60 mục gần nhất,
+    /// phòng đông thì câu chào trôi mất sau vài giây, và người ấy bị chào lại
+    /// mỗi lượt MC.
+    pub chao_roi: Mutex<HashMap<String, i64>>,
+    /// Mốc lần gần nhất MC hỏi ý kiến CẢ PHÒNG, theo từng thiết kế. Xem
+    /// `duoc_hoi_phong`.
+    pub hoi_roi: Mutex<HashMap<String, i64>>,
+    /// Giờ nghỉ nào (mốc mở) và đã nói mấy câu trong đó, theo từng thiết kế.
+    /// Xem `duoc_noi_trong_nghi`.
+    pub noi_trong_nghi: Mutex<HashMap<String, (i64, usize)>>,
+    /// Mốc thẻ MC nói với khách gần nhất, theo từng thiết kế. Xem `duoc_the_mc`.
+    pub the_mc_cuoi: Mutex<HashMap<String, i64>>,
     pub token: String,
     /// Chỉ một thiết kế chạy một lúc. Đây là chỗ giữ điều đó.
     live: RwLock<Option<String>>,
@@ -126,6 +141,10 @@ impl AppState {
         Arc::new(Self {
             layout,
             port,
+            chao_roi: Mutex::new(HashMap::new()),
+            hoi_roi: Mutex::new(HashMap::new()),
+            noi_trong_nghi: Mutex::new(HashMap::new()),
+            the_mc_cuoi: Mutex::new(HashMap::new()),
             token,
             live: RwLock::new(None),
             phien: RwLock::new(None),
@@ -197,8 +216,9 @@ impl AppState {
         self.xem_thu.write().expect("khoá xem thử hỏng").remove(id);
         *self.phien.write().expect("khoá phiên hỏng") = Some(self.phien_moi(id));
         self.broadcast(json!({ "t": "live", "designId": id }));
-        // Buổi live mới: lịch chát của buổi trước không còn ràng buộc nhịp.
+        // Buổi live mới: lịch chát và sổ đã chào của buổi trước không còn ý nghĩa.
         crate::chat_tiktok::quen_lich();
+        self.quen_da_chao();
         // Buổi live mới: sổ chi phí mới, tính từ lúc này.
         let so = self.so_moi(id, true);
         self.chi_phi.write().expect("khoá chi phí hỏng").insert(id.to_string(), so.clone());
@@ -310,12 +330,12 @@ impl AppState {
 
     /// MC nói một câu trong phiên xem thử của `id`. Như `mc_noi`, nhưng feed
     /// gắn `designId` nên chỉ cửa sổ xem thử của đúng phòng đó nghe thấy.
-    pub fn mc_noi_xem_thu(&self, id: &str, text: String, voice: Option<String>, ke: Option<u32>, truyen: bool, chao: bool) {
+    pub fn mc_noi_xem_thu(&self, id: &str, text: String, voice: Option<String>, ke: Option<u32>, truyen: bool, chao: bool, la_chao: bool) {
         let now = bay_gio_ms();
         let item = {
             let mut g = self.xem_thu.write().expect("khoá xem thử hỏng");
             match g.get_mut(id) {
-                Some(p) => p.mc_noi(now, text, voice, ke, truyen, chao),
+                Some(p) => p.mc_noi(now, text, voice, ke, truyen, chao, la_chao),
                 None => return,
             }
         };
@@ -407,8 +427,107 @@ impl AppState {
                 None => return,
             }
         };
+        // Cả phòng đã ra hết: ai quay lại sau cũng là khách mới, phải được chào.
+        self.quen_da_chao();
         tracing::info!("kênh tắt live: dọn rạp, số người xem về 0");
         self.broadcast(json!({ "t": "session", "view": view }));
+    }
+
+    /// Những tên trong `ds` mà buổi này CHƯA chào (hoặc chào đã quá lâu), và
+    /// ghi luôn vào sổ là lượt này chào họ.
+    ///
+    /// Gọi một lần mỗi lượt MC, ngay trước khi đưa danh sách cho AI. Ghi sổ
+    /// ngay tại đây chứ không đợi MC nói xong: lượt MC mất vài giây, đợi thì
+    /// lượt kế tiếp đã kịp lấy lại đúng mấy cái tên ấy.
+    pub fn loc_chua_chao(&self, ds: Vec<String>, now: i64) -> Vec<String> {
+        let mut so = self.chao_roi.lock().unwrap_or_else(|e| e.into_inner());
+        so.retain(|_, t| now - *t < crate::ai::CHAO_LAI_SAU_MS);
+        let mut ra = Vec::new();
+        for ten in ds {
+            let khoa = crate::ai::nhan_ten(&ten);
+            // Tên chỉ toàn biểu tượng thì không rút ra được chữ nào để làm
+            // khoá — chào họ một lần theo tên gốc còn hơn chặn nhầm cả phòng.
+            let khoa = if khoa.is_empty() { ten.clone() } else { khoa };
+            if so.contains_key(&khoa) {
+                continue;
+            }
+            so.insert(khoa, now);
+            ra.push(ten);
+        }
+        ra
+    }
+
+    /// Quên sổ đã chào. Gọi lúc lên sóng và lúc dọn phòng (buổi live tắt).
+    pub fn quen_da_chao(&self) {
+        self.chao_roi.lock().unwrap_or_else(|e| e.into_inner()).clear();
+        self.hoi_roi.lock().unwrap_or_else(|e| e.into_inner()).clear();
+        self.noi_trong_nghi.lock().unwrap_or_else(|e| e.into_inner()).clear();
+        self.the_mc_cuoi.lock().unwrap_or_else(|e| e.into_inner()).clear();
+    }
+
+    /// Phòng này đã được hỏi ý kiến đủ lâu trước đó chưa. `true` thì GHI NHẬN
+    /// luôn lượt hỏi này, nên gọi đúng một lần cho mỗi câu định hỏi.
+    ///
+    /// Vì sao là sổ chứ không dò trong feed: feed chỉ giữ 60 mục gần nhất, phòng
+    /// đông thì một câu hỏi trôi khỏi đó trong vài giây — mà quãng cần nhớ ở đây
+    /// là bảy phút.
+    pub fn duoc_hoi_phong(&self, design_id: &str, now: i64) -> bool {
+        let mut so = self.hoi_roi.lock().unwrap_or_else(|e| e.into_inner());
+        if so
+            .get(design_id)
+            .is_some_and(|t| now - *t < crate::ke_truyen::HOI_PHONG_CACH_MS)
+        {
+            return false;
+        }
+        so.insert(design_id.to_string(), now);
+        true
+    }
+
+    /// Thẻ MC nói với khách gần đây chưa — chỉ XEM, không ghi gì. Dùng để
+    /// khỏi kéo lượt MC lên sớm trong khi câu nói ra chắc chắn bị chặn.
+    pub fn the_mc_gan_day(&self, design_id: &str, now: i64, cach: i64) -> bool {
+        if cach <= 0 {
+            return false;
+        }
+        self.the_mc_cuoi
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(design_id)
+            .is_some_and(|t| now - *t < cach)
+    }
+
+    /// Phòng này đã đủ giãn cách để hiện một thẻ MC nói với khách chưa. `true`
+    /// thì GHI NHẬN luôn thẻ ấy, nên gọi đúng một lần cho mỗi câu định nói.
+    ///
+    /// `cach` co theo độ đông — xem `ke_truyen::cach_the_mc`. `cach <= 0` là
+    /// phòng vắng: không chặn gì.
+    pub fn duoc_the_mc(&self, design_id: &str, now: i64, cach: i64) -> bool {
+        if cach <= 0 {
+            return true;
+        }
+        let mut so = self.the_mc_cuoi.lock().unwrap_or_else(|e| e.into_inner());
+        if so.get(design_id).is_some_and(|t| now - *t < cach) {
+            return false;
+        }
+        so.insert(design_id.to_string(), now);
+        true
+    }
+
+    /// Giờ nghỉ `moc` của phòng này còn chỗ cho một câu MC nữa không. `true`
+    /// thì ĐẾM luôn câu ấy, nên gọi đúng một lần cho mỗi câu định nói.
+    ///
+    /// `moc` là mốc mở giờ nghỉ: đổi giờ nghỉ là số đếm về 0.
+    pub fn duoc_noi_trong_nghi(&self, design_id: &str, moc: i64, toi_da: usize) -> bool {
+        let mut so = self.noi_trong_nghi.lock().unwrap_or_else(|e| e.into_inner());
+        let o = so.entry(design_id.to_string()).or_insert((moc, 0));
+        if o.0 != moc {
+            *o = (moc, 0);
+        }
+        if o.1 >= toi_da {
+            return false;
+        }
+        o.1 += 1;
+        true
     }
 
     /// Mở phiên TRẮNG cho phòng đang phát: mọi con số của buổi về 0.
@@ -420,12 +539,17 @@ impl AppState {
     ///
     /// Trả về `false` khi phòng này không phải phòng đang phát — không có
     /// phiên nào để dựng lại.
+    ///
+    /// Phiên mới LUÔN đếm lại từ 0 kể cả khi kênh không đổi: tin tổng kế tiếp
+    /// của TikTok thành mốc (`Session::dem_lai_tu_dau`). Không có bước này thì
+    /// dựng phiên xong, tin đầu tiên kéo số tim về đúng con số cũ.
     pub fn lam_moi_phien(&self, design_id: &str) -> bool {
         if self.live().as_deref() != Some(design_id) {
             return false;
         }
         let view = {
-            let moi = self.phien_moi(design_id);
+            let mut moi = self.phien_moi(design_id);
+            moi.dem_lai_tu_dau();
             let mut g = self.phien.write().expect("khoá phiên hỏng");
             let view = moi.view(60);
             *g = Some(moi);
@@ -708,6 +832,12 @@ impl AppState {
     }
 
     pub fn doi_nguon(&self, cfg: SourceCfg) -> u64 {
+        // Nối lại nguồn: đếm lại từ 0. Tổng TikTok báo là tổng tích luỹ của
+        // buổi live bên họ, không nối lại bao nhiêu lần nó vẫn ra con số cũ —
+        // đặt mốc tại đây thì sân khấu về 0 rồi đếm lên theo tim mới.
+        if let Some(p) = self.phien.write().expect("khoá phiên hỏng").as_mut() {
+            p.dem_lai_tu_dau();
+        }
         *self.nguon.write().expect("khoá nguồn hỏng") = cfg;
         *self.loi_nguon.write().expect("khoá nguồn hỏng") = None;
         *self.loi_tien_trinh.write().expect("khoá nguồn hỏng") = None;
@@ -871,12 +1001,12 @@ impl AppState {
     /// Di qua feed chu khong phai mot tin rieng: cau MC phai nam trong phien de
     /// luot sau AI doc lai duoc minh vua noi gi, va cua so xem mo giua chung
     /// cung thay MC dang ke toi dau.
-    pub fn mc_noi(&self, text: String, voice: Option<String>, ke: Option<u32>, truyen: bool, chao: bool) {
+    pub fn mc_noi(&self, text: String, voice: Option<String>, ke: Option<u32>, truyen: bool, chao: bool, la_chao: bool) {
         let now = bay_gio_ms();
         let item = {
             let mut g = self.phien.write().expect("khoá phiên hỏng");
             match g.as_mut() {
-                Some(p) => p.mc_noi(now, text, voice, ke, truyen, chao),
+                Some(p) => p.mc_noi(now, text, voice, ke, truyen, chao, la_chao),
                 None => return,
             }
         };
@@ -1177,6 +1307,54 @@ mod tests {
     }
 
     #[test]
+    fn phong_dong_thi_the_mc_phai_cach_nhau() {
+        let t = tempfile::tempdir().unwrap();
+        let st = state(t.path());
+        let cach = crate::ke_truyen::cach_the_mc(21_000);
+        assert!(st.duoc_the_mc("ke-chuyen", 1_000, cach));
+        assert!(!st.duoc_the_mc("ke-chuyen", 1_000 + cach - 1, cach));
+        assert!(st.duoc_the_mc("ke-chuyen", 1_000 + cach, cach));
+        // `the_mc_gan_day` chỉ XEM, gọi mấy lần cũng không đổi gì.
+        assert!(st.the_mc_gan_day("ke-chuyen", 1_000 + cach + 1, cach));
+        assert!(st.the_mc_gan_day("ke-chuyen", 1_000 + cach + 1, cach));
+        assert!(!st.the_mc_gan_day("ke-chuyen", 1_000 + cach * 3, cach));
+        // Phòng VẮNG: không chặn gì, gọi liên tiếp vẫn qua.
+        assert!(st.duoc_the_mc("lop-hoc-chu", 0, 0));
+        assert!(st.duoc_the_mc("lop-hoc-chu", 0, 0));
+        assert!(!st.the_mc_gan_day("lop-hoc-chu", 0, 0));
+    }
+
+    #[test]
+    fn gio_nghi_chi_cho_mot_so_cau_mc_roi_thoi() {
+        let t = tempfile::tempdir().unwrap();
+        let st = state(t.path());
+        // Giờ nghỉ mở lúc 1_000: hai câu đầu được nói, câu thứ ba bị chặn.
+        assert!(st.duoc_noi_trong_nghi("ke-chuyen", 1_000, 2));
+        assert!(st.duoc_noi_trong_nghi("ke-chuyen", 1_000, 2));
+        assert!(!st.duoc_noi_trong_nghi("ke-chuyen", 1_000, 2));
+        assert!(!st.duoc_noi_trong_nghi("ke-chuyen", 1_000, 2));
+        // Giờ nghỉ KHÁC thì đếm lại từ đầu.
+        assert!(st.duoc_noi_trong_nghi("ke-chuyen", 2_000, 2));
+        // Phòng khác có sổ riêng.
+        assert!(st.duoc_noi_trong_nghi("lop-hoc-chu", 1_000, 2));
+        // Buổi live mới thì quên hết.
+        st.quen_da_chao();
+        assert!(st.duoc_noi_trong_nghi("ke-chuyen", 2_000, 2));
+    }
+
+    #[test]
+    fn hoi_y_kien_phong_phai_cach_nhau_dung_nhip() {
+        let t = tempfile::tempdir().unwrap();
+        let st = state(t.path());
+        let cach = crate::ke_truyen::HOI_PHONG_CACH_MS;
+        assert!(st.duoc_hoi_phong("ke-chuyen", 1_000));
+        assert!(!st.duoc_hoi_phong("ke-chuyen", 1_000 + cach - 1));
+        assert!(st.duoc_hoi_phong("ke-chuyen", 1_000 + cach));
+        // Hỏi lại thì mốc tính từ lần vừa hỏi, không phải lần đầu.
+        assert!(!st.duoc_hoi_phong("ke-chuyen", 1_000 + cach + 1));
+    }
+
+    #[test]
     fn loi_dan_mc_rieng_cua_thiet_ke_va_lui_ve_goc() {
         let tmp = tempfile::tempdir().unwrap();
         dung(tmp.path(), "ke-chuyen");
@@ -1235,6 +1413,42 @@ mod tests {
         // Tắt sóng lần nữa khi không phát thì không ghi thêm dòng nào.
         s.stop_live();
         assert_eq!(fs::read_to_string(&file).unwrap().lines().count(), 1);
+    }
+
+    #[test]
+    fn mot_nguoi_chi_duoc_chao_mot_lan_trong_buoi() {
+        let tmp = tempfile::tempdir().unwrap();
+        dung(tmp.path(), "ke-chuyen");
+        let s = state(tmp.path());
+        let now = 1_000_000;
+
+        let ds = vec!["♕P.H.hoa ❤️".to_string(), "Dolly Dee".to_string()];
+        assert_eq!(s.loc_chua_chao(ds.clone(), now).len(), 2, "lần đầu thì chào cả hai");
+        // Lượt sau, dù tin vào phòng vẫn còn trong cửa sổ "vừa vào": im.
+        assert!(s.loc_chua_chao(ds.clone(), now + 12_000).is_empty(), "không chào lại");
+        assert!(s.loc_chua_chao(ds.clone(), now + 100_000).is_empty());
+
+        // MC viết tên khác đi (bỏ vương miện, bỏ trái tim) vẫn là một người.
+        assert!(s.loc_chua_chao(vec!["P.H.hoa".to_string()], now + 20_000).is_empty());
+
+        // Người mới thì vẫn được chào ngay.
+        assert_eq!(s.loc_chua_chao(vec!["Quốc Khánh".to_string()], now + 30_000).len(), 1);
+
+        // Quá lâu rồi thì chào lại được — họ đã ra vào một vòng.
+        let lau = now + crate::ai::CHAO_LAI_SAU_MS + 1;
+        assert_eq!(s.loc_chua_chao(ds, lau).len(), 2);
+    }
+
+    #[test]
+    fn buoi_live_moi_hay_ca_phong_ra_het_thi_quen_so_da_chao() {
+        let tmp = tempfile::tempdir().unwrap();
+        dung(tmp.path(), "ke-chuyen");
+        let s = state(tmp.path());
+        let ds = vec!["Vy".to_string()];
+        assert_eq!(s.loc_chua_chao(ds.clone(), 1_000).len(), 1);
+        assert!(s.loc_chua_chao(ds.clone(), 2_000).is_empty());
+        s.quen_da_chao();
+        assert_eq!(s.loc_chua_chao(ds, 3_000).len(), 1, "quên sổ thì chào lại");
     }
 
     #[test]

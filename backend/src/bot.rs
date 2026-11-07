@@ -58,6 +58,14 @@ pub struct BotCfg {
     pub enabled: bool,
     #[serde(default = "so_mac_dinh")]
     pub count: u32,
+    /// Cho máy chủ TỰ bật nhân vật ảo khi mất nguồn dữ liệu quá lâu
+    /// (`ai::canh_mat_nguon`), rồi tự tắt khi nối lại.
+    ///
+    /// Mặc định TẮT. Người vận hành tắt nhân vật ảo là họ đã quyết rồi; máy
+    /// chủ tự bật lại sau lưng thì công tắc kia thành vô nghĩa — mà kênh chưa
+    /// lên sóng cũng tính là "mất nguồn", nên nó bật gần như suốt.
+    #[serde(default, rename = "tuBatKhiMatNguon")]
+    pub tu_bat_khi_mat_nguon: bool,
 }
 
 fn so_mac_dinh() -> u32 {
@@ -71,6 +79,7 @@ impl Default for BotCfg {
         Self {
             enabled: false,
             count: so_mac_dinh(),
+            tu_bat_khi_mat_nguon: false,
         }
     }
 }
@@ -493,20 +502,27 @@ mod tests {
     }
 
     #[test]
+    fn mac_dinh_tat_het_va_khong_tu_bat_lai() {
+        let c = BotCfg::default();
+        assert!(!c.enabled, "nhân vật ảo mặc định TẮT");
+        assert!(
+            !c.tu_bat_khi_mat_nguon,
+            "mất nguồn cũng KHÔNG tự bật — người vận hành tắt là họ đã quyết"
+        );
+        // Cấu hình cũ chưa có khoá này thì cũng là tắt, không phải bật.
+        let cu: BotCfg = serde_json::from_value(serde_json::json!({ "enabled": true, "count": 5 })).unwrap();
+        assert!(!cu.tu_bat_khi_mat_nguon);
+    }
+
+    #[test]
     fn tat_thi_muc_tieu_la_khong() {
-        let c = BotCfg {
-            enabled: false,
-            count: 20,
-        };
+        let c = BotCfg { enabled: false, count: 20, ..BotCfg::default() };
         assert_eq!(c.muc_tieu(), 0);
     }
 
     #[test]
     fn so_qua_lon_bi_keo_ve_tran() {
-        let c = BotCfg {
-            enabled: true,
-            count: 1000,
-        };
+        let c = BotCfg { enabled: true, count: 1000, ..BotCfg::default() };
         assert_eq!(c.muc_tieu(), TOI_DA as usize);
     }
 

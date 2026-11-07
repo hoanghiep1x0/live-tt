@@ -68,11 +68,11 @@
     "greet": [
       "Chào {ten} 👋",
       "Chào mừng {ten} vào phòng 🙏",
-      "{ten} vào rồi kìa, chào bạn nha",
-      "Chào {ten}, ngồi nghe truyện cùng cả nhà nhé",
-      "Chào {ten} vào phòng nha 👋",
-      "{ten} vào phòng rồi, chào bạn nhé ❤",
-      "Chào {ten}, ngồi nghe cùng mình nha"
+      "{ten} vào rồi kìa, chào bạn",
+      "Chào {ten}, mời ngồi nghe truyện cùng",
+      "Chào {ten} vào phòng 👋",
+      "{ten} vào phòng rồi, chào bạn ❤",
+      "A, {ten} tới rồi"
     ],
     "thanks": [
       "Cảm ơn {ten} nhiều nha 🎉",

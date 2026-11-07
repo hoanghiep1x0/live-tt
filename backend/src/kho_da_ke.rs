@@ -196,6 +196,37 @@ pub async fn post_xoa(
     }
 }
 
+/// Xoá SẠCH lịch sử truyện đã kể của một phòng.
+///
+/// Phải dọn HAI nơi, không thì xoá như không: kho lâu dài (file này) và sổ
+/// `daKe` trong cấu hình module. Cả hai đều chặn kể lại — còn một cái là
+/// phòng vẫn từ chối đúng mấy truyện ấy, mà người vận hành thì đã thấy bảng
+/// trống rồi, không hiểu vì sao.
+pub async fn post_xoa_het(
+    State(st): State<Arc<AppState>>,
+    AxPath(design_id): AxPath<String>,
+) -> Response {
+    if !valid_id(&design_id) {
+        return loi(StatusCode::BAD_REQUEST, "id thiết kế sai định dạng");
+    }
+    let so_kho = doc(&st.layout, &design_id).len();
+    if let Err(e) = store::write_json_atomic(&duong(&st.layout, &design_id), &Value::Array(Vec::new())) {
+        tracing::warn!(thiet_ke = %design_id, ?e, "không xoá được kho truyện");
+        return loi(StatusCode::INTERNAL_SERVER_ERROR, "không ghi được kho truyện");
+    }
+    let so_so = st
+        .module_state(&design_id, "story")
+        .ok()
+        .and_then(|m| m.config.get("daKe").and_then(Value::as_array).map(Vec::len))
+        .unwrap_or(0);
+    if let Err(e) = st.set_config(&design_id, "story", json!({ "daKe": [] })) {
+        tracing::warn!(thiet_ke = %design_id, ?e, "không xoá được sổ đã kể");
+        return loi(StatusCode::INTERNAL_SERVER_ERROR, "không xoá được sổ đã kể");
+    }
+    tracing::info!(thiet_ke = %design_id, so_kho, so_so, "đã xoá sạch lịch sử truyện đã kể");
+    Json(json!({ "ok": true, "soKho": so_kho, "soSo": so_so })).into_response()
+}
+
 /// Số truyện và số ảnh đang giữ — cho dòng tóm tắt của bảng xem. Hàm thuần.
 pub fn tom_tat(kho: &[Value]) -> Map<String, Value> {
     let anh = kho

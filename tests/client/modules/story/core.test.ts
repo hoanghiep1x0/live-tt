@@ -4,13 +4,16 @@ import type { FeedItem } from '@live/contracts';
 import { runAction, runFeed, runTick } from '@live/runtime';
 import {
   catDoan,
+  CHAO_KHUNG,
   CHO_MC_MS,
   chuPhuDe,
   core,
   doanHienTai,
   dongHo,
+  loiChaoKhung,
   moduleStory as mod,
   schema,
+  coHinhNao,
   trongSuot,
 } from '@live/mod-story';
 import { ctx, kiemModule } from '../_helper';
@@ -42,6 +45,18 @@ describe('manifest', () => {
   it('nền trong suốt mặc định tắt, cấu hình cũ không xin thiết kế bỏ nền', () => {
     expect(trongSuot(schema.parse({}))).toBe(false);
     expect(trongSuot(schema.parse({ media: 'a.mp4' }))).toBe(false);
+  });
+
+  it('tắt ảnh minh hoạ thì khung coi như KHÔNG có hình', () => {
+    // Ảnh đã vẽ vẫn nằm trong `moc`, nhưng khung giấu hết nên nó trong suốt.
+    // Không thế thì thiết kế kéo màn chờ lên sau khung trống — người xem thấy
+    // "Chào cả nhà" chồng lên lúc truyện đang kể.
+    const co = { title: 'A', moc: [{ tu: 1, ta: '', nhanVat: [], anh: 'a.webp', dau: 'd' }] };
+    expect(coHinhNao(schema.parse(co))).toBe(true);
+    expect(coHinhNao(schema.parse({ ...co, hienAnh: false }))).toBe(false);
+    expect(trongSuot(schema.parse({ ...co, hienAnh: false }))).toBe(true, 'khung phải trong suốt');
+    // Ảnh chung người vận hành tự dán cũng bị giấu theo.
+    expect(coHinhNao(schema.parse({ title: 'A', media: 'x.mp4', hienAnh: false }))).toBe(false);
   });
 
   it('bật nền trong suốt thì xin thiết kế bỏ nền khung', () => {
@@ -234,6 +249,22 @@ describe('giờ nghỉ (máy chủ ghi ô giaiLao)', () => {
     expect(schema.parse({ giaiLao: { truyenSau: 'A', lyDo: 'ket-noi', batBot: true } }).giaiLao?.batBot).toBe(true);
   });
 
+  it('giờ nghỉ thì DỪNG đoạn — màn chờ đang hiện, giọng không được đọc tiếp', () => {
+    const nghi = {
+      ...MAC_DINH,
+      giaiLao: { truyenSau: 'Sọ Dừa', lyDo: 'chuyen' as const, tu: 1_000, batBot: false, han: 0 },
+    };
+    const s = core.init(nghi);
+    // Không có đoạn nào lên, không có câu nào được đọc.
+    expect(runTick(mod, s, 1_000, ctx(nghi, 1_000))).toEqual([]);
+    expect(runTick(mod, s, 60_000, ctx(nghi, 60_000))).toEqual([]);
+    expect(doanHienTai(s)).toBe(null);
+
+    // Hết giờ nghỉ thì kể lại bình thường, từ đoạn đầu.
+    const s2 = core.init(MAC_DINH);
+    expect(loiNoi(runTick(mod, s2, 1_000, ctx(MAC_DINH, 1_000)))).toBe('Đoạn một.');
+  });
+
   it('giá trị hỏng không làm hỏng cả cấu hình truyện', () => {
     const c = schema.parse({ title: 'Cây khế', giaiLao: { truyenSau: 'A', lyDo: 'la-lam' } });
     expect(c.title).toBe('Cây khế');
@@ -253,10 +284,31 @@ describe('khung truyện: trong suốt khi chưa có hình, đồng hồ đếm 
     expect(trongSuot(schema.parse({ title: 'A', media: '/u/x/a.png', transparentBg: true }))).toBe(true);
   });
 
+  it('bật đồng hồ mà khung không hình: VẪN trong suốt với thiết kế', () => {
+    // Cái bẫy ở đây: công tắc trong suốt của thiết kế kéo LUÔN màn chờ "Chào
+    // cả phòng" lên sau khung. Bỏ trong suốt để lấy nền cho đồng hồ thì giữa
+    // lúc truyện đang kể, người xem đọc được "Chào cả phòng" xuyên qua khung.
+    // Nên module tự trải nền của nó (`data-dong-ho-to` trong `stage.tsx`), còn
+    // chỗ này phải giữ nguyên `true`.
+    const cfg = schema.parse({ title: 'A', hienAnh: false, hienDongHo: true });
+    expect(coHinhNao(cfg)).toBe(false);
+    expect(trongSuot(cfg)).toBe(true, 'thiết kế vẫn phải cất màn chờ đi');
+  });
+
   it('đồng hồ mm:ss, quá một giờ thì h:mm:ss', () => {
     expect(dongHo(0)).toBe('00:00');
     expect(dongHo(135.9)).toBe('02:15');
     expect(dongHo(3725)).toBe('1:02:05');
     expect(dongHo(-5)).toBe('00:00');
+  });
+
+  it('lời chào trên đồng hồ: xoay vòng theo TÊN TRUYỆN, không ngẫu nhiên', () => {
+    // Cùng truyện thì mọi cửa sổ (sân khấu, OBS, bảng xem thử) phải ra cùng
+    // một câu — và câu ấy đứng yên suốt truyện, không nhảy mỗi giây đồng hồ đập.
+    const a = loiChaoKhung('Thằng Bờm có cái quạt mo');
+    expect(loiChaoKhung('Thằng Bờm có cái quạt mo')).toBe(a);
+    expect(CHAO_KHUNG).toContain(a);
+    // Chủ phòng chốt đúng một câu, viết đúng hoa thường như họ gõ.
+    expect(loiChaoKhung('Tấm Cám')).toBe('Chúc Nghe Truyện Vui vẻ');
   });
 });
