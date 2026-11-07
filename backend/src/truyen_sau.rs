@@ -51,7 +51,7 @@ pub struct TruyenKho {
 #[derive(Deserialize)]
 struct Kho {
     #[serde(rename = "chuyenTiep")]
-    chuyen_tiep: String,
+    chuyen_tiep: Vec<String>,
     truyen: Vec<TruyenKho>,
 }
 
@@ -65,9 +65,26 @@ pub fn kho_truyen() -> &'static [TruyenKho] {
     &kho().truyen
 }
 
-/// Câu chuyển tiếp của bản cũ.
-pub fn cau_chuyen_tiep() -> &'static str {
-    &kho().chuyen_tiep
+/// Câu chuyển tiếp, XOAY VÒNG qua cả kho câu.
+///
+/// Một câu duy nhất thì buổi live nào người xem cũng nghe đúng một lời ấy mỗi
+/// lần đổi truyện — nghe vài lượt là biết máy đọc. Xoay theo `thu_tu` (số
+/// truyện đã kể trong buổi) chứ không bốc ngẫu nhiên: ngẫu nhiên vẫn trùng
+/// liền hai lượt, xoay vòng thì chắc chắn hết lượt kho mới quay lại câu cũ.
+pub fn cau_chuyen_tiep_thu(thu_tu: usize) -> String {
+    let ds = &kho().chuyen_tiep;
+    if ds.is_empty() {
+        return String::new();
+    }
+    // Hai vòng xoay LỆCH NHAU: 10 câu × 5 cách gọi khán giả. Cùng một câu mẫu
+    // mà lần sau đã khác từ gọi, nên phải qua 50 lượt đổi truyện mới gặp lại
+    // đúng một lời — dài hơn hẳn một buổi live.
+    crate::xung_ho::thay(&ds[thu_tu % ds.len()], thu_tu)
+}
+
+/// Số câu chuyển tiếp đang có.
+pub fn so_cau_chuyen_tiep() -> usize {
+    kho().chuyen_tiep.len()
 }
 
 /// 10 thể loại xoay vòng, đúng thứ tự bản cũ.
@@ -333,17 +350,60 @@ const SAP_HET_MS: i64 = 20_000;
 /// Nguồn dữ liệu đứt quá ngần này mới bật nhân vật minh hoạ — nối lại chớp nhoáng thì thôi.
 pub const MAT_KET_NOI_SAU_MS: i64 = 20_000;
 
+/// Khung giữ ĐOẠN CUỐI (kèm ảnh của đoạn, nếu có) thêm ngần này rồi mới nhường
+/// chỗ cho màn chờ.
+///
+/// Kể xong câu cuối mà khung tắt ngay thì câu kết chưa kịp đọng lại — người
+/// xem đang nghe dở đã thấy đồng hồ. Giữ vài giây cho hết câu, rồi mới chuyển.
+/// Giờ nghỉ KHÔNG dài thêm vì ngần này: nó nằm trong giờ nghỉ, chỉ là mấy giây
+/// đầu dành cho khung cũ thay vì màn chờ.
+pub const GIU_DOAN_CUOI_MS: i64 = 5_000;
+
+/// Giờ chờ của MỘT lần đổi truyện, tính theo số người đang xem.
+///
+/// Phòng vắng thì chờ ngắn: không có ai để chào, kéo dài chỉ tổ im. Phòng đông
+/// thì chờ dài hơn, vì giờ nghỉ chính là lúc MC chào khách mới và đáp bình
+/// luận — cắt ngắn là cắt mất phần sống nhất của phòng.
+///
+/// Có pha ngẫu nhiên: nghỉ đúng một con số tròn mỗi lần thì buổi live thành
+/// cái máy đếm nhịp, người xem đoán trước được. `seed` lấy từ mốc mở giờ nghỉ
+/// nên hàm vẫn THUẦN — cùng mốc, cùng số người thì mọi cửa sổ ra cùng kết quả,
+/// không có chuyện hai màn hình đếm lệch nhau.
+///
+/// Không bao giờ quá `GIAI_LAO_CHUYEN_MS` — trần cũ giữ nguyên.
+pub fn han_giai_lao(so_nguoi: u64, seed: i64) -> i64 {
+    let (ngan, dai) = match so_nguoi {
+        0 => (15_000, 25_000),
+        1..=9 => (25_000, 40_000),
+        10..=99 => (35_000, 55_000),
+        _ => (45_000, 75_000),
+    };
+    let khoang = dai - ngan;
+    // Băm mốc thời gian cho tản đều: mốc ms liền nhau mà chia thẳng thì ra
+    // mấy giá trị sát nhau.
+    let bam = (seed as u64).wrapping_mul(6_364_136_223_846_793_005).rotate_left(29);
+    let ra = ngan + (bam % (khoang as u64 + 1)) as i64;
+    ra.min(GIAI_LAO_CHUYEN_MS)
+}
+
 /// Giờ nghỉ đổi truyện mở từ `tu` đã hết chưa. `soi_dong`: còn người chờ được
-/// chào hay được đáp. Hàm thuần.
-pub fn het_giai_lao(tu: i64, now: i64, soi_dong: bool) -> bool {
+/// chào hay được đáp; `han`: giờ chờ đã chọn cho lần này (`han_giai_lao`),
+/// không có thì về mốc cũ. Hàm thuần.
+pub fn het_giai_lao(tu: i64, now: i64, soi_dong: bool, han: i64) -> bool {
     let da = now - tu;
-    da >= GIAI_LAO_CHUYEN_MS || (da >= GIAI_LAO_TOI_THIEU_MS && !soi_dong)
+    let han = if han > 0 { han.min(GIAI_LAO_CHUYEN_MS) } else { GIAI_LAO_TOI_THIEU_MS };
+    da >= GIAI_LAO_CHUYEN_MS || (da >= han && !soi_dong)
 }
 
 /// Lượt MC này có thể là lượt cuối của giờ nghỉ đổi truyện — nhá trước truyện kế.
 /// Hàm thuần.
-pub fn sap_het_giai_lao(tu: i64, now: i64, soi_dong: bool) -> bool {
-    het_giai_lao(tu, now + SAP_HET_MS, soi_dong)
+pub fn sap_het_giai_lao(tu: i64, now: i64, soi_dong: bool, han: i64) -> bool {
+    het_giai_lao(tu, now + SAP_HET_MS, soi_dong, han)
+}
+
+/// Giờ chờ đã chọn cho giờ nghỉ đang mở (ms). 0 là bản cũ chưa ghi ô này.
+pub fn han_cua(cfg: &Value) -> i64 {
+    cfg.pointer("/giaiLao/han").and_then(Value::as_i64).unwrap_or(0)
 }
 
 /// Giờ nghỉ sự cố đã quá hạn chót chưa. Hàm thuần.
@@ -380,7 +440,7 @@ pub fn su_co_bat_bot(ly_do: &str) -> bool {
 /// và ghi nhớ `batBot` — đóng giờ nghỉ thì chỉ tắt lại cái chính nó đã bật.
 /// Nhân vật minh hoạ ngồi ghế là thiết kế tự ghi dòng minh bạch "có nhân vật
 /// minh họa" ở chân màn — không bao giờ giả làm khách thật.
-pub fn dat_giai_lao(st: &AppState, id: &str, gl: Option<(&str, &str)>, now: i64) {
+pub fn dat_giai_lao(st: &AppState, id: &str, gl: Option<(&str, &str)>, now: i64, so_nguoi: u64) {
     let v = match gl {
         Some((ten, ly_do)) => {
             // Giờ nghỉ trước (chưa đóng) đã bật bot thì giữ cờ — mất cờ là bot
@@ -388,7 +448,12 @@ pub fn dat_giai_lao(st: &AppState, id: &str, gl: Option<(&str, &str)>, now: i64)
             let da_bat = cau_hinh_ke(st, id).is_some_and(|c| giai_lao_da_bat_bot(&c));
             let bat_bot = da_bat
                 || (su_co_bat_bot(ly_do) && !st.bot_config(id).enabled && bat_bot(st, id, true));
-            json!({ "truyenSau": ten, "lyDo": ly_do, "tu": now, "batBot": bat_bot })
+            // Giờ chờ chốt MỘT LẦN lúc mở giờ nghỉ, rồi ghi vào cấu hình: sân
+            // khấu đếm ngược theo đúng con số này, không tự tính lại mỗi nhịp
+            // (số người đổi liên tục, tính lại là đồng hồ nhảy cóc).
+            let han = han_giai_lao(so_nguoi, now);
+            tracing::info!(thiet_ke = %id, %ly_do, so_nguoi, giay = han / 1000, "mở giờ nghỉ");
+            json!({ "truyenSau": ten, "lyDo": ly_do, "tu": now, "batBot": bat_bot, "han": han })
         }
         None => {
             tat_bot_da_bat(st, id);
@@ -872,10 +937,83 @@ mod tests {
     fn kho_ban_cu_doc_duoc_va_du_8_truyen() {
         assert_eq!(kho_truyen().len(), 8);
         assert!(kho_truyen().iter().all(|t| t.doan.len() >= 8 && THE_LOAI.contains(&t.loai.as_str())));
-        assert!(cau_chuyen_tiep().starts_with("Chờ xíu xíu"));
+        assert!(cau_chuyen_tiep_thu(0).starts_with("Chờ xíu xíu"));
+        assert!(!cau_chuyen_tiep_thu(0).contains("{nha}"), "chỗ trống phải được thay");
         // Câu mở "MC kể thêm truyện…" là việc của MC, không nằm trong đoạn.
         assert!(kho_truyen().iter().all(|t| !t.doan[0].starts_with("MC kể") && !t.doan[0].starts_with("📖")));
         assert!(kho_truyen().iter().all(|t| t.doan.iter().all(|d| !d.contains("MC"))), "lời truyện không xưng MC");
+    }
+
+    #[test]
+    fn gio_cho_co_theo_so_nguoi_va_khong_bao_gio_qua_tran() {
+        // Phòng vắng chờ ngắn, phòng đông chờ dài — nhưng không bao giờ quá trần.
+        for (nguoi, ngan, dai) in [(0u64, 15_000, 25_000), (5, 25_000, 40_000), (50, 35_000, 55_000), (5_000, 45_000, 75_000)] {
+            for seed in [0_i64, 1, 977, 1_794_000_000_000, i64::MAX] {
+                let h = han_giai_lao(nguoi, seed);
+                assert!((ngan..=dai).contains(&h), "{nguoi} người, seed {seed} ra {h}");
+                assert!(h <= GIAI_LAO_CHUYEN_MS, "không được quá trần cũ");
+            }
+        }
+        // Phòng đông chờ lâu hơn phòng vắng, không có chuyện ngược lại.
+        assert!(han_giai_lao(0, 7) < han_giai_lao(5_000, 7));
+    }
+
+    #[test]
+    fn gio_cho_cung_moc_thi_moi_man_hinh_ra_cung_mot_so() {
+        // Hàm thuần: hai cửa sổ cùng xem một phòng phải đếm giống hệt nhau.
+        assert_eq!(han_giai_lao(12, 1_794_000_000_000), han_giai_lao(12, 1_794_000_000_000));
+        // Mốc khác nhau thì rải ra, không phải lần nào cũng đúng một con số.
+        let ds: Vec<i64> = (0..40).map(|i| han_giai_lao(12, 1_794_000_000_000 + i * 977)).collect();
+        let mut rieng = ds.clone();
+        rieng.sort_unstable();
+        rieng.dedup();
+        assert!(rieng.len() > 10, "nghỉ đúng một con số tròn thì người xem đoán được: {rieng:?}");
+    }
+
+    #[test]
+    fn het_gio_nghi_theo_han_da_chot_chu_khong_phai_moc_cu() {
+        // Chốt 20 giây thì 20 giây là vào truyện, không phải chờ đủ 40.
+        assert!(het_giai_lao(0, 20_000, false, 20_000));
+        assert!(!het_giai_lao(0, 19_999, false, 20_000));
+        // Còn người chờ được chào thì vẫn nghỉ thêm, tối đa trần cũ.
+        assert!(!het_giai_lao(0, 20_000, true, 20_000));
+        assert!(het_giai_lao(0, GIAI_LAO_CHUYEN_MS, true, 20_000));
+        // Hạn quá trần thì cắt về trần.
+        assert!(het_giai_lao(0, GIAI_LAO_CHUYEN_MS, false, 10 * GIAI_LAO_CHUYEN_MS));
+        // Bản cũ chưa ghi ô `han` (0) thì giữ nguyên mốc 40 giây.
+        assert!(!het_giai_lao(0, GIAI_LAO_TOI_THIEU_MS - 1, false, 0));
+        assert!(het_giai_lao(0, GIAI_LAO_TOI_THIEU_MS, false, 0));
+    }
+
+    #[test]
+    fn cau_chuyen_tiep_xoay_vong_het_kho_moi_lap_lai() {
+        let n = so_cau_chuyen_tiep();
+        assert!(n >= 5, "ít câu quá thì nghe vài lượt là biết máy đọc, có {n}");
+        let vong: Vec<String> = (0..n).map(cau_chuyen_tiep_thu).collect();
+        let mut rieng = vong.clone();
+        rieng.sort_unstable();
+        rieng.dedup();
+        assert_eq!(rieng.len(), n, "trong một vòng không câu nào lặp");
+        assert!(vong.iter().all(|c| !c.trim().is_empty()));
+        // Hết vòng CÂU MẪU thì quay lại câu mẫu đầu, nhưng từ xưng hô đã
+        // khác — ba vòng (câu, cách gọi, người đi cùng) lệch độ dài nhau nên
+        // phải hết bội chung mới lặp lại y hệt một lời.
+        // Số câu mẫu KHÔNG được chia hết cho số cách gọi hay số từ đi cùng —
+        // chia hết là hai vòng bước song song, thêm bao nhiêu từ cũng vô ích.
+        assert_ne!(n % crate::xung_ho::CACH_GOI.len(), 0, "{n} câu chia hết cho số cách gọi");
+        assert_ne!(n % crate::xung_ho::CUNG.len(), 0, "{n} câu chia hết cho số từ đi cùng");
+        let vong_day = n * crate::xung_ho::CACH_GOI.len() * crate::xung_ho::CUNG.len();
+        assert_eq!(cau_chuyen_tiep_thu(vong_day), cau_chuyen_tiep_thu(0));
+        assert_ne!(
+            cau_chuyen_tiep_thu(n),
+            cau_chuyen_tiep_thu(0),
+            "hết vòng câu mẫu mà lời y hệt thì ba vòng đang bước song song"
+        );
+        // Không bao giờ sót chỗ trống chưa điền.
+        for i in 0..vong_day {
+            let c = cau_chuyen_tiep_thu(i);
+            assert!(!c.contains('{') && !c.contains('}'), "lượt {i} còn chỗ trống: {c}");
+        }
     }
 
     #[test]
@@ -921,15 +1059,15 @@ mod tests {
         // Thiếu lý do: là giờ nghỉ giữa hai truyện.
         assert_eq!(giai_lao(&json!({ "giaiLao": { "truyenSau": "A" } })).unwrap().1, "chuyen");
         // Phòng vắng: đủ tối thiểu là vào truyện.
-        assert!(!het_giai_lao(0, GIAI_LAO_TOI_THIEU_MS - 1, false));
-        assert!(het_giai_lao(0, GIAI_LAO_TOI_THIEU_MS, false));
+        assert!(!het_giai_lao(0, GIAI_LAO_TOI_THIEU_MS - 1, false, 0));
+        assert!(het_giai_lao(0, GIAI_LAO_TOI_THIEU_MS, false, 0));
         // Phòng sôi động: nghỉ thêm, tới 90 giây thì vẫn vào truyện.
-        assert!(!het_giai_lao(0, GIAI_LAO_TOI_THIEU_MS + 10_000, true));
-        assert!(het_giai_lao(0, GIAI_LAO_CHUYEN_MS, true));
+        assert!(!het_giai_lao(0, GIAI_LAO_TOI_THIEU_MS + 10_000, true, 0));
+        assert!(het_giai_lao(0, GIAI_LAO_CHUYEN_MS, true, 0));
         // Báo "sắp hết" trước một nhịp.
-        assert!(sap_het_giai_lao(0, GIAI_LAO_TOI_THIEU_MS - 15_000, false));
-        assert!(!sap_het_giai_lao(0, GIAI_LAO_TOI_THIEU_MS - 15_000, true));
-        assert!(sap_het_giai_lao(0, GIAI_LAO_CHUYEN_MS - 15_000, true));
+        assert!(sap_het_giai_lao(0, GIAI_LAO_TOI_THIEU_MS - 15_000, false, 0));
+        assert!(!sap_het_giai_lao(0, GIAI_LAO_TOI_THIEU_MS - 15_000, true, 0));
+        assert!(sap_het_giai_lao(0, GIAI_LAO_CHUYEN_MS - 15_000, true, 0));
         // Sự cố: tối đa 24 giờ.
         assert!(!qua_han_su_co(0, GIAI_LAO_SU_CO_MS - 1));
         assert!(qua_han_su_co(0, GIAI_LAO_SU_CO_MS));
@@ -952,14 +1090,14 @@ mod tests {
         assert!(!st.bot_config("ke-chuyen").enabled);
 
         // Mất nguồn: bật nhân vật minh hoạ, nhớ là mình bật.
-        dat_giai_lao(&st, "ke-chuyen", Some(("Cây khế", "ket-noi")), 1_000);
+        dat_giai_lao(&st, "ke-chuyen", Some(("Cây khế", "ket-noi")), 1_000, 0);
         assert!(st.bot_config("ke-chuyen").enabled);
         // Mở lại giờ nghỉ (vd chuyển sang lỗi ảnh) vẫn giữ cờ — không thì không bao giờ tắt.
-        dat_giai_lao(&st, "ke-chuyen", Some(("Cây khế", "anh")), 2_000);
+        dat_giai_lao(&st, "ke-chuyen", Some(("Cây khế", "anh")), 2_000, 0);
         assert!(cau_hinh_ke(&st, "ke-chuyen").is_some_and(|c| giai_lao_da_bat_bot(&c)));
 
         // Hết sự cố: tắt lại đúng cái mình đã bật.
-        dat_giai_lao(&st, "ke-chuyen", None, 3_000);
+        dat_giai_lao(&st, "ke-chuyen", None, 3_000, 0);
         assert!(!st.bot_config("ke-chuyen").enabled);
     }
 
@@ -967,15 +1105,15 @@ mod tests {
     fn nguoi_van_hanh_da_bat_bot_thi_het_su_co_khong_tat() {
         let (_tmp, st) = phong_thu();
         st.set_bot_config("ke-chuyen", json!({ "enabled": true })).unwrap();
-        dat_giai_lao(&st, "ke-chuyen", Some(("Cây khế", "anh")), 1_000);
-        dat_giai_lao(&st, "ke-chuyen", None, 2_000);
+        dat_giai_lao(&st, "ke-chuyen", Some(("Cây khế", "anh")), 1_000, 0);
+        dat_giai_lao(&st, "ke-chuyen", None, 2_000, 0);
         assert!(st.bot_config("ke-chuyen").enabled, "bot của người vận hành phải giữ nguyên");
     }
 
     #[test]
     fn gio_nghi_doi_truyen_khong_bat_bot() {
         let (_tmp, st) = phong_thu();
-        dat_giai_lao(&st, "ke-chuyen", Some(("Cây khế", "chuyen")), 1_000);
+        dat_giai_lao(&st, "ke-chuyen", Some(("Cây khế", "chuyen")), 1_000, 0);
         assert!(!st.bot_config("ke-chuyen").enabled);
     }
 

@@ -1,6 +1,16 @@
 {
   "nguon": "Kho chuyện bản cũ (D:/Live/client/src/data/kho-chuyen.json): truyện cổ tích kể lại bằng lời riêng và chuyện MC tự sáng tác, chia sẵn từng đoạn.",
-  "chuyenTiep": "Chờ xíu xíu, chuyển tiếp chuyện khác hay hay nè cả nhà ơi 😊",
+  "chuyenTiep": [
+    "Chờ xíu xíu, chuyển tiếp chuyện khác hay hay nè {nha} ơi 😊",
+    "Nghỉ một chút xíu thôi nha, truyện sau còn hay hơn nữa đó {nha} 😊",
+    "Ngồi yên đó nha, lát nữa {nha} nghe tiếp cùng {cung} 😄",
+    "Hết chuyện này rồi, mình kể tiếp chuyện khác cho {nha} nghe nha ❤",
+    "Chờ xíu nha, có một chuyện hay lắm sắp kể cho {nha} nè 😊",
+    "Đi lấy chuyện mới đây, {nha} đừng đi đâu, ở lại nghe cùng {cung} nha 😄",
+    "Một chút xíu nữa thôi, chuyện sau cảm động lắm đó {nha} ❤",
+    "{nha} uống miếng nước đi, xíu nữa nghe tiếp cùng {cung} nha 😊",
+    "Ngồi lại xíu nha {nha}, chuyện sau nghe cùng {cung} cho vui 😊"
+  ],
   "truyen": [
     {
       "ma": "vu-sua",

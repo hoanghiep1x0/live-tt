@@ -116,6 +116,16 @@ pub struct AiCfg {
     /// Nhiều nhất ngần này tin chát trong mỗi 15 phút.
     #[serde(default = "chat_moi_15_mac_dinh", rename = "chatMoi15")]
     pub chat_moi_15: u32,
+    /// PHÁT LIÊN TỤC: phòng chưa có ai thì MC vẫn chạy, truyện vẫn kể tiếp.
+    ///
+    /// Mặc định TẮT. Phòng trống thì bình thường MC ngủ 30 giây một lượt
+    /// (`phong_trong`) — không ai nghe mà vẫn gọi AI là đốt tiền suông.
+    ///
+    /// Bật khi muốn phòng luôn có truyện đang chạy: người mới ghé vào là nghe
+    /// được ngay giữa chừng, chứ không rơi vào màn chờ im lìm rồi lướt đi.
+    /// Đổi lại, tiền AI chạy suốt buổi kể cả lúc không ai xem.
+    #[serde(default, rename = "phatLienTuc")]
+    pub phat_lien_tuc: bool,
 }
 
 fn chat_moi_15_mac_dinh() -> u32 {
@@ -176,6 +186,9 @@ impl Default for AiCfg {
             vai_giong: VaiGiong::default(),
             chat_tiktok: false,
             chat_moi_15: chat_moi_15_mac_dinh(),
+            // Mặc định TẮT: phòng trống mà vẫn gọi AI mỗi lượt là đốt tiền
+            // suông. Người vận hành bật khi muốn truyện chạy liên tục.
+            phat_lien_tuc: false,
         }
     }
 }
@@ -338,7 +351,13 @@ Giọng MC:
 - "choChao" là false: ĐỪNG chào — vừa chào xong hoặc chưa ai mới vào. Người vào sau sẽ được chào ở lượt sau, không dồn.
 - Phòng vắng (≤3 người): trò truyện nhiều hơn, kể ít hơn. Phòng đông: gom tên, chào gộp.
 - Thỉnh thoảng (2–4 phút) hỏi một người một câu vui; lâu lâu trêu nhẹ một người. Lời chúc đổi kiểu, không lặp trong nửa giờ, hợp giờ trong ngày.
-- Xưng "mình" (đầu câu viết "Mình"), gọi khách là "cả nhà" / "bạn" / tên khách. KHÔNG BAO GIỜ tự gọi mình là "MC".
+- Xưng "mình" (đầu câu viết "Mình") — GIỮ NGUYÊN cách tự xưng này cả buổi, đừng đổi sang "tớ"/"chúng mình" giữa chừng, nghe như hai người khác nhau. KHÔNG BAO GIỜ tự gọi mình là "MC".
+- Gọi người nghe có HAI LỐI, dùng CẢ HAI, đổi qua đổi lại, đừng lượt nào cũng một từ:
+  (a) Nói với CẢ PHÒNG: {DAM_DONG} — ấm, đông vui, hợp lúc chào, lúc mời thả tim.
+  (b) Nói với MỘT NGƯỜI đang ngồi xem: {MOT_NGUOI} / tên khách. Ai xem live cũng đang ngồi một mình với cái điện thoại, nên lối này nghe như có người ngồi cạnh kể cho riêng họ.
+  Và chỗ RỦ NGHE CÙNG ("nghe trọn câu chuyện cùng …", "nghe tiếp cùng …") thì mỗi lần CHỌN MỘT trong: {CUNG} — đổi luôn, đừng lần nào cũng một từ.
+  Đừng ba lượt liền cùng một lối. Câu nào cũng "cả nhà" là người xem nhận ra ngay máy đọc.
+  Nhớ: "mình" là MC TỰ XƯNG, "chúng mình" / "cùng mình" là câu RỦ — không bao giờ viết "Chào mình" hay "Chào chúng mình".
 - Câu ngắn mà chất, dưới 110 ký tự. Không lặp câu vừa nói (xem "mcVuaNoi"). Không giảng đạo lý.
 - Không tự nhận mình là AI. Khách hỏi thật lòng thì đừng nói dối là người: đáp khéo "phòng có người vận hành và trợ lý dẫn truyện cùng trực nha" rồi kéo về câu truyện.
 
@@ -947,6 +966,16 @@ pub fn phong_trong(view: &Value, now: i64) -> bool {
         })
 }
 
+/// MC có được bỏ lượt này mà ngủ tiếp không.
+///
+/// Phòng chưa có ai thì bình thường là có — không ai nghe mà vẫn gọi AI là
+/// đốt tiền suông. Nhưng người vận hành bật "Kể cả khi phòng vắng" thì không:
+/// họ muốn truyện chạy liên tục, ai ghé vào cũng nghe được ngay giữa chừng
+/// chứ không rơi vào màn chờ im lìm. Hàm thuần.
+pub fn duoc_nghi(view: &Value, now: i64, phat_lien_tuc: bool) -> bool {
+    !phat_lien_tuc && phong_trong(view, now)
+}
+
 /// Thêm vào bản chụp những gì MC cần biết mà phiên không có: truyện đang kể,
 /// nhân vật ảo, và dàn giọng đọc được. Hàm thuần.
 pub fn them_boi_canh(
@@ -1008,7 +1037,13 @@ pub fn than_chat(kind: ProviderKind, model: &str, dan: &str, loi: &str, tran: u3
 /// Lời dặn (kèm lời dặn thêm của người vận hành) và lời nhắn của một lượt MC.
 /// Hàm thuần.
 fn dan_va_loi(cfg: &AiCfg, chup: &Value, dan_goc: &str) -> (String, String) {
-    let mut dan = dan_goc.to_string();
+    // Danh sách cách gọi khán giả chỉ có MỘT nơi giữ (`xung_ho`), chèn vào lời
+    // nhắc lúc dựng. Viết cứng trong lời nhắc thì thêm một từ phải sửa hai chỗ,
+    // và sớm muộn hai chỗ lệch nhau.
+    let mut dan = dan_goc
+        .replace("{DAM_DONG}", &crate::xung_ho::ds_dam_dong())
+        .replace("{MOT_NGUOI}", &crate::xung_ho::ds_mot_nguoi())
+        .replace("{CUNG}", &crate::xung_ho::ds_cung());
     let them = cfg.extra.trim();
     if !them.is_empty() {
         dan.push_str("\n\nLời dặn thêm của người vận hành:\n");
@@ -1440,7 +1475,10 @@ pub async fn chay(st: Arc<AppState>) {
             let Some(view) = view else { continue };
             let Ok(view) = serde_json::to_value(&view) else { continue };
             let now = crate::state::bay_gio_ms();
-            if phong_trong(&view, now) {
+            // Phòng chưa có ai: bình thường ngủ cho đỡ tốn, trừ khi người vận
+            // hành bật "Kể cả khi phòng vắng" — lúc đó truyện phải chạy liên
+            // tục để ai ghé vào cũng có cái nghe ngay.
+            if duoc_nghi(&view, now, cfg.phat_lien_tuc) {
                 hen_lai(Duration::from_secs(30));
                 continue;
             }
@@ -1448,6 +1486,12 @@ pub async fn chay(st: Arc<AppState>) {
             // Nick chủ kênh: tin của chính mình không đưa cho MC.
             let chu_phong = st.nguon().cfg.channel.clone();
             let mut chup = ban_chup_tu(&view, now, st.truyen_bat_dau(&id).unwrap_or(i64::MIN), &chu_phong);
+            // Chát chào khách vào phòng, nếu người vận hành đã bật và còn nhịp.
+            // Đứng TRƯỚC lượt gọi AI và không bao giờ chặn lượt ấy: chát là
+            // thứ có thì tốt, hỏng thì MC vẫn phải kể tiếp như không có gì.
+            if dang_phat {
+                crate::chat_tiktok::chao_khach(&st, &id, &chup, now);
+            }
             let truyen = st
                 .module_state(&id, "story")
                 .ok()
@@ -1490,8 +1534,13 @@ pub async fn chay(st: Arc<AppState>) {
             // có ít nhất một lượt nghỉ.
             let soi_dong = chup["dangCho"].as_array().is_some_and(|a| !a.is_empty())
                 || chup["choChao"].as_bool() == Some(true);
-            let het_gio_nghi =
-                |td: &crate::ke_truyen::TienDo| crate::truyen_sau::het_giai_lao(td.bao_luc, now, soi_dong);
+            // Giờ chờ đã chốt lúc mở giờ nghỉ (`dat_giai_lao`), co theo số người
+            // trong phòng lúc ấy. Đọc lại chứ không tính lại: tính lại mỗi nhịp
+            // thì số người đổi là đồng hồ trên sân khấu nhảy cóc.
+            let han_nghi = truyen.as_ref().map_or(0, crate::truyen_sau::han_cua);
+            let het_gio_nghi = |td: &crate::ke_truyen::TienDo| {
+                crate::truyen_sau::het_giai_lao(td.bao_luc, now, soi_dong, han_nghi)
+            };
             if tu_chuyen
                 && het.is_some_and(|td| {
                     td.da_bao && td.da_nghi && het_gio_nghi(td) && crate::truyen_sau::chuyen_sang(&st, &id, now)
@@ -1510,7 +1559,8 @@ pub async fn chay(st: Arc<AppState>) {
             // khách, hỏi cảm nghĩ, nhá trước truyện kế; hết giờ nghỉ mới mở truyện mới.
             let nghi_giua =
                 tu_chuyen && het.is_some_and(|td| td.da_bao && (!td.da_nghi || !het_gio_nghi(td)));
-            let sap_het_nghi = het.is_some_and(|td| crate::truyen_sau::sap_het_giai_lao(td.bao_luc, now, soi_dong));
+            let sap_het_nghi =
+                het.is_some_and(|td| crate::truyen_sau::sap_het_giai_lao(td.bao_luc, now, soi_dong, han_nghi));
             // Giờ nghỉ SỰ CỐ — không vẽ được ảnh ("anh", `anh_truyen` mở): trong
             // giờ nghỉ KHÔNG kể, MC chào, trò chuyện; vẽ lại được thì đóng và kể
             // tiếp. Quá 24 giờ thì thôi chờ, kể không ảnh. (Mất nguồn thì không
@@ -1518,7 +1568,7 @@ pub async fn chay(st: Arc<AppState>) {
             let nghi_su_co: Option<(String, String)> = match truyen.as_ref().and_then(crate::truyen_sau::giai_lao) {
                 // Giờ nghỉ "ket-noi" của bản trước: mất nguồn giờ không dừng truyện — dọn đi.
                 Some((_, ly_do, _)) if ly_do == "ket-noi" => {
-                    crate::truyen_sau::dat_giai_lao(&st, &id, None, now);
+                    crate::truyen_sau::dat_giai_lao(&st, &id, None, now, 0);
                     None
                 }
                 Some((ten, ly_do, tu)) if ly_do == "anh" => {
@@ -1529,7 +1579,7 @@ pub async fn chay(st: Arc<AppState>) {
                             let _ = st.set_config(&id, "story", json!({ "boAnh": true }));
                         }
                         tracing::info!(thiet_ke = %id, %ly_do, qua_han, "hết giờ nghỉ sự cố, kể tiếp");
-                        crate::truyen_sau::dat_giai_lao(&st, &id, None, now);
+                        crate::truyen_sau::dat_giai_lao(&st, &id, None, now, 0);
                         None
                     } else {
                         Some((ten, ly_do))
@@ -1551,6 +1601,12 @@ pub async fn chay(st: Arc<AppState>) {
                 .and_then(|c| c.get("nguon"))
                 .and_then(Value::as_str)
                 .is_some_and(|n| n.contains("truyện MC kể"));
+            // Số truyện phòng đã kể — dùng để xoay vòng câu chuyển tiếp.
+            let so_da_ke = truyen
+                .as_ref()
+                .and_then(|c| c.get("daKe"))
+                .and_then(Value::as_array)
+                .map_or(0, Vec::len);
             let ke = tien_do.as_ref().map(|td| {
                 let mut b = crate::ke_truyen::boi_canh(td, &cac_doan);
                 crate::ke_truyen::them_chuyen(
@@ -1560,6 +1616,7 @@ pub async fn chay(st: Arc<AppState>) {
                     truoc.as_deref(),
                     mc_sang_tac,
                     cho_sau.as_deref(),
+                    so_da_ke,
                 );
                 if nghi_giua {
                     b["nghiGiuaTruyen"] = json!({ "truyenSau": ten_sau, "sapHet": sap_het_nghi });
@@ -1744,7 +1801,14 @@ pub async fn chay(st: Arc<AppState>) {
                                 // Mở giờ nghỉ: khung hiện màn chờ + "Truyện tiếp theo".
                                 let luc = crate::state::bay_gio_ms();
                                 td.bao_luc = luc;
-                                crate::truyen_sau::dat_giai_lao(&st2, &id, Some((&ten_sau2, "chuyen")), luc);
+                                let so_nguoi = st2.session_view().map_or(0, |v| v.totals.viewers);
+                                crate::truyen_sau::dat_giai_lao(
+                                    &st2,
+                                    &id,
+                                    Some((&ten_sau2, "chuyen")),
+                                    luc,
+                                    so_nguoi,
+                                );
                             }
                             if nghi_giua {
                                 td.da_nghi = true;
@@ -2055,6 +2119,35 @@ mod tests {
             { "kind": "join", "at": now - VUA_VAO_MS - 1, "name": "Vy", "user": "vy.99" },
         ]});
         assert!(!khach_cho_chao(&v, now, ""));
+    }
+
+    #[test]
+    fn loi_nhac_khong_con_cho_trong_va_co_du_hai_loi_xung_ho() {
+        let (dan, _) = dan_va_loi(&AiCfg::default(), &json!({}), DAN_GOC);
+        for o in ["{DAM_DONG}", "{MOT_NGUOI}", "{CUNG}"] {
+            assert!(!dan.contains(o), "còn chỗ trống chưa thay: {o}");
+        }
+        for c in crate::xung_ho::CUNG {
+            assert!(dan.contains(c), "lời nhắc thiếu từ đi cùng {c}");
+        }
+        for c in crate::xung_ho::DAM_DONG.iter().chain(crate::xung_ho::MOT_NGUOI.iter()) {
+            assert!(dan.contains(c), "lời nhắc thiếu cách gọi {c}");
+        }
+        // Lối rủ nghe cùng MC phải có mặt — đó là nửa còn lại của yêu cầu.
+        assert!(dan.contains("cùng mình"));
+    }
+
+    #[test]
+    fn bat_phat_lien_tuc_thi_phong_trong_van_ke_tiep() {
+        let now = 1_000_000;
+        let trong = json!({ "totals": { "viewers": 0 }, "recentFeed": [] });
+        assert!(duoc_nghi(&trong, now, false), "mặc định: phòng trống thì ngủ cho đỡ tốn");
+        assert!(!duoc_nghi(&trong, now, true), "bật kể liên tục: vắng mấy cũng kể tiếp");
+
+        // Có người thì lượt nào cũng chạy, công tắc không liên quan.
+        let dong = json!({ "totals": { "viewers": 3 }, "recentFeed": [] });
+        assert!(!duoc_nghi(&dong, now, false));
+        assert!(!duoc_nghi(&dong, now, true));
     }
 
     #[test]

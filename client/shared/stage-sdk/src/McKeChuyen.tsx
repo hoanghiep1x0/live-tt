@@ -13,7 +13,7 @@ import type { ComponentType } from 'react';
 import { oChonGiong } from '@live/contracts';
 import type { ConfigField, Json } from '@live/contracts';
 import { ONguonChu } from './AnhTruyen';
-import { nhaMacDinh, O_DAN, O_GIONG_MC, O_NHIP, O_SANG_TAO, O_TRAN, oModel, oNha, suaAi, useNhaAi } from './mc-cfg';
+import { nhaMacDinh, O_DAN, O_CHAT_MOI_15, O_CHAT_TIKTOK, O_GIONG_MC, O_NHIP, O_PHAT_LIEN_TUC, O_SANG_TAO, O_TRAN, oModel, oNha, suaAi, useNhaAi } from './mc-cfg';
 import { AI_MAC_DINH, VAI_GIONG_TRONG } from './state';
 import type { VaiGiong } from './state';
 import { useStage } from './Stage';
@@ -231,6 +231,29 @@ export function OMcKeChuyen({
           <div className="bx-nang-cao">
             <O moduleId="mc" field={O_DAN} value={ai.extra} disabled={tat} onChange={(v) => suaAi('extra', v)} />
             <O moduleId="mc" field={O_NHIP} value={ai.everySec} disabled={tat} onChange={(v) => suaAi('everySec', v)} />
+            <O
+              moduleId="mc"
+              field={O_PHAT_LIEN_TUC}
+              value={ai.phatLienTuc === true}
+              disabled={tat}
+              onChange={(v) => suaAi('phatLienTuc', v)}
+            />
+            <O
+              moduleId="mc"
+              field={O_CHAT_TIKTOK}
+              value={ai.chatTiktok === true}
+              disabled={tat}
+              onChange={(v) => suaAi('chatTiktok', v)}
+            />
+            {ai.chatTiktok === true ? (
+              <O
+                moduleId="mc"
+                field={O_CHAT_MOI_15}
+                value={ai.chatMoi15 ?? 3}
+                disabled={tat}
+                onChange={(v) => suaAi('chatMoi15', v)}
+              />
+            ) : null}
             <O
               moduleId="mc"
               field={O_SANG_TAO}

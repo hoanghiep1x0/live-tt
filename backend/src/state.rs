@@ -197,6 +197,8 @@ impl AppState {
         self.xem_thu.write().expect("khoá xem thử hỏng").remove(id);
         *self.phien.write().expect("khoá phiên hỏng") = Some(self.phien_moi(id));
         self.broadcast(json!({ "t": "live", "designId": id }));
+        // Buổi live mới: lịch chát của buổi trước không còn ràng buộc nhịp.
+        crate::chat_tiktok::quen_lich();
         // Buổi live mới: sổ chi phí mới, tính từ lúc này.
         let so = self.so_moi(id, true);
         self.chi_phi.write().expect("khoá chi phí hỏng").insert(id.to_string(), so.clone());
@@ -407,6 +409,31 @@ impl AppState {
         };
         tracing::info!("kênh tắt live: dọn rạp, số người xem về 0");
         self.broadcast(json!({ "t": "session", "view": view }));
+    }
+
+    /// Mở phiên TRẮNG cho phòng đang phát: mọi con số của buổi về 0.
+    ///
+    /// Khác `don_phong` (buổi live tắt: người ra hết, nhưng tim/quà/điểm của
+    /// buổi được GIỮ vì đó là thành tích đã đạt). Đây là "đổi sang buổi live
+    /// khác": thành tích của buổi cũ không còn liên quan gì tới buổi mới, để
+    /// nguyên là bảng top và con số 👥 nói dối về buổi đang chạy.
+    ///
+    /// Trả về `false` khi phòng này không phải phòng đang phát — không có
+    /// phiên nào để dựng lại.
+    pub fn lam_moi_phien(&self, design_id: &str) -> bool {
+        if self.live().as_deref() != Some(design_id) {
+            return false;
+        }
+        let view = {
+            let moi = self.phien_moi(design_id);
+            let mut g = self.phien.write().expect("khoá phiên hỏng");
+            let view = moi.view(60);
+            *g = Some(moi);
+            view
+        };
+        tracing::info!(thiet_ke = %design_id, "đổi buổi live: mở phiên trắng, số liệu đếm lại từ 0");
+        self.broadcast(json!({ "t": "session", "view": view }));
+        true
     }
 
     /// Nhịp đều: trả ghế của người đã vắng lâu, rồi phát bản phiên xuống.
@@ -1208,6 +1235,44 @@ mod tests {
         // Tắt sóng lần nữa khi không phát thì không ghi thêm dòng nào.
         s.stop_live();
         assert_eq!(fs::read_to_string(&file).unwrap().lines().count(), 1);
+    }
+
+    #[test]
+    fn doi_buoi_live_thi_moi_con_so_cua_buoi_ve_0() {
+        let tmp = tempfile::tempdir().unwrap();
+        dung(tmp.path(), "ke-chuyen");
+        let s = state(tmp.path());
+        s.go_live("ke-chuyen").unwrap();
+
+        s.ap_su_kien(
+            crate::events::LiveEvent::new(
+                "vy",
+                "Vy",
+                crate::events::Payload::Like { count: 7, total: None },
+            ),
+            false,
+        );
+        s.dat_nguoi_xem(4_484);
+        let t = s.session_view().unwrap().totals;
+        assert_eq!((t.viewers, t.likes), (4_484, 7), "số của buổi đang chạy");
+
+        assert!(s.lam_moi_phien("ke-chuyen"), "phòng đang phát thì dựng lại được");
+        let t = s.session_view().unwrap().totals;
+        assert_eq!(
+            (t.viewers, t.likes, t.xu, t.comments),
+            (0, 0, 0, 0),
+            "buổi live khác thì không mang theo số của buổi cũ"
+        );
+    }
+
+    #[test]
+    fn phong_khong_phat_thi_khong_co_phien_nao_de_dung_lai() {
+        let tmp = tempfile::tempdir().unwrap();
+        dung(tmp.path(), "ke-chuyen");
+        let s = state(tmp.path());
+        assert!(!s.lam_moi_phien("ke-chuyen"), "chưa lên sóng");
+        s.go_live("ke-chuyen").unwrap();
+        assert!(!s.lam_moi_phien("phong-khac"), "phòng khác đang phát, không đụng tới");
     }
 
     #[test]

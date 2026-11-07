@@ -124,29 +124,101 @@ pub async fn put_settings(
 
 /// Link phát sóng của một phòng, cho BẢNG XEM THỬ ngay trên sân khấu.
 ///
-/// Người vận hành đang đứng ở phòng, đổi link Studio tại chỗ — không phải bỏ
-/// phòng ra trang quản lý rồi quay lại. Link OBS không nằm ở đây: nó chính là
-/// địa chỉ trang sân khấu đang mở, trang tự biết.
+/// Người vận hành đang đứng ở phòng, đổi link tại chỗ — không phải bỏ phòng ra
+/// trang quản lý rồi quay lại. Trả cả link OBS mặc định để trang biết ô đang
+/// bỏ trống thì OBS sẽ nhận link nào.
 pub async fn get_link_phat(
     State(st): State<Arc<AppState>>,
     Path(design_id): Path<String>,
 ) -> Result<Json<Value>, AppError> {
     kiem_id(&design_id, "id thiết kế")?;
     let s = crate::settings::read(&st.layout, &design_id);
-    Ok(Json(json!({ "studioUrl": s.studio_url })))
+    let mac_dinh = crate::designs::obs_mac_dinh(st.port, &design_id);
+    Ok(Json(json!({
+        "obsUrl": s.obs_url.clone().unwrap_or_else(|| mac_dinh.clone()),
+        "obsMacDinh": mac_dinh,
+        "obsRieng": s.obs_url.is_some(),
+        "studioUrl": s.studio_url,
+        "kenhDangNghe": st.nguon().cfg.channel,
+    })))
 }
 
-/// Đổi link Studio từ bảng xem thử. CHỈ ô đó: bảng xem thử không phải chỗ đổi
-/// tên phòng, nhận cả gói là mở đường sửa nhầm thứ khác.
+/// Đổi link phát sóng từ bảng xem thử. CHỈ hai ô link: bảng xem thử không phải
+/// chỗ đổi tên phòng, nhận cả gói là mở đường sửa nhầm thứ khác.
+///
+/// Lưu link Studio của MỘT KÊNH KHÁC thì làm nốt hai việc người vận hành vừa
+/// định làm, chứ không chỉ cất cái chuỗi đi:
+///
+/// 1. Trỏ nguồn dữ liệu sang kênh đó. Không có bước này thì lưu link xong máy
+///    chủ vẫn nghe kênh cũ — đúng cái bẫy của trang quản lý, nơi phải bấm
+///    thêm nút "Nối kênh" mới thật sự đổi.
+/// 2. Mở phiên trắng. Buổi live mới mà 👥, tim, quà, bảng top còn mang số của
+///    buổi trước thì những con số ấy đang nói dối về buổi đang chạy.
 pub async fn put_link_phat(
     State(st): State<Arc<AppState>>,
     Path(design_id): Path<String>,
     Json(body): Json<Value>,
 ) -> Result<Json<Value>, AppError> {
     kiem_id(&design_id, "id thiết kế")?;
-    let studio = body.get("studioUrl").cloned().unwrap_or(Value::Null);
-    let s = st.set_settings(&design_id, &json!({ "studioUrl": studio }))?;
-    Ok(Json(json!({ "studioUrl": s.studio_url })))
+
+    let mut patch = serde_json::Map::new();
+    for k in ["studioUrl", "obsUrl"] {
+        if let Some(v) = body.get(k) {
+            patch.insert(k.to_string(), v.clone());
+        }
+    }
+    let doi_studio = patch.contains_key("studioUrl");
+    let s = st.set_settings(&design_id, &Value::Object(patch))?;
+
+    // Nick mới khác kênh đang nghe thì mới nối lại — lưu lại đúng link cũ
+    // không được phép quật đổ buổi live đang chạy ngon lành.
+    let kenh_cu = st.nguon().cfg.channel.trim().trim_start_matches('@').to_lowercase();
+    let nick = s.studio_url.as_deref().and_then(crate::settings::nick_tu_link);
+    // Nguồn dữ liệu là của CẢ MÁY CHỦ, chỉ một kênh một lúc. Phòng khác đang
+    // phát mà ta nối kênh theo link của phòng này là cướp nguồn ngay giữa buổi
+    // live của họ. Lúc đó chỉ cất link, đợi tới lượt phòng này lên sóng.
+    let live = st.live();
+    let duoc_noi = live.is_none() || live.as_deref() == Some(design_id.as_str());
+    let nick_moi = doi_studio && nick.as_ref().is_some_and(|n| *n != kenh_cu);
+    // `buoc`: người vận hành BẤM nút "Kết nối" — nối lại kể cả khi link y hệt
+    // cũ. Chính là lúc cần nó nhất: cầu nối rớt, hay kênh vừa mở live lại, mà
+    // link thì chẳng có gì để sửa cho nút sáng lên.
+    let buoc = body.get("buoc").and_then(Value::as_bool) == Some(true);
+    let doi_kenh = (nick_moi || (buoc && nick.is_some())) && duoc_noi;
+    // Chỉ báo "chưa nối" khi thật sự CÓ kênh mới để nối mà không nối được —
+    // lưu lại link của đúng kênh đang nghe thì không có gì phải nói.
+    let phong_khac = live.filter(|l| l != &design_id && nick_moi);
+
+    if let Some(n) = nick.clone().filter(|_| doi_kenh) {
+        let cu = st.nguon().cfg;
+        crate::source::mo(
+            st.clone(),
+            crate::source::SourceCfg {
+                kind: crate::source::SourceKind::Bridge,
+                channel: n.clone(),
+                ..cu
+            },
+        );
+        tracing::info!(thiet_ke = %design_id, kenh = %n, "bảng xem thử đổi link Studio: nối sang kênh mới");
+    }
+    // Đếm lại số liệu CHỈ khi sang kênh khác. Nối lại cùng một kênh thì buổi
+    // live vẫn là buổi ấy — xoá tim, quà, bảng top của nó là xoá oan.
+    let da_dem_lai = nick_moi && duoc_noi && st.lam_moi_phien(&design_id);
+
+    let mac_dinh = crate::designs::obs_mac_dinh(st.port, &design_id);
+    Ok(Json(json!({
+        "obsUrl": s.obs_url.clone().unwrap_or_else(|| mac_dinh.clone()),
+        "obsMacDinh": mac_dinh,
+        "obsRieng": s.obs_url.is_some(),
+        "studioUrl": s.studio_url,
+        "kenhDangNghe": st.nguon().cfg.channel,
+        "daNoiKenh": doi_kenh,
+        "daDemLai": da_dem_lai,
+        // Có giá trị nghĩa là: đã cất link, nhưng CHƯA nối kênh, vì phòng này
+        // không phải phòng đang phát. Trang nói thẳng ra chứ đừng để người
+        // vận hành tưởng đã đổi xong.
+        "phongDangPhat": phong_khac,
+    })))
 }
 
 /// Xoá dữ liệu phiên. Trả về đúng những gì đã xoá, để người dùng không phải

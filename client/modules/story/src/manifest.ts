@@ -68,6 +68,9 @@ export const schema = z.object({
       truyenSau: z.string().max(120).default(''),
       lyDo: z.enum(['chuyen', 'anh', 'ket-noi']).catch('chuyen').default('chuyen'),
       tu: z.number().default(0),
+      /** Giờ chờ máy chủ đã chốt cho lần nghỉ này (ms), co theo số người trong
+       *  phòng. 0 là bản cũ chưa ghi — sân khấu về mốc tối thiểu. */
+      han: z.number().default(0),
       /** Giờ nghỉ sự cố này đã tự bật nhân vật minh hoạ — hết sự cố thì máy chủ tắt lại. */
       batBot: z.boolean().default(false),
     })
@@ -132,8 +135,20 @@ export const coHinhNao = (config: Config): boolean =>
  *  người vận hành bật, hoặc ĐANG có truyện mà chưa có hình nào — thay cho nền
  *  tím đổi màu ngày trước. Chưa có truyện (buổi live vừa mở) hay đang giờ nghỉ
  *  thì không: lúc đó màn chờ "Chào cả nhà" của thiết kế PHẢI hiện. */
-export const trongSuot = (config: Config): boolean =>
-  config.giaiLao === null &&
+/** Mấy giây đầu của giờ nghỉ đổi truyện, khung còn giữ đoạn cuối (xem
+ *  `stage.tsx`). Trong lúc ấy thiết kế phải CHƯA kéo màn chờ lên, nếu không
+ *  truyện không ảnh sẽ lộ ngay màn chờ qua khung trong suốt. */
+const GIU_DOAN_CUOI_MS = 5_000;
+
+const dangGiuDoanCuoi = (config: Config, now: number): boolean => {
+  const g = config.giaiLao;
+  if (g === null || g.lyDo !== 'chuyen') return false;
+  const da = now - g.tu;
+  return da >= 0 && da < GIU_DOAN_CUOI_MS;
+};
+
+export const trongSuot = (config: Config, now: number = Date.now()): boolean =>
+  (config.giaiLao === null || dangGiuDoanCuoi(config, now)) &&
   (config.transparentBg || (config.title.trim() !== '' && !coHinhNao(config)));
 
 export const manifest: ModuleManifest<Config> = {

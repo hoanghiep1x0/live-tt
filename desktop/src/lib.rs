@@ -10,6 +10,7 @@
 //! ("app"), để các trang web đặt chồng lên đúng khung của hộp — cùng cách với
 //! bản cũ (D:\Live\desktop).
 
+mod chat_tiktok;
 mod muse;
 mod phong;
 mod trinh_duyet;
@@ -76,6 +77,10 @@ pub fn run() {
         .setup(|app| {
             // Cầu nối muse.ai: máy chủ vẽ ảnh bằng tab muse.ai đã đăng nhập.
             live_backend::muse::dat(Arc::new(muse::Muse { app: app.handle().clone() }));
+            // Cầu nối chát TikTok: MC gõ tin vào ô chat của tab trang live.
+            live_backend::chat_tiktok::dat(Arc::new(chat_tiktok::ChatTiktok {
+                app: app.handle().clone(),
+            }));
 
             // Máy chủ chạy suốt đời app, trên chính runtime của Tauri.
             let goc = live_backend::khoi_dong::goc_du_an(Path::new(env!("CARGO_MANIFEST_DIR")));

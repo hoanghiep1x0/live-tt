@@ -436,27 +436,48 @@ function gocQuanLy(): string | null {
  *  phòng, mở trang quản lý, sửa rồi quay lại — giữa buổi live thì đó là mấy
  *  chục giây khung không ai trông. Link OBS chỉ để CHÉP: nó là địa chỉ của
  *  chính trang này, máy chủ sinh ra, không ai đặt tay được. */
+interface LinkPhat {
+  obsUrl: string;
+  obsMacDinh: string;
+  obsRieng: boolean;
+  studioUrl: string | null;
+  kenhDangNghe?: string;
+  daNoiKenh?: boolean;
+  daDemLai?: boolean;
+  /** Có tên phòng khác nghĩa là: đã cất link, nhưng CHƯA nối kênh. */
+  phongDangPhat?: string | null;
+}
+
 function TheLienKet() {
   const s = useStage();
   const id = s.cuaMinh;
-  /** Link OBS = địa chỉ trang sân khấu đang mở. Bỏ mọi tham số: dán vào OBS
-   *  phải là link sạch, không mang theo cờ xem thử của cửa sổ này. */
-  const obs = id === null ? '' : `${window.location.origin}/d/${id}/`;
+  const [obs, datObs] = useState('');
   const [studio, datStudio] = useState('');
-  const [goc, datGoc] = useState('');
+  /** Bản máy chủ đang giữ — nút Lưu chỉ sáng khi ô đã khác bản này. */
+  const [goc, datGoc] = useState<{ obs: string; studio: string }>({ obs: '', studio: '' });
+  const [macDinh, datMacDinh] = useState('');
+  const [kenh, datKenh] = useState('');
   const [bao, datBao] = useState('');
+
+  const nhan = useCallback((d: LinkPhat) => {
+    const o = d.obsUrl ?? '';
+    const t = d.studioUrl ?? '';
+    datObs(o);
+    datStudio(t);
+    datGoc({ obs: o, studio: t });
+    datMacDinh(d.obsMacDinh ?? '');
+    datKenh((d.kenhDangNghe ?? '').trim());
+  }, []);
 
   useEffect(() => {
     if (id === null) return;
     void fetch(`/s/thiet-ke/${encodeURIComponent(id)}/link`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { studioUrl?: string } | null) => {
-        const v = d?.studioUrl ?? '';
-        datStudio(v);
-        datGoc(v);
+      .then((r) => (r.ok ? (r.json() as Promise<LinkPhat>) : null))
+      .then((d) => {
+        if (d !== null) nhan(d);
       })
       .catch(() => undefined);
-  }, [id]);
+  }, [id, nhan]);
 
   const chep = (chu: string, loi: string) => {
     void navigator.clipboard
@@ -465,51 +486,85 @@ function TheLienKet() {
       .catch(() => datBao('máy không cho chép'));
   };
 
-  const luu = () => {
+  /** Gửi một ô lên máy chủ. Chỉ gửi ô vừa sửa: gửi cả hai thì lưu link OBS
+   *  cũng lọt vào đường "đổi kênh" bên máy chủ. */
+  const luu = (khoa: 'obsUrl' | 'studioUrl', v: string, buoc = false) => {
     if (id === null) return;
-    const v = studio.trim();
-    datBao('đang lưu…');
+    const t = v.trim();
+    datBao(buoc ? 'đang nối…' : 'đang lưu…');
     void fetch(`/s/thiet-ke/${encodeURIComponent(id)}/link`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ studioUrl: v === '' ? null : v }),
+      body: JSON.stringify({ [khoa]: t === '' ? null : t, ...(buoc ? { buoc: true } : {}) }),
     })
       .then(async (r) => {
-        const d = (await r.json().catch(() => null)) as { studioUrl?: string; error?: string } | null;
-        if (!r.ok) {
-          // Máy chủ chỉ nhận link https của tiktok.com; nói đúng lý do nó từ chối.
+        const d = (await r.json().catch(() => null)) as (LinkPhat & { error?: string }) | null;
+        if (!r.ok || d === null) {
+          // Máy chủ nói rõ vì sao nó từ chối (sai dạng, không phải tiktok.com…).
           datBao(d?.error ?? 'không lưu được');
           return;
         }
-        const moi = d?.studioUrl ?? '';
-        datStudio(moi);
-        datGoc(moi);
-        datBao('đã lưu');
+        nhan(d);
+        // Nói ĐÚNG việc máy chủ vừa làm: đổi kênh là chuyện lớn hơn lưu một
+        // chuỗi nhiều, người vận hành phải thấy nó đã xảy ra.
+        const khac = (d.phongDangPhat ?? '').trim();
+        const kenh = (d.kenhDangNghe ?? '').trim();
+        datBao(
+          d.daNoiKenh === true
+            ? d.daDemLai === true
+              ? `đã nối sang @${kenh} — số liệu buổi đếm lại từ 0`
+              : `đang nối lại @${kenh}, lấy dữ liệu mới`
+            : khoa === 'studioUrl' && khac !== ''
+              ? `đã lưu link, CHƯA nối kênh — "${khac}" mới là phòng đang phát`
+              : khoa === 'obsUrl' && t === ''
+                ? 'đã xoá, OBS dùng lại link mặc định'
+                : 'đã lưu',
+        );
       })
       .catch(() => datBao('không lưu được'));
   };
 
-  const doi = studio.trim() !== goc.trim();
+  const obsDoi = obs.trim() !== goc.obs.trim();
+  const studioDoi = studio.trim() !== goc.studio.trim();
+  const rieng = macDinh !== '' && goc.obs.trim() !== macDinh;
 
   return (
-    <article className="bx-the bx-the-link" data-bat={goc !== ''}>
+    <article className="bx-the bx-the-link" data-bat={goc.studio !== ''}>
       <div className="bx-the-dau">
         <span className="bx-icon">🔗</span>
         <span className="bx-ten">
           <b>Link phát sóng</b>
-          <small>{goc === '' ? 'chưa có link Studio' : 'đủ link OBS và Studio'}</small>
+          <small>
+            {goc.studio === ''
+              ? 'chưa có link Studio'
+              : kenh === ''
+                ? 'có link Studio, chưa nối kênh nào'
+                : `đang nghe @${kenh}`}
+          </small>
         </span>
       </div>
 
       <div className="bx-link-hang">
         <label htmlFor="bx-link-obs">OBS</label>
-        <input id="bx-link-obs" className="bx-o bx-o-link" readOnly value={obs} />
+        <input
+          id="bx-link-obs"
+          className="bx-o bx-o-link"
+          value={obs}
+          placeholder={macDinh}
+          onChange={(e) => {
+            datObs(e.target.value);
+            datBao('');
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') luu('obsUrl', obs);
+          }}
+        />
         <button
           type="button"
           className="bx-link-nut"
-          onClick={() => chep(obs, 'đã chép link OBS')}
+          onClick={() => (obsDoi ? luu('obsUrl', obs) : chep(obs, 'đã chép link OBS'))}
         >
-          Chép
+          {obsDoi ? 'Lưu' : 'Chép'}
         </button>
       </div>
 
@@ -525,15 +580,30 @@ function TheLienKet() {
             datBao('');
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') luu();
+            if (e.key === 'Enter') luu('studioUrl', studio);
           }}
         />
-        <button type="button" className="bx-link-nut" disabled={!doi} onClick={luu}>
-          Lưu
+        {/* LUÔN bấm được, kể cả khi link không đổi gì: cầu nối rớt hay kênh
+            vừa mở live lại thì đây là nút nối lại, mà lúc ấy có gì trong ô
+            đâu mà sửa cho nút sáng lên. Nối lại cùng một kênh KHÔNG xoá số
+            liệu của buổi — chỉ sang kênh khác mới đếm lại. */}
+        <button
+          type="button"
+          className="bx-link-nut"
+          title={studioDoi ? 'Lưu link mới và nối sang kênh đó' : 'Nối lại kênh này, lấy dữ liệu mới'}
+          onClick={() => luu('studioUrl', studio, true)}
+        >
+          Kết nối
         </button>
       </div>
 
-      {bao === '' ? null : <p className="bx-link-bao">{bao}</p>}
+      {bao === '' ? (
+        rieng ? (
+          <p className="bx-link-bao">link OBS riêng — xoá ô để về {macDinh}</p>
+        ) : null
+      ) : (
+        <p className="bx-link-bao">{bao}</p>
+      )}
     </article>
   );
 }

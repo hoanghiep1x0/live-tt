@@ -589,7 +589,10 @@ fn nghi_vi_anh(st: &AppState, id: &str, n: Nhanh) {
     }
     let ten = cfg.get("title").and_then(Value::as_str).unwrap_or_default().to_string();
     tracing::warn!(thiet_ke = %id, %ten, "ảnh truyện: muse.ai và API đều hỏng — giờ nghỉ tới khi vẽ được");
-    crate::truyen_sau::dat_giai_lao(st, id, Some((&ten, "anh")), crate::state::bay_gio_ms());
+    let so_nguoi = st
+        .session_view()
+        .map_or(0, |v| v.totals.viewers);
+    crate::truyen_sau::dat_giai_lao(st, id, Some((&ten, "anh")), crate::state::bay_gio_ms(), so_nguoi);
 }
 
 /// Ảnh truyện đang kể đã ổn trở lại (lần vẽ gần nhất không lỗi, hay không

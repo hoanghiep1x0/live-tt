@@ -229,7 +229,7 @@ describe('giờ nghỉ (máy chủ ghi ô giaiLao)', () => {
     expect(schema.parse({}).giaiLao).toBeNull();
     expect(schema.parse({}).boAnh).toBe(false);
     const c = schema.parse({ giaiLao: { truyenSau: 'Tấm Cám', lyDo: 'anh', tu: 5 } });
-    expect(c.giaiLao).toEqual({ truyenSau: 'Tấm Cám', lyDo: 'anh', tu: 5, batBot: false });
+    expect(c.giaiLao).toEqual({ truyenSau: 'Tấm Cám', lyDo: 'anh', tu: 5, batBot: false, han: 0 });
     // Cờ "đã tự bật nhân vật minh hoạ" phải giữ được qua một lần lưu cấu hình.
     expect(schema.parse({ giaiLao: { truyenSau: 'A', lyDo: 'ket-noi', batBot: true } }).giaiLao?.batBot).toBe(true);
   });

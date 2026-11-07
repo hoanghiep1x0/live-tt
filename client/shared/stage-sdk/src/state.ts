@@ -71,6 +71,13 @@ export interface AiCfg {
   anhEnabled: boolean;
   /** Kích thước ảnh, dạng `1024x1024`. Rỗng là vuông 1024. */
   anhSize: string;
+  /** Phát liên tục: phòng chưa có ai thì vẫn kể tiếp. Tắt thì vắng người là
+   *  dừng chờ, có người lại kể tiếp chỗ đang dở. */
+  phatLienTuc?: boolean;
+  /** Gõ câu chào khách mới vào KHUNG CHAT của phòng live TikTok. */
+  chatTiktok?: boolean;
+  /** Nhiều nhất ngần này tin chát trong mỗi 15 phút. 0 là thôi chát. */
+  chatMoi15?: number;
   /** Id giọng trong dàn để đọc câu MC. Rỗng là giọng mặc định của dàn. Ở phòng
    *  kể chuyện đây là giọng DẪN CHUYỆN — MC chính là người kể. */
   voiceId: string;
@@ -124,6 +131,9 @@ export const AI_MAC_DINH: AiCfg = {
   anhSize: '',
   voiceId: '',
   vaiGiong: VAI_GIONG_TRONG,
+  phatLienTuc: false,
+  chatTiktok: false,
+  chatMoi15: 3,
 };
 
 /** Nhân vật ảo minh hoạ. Nội dung họ nói nằm ở `crowd` trong design.json của

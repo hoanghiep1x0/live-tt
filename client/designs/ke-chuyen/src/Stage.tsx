@@ -20,7 +20,7 @@ import type { Huong } from './geometry';
 import { GHE_MAC_DINH, hallContentH, hallRowsFor } from './seats';
 import { dungGhe, HangGhe, nguoiNong, TenKhan } from './parts/HangGhe';
 import { CHO_OM } from './parts/an-ui';
-import { giaiLaoCua, giayConLai } from './parts/cho-truyen';
+import { cauCho, giaiLaoCua, giayConLai, loiChao, tenTruyenSau, thuTuCho } from './parts/cho-truyen';
 import { LoiDi } from './parts/LoiDi';
 import {
   AN_UI_MAC_DINH,
@@ -200,7 +200,15 @@ export function Stage() {
   // Giờ nghỉ giữa hai truyện: đồng hồ lớn đếm ngược số giây tới truyện kế thay
   // vì chỉ giờ treo tường — màn chờ có cái để nhìn, người xem biết còn phải
   // đợi bao lâu nên ở lại. `gio` nhịp mỗi giây nên con số tự lùi theo.
-  const demTruyen = giayConLai(giaiLaoCua(truyen), Date.now());
+  const nghiCho = giaiLaoCua(truyen);
+  const demTruyen = giayConLai(nghiCho, Date.now());
+  // Màn chờ đổi cách gọi người nghe mỗi lượt chờ — khi thì gọi cả phòng, khi
+  // thì gọi riêng người đang ngồi xem. Một buổi mấy tiếng mà câu nào cũng y
+  // hệt là người xem nghe ra máy ngay.
+  const thuTu = thuTuCho(truyen, nghiCho);
+  // Tên truyện sắp kể, đặt dưới màn chờ: chờ mà biết sắp được nghe truyện gì
+  // thì người xem có cớ ở lại, chứ đồng hồ trống không giữ được ai.
+  const tenSau = tenTruyenSau(truyen);
   // Đồng hồ cho lượt người ra vào ở lối đi: chỉ cần đủ mịn để bắt đầu và kết
   // thúc một lượt, phần chạy là của CSS.
   const nhip = useNhip();
@@ -326,7 +334,7 @@ export function Stage() {
           {khungTrong ? null : (
             <div className="stage-waiting">
               <span className="stage-waiting-sen" />
-              <p className="waiting-welcome">Chào cả nhà</p>
+              <p className="waiting-welcome">{loiChao(thuTu)}</p>
               <p className="waiting-clock">
                 {demTruyen === null ? (
                   gio
@@ -337,9 +345,13 @@ export function Stage() {
                   </>
                 )}
               </p>
-              <p className="waiting-note">
-                Truyện sắp bắt đầu rồi, cả nhà ngồi lại nghe cùng nhau nha ❤
-              </p>
+              <p className="waiting-note">{cauCho(thuTu)}</p>
+              {tenSau === '' ? null : (
+                <p className="waiting-next">
+                  <span className="waiting-next-nhan">Truyện tiếp theo</span>
+                  <b className="waiting-next-ten">{tenSau}</b>
+                </p>
+              )}
             </div>
           )}
           <Slot name="screen" />

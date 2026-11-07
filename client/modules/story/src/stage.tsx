@@ -101,11 +101,31 @@ function AnhMuot({ src }: { src: string }) {
  *  có ảnh hay video. Trước đây lúc không có hình thì chữ đứng giữa khung; đổi
  *  chỗ giữa chừng (vừa dán video vào là chữ nhảy xuống đáy) làm người xem mất
  *  mạch, mà phụ đề dưới đáy thì ai cũng quen mắt rồi. */
+/** Mấy giây đầu của giờ nghỉ đổi truyện, khung còn giữ đoạn cuối. PHẢI khớp
+ *  `GIU_DOAN_CUOI_MS` ở `backend/src/truyen_sau.rs`. */
+const GIU_DOAN_CUOI_MS = 5_000;
+
 export function Stage({ config, modState }: StagePartProps<Config, State>) {
+  // Vừa mở giờ nghỉ đổi truyện: GIỮ nguyên khung với đoạn cuối và ảnh của nó
+  // thêm mấy giây. Kể xong câu cuối mà khung tắt ngay thì câu kết chưa kịp
+  // đọng lại — người xem đang đọc dở đã thấy màn chờ.
+  const gl = config.giaiLao;
+  const giuToi = gl !== null && gl.lyDo === 'chuyen' ? gl.tu + GIU_DOAN_CUOI_MS : 0;
+  const [bayGio, setBayGio] = useState(() => Date.now());
+  useEffect(() => {
+    if (giuToi === 0) return;
+    const con = giuToi - Date.now();
+    if (con <= 0) return;
+    // Hết giữ thì tự dựng lại một lần để nhường chỗ cho màn chờ.
+    const h = setTimeout(() => setBayGio(Date.now()), con);
+    return () => clearTimeout(h);
+  }, [giuToi]);
+  const dangGiu = giuToi > 0 && bayGio < giuToi && Date.now() < giuToi;
+
   // Giờ nghỉ: KHÔNG vẽ thẻ truyện — để lộ màn chờ của thiết kế ("Chào cả nhà"
   // + đồng hồ) phía sau, chỉ đặt thêm dải giới thiệu truyện sắp kể. Module
   // không biết thiết kế vẽ màn chờ thế nào; thiết kế không biết gì về truyện.
-  if (config.giaiLao !== null) {
+  if (config.giaiLao !== null && !dangGiu) {
     const ten = config.giaiLao.truyenSau.trim();
     return ten === '' ? null : (
       <div className="mod-truyen-giai-lao" role="status">

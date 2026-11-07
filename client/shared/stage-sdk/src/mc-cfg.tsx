@@ -153,6 +153,33 @@ export const O_GIONG_MC: ConfigField = {
   hint: 'Chỉ dùng khi phòng bật Đa giọng (trang quản lý, nút Giọng đọc). Trong câu, [id-giọng] đổi giọng, [-] quay về giọng chính.',
 };
 
+export const O_PHAT_LIEN_TUC: ConfigField = {
+  key: 'phatLienTuc',
+  label: 'Phát liên tục',
+  short: 'Phát liên tục',
+  type: 'toggle',
+  hint: 'Tắt: phòng có người thì kể, vắng người thì dừng chờ, có người lại kể tiếp chỗ đang dở — không bỏ truyện. Bật: vắng mấy cũng kể, ai ghé vào là nghe được ngay giữa chừng, đổi lại tiền AI chạy suốt buổi.',
+};
+
+export const O_CHAT_TIKTOK: ConfigField = {
+  key: 'chatTiktok',
+  label: 'Chát chào khách vào phòng',
+  short: 'Chát TikTok',
+  type: 'toggle',
+  hint: 'Mình gõ câu chào vào KHUNG CHAT của phòng live, bằng chính tài khoản đang live — ai mở TikTok cũng đọc được. Nhiều nhất vài tin mỗi 15 phút, cách nhau 3 phút, vì TikTok hạn chế tài khoản chát dày. Cần mở sẵn tab trang live (nút "Kết nối Studio") và đã đăng nhập trong đó.',
+};
+
+export const O_CHAT_MOI_15: ConfigField = {
+  key: 'chatMoi15',
+  label: 'Nhiều nhất mấy tin / 15 phút',
+  short: 'Tin / 15 phút',
+  type: 'number',
+  min: 0,
+  max: 5,
+  unit: 'tin',
+  hint: 'Đặt 0 là thôi chát. Càng dày càng dễ bị TikTok hạn chế tài khoản — mất tài khoản live là mất tất cả.',
+};
+
 export const O_BAT_ANH: ConfigField = {
   key: 'anhEnabled',
   label: 'Cho nút "AI vẽ ảnh" gọi API',

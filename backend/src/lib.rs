@@ -14,6 +14,7 @@ pub mod cli_goi;
 pub mod kho_da_ke;
 pub mod ke_truyen;
 pub mod anh_truyen;
+pub mod chat_tiktok;
 pub mod chi_phi;
 pub mod api;
 pub mod bot;
@@ -38,6 +39,7 @@ pub mod truyen_sau;
 pub mod tts;
 pub mod tu_do;
 pub mod voice;
+pub mod xung_ho;
 pub mod ws;
 
 use std::sync::Arc;

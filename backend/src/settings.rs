@@ -14,12 +14,23 @@ use crate::store::{self, StoreError};
 /// Tên dài hơn mức này thì tràn thẻ, không phải nhu cầu thật.
 const MAX_NAME_CHARS: usize = 80;
 
+/// Link dài hơn mức này thì không phải link người ta gõ tay.
+const MAX_URL_CHARS: usize = 600;
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct Settings {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(default, rename = "studioUrl", skip_serializing_if = "Option::is_none")]
     pub studio_url: Option<String>,
+    /// Link người vận hành dán vào OBS. Trống thì dùng link máy chủ tự dựng
+    /// theo cổng đang chạy (`http://127.0.0.1:<cổng>/d/<phòng>/`).
+    ///
+    /// Có ô này vì link mặc định chỉ đúng khi OBS chạy CÙNG máy với máy chủ.
+    /// Ai chạy OBS ở máy khác trong nhà phải đổi `127.0.0.1` thành địa chỉ
+    /// mạng LAN của máy này, nếu không OBS mở vào chính nó và ra trang trắng.
+    #[serde(default, rename = "obsUrl", skip_serializing_if = "Option::is_none")]
+    pub obs_url: Option<String>,
 }
 
 #[derive(Debug)]
@@ -63,6 +74,15 @@ pub fn apply(layout: &Layout, design_id: &str, patch: &Value) -> Result<Settings
                     "name phải là chuỗi hoặc null".into(),
                 ))
             }
+        };
+    }
+
+    if let Some(v) = obj.get("obsUrl") {
+        s.obs_url = match v {
+            Value::Null => None,
+            Value::String(x) if x.trim().is_empty() => None,
+            Value::String(x) => Some(kiem_obs_url(x.trim())?),
+            _ => return Err(SettingsError::Invalid("obsUrl phải là chuỗi hoặc null".into())),
         };
     }
 
@@ -132,6 +152,71 @@ fn kiem_studio_url(x: &str) -> Result<String, SettingsError> {
     } else {
         Err(loi("chỉ nhận địa chỉ thuộc tiktok.com"))
     }
+}
+
+/// Nick kênh trong một link TikTok LIVE, viết thường. Không có thì `None`.
+///
+/// Đọc cùng một thứ như `nickTuLink` ở `client/manager/src/lib/trang-web.ts`,
+/// để trang quản lý và sân khấu không bao giờ nối hai kênh khác nhau từ cùng
+/// một link. KHÔNG nhận nick trần ("hieuthao.1995") như bản TS: ở đây đầu vào
+/// luôn là `studio_url` đã qua `kiem_studio_url`, tức chắc chắn là link
+/// https của tiktok.com — nick trần không có đường nào tới được.
+pub fn nick_tu_link(raw: &str) -> Option<String> {
+    let t = raw.trim();
+    if t.is_empty() {
+        return None;
+    }
+    let thap = t.to_ascii_lowercase();
+    let sau = thap
+        .strip_prefix("https://")
+        .or_else(|| thap.strip_prefix("http://"))
+        .unwrap_or(&thap);
+    let sau = sau.strip_prefix("www.").unwrap_or(sau);
+    let sau = sau.strip_prefix("tiktok.com/")?;
+    let nick = sau
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or("")
+        .strip_prefix('@')?;
+    if nick.is_empty()
+        || nick.chars().count() > 60
+        || !nick.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_')
+    {
+        return None;
+    }
+    Some(nick.to_string())
+}
+
+/// Link OBS: chỉ cần là địa chỉ http(s) có máy chủ.
+///
+/// Rộng hơn `kiem_studio_url` một cách CÓ CHỦ Ý, và vì lý do khác hẳn: link
+/// Studio được mở trong webview đã đăng nhập TikTok nên phải khoá chặt theo
+/// danh sách trắng; link OBS thì người vận hành chỉ chép ra ngoài dán vào OBS,
+/// app không bao giờ tự mở nó. Khoá nó về `127.0.0.1` là chặn đúng trường hợp
+/// cần ô này: OBS chạy ở máy khác, phải trỏ về địa chỉ LAN của máy chủ.
+fn kiem_obs_url(x: &str) -> Result<String, SettingsError> {
+    let loi = |m: &str| SettingsError::Invalid(m.to_string());
+
+    if x.chars().any(|c| c.is_whitespace() || c.is_control() || c == '\\') {
+        return Err(loi("địa chỉ có ký tự không hợp lệ"));
+    }
+    if x.chars().count() > MAX_URL_CHARS {
+        return Err(loi("địa chỉ quá dài"));
+    }
+    let thap = x.to_ascii_lowercase();
+    let sau = thap
+        .strip_prefix("http://")
+        .or_else(|| thap.strip_prefix("https://"))
+        .ok_or_else(|| loi("địa chỉ phải bắt đầu bằng http:// hoặc https://"))?;
+
+    let host = sau.split(['/', '?', '#']).next().unwrap_or("");
+    // Lấy phần SAU dấu @ cuối: "http://that.example@ke-gian.example/" thì máy
+    // thật là ke-gian.example. Cùng cái bẫy đã chặn ở link Studio.
+    let host = host.rsplit('@').next().unwrap_or("");
+    if host.split(':').next().unwrap_or("").is_empty() {
+        return Err(loi("địa chỉ thiếu tên máy"));
+    }
+    Ok(x.to_string())
 }
 
 /// Xoá dữ liệu phiên của một thiết kế. Trả về tên những file đã xoá thật.
@@ -229,6 +314,65 @@ mod tests {
         let (_d, l) = moi();
         let kq = apply(&l, "ke-chuyen", &json!({ "name": "Phòng\nA" }));
         assert!(matches!(kq, Err(SettingsError::Invalid(_))));
+    }
+
+    #[test]
+    fn link_obs_nhan_ca_http_va_may_khac_trong_mang() {
+        for x in [
+            "http://127.0.0.1:47830/d/ke-chuyen/",
+            // Đúng trường hợp sinh ra ô này: OBS chạy ở máy khác trong nhà.
+            "http://192.168.1.12:47830/d/ke-chuyen/",
+            "https://phong.nha.lan/d/ke-chuyen/",
+        ] {
+            assert!(kiem_obs_url(x).is_ok(), "phải nhận: {x}");
+        }
+    }
+
+    #[test]
+    fn link_obs_chan_dia_chi_khong_phai_http() {
+        for x in [
+            "javascript:alert(1)",
+            "file:///C:/bi-mat.txt",
+            "127.0.0.1:47830/d/ke-chuyen/",
+            "http://",
+            "http:// 127.0.0.1",
+            r"http://that.example\@ke-gian.example/",
+        ] {
+            assert!(kiem_obs_url(x).is_err(), "phải chặn: {x}");
+        }
+    }
+
+    #[test]
+    fn link_obs_rong_thi_ve_mac_dinh() {
+        let (_d, l) = moi();
+        apply(&l, "ke-chuyen", &json!({ "obsUrl": "http://192.168.1.12:47830/d/ke-chuyen/" })).unwrap();
+        assert!(read(&l, "ke-chuyen").obs_url.is_some());
+        let s = apply(&l, "ke-chuyen", &json!({ "obsUrl": "" })).unwrap();
+        assert_eq!(s.obs_url, None, "xoá ô là quay về link mặc định");
+    }
+
+    #[test]
+    fn doc_duoc_nick_trong_link_live() {
+        for (link, nick) in [
+            ("https://www.tiktok.com/@hieuthao.1995/live", "hieuthao.1995"),
+            ("https://tiktok.com/@Ai_Do/live?lang=vi", "ai_do"),
+            ("tiktok.com/@ai_do", "ai_do"),
+        ] {
+            assert_eq!(nick_tu_link(link).as_deref(), Some(nick), "link: {link}");
+        }
+    }
+
+    #[test]
+    fn link_khong_co_nick_thi_khong_doan_bua() {
+        for x in [
+            "https://livestudio.tiktok.com/room/42",
+            "https://www.tiktok.com/live",
+            // Không phải tiktok.com: không được moi nick ra từ đây.
+            "https://ke-gian.example/@hieuthao.1995/live",
+            "",
+        ] {
+            assert_eq!(nick_tu_link(x), None, "phải không ra nick: {x}");
+        }
     }
 
     #[test]

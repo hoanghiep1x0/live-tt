@@ -173,6 +173,12 @@ pub fn read_manifest(path: &Path, dir_name: &str) -> Result<DesignManifest, Stri
 }
 
 /// Quét toàn bộ thư mục thiết kế. Sắp theo tên để danh sách không nhảy chỗ mỗi lần tải.
+/// Link OBS mặc định: máy chủ ngay trên máy này. Đúng cho hầu hết mọi người —
+/// ai chạy OBS ở máy khác thì đặt link riêng (`Settings::obs_url`).
+pub fn obs_mac_dinh(port: u16, design_id: &str) -> String {
+    format!("http://127.0.0.1:{port}/d/{design_id}/")
+}
+
 pub fn scan(layout: &Layout, port: u16, live: Option<&str>) -> Vec<DesignInfo> {
     let dir = layout.designs_dir();
     let Ok(entries) = fs::read_dir(&dir) else {
@@ -193,8 +199,12 @@ pub fn scan(layout: &Layout, port: u16, live: Option<&str>) -> Vec<DesignInfo> {
             continue;
         }
 
-        let obs_url = format!("http://127.0.0.1:{port}/d/{name}/");
         let dat = settings::read(layout, &name);
+        // Người vận hành đặt link riêng (OBS ở máy khác) thì dùng của họ.
+        let obs_url = dat
+            .obs_url
+            .clone()
+            .unwrap_or_else(|| obs_mac_dinh(port, &name));
         match read_manifest(&manifest_path, &name) {
             Ok(m) => {
                 let da_build = layout.design_dist(&name).join("index.html").exists();

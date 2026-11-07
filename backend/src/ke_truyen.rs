@@ -92,10 +92,14 @@ pub fn them_chuyen(
     truoc: Option<&str>,
     mc_sang_tac: bool,
     cho: Option<&str>,
+    thu_tu: usize,
 ) {
     // `sau`: người gọi chỉ đưa khi lượt này là lượt báo chuyển tiếp.
     if let Some(t) = sau {
-        b["chuyenTiep"] = json!({ "truyenSau": t, "cau": crate::truyen_sau::cau_chuyen_tiep() });
+        // `thu_tu` (số truyện đã kể) xoay vòng kho câu chuyển tiếp — mỗi lần
+        // đổi truyện một lời khác, đừng để người xem nghe mãi một câu.
+        b["chuyenTiep"] =
+            json!({ "truyenSau": t, "cau": crate::truyen_sau::cau_chuyen_tiep_thu(thu_tu) });
     }
     if !td.vua_xong && td.tiep == 0 {
         b["moDau"] = json!({ "truyenTruoc": truoc, "chuyenMcKe": mc_sang_tac });
@@ -341,7 +345,7 @@ mod tests {
     fn chuyen_truyen_nhu_ban_cu() {
         let mut td = TienDo::cua(None, "d");
         let mut b = boi_canh(&td, &doan());
-        them_chuyen(&mut b, &td, None, Some("Trước"), false, None);
+        them_chuyen(&mut b, &td, None, Some("Trước"), false, None, 0);
         assert_eq!(b["moDau"]["truyenTruoc"], json!("Trước"), "đoạn đầu: mở bằng MC kể thêm truyện");
         assert!(b.get("chuyenTiep").is_none());
 
@@ -349,13 +353,13 @@ mod tests {
             td.da_ke(i, 3, false);
         }
         let mut b = boi_canh(&td, &doan());
-        them_chuyen(&mut b, &td, Some("Sau"), None, false, None);
+        them_chuyen(&mut b, &td, Some("Sau"), None, false, None, 0);
         assert_eq!(b["chuyenTiep"]["truyenSau"], json!("Sau"));
         assert!(b["chuyenTiep"]["cau"].as_str().unwrap().starts_with("Chờ xíu xíu"));
 
         // Truyện sau chưa sẵn: khép truyện như thường.
         let mut b = boi_canh(&td, &doan());
-        them_chuyen(&mut b, &td, None, None, false, Some("Sau"));
+        them_chuyen(&mut b, &td, None, None, false, Some("Sau"), 0);
         assert!(b.get("chuyenTiep").is_none());
         assert_eq!(b["choTruyenSau"]["truyenSau"], json!("Sau"), "ảnh chưa đủ: MC lấp chỗ chờ");
     }

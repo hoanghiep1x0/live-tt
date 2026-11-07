@@ -53,7 +53,14 @@
     }
   },
   "seats": 84,
-  "seatRows": [8, 10, 12, 12, 14, 14],
+  "seatRows": [
+    8,
+    10,
+    12,
+    12,
+    14,
+    14
+  ],
   "rowSeats": 14,
   "pointRate": 1,
   "crowd": {
@@ -62,7 +69,10 @@
       "Chào {ten} 👋",
       "Chào mừng {ten} vào phòng 🙏",
       "{ten} vào rồi kìa, chào bạn nha",
-      "Chào {ten}, ngồi nghe truyện cùng cả nhà nhé"
+      "Chào {ten}, ngồi nghe truyện cùng cả nhà nhé",
+      "Chào {ten} vào phòng nha 👋",
+      "{ten} vào phòng rồi, chào bạn nhé ❤",
+      "Chào {ten}, ngồi nghe cùng mình nha"
     ],
     "thanks": [
       "Cảm ơn {ten} nhiều nha 🎉",

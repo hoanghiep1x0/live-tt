@@ -38,6 +38,13 @@ pub struct TabInfo {
 #[derive(Default)]
 pub struct Tabs(Mutex<BTreeMap<String, TabInfo>>);
 
+impl Tabs {
+    /// Id các tab đang mở.
+    pub fn ids(&self) -> Vec<String> {
+        self.0.lock().expect("khoá tab hỏng").keys().cloned().collect()
+    }
+}
+
 /// Id tab do giao diện đặt: chữ thường, số, gạch nối, tối đa 40 ký tự.
 pub fn kiem_id(id: &str) -> Result<String, String> {
     let ok = !id.is_empty() && id.len() <= 40 && id.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
