@@ -53,6 +53,10 @@ pub struct AppState {
     pub noi_trong_nghi: Mutex<HashMap<String, (i64, usize)>>,
     /// Mốc thẻ MC nói với khách gần nhất, theo từng thiết kế. Xem `duoc_the_mc`.
     pub the_mc_cuoi: Mutex<HashMap<String, i64>>,
+    /// Lần cuối MC mời follow / chia sẻ, và đã mời mấy lần — `ke_truyen::MOI_CACH_MS`.
+    pub moi_roi: Mutex<HashMap<String, (i64, u32)>>,
+    /// Lần cuối MC cảm ơn người tặng quà — `ke_truyen::CAM_ON_QUA_CACH_MS`.
+    pub cam_on_roi: Mutex<HashMap<String, i64>>,
     pub token: String,
     /// Chỉ một thiết kế chạy một lúc. Đây là chỗ giữ điều đó.
     live: RwLock<Option<String>>,
@@ -145,6 +149,8 @@ impl AppState {
             hoi_roi: Mutex::new(HashMap::new()),
             noi_trong_nghi: Mutex::new(HashMap::new()),
             the_mc_cuoi: Mutex::new(HashMap::new()),
+            moi_roi: Mutex::new(HashMap::new()),
+            cam_on_roi: Mutex::new(HashMap::new()),
             token,
             live: RwLock::new(None),
             phien: RwLock::new(None),
@@ -250,7 +256,10 @@ impl AppState {
         // Mã ghế ("ghế B4") là đồ đạc của từng phòng: chỉ phòng tự khai sơ đồ
         // hàng ghế mới đọc các lệnh dùng mã ghế.
         if let Some(m) = m.filter(|m| !m.seat_rows.is_empty()) {
+            let phia = m.seat_prefer.clone();
             s.dat_so_do(m.seat_rows, m.row_seats.unwrap_or(0));
+            // Phía rạp ưu tiên xếp khách (`seatPrefer`), cần sơ đồ hàng ghế.
+            s.dat_uu_tien_ghe(phia.as_deref());
         }
         s
     }
@@ -471,6 +480,43 @@ impl AppState {
     /// Vì sao là sổ chứ không dò trong feed: feed chỉ giữ 60 mục gần nhất, phòng
     /// đông thì một câu hỏi trôi khỏi đó trong vài giây — mà quãng cần nhớ ở đây
     /// là bảy phút.
+    /// Đã đủ giãn cách để MC cảm ơn người tặng quà chưa. `ghi` thì GHI luôn
+    /// lần này (gọi đúng một lần cho mỗi câu cảm ơn định nói).
+    pub fn duoc_cam_on(&self, design_id: &str, now: i64, ghi: bool) -> bool {
+        let mut so = self.cam_on_roi.lock().unwrap_or_else(|e| e.into_inner());
+        if so.get(design_id).is_some_and(|t| now - *t < crate::ke_truyen::CAM_ON_QUA_CACH_MS) {
+            return false;
+        }
+        if ghi {
+            so.insert(design_id.to_string(), now);
+        }
+        true
+    }
+
+    /// Phòng này đã đủ giãn cách để MC mời follow / chia sẻ chưa — chỉ XEM.
+    /// `Some(số lần đã mời)` khi được.
+    pub fn co_the_moi(&self, design_id: &str, now: i64) -> Option<u32> {
+        let so = self.moi_roi.lock().unwrap_or_else(|e| e.into_inner());
+        match so.get(design_id) {
+            Some((t, _)) if now - *t < crate::ke_truyen::MOI_CACH_MS => None,
+            Some((_, n)) => Some(*n),
+            None => Some(0),
+        }
+    }
+
+    /// Được mời không; `true` thì GHI luôn lần mời này. Gọi đúng một lần cho
+    /// mỗi câu mời định nói.
+    pub fn duoc_moi(&self, design_id: &str, now: i64) -> bool {
+        let mut so = self.moi_roi.lock().unwrap_or_else(|e| e.into_inner());
+        let n = match so.get(design_id) {
+            Some((t, _)) if now - *t < crate::ke_truyen::MOI_CACH_MS => return false,
+            Some((_, n)) => *n + 1,
+            None => 1,
+        };
+        so.insert(design_id.to_string(), (now, n));
+        true
+    }
+
     pub fn duoc_hoi_phong(&self, design_id: &str, now: i64) -> bool {
         let mut so = self.hoi_roi.lock().unwrap_or_else(|e| e.into_inner());
         if so

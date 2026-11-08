@@ -62,6 +62,7 @@
     14
   ],
   "rowSeats": 14,
+  "seatPrefer": "right",
   "pointRate": 1,
   "crowd": {
     "names": [],

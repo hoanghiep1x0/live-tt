@@ -186,6 +186,18 @@ function TenGhe({ ten, anh }: { ten: string; anh: string | undefined }) {
   );
 }
 
+/** Bong bóng ảnh đại diện tròn trên đầu chibi, to hơn cái đầu, ẩn hiện cùng
+ *  nhịp với tên dưới ghế. Ảnh hỏng thì thôi, không để lại khung tròn rỗng. */
+function AnhDau({ anh, nong }: { anh: string; nong: boolean }) {
+  const [hong, setHong] = useState(false);
+  if (hong) return null;
+  return (
+    <span className={nong ? 'seat-anh nong' : 'seat-anh'}>
+      <img src={anh} alt="" referrerPolicy="no-referrer" onError={() => setHong(true)} />
+    </span>
+  );
+}
+
 /** Người vừa bình luận, thả tim hay tặng quà trong ngần này thì tên "nóng":
  *  luôn hiện, chữ vàng, nổi lên trên — như `hot` (2,5 giây) của bản cũ. */
 const NONG_MS = 2_500;
@@ -205,17 +217,43 @@ export function TenKhan({
   ghe,
   ngoi,
   nong,
+  vang,
 }: {
   ghe: ChoNgoi[];
   ngoi: Map<number, Seat>;
   /** Người đang tương tác (`nguoiNong`). */
   nong: ReadonlySet<string>;
+  /** Người đang rời ghế (chạy lên an ủi bé): ghế trống, không hiện bong bóng
+   *  ảnh lơ lửng trên chỗ không có ai. */
+  vang?: ReadonlySet<string> | undefined;
 }) {
   const [luot, setLuot] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setLuot((x) => 1 - x), DOI_TEN_MS);
     return () => clearInterval(t);
   }, []);
+  // Lúc mình thấy từng người lần đầu: người có sẵn từ lượt dựng đầu tiên coi
+  // như đã ngồi từ trước (mốc 0); người mới vào thì chờ họ đi tới ghế đã.
+  const daThay = useRef<Map<string, number>>(new Map());
+  const dauTien = useRef(true);
+  useEffect(() => {
+    const gio = Date.now();
+    const co = new Set<string>();
+    for (const n of ngoi.values()) {
+      co.add(n.user);
+      if (!daThay.current.has(n.user)) daThay.current.set(n.user, dauTien.current ? 0 : gio);
+    }
+    for (const u of daThay.current.keys()) if (!co.has(u)) daThay.current.delete(u);
+    dauTien.current = false;
+  }, [ngoi]);
+  // Bong bóng ảnh chỉ đứng trên người đang NGỒI: vừa vào (còn đi trên lối,
+  // `VAO_MS`) hay đang chạy lên an ủi bé thì ghế trống — không có đầu để đứng.
+  const gioAnh = Date.now();
+  const dangNgoi = (user: string): boolean => {
+    if (vang?.has(user) === true) return false;
+    const vao = daThay.current.get(user);
+    return vao === undefined || gioAnh - vao >= VAO_MS;
+  };
 
   return (
     <>
@@ -247,6 +285,11 @@ export function TenKhan({
               '--seat-scale': g.scale,
             }}
           >
+            {ai.avatar !== undefined && dangNgoi(ai.user) ? (
+              // Ẩn hiện CÙNG NHỊP với tên: `name-off` của thẻ này làm cả tên lẫn
+              // bong bóng mờ dần (stage.css) — hai ghế kề nhau không cùng hiện.
+              <AnhDau key={ai.user} anh={ai.avatar} nong={dangNong} />
+            ) : null}
             <TenGhe ten={ai.name} anh={ai.avatar} />
           </span>
         );

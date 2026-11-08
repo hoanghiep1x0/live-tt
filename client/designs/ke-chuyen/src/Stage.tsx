@@ -278,8 +278,6 @@ export function Stage() {
   const rows = hallRowsFor(GHE_MAC_DINH);
   const bien = bienCss(huong, rows);
   const ghe = useMemo(() => dungGhe(rows), [rows]);
-  // Người ảo do máy dựng có nick `mh…` (backend `bot.rs`).
-  const coNguoiAo = s.session.seats.some((x) => x.user.startsWith('mh'));
   const ngoi = useMemo(
     () => new Map(s.session.seats.map((x) => [x.i, x])),
     [s.session.seats],
@@ -363,8 +361,7 @@ export function Stage() {
 
       <section className="stage-screen" data-trong-suot={khungTrong}>
         {/* Nhãn minh bạch kiểu bản cũ: ngồi ngoài khung, sát mép trên góc trái
-            — không che hình. Lời minh bạch về cả phòng là dòng mờ ở chân màn
-            (`stage-honest`).
+            — không che hình. Dòng mờ ở chân màn đã bỏ.
 
             Nhãn "Có ảnh minh hoạ cốt truyện" ở mép phải đã BỎ: chủ phòng chốt
             là người xem nhìn thấy ảnh rồi, ghi thêm chỉ tổ chật mép khung. */}
@@ -442,7 +439,7 @@ export function Stage() {
 
       <div className="stage-seat-names">
         <div className="hall-content" style={{ height: `${hallContentH(rows)}cqw` }}>
-          <TenKhan ghe={ghe} ngoi={ngoi} nong={nguoiNong(s.session.recentFeed, nhip)} />
+          <TenKhan ghe={ghe} ngoi={ngoi} nong={nguoiNong(s.session.recentFeed, nhip)} vang={vangAnUi} />
         </div>
         <Slot name="seats" />
       </div>
@@ -546,13 +543,9 @@ export function Stage() {
             in lên sóng là bảo người xem làm một việc không chạy. Tắt cảnh an
             ủi thì không còn lệnh nào, dòng này biến mất luôn. */}
         <Slot name="bottom-bar" />
-        {/* Dòng minh bạch của bản cũ, nguyên chữ. "Có nhân vật minh họa" chỉ
-            khi đang có người ảo ngồi trong rạp — ghi lúc không có ai ảo là nói
-            sai về chính phòng mình. */}
-        <p className="stage-honest">
-          Phòng kể truyện & xem video{coNguoiAo ? ' · có nhân vật minh họa' : ''} · người dẫn &
-          giọng đọc dùng AI
-        </p>
+        {/* Dòng "Phòng kể truyện… người dẫn & giọng đọc dùng AI" ở chân màn đã
+            BỎ: chủ phòng chốt là người xem đọc dòng đó thì thoát luôn. Nhãn
+            "Truyện hay do AI đề xuất" trên khung truyện vẫn giữ. */}
       </footer>
     </div>
   );

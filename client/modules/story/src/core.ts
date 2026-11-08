@@ -1,4 +1,4 @@
-import { cachKeCua } from '@live/contracts';
+import { cachKeCua, GIONG_XOAY } from '@live/contracts';
 import type { Effect, ModuleCore } from '@live/contracts';
 import type { Config } from './manifest';
 
@@ -63,9 +63,29 @@ function sang(state: State, i: number, now: number, ds: string[]): Effect[] {
   if (state.config.readAloud) {
     // `caption: false`: đoạn truyện đã nằm trên khung chiếu rồi, để thẻ MC
     // nhắc lại nữa là màn ra hai lần cùng một câu.
-    ra.unshift({ kind: 'say', text: d, priority: 'normal', caption: false });
+    // Vắng MC thì module tự đọc: dùng giọng dẫn người phân vai đã chọn cho
+    // truyện này — trừ khi người vận hành đã đặt hẳn một giọng cho tính năng
+    // (ô giọng khác "mặc định" và "tự đổi"), lúc đó giọng của họ đứng trước.
+    const giong = giongTuDoc(state.config);
+    ra.unshift({
+      kind: 'say',
+      text: d,
+      priority: 'normal',
+      caption: false,
+      ...(giong === '' ? {} : { voice: giong }),
+    });
   }
   return ra;
+}
+
+/** Giọng module tự đọc đoạn truyện khi vắng MC. Rỗng là để runtime gắn giọng
+ *  của tính năng như cũ. Cấu hình xuống sân khấu là JSON thô (không qua zod),
+ *  nên `phanVai` có thể thiếu hẳn. Hàm thuần. */
+export function giongTuDoc(config: Config): string {
+  const datTay = typeof config.voiceId === 'string' ? config.voiceId : '';
+  if (datTay !== '' && datTay !== GIONG_XOAY) return '';
+  const pv = (config as { phanVai?: { giongDan?: unknown } }).phanVai;
+  return typeof pv?.giongDan === 'string' ? pv.giongDan : '';
 }
 
 export const core: ModuleCore<Config, State> = {

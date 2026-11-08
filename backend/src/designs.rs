@@ -91,6 +91,10 @@ pub struct DesignManifest {
     /// Số ghế mỗi hàng sau các hàng đã khai.
     #[serde(default, rename = "rowSeats", skip_serializing_if = "Option::is_none")]
     pub row_seats: Option<usize>,
+    /// Phía rạp xếp khách vào nhiều hơn: "right" hay "left" (cần `seatRows`).
+    /// Không khai thì rải đều như cũ — phòng khác không đổi gì.
+    #[serde(default, rename = "seatPrefer", skip_serializing_if = "Option::is_none")]
+    pub seat_prefer: Option<String>,
     /// Đổi xu TikTok sang điểm của phòng. Mỗi bối cảnh có thể khác nhau.
     #[serde(default = "ti_le_mac_dinh", rename = "pointRate")]
     pub point_rate: f64,
@@ -246,6 +250,7 @@ pub fn scan(layout: &Layout, port: u16, live: Option<&str>) -> Vec<DesignInfo> {
                     seats: ghe_mac_dinh(),
                     seat_rows: Vec::new(),
                     row_seats: None,
+                    seat_prefer: None,
                     point_rate: ti_le_mac_dinh(),
                     defaults: BTreeMap::new(),
                     entry: entry_mac_dinh(),

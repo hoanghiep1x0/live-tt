@@ -34,7 +34,10 @@ body {
   min-height: 100vh;
   display: flex;
   align-items: center;
-  justify-content: center;
+  /* Khung sân khấu sát mép trái cửa sổ: phần trống bên phải để dành cho
+     bảng chi phí / bảng điều khiển, không đè lên khung hình. Cửa sổ đúng tỉ
+     lệ 9:16 (OBS) thì khung vẫn kín màn như cũ. */
+  justify-content: flex-start;
   background: #000;
   color: #fff;
   font-family: 'Be Vietnam Pro', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
@@ -891,7 +894,10 @@ body {
   right: 0;
   top: var(--hall-top);
   bottom: var(--hall-gap);
-  overflow: hidden;
+  /* Cắt hai bên và đáy như cũ, nhưng chừa phía trên 12cqw: bong bóng ảnh
+     trên đầu người ngồi hàng A nhô lên khỏi mép rạp, cắt thẳng là mất nửa. */
+  overflow: visible;
+  clip-path: inset(-12cqw 0 0 0);
   pointer-events: none;
   z-index: 2;
 }
@@ -942,6 +948,67 @@ body {
 /* So le: ghế lẻ trong hàng hạ nhãn xuống, tên hai ghế cạnh nhau không đè chữ. */
 .seat-tag.alt .seat-label {
   margin-top: 2.2cqw;
+}
+
+/* Bong bóng ảnh đại diện tròn nổi trên đầu chibi — TO HƠN cái đầu, có đuôi
+   nhỏ chỉ xuống. Ẩn hiện CÙNG NHỊP với tên dưới ghế: thẻ `name-off` làm cả tên
+   lẫn bong bóng mờ dần 1,5 giây, theo ô cờ nên hai ghế kề nhau không cùng
+   hiện. Người đang tương tác: viền vàng đậm, luôn hiện. */
+.seat-anh {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: calc(100% + 5.6cqw);
+  width: 6.6cqw;
+  height: 6.6cqw;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+  transition: opacity 1.5s ease-in-out, transform 1.5s ease-in-out;
+  /* `backwards`, không `both`: giữ trạng thái cuối là đè mất lệnh mờ của
+     `name-off`, bong bóng không bao giờ ẩn được. */
+  animation: anh-dau-vao 0.45s ease-out backwards;
+}
+.seat-anh img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 0.35cqw solid #ffe39a;
+  background: #1a0d05;
+  box-shadow: 0 0.3cqw 0.7cqw rgba(0, 0, 0, 0.55), 0 0 0.9cqw rgba(255, 220, 140, 0.35);
+}
+.seat-anh::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: calc(100% - 0.25cqw);
+  border: 0.8cqw solid transparent;
+  border-top-color: #ffe39a;
+  border-bottom-width: 0;
+  transform: translateX(-50%);
+}
+.seat-tag.name-off .seat-anh {
+  opacity: 0;
+  transform: translate(-50%, 0.6cqw) scale(0.9);
+}
+.seat-anh.nong img {
+  border-color: var(--gold, #f2c45a);
+  box-shadow: 0 0.3cqw 0.7cqw rgba(0, 0, 0, 0.55), 0 0 1.4cqw rgba(242, 196, 90, 0.75);
+}
+.seat-anh.nong::after {
+  border-top-color: var(--gold, #f2c45a);
+}
+@keyframes anh-dau-vao {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 0.8cqw) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
 }
 
 /* Tên ghế chẵn / lẻ thay phiên: mờ dần rồi tắt, rồi hiện dần lại */
@@ -1219,12 +1286,7 @@ body {
   color: var(--gold);
   font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
 }
-/* Dòng minh bạch của bản cũ: nhỏ và nhạt hơn dòng lệnh — ghi chú, không phải lời mời. */
-.stage-honest {
-  margin: 0;
-  font-size: 1.8cqw;
-  color: rgba(255, 255, 255, 0.55);
-}
+
 
 
 /* Mất kết nối máy chủ: nói rõ trên màn, vì OBS đang phát ra ngoài */

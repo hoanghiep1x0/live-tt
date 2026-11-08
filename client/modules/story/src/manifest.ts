@@ -31,7 +31,7 @@ export const schema = z.object({
     .default([]),
   /** Bật thì AI tự làm ảnh cho truyện (máy chủ, `anh_truyen.rs`). */
   anhTuDong: z.boolean().default(false),
-  /** Bật thì chỉ kể các thể loại ở `theLoai`; tắt thì xoay vòng 10 thể loại
+  /** Bật thì chỉ kể các thể loại ở `theLoai`; tắt thì xoay vòng 12 thể loại
    *  như cũ. Tách khỏi `theLoai` để tắt đi vẫn GIỮ danh sách đã chọn — bật
    *  lại là dùng ngay, không phải gõ lại. */
   theoTheLoai: z.boolean().default(false),
@@ -100,6 +100,27 @@ export const schema = z.object({
   /** Truyện kế tiếp máy chủ chuẩn bị sẵn — cùng dạng các ô truyện (title,
    *  passages, loai, nguon, moc, hoSoCua…), ảnh vẽ sẵn trong đó. */
   truyenSau: z.record(z.string(), z.unknown()).default({}),
+  /** Phân vai của truyện đang kể — NGƯỜI PHÂN VAI (AI) gán lúc viết truyện,
+   *  máy chủ ghi; không phải ô người vận hành gõ tay, nên không có trong
+   *  `fields`. MC đọc để kể đúng giọng; module tự đọc thì dùng `giongDan`. */
+  phanVai: z
+    .object({
+      giongDan: z.string().max(60).default(''),
+      vai: z
+        .array(z.object({ ten: z.string().max(80), giong: z.string().max(60) }))
+        .max(20)
+        .default([]),
+      camXuc: z.array(z.string().max(20)).max(30).default([]),
+    })
+    .default({ giongDan: '', vai: [], camXuc: [] }),
+  /** Hàng chờ truyện KHÁCH xin qua chát — MC nghe ra, máy chủ ghi
+   *  (`truyen_sau::them_yeu_cau`); truyện kế tiếp lấy từ đầu hàng. */
+  yeuCau: z
+    .array(z.object({ ten: z.string().max(120), khach: z.string().max(80), luc: z.number() }))
+    .max(10)
+    .default([]),
+  /** Truyện đang kể là truyện khách nào xin (rỗng là máy tự chọn). */
+  theoYeuCau: z.string().max(80).default(''),
   /** Sổ truyện đã kể ở phòng — không bao giờ kể lại. */
   daKe: z
     .array(z.object({ ten: z.string().max(120), loai: z.string().max(80).default('') }))
@@ -135,7 +156,7 @@ export type Config = z.infer<typeof schema>;
 /** Tab truyện đang kể: tên và các đoạn — tự chuyển truyện đã tự lo, ít khi sửa tay. */
 const TAB_TRUYEN = 'Truyện';
 
-/** 10 thể loại phòng xoay vòng khi ô "Thể loại truyện" để trống. PHẢI khớp
+/** 12 thể loại phòng xoay vòng khi ô "Thể loại truyện" để trống. PHẢI khớp
  *  `THE_LOAI` ở `backend/src/truyen_sau.rs` — đây chỉ là danh sách GỢI Ý cho
  *  ô chọn, người vận hành gõ thêm thể loại nào cũng được. */
 export const THE_LOAI = [
@@ -149,6 +170,8 @@ export const THE_LOAI = [
   'tình cảm gia đình',
   'truyện cảm động',
   'nhân cách – tri thức',
+  'truyện tranh kỹ năng sống',
+  'kỹ năng an toàn',
 ] as const;
 const TAB_ANH = 'Ảnh truyện';
 
@@ -281,7 +304,7 @@ export const manifest: ModuleManifest<Config> = {
       type: 'toggle',
       // Không khai `tab`: về tab đầu ("Cài đặt"). Đây là cách phòng CHỌN
       // truyện, không phải nội dung truyện đang kể.
-      hint: 'Tắt thì phòng xoay vòng 10 thể loại như mặc định. Bật thì chỉ kể những thể loại bạn chọn bên dưới.',
+      hint: 'Tắt thì phòng xoay vòng 12 thể loại như mặc định. Bật thì chỉ kể những thể loại bạn chọn bên dưới.',
     },
     {
       key: 'theLoai',
@@ -289,7 +312,7 @@ export const manifest: ModuleManifest<Config> = {
       label: 'Thể loại truyện',
       type: 'chon-them',
       options: THE_LOAI.map((x) => ({ value: x, label: x })),
-      hint: 'Gõ để tìm trong 10 thể loại sẵn có, hoặc gõ thể loại của riêng bạn rồi bấm "thêm" — AI tự tìm truyện. Chọn nhiều thì chúng thay phiên nhau.',
+      hint: 'Gõ để tìm trong 12 thể loại sẵn có, hoặc gõ thể loại của riêng bạn rồi bấm "thêm" — AI tự tìm truyện. Chọn nhiều thì chúng thay phiên nhau.',
     },
     {
       key: 'khoTruyen',

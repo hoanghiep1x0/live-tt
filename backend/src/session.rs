@@ -197,6 +197,9 @@ pub struct Session {
     /// Sơ đồ hàng ghế thiết kế khai (`seatRows`). Không khai thì phòng không có
     /// mã ghế, và các lệnh "ghế B4", "chỗ…", "đánh…" không được đọc.
     so_do: Option<crate::lenh::SoDoGhe>,
+    /// Phía rạp xếp khách vào nhiều hơn: `Some(true)` bên phải, `Some(false)`
+    /// bên trái, `None` rải đều (`seatPrefer` của thiết kế).
+    uu_tien_phai: Option<bool>,
     /// Tin TỔNG kế tiếp của TikTok (tim, lượt xem) được LẤY NGUYÊN, kể cả khi
     /// nhỏ hơn số đang giữ.
     ///
@@ -245,11 +248,21 @@ impl Session {
             dat_moc_tim: false,
             dat_moc_luot: false,
             so_do: None,
+            uu_tien_phai: None,
             luc_nay: now,
         }
     }
 
     /// Thiết kế có khai sơ đồ hàng ghế: bật các lệnh dùng mã ghế.
+    /// Đặt phía rạp ưu tiên: "right" / "left"; khác thì rải đều.
+    pub fn dat_uu_tien_ghe(&mut self, phia: Option<&str>) {
+        self.uu_tien_phai = match phia {
+            Some("right") => Some(true),
+            Some("left") => Some(false),
+            _ => None,
+        };
+    }
+
     pub fn dat_so_do(&mut self, hang: Vec<usize>, sau: usize) {
         if hang.is_empty() && sau == 0 {
             return;
@@ -430,6 +443,9 @@ impl Session {
 
     /// Xếp chỗ cho một người. Trả chỉ số ghế, hoặc `None` khi phòng đã kín.
     ///
+    /// Có phía ưu tiên (`dat_uu_tien_ghe`) thì phía đó đông hơn — xem
+    /// `UU_TIEN_PHAN_TRAM`.
+    ///
     /// Chọn NGẪU NHIÊN trong các ghế còn trống, không lấp lần lượt từ đầu:
     /// lấp theo thứ tự thì rạp đầy dần thành một khối vuông vắn từ hàng A,
     /// nhìn là biết máy xếp. Rải ngẫu nhiên trông như người tự tìm chỗ ngồi.
@@ -445,7 +461,16 @@ impl Session {
         for b in user.as_bytes().iter().chain(self.started_at.to_le_bytes().iter()) {
             h = (h ^ u64::from(*b)).wrapping_mul(1_099_511_628_211);
         }
-        let i = *trong.get((h % trong.len().max(1) as u64) as usize)?;
+        // Thiết kế khai phía ưu tiên (`seatPrefer`): `UU_TIEN_PHAN_TRAM`% số
+        // người ngồi phía đó, còn lại rải khắp rạp — bên kia vẫn có người, nhìn
+        // vẫn như người tự tìm chỗ chứ không dồn cục một bên. Phía đó kín thì
+        // xếp chỗ nào còn trống.
+        let uu: Vec<usize> = match (self.uu_tien_phai, self.so_do.as_ref()) {
+            (Some(phai), Some(sd)) => trong.iter().copied().filter(|i| sd.ben_phai(*i) == Some(phai)).collect(),
+            _ => Vec::new(),
+        };
+        let ds = if !uu.is_empty() && (h >> 32) % 100 < UU_TIEN_PHAN_TRAM { &uu } else { &trong };
+        let i = *ds.get((h % ds.len().max(1) as u64) as usize)?;
         self.ghe[i] = Some(user.to_string());
         self.ghe_cua.insert(user.to_string(), i);
         Some(i)
@@ -787,9 +812,45 @@ impl Session {
     }
 }
 
+/// Thiết kế có phía ưu tiên thì chừng này phần trăm khách ngồi phía đó.
+pub const UU_TIEN_PHAN_TRAM: u64 = 72;
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn xep_khach_ben_phai_nhieu_hon_khi_thiet_ke_khai() {
+        let dem = |phia: Option<&str>| {
+            let mut s = Session::new("ke-chuyen", 84, 1.0, 1_000);
+            s.dat_so_do(vec![8, 10, 12, 12, 14, 14], 14);
+            s.dat_uu_tien_ghe(phia);
+            let sd = s.so_do.clone().unwrap();
+            let mut phai = 0;
+            for k in 0..40 {
+                let i = s.xep_ghe(&format!("khach{k}")).unwrap();
+                if sd.ben_phai(i) == Some(true) {
+                    phai += 1;
+                }
+            }
+            phai
+        };
+        let co = dem(Some("right"));
+        assert!(co >= 25, "khai bên phải thì phải đông hơn hẳn, được {co}/40");
+        assert!(co < 40, "bên trái vẫn có người");
+        let deu = dem(None);
+        assert!((12..=28).contains(&deu), "không khai thì rải đều, được {deu}/40");
+    }
+
+    #[test]
+    fn ben_phai_theo_tung_hang() {
+        let sd = crate::lenh::SoDoGhe { hang: vec![8, 10], sau: 14, tong: 32 };
+        assert_eq!(sd.ben_phai(3), Some(false), "A4 bên trái");
+        assert_eq!(sd.ben_phai(4), Some(true), "A5 bên phải");
+        assert_eq!(sd.ben_phai(8 + 4), Some(false), "B5 bên trái");
+        assert_eq!(sd.ben_phai(8 + 5), Some(true), "B6 bên phải");
+        assert_eq!(sd.ben_phai(32), None);
+    }
     use crate::events::Payload as P;
 
     fn phien() -> Session {

@@ -235,6 +235,76 @@ const GOI_CA_PHONG: [&str; 5] = ["cả nhà", "cả phòng", "cả rạp", "các
 /// Câu chào (`viec = "chao"`) cũng không tính.
 ///
 /// Hàm thuần.
+/// Hai lần MC mời follow kênh / chia sẻ truyện cách nhau ít nhất ngần này.
+///
+/// Mời dày là người nghe bỏ đi ngay — nghe như cái máy xin follow. 12 phút
+/// một lần, lại chỉ vào lúc hợp (`luc_hop_moi`): một buổi một tiếng chừng bốn
+/// năm lần, follow và chia sẻ thay phiên.
+pub const MOI_CACH_MS: i64 = 12 * 60_000;
+
+/// Câu này là lời MỜI follow kênh / chia sẻ truyện. AI ghi `viec` "moi";
+/// lỡ quên thì nhận theo chữ. Hàm thuần.
+pub fn la_loi_moi(chu: &str, viec: Option<&str>) -> bool {
+    if viec == Some("moi") {
+        return true;
+    }
+    let t = chu.to_lowercase();
+    [
+        "follow",
+        "theo dõi kênh",
+        "bấm theo dõi",
+        "nút theo dõi",
+        "chia sẻ",
+        "share",
+        // Khích lệ tặng quà cũng là một lời mời: cùng giãn cách, ngoài lượt thì bỏ.
+        "tặng mình",
+        "tặng quà",
+        "gửi quà",
+        "thả quà",
+        "tặng một bông",
+        "tặng bông",
+    ]
+        .iter()
+        .any(|k| t.contains(k))
+}
+
+/// Lần mời thứ `lan` (đếm từ 0) là lời gì — năm kiểu thay phiên: mời follow,
+/// rủ ở lại nghe tiếp, mời chia sẻ, khích lệ tặng quà, cảm ơn cả phòng. Cùng
+/// một giãn cách (`MOI_CACH_MS`), nên mỗi kiểu chừng một tiếng mới quay lại —
+/// lời khích lệ quà vì vậy hiếm, đúng như chủ phòng muốn. Hàm thuần.
+pub fn kieu_moi(lan: u32) -> &'static str {
+    ["theo-doi", "o-lai", "chia-se", "khich-le-qua", "cam-on-phong"][(lan % 5) as usize]
+}
+
+/// Kiểu mời này chỉ hợp lúc vừa kể xong truyện / giờ nghỉ — không chen vào
+/// giữa truyện. Khích lệ quà giữa lúc đang kể là cắt ngang mạch truyện để xin.
+/// Hàm thuần.
+pub fn chi_luc_nghi(kieu: &str) -> bool {
+    kieu == "khich-le-qua"
+}
+
+/// Hai lần MC cảm ơn người vừa tặng quà cách nhau ít nhất ngần này. Sân khấu
+/// đã tự cảm ơn từng món quà; MC chỉ thỉnh thoảng nhắc tên thêm một câu ấm,
+/// không để lời cảm ơn chen dày vào truyện.
+pub const CAM_ON_QUA_CACH_MS: i64 = 6 * 60_000;
+
+/// Câu này là MC cảm ơn người tặng quà. AI ghi `viec` "cam-on"; lỡ quên thì
+/// nhận theo chữ. Hàm thuần.
+pub fn la_cam_on_qua(chu: &str, viec: Option<&str>) -> bool {
+    if viec == Some("cam-on") {
+        return true;
+    }
+    let t = chu.to_lowercase();
+    t.contains("cảm ơn") && ["tặng", "món quà", "quà"].iter().any(|k| t.contains(k))
+}
+
+/// Lúc này có hợp để chen một lời mời không: vừa kể xong truyện / đang giờ
+/// nghỉ đổi truyện, hoặc đã qua nửa truyện mà không ai đang chờ được đáp.
+/// Đầu truyện thì không — người nghe vừa ngồi xuống đã bị xin follow. Hàm thuần.
+pub fn luc_hop_moi(tiep: usize, so_doan: usize, xong_hay_nghi: bool, co_khach_cho: bool) -> bool {
+    xong_hay_nghi || (!co_khach_cho && so_doan > 0 && tiep * 2 >= so_doan)
+}
+
 pub fn hoi_ca_phong(chu: &str, viec: Option<&str>) -> bool {
     if viec == Some("chao") || !chu.contains('?') {
         return false;
@@ -552,6 +622,28 @@ pub fn thoi_gian_doc(so_chu: usize) -> Duration {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn loi_moi_follow_chia_se() {
+        assert!(la_loi_moi("Thấy hay thì bấm theo dõi kênh mình nhé", None));
+        assert!(la_loi_moi("abc", Some("moi")));
+        assert!(!la_loi_moi("Chào Lan vào phòng", Some("chao")));
+        assert_eq!(kieu_moi(0), "theo-doi");
+        assert_eq!(kieu_moi(1), "o-lai");
+        assert_eq!(kieu_moi(2), "chia-se");
+        assert_eq!(kieu_moi(3), "khich-le-qua");
+        assert_eq!(kieu_moi(4), "cam-on-phong");
+        assert_eq!(kieu_moi(5), "theo-doi");
+        assert!(chi_luc_nghi("khich-le-qua") && !chi_luc_nghi("theo-doi"));
+        assert!(la_loi_moi("Ai thấy truyện hay thì tặng mình một bông hoa nhỏ nhé", Some("dap")));
+        assert!(la_cam_on_qua("Cảm ơn Lan tặng bông hồng nha", None));
+        assert!(la_cam_on_qua("abc", Some("cam-on")));
+        assert!(!la_cam_on_qua("Cảm ơn cả nhà đã ngồi nghe", None), "cảm ơn chung không phải cảm ơn quà");
+        assert!(!luc_hop_moi(1, 10, false, false), "đầu truyện không mời");
+        assert!(luc_hop_moi(5, 10, false, false), "qua nửa truyện được mời");
+        assert!(!luc_hop_moi(6, 10, false, true), "có khách chờ đáp thì đáp trước");
+        assert!(luc_hop_moi(0, 10, true, true), "kể xong / giờ nghỉ thì được");
+    }
 
     #[test]
     fn so_cau_voi_khach_theo_dung_trong_so() {

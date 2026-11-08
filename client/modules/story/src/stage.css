@@ -171,9 +171,23 @@
   }
 }
 
-/* Sang mốc ảnh mới: ảnh mới hiện dần lên thay vì giật cảnh. */
+/* Lớp bọc hình: nhịp "thở" mỗi lần sang đoạn chạy trên lớp này (xem
+   `useNhipDoan`), không đụng tới hiệu ứng trôi chậm của chính tấm ảnh. */
+.mod-truyen-khung-anh {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 45%;
+}
+
+/* Sang mốc ảnh mới: ảnh mới mờ dần lên ĐỒNG THỜI ống kính lùi nhẹ ra, rồi nối
+   liền vào nhịp trôi chậm. Trước đây khai báo `animation` ở đây ghi đè mất
+   `mod-truyen-troi` — ảnh mới hiện xong là đứng im tới hết mốc. Giờ hai hiệu
+   ứng nối nhau: điểm cuối của `mod-truyen-hien` trùng đúng điểm đầu của
+   `mod-truyen-troi`, nên không có cú giật lúc chuyển. */
 .mod-truyen-hien {
-  animation: mod-truyen-hien 1.2s ease both;
+  animation:
+    mod-truyen-hien 1.8s cubic-bezier(0.25, 0.8, 0.3, 1) both,
+    mod-truyen-troi 32s ease-in-out 1.8s infinite alternate;
 }
 /* Có hình thì khung tự có nền tối: ảnh đang mờ dần lên cũng không lộ màn chờ
    phía sau. */
@@ -183,6 +197,25 @@
 @keyframes mod-truyen-hien {
   from {
     opacity: 0;
+    transform: scale(1.1) translate(-0.6%, -0.4%);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.02) translate(-0.6%, -0.4%);
+  }
+}
+/* Giảm chuyển động: ảnh mới chỉ mờ dần lên, không lùi ống kính. Nhịp trôi
+   chậm vẫn giữ — đó là ràng buộc của nền tảng (khung không được đứng im). */
+@keyframes mod-truyen-mo {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mod-truyen-hien {
+    animation:
+      mod-truyen-mo 1.2s ease both,
+      mod-truyen-troi 32s ease-in-out infinite alternate;
   }
 }
 

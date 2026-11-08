@@ -43,6 +43,21 @@ impl SoDoGhe {
         (i < self.tong).then_some(i)
     }
 
+    /// Ghế `i` ở NỬA PHẢI của hàng mình không (nhìn từ khán giả ra sân khấu):
+    /// nửa trái là `⌈n/2⌉` ghế đầu hàng, đúng cách thiết kế chia hai bên lối
+    /// giữa. `None` khi `i` ngoài phòng.
+    pub fn ben_phai(&self, i: usize) -> Option<bool> {
+        if i >= self.tong {
+            return None;
+        }
+        let (mut r, mut con) = (0, i);
+        while con >= self.so_trong_hang(r) {
+            con -= self.so_trong_hang(r);
+            r += 1;
+        }
+        Some(con >= self.so_trong_hang(r).div_ceil(2))
+    }
+
     /// Chỉ số → mã ghế `"B4"`.
     pub fn ma(&self, i: usize) -> Option<String> {
         if i >= self.tong {

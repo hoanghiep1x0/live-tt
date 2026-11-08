@@ -62,6 +62,8 @@ pub fn tu_cau_hinh(cfg: &Value, luc: i64) -> Option<Value> {
         "phongCach": lay("phongCach"),
         "nhanVat": lay("nhanVat"),
         "hoSoTruyen": lay("hoSoTruyen"),
+        // Phân vai đi cùng truyện: kể lại từ kho vẫn đúng giọng từng nhân vật.
+        "phanVai": cfg.get("phanVai").cloned().unwrap_or(json!({})),
         "luc": luc,
     }))
 }
@@ -159,6 +161,7 @@ pub async fn post_ke_lai(
             "phongCach": lay("phongCach"),
             "nhanVat": lay("nhanVat"),
             "hoSoTruyen": lay("hoSoTruyen"),
+            "phanVai": t.get("phanVai").cloned().unwrap_or(json!({})),
             "anhLoi": "",
             "truyenSau": {},
             "daKe": Value::Array(so),

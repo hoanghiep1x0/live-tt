@@ -10,6 +10,7 @@ import {
   core,
   doanHienTai,
   dongHo,
+  giongTuDoc,
   loiChaoKhung,
   moduleStory as mod,
   schema,
@@ -300,6 +301,17 @@ describe('khung truyện: trong suốt khi chưa có hình, đồng hồ đếm 
     expect(dongHo(135.9)).toBe('02:15');
     expect(dongHo(3725)).toBe('1:02:05');
     expect(dongHo(-5)).toBe('00:00');
+  });
+
+  it('vắng MC: module tự đọc bằng giọng dẫn người phân vai đã chọn', () => {
+    const pv = { giongDan: 'nam-minh', vai: [], camXuc: [] };
+    // Ô giọng để mặc định hay "tự đổi": dùng giọng dẫn đã phân.
+    expect(giongTuDoc(schema.parse({ phanVai: pv }))).toBe('nam-minh');
+    expect(giongTuDoc(schema.parse({ voiceId: '*', phanVai: pv }))).toBe('nam-minh');
+    // Người vận hành đặt hẳn một giọng: giọng của họ đứng trước.
+    expect(giongTuDoc(schema.parse({ voiceId: 'mc', phanVai: pv }))).toBe('');
+    // Cấu hình xuống sân khấu là JSON thô: thiếu hẳn ô phanVai cũng không nổ.
+    expect(giongTuDoc({ voiceId: '' } as unknown as Parameters<typeof giongTuDoc>[0])).toBe('');
   });
 
   it('lời chào trên đồng hồ: xoay vòng theo TÊN TRUYỆN, không ngẫu nhiên', () => {

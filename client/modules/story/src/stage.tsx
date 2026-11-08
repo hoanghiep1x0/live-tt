@@ -55,6 +55,34 @@ function VideoKhongKet({ src }: { src: string }) {
   );
 }
 
+/** Mỗi lần sang đoạn truyện, khung hình khẽ "thở" một nhịp: lùi ra một chút
+ *  và sáng dần lên, như máy quay khẽ chỉnh khung theo lời kể. Ảnh thường giữ
+ *  nguyên qua vài đoạn (chỉ đổi ở mốc), nên không có nhịp này thì khung đứng
+ *  y nguyên trong lúc lời kể đã sang ý mới.
+ *
+ *  Chạy bằng Web Animations trên lớp bọc chứ không đổi `key`: đổi `key` là
+ *  dựng lại thẻ ảnh, ảnh lại mờ dần lên từ đầu. Đổi ẢNH thì để `AnhMuot` lo
+ *  (mờ dần + lùi ống kính), không chạy nhịp này chồng lên. Người xem bật
+ *  giảm chuyển động thì bỏ. */
+function useNhipDoan(khung: { current: HTMLDivElement | null }, doan: number, anh: string) {
+  const truoc = useRef<{ doan: number; anh: string } | null>(null);
+  useEffect(() => {
+    const cu = truoc.current;
+    truoc.current = { doan, anh };
+    if (cu === null || cu.doan === doan || cu.anh !== anh) return;
+    const el = khung.current;
+    if (el === null || typeof el.animate !== 'function') return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    el.animate(
+      [
+        { transform: 'scale(1.035)', filter: 'brightness(0.8)' },
+        { transform: 'scale(1)', filter: 'brightness(1)' },
+      ],
+      { duration: 1600, easing: 'cubic-bezier(0.25, 0.8, 0.3, 1)' },
+    );
+  }, [doan, anh, khung]);
+}
+
 /** Ảnh đổi mượt: ảnh mới tải và giải mã XONG mới hiện, mờ dần lên ĐÈ lên ảnh
  *  cũ (ảnh cũ nằm dưới tới lúc đó). Không bao giờ có khoảnh khắc khung trống
  *  — trước đây ảnh mới đang tải là lộ màn chờ phía sau, chập chờn rất xấu. */
@@ -186,6 +214,8 @@ function KhungTruyen({ config, modState }: Pick<StagePartProps<Config, State>, '
   const hienDongHo = hien.dongHo || (config.anhHoacDongHo === true && !coHinh);
   /** Khung lấy ĐỒNG HỒ làm nội dung chính: không hình, mà đồng hồ đang bật. */
   const dongHoTo = hienDongHo && !coHinh && config.title !== '';
+  const khungAnh = useRef<HTMLDivElement>(null);
+  useNhipDoan(khungAnh, modState.doan, media);
   const gioMay = useGioMay(dongHoTo);
 
   // Tải sẵn ảnh của mọi mốc trong truyện: tới đoạn là ảnh có ngay trong bộ nhớ.
@@ -218,11 +248,11 @@ function KhungTruyen({ config, modState }: Pick<StagePartProps<Config, State>, '
       )}
 
       {coHinh ? (
-        LA_VIDEO.test(media) ? (
-          <VideoKhongKet src={media} />
-        ) : (
-          <AnhMuot src={media} />
-        )
+        // Lớp bọc hình: mỗi lần SANG ĐOẠN thì khẽ "thở" một nhịp (`useNhipDoan`)
+        // — ảnh giữ nguyên qua nhiều đoạn mà khung vẫn đổi nhịp theo lời kể.
+        <div className="mod-truyen-khung-anh" ref={khungAnh}>
+          {LA_VIDEO.test(media) ? <VideoKhongKet src={media} /> : <AnhMuot src={media} />}
+        </div>
       ) : null}
 
       {/* Dải sáng quét chậm: khung không bao giờ đứng im, kể cả khi ảnh tĩnh. */}
