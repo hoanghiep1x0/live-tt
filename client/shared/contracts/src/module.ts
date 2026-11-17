@@ -152,8 +152,28 @@ export interface ModuleAction {
   icon?: string;
 }
 
+/** Một nhúm ô của module tách ra thành THẺ RIÊNG trên bảng xem: bật tắt và
+ *  sửa ngay trên thẻ, không phải mở hộp cấu hình của module.
+ *
+ *  Cấu hình vẫn của module đó, chỉ khác chỗ chỉnh. Hộp cấu hình trên bảng xem
+ *  không hiện lại các ô này cho khỏi hai nơi cùng sửa một thứ. */
+export interface TheTach {
+  id: string;
+  name: string;
+  icon: string;
+  summary: string;
+  /** Khoá ô `toggle` làm công tắc đầu thẻ. */
+  congTac: string;
+  /** Khoá các ô hiện đầy đủ trong thân thẻ. */
+  fields: readonly string[];
+  /** Nút chạy luôn: POST tới `duong` (`{id}` là id thiết kế), máy chủ trả `{ chu }`. */
+  apDung?: { label: string; icon?: string; duong: string };
+  /** Một dòng cho biết kết quả: đọc các `khoa` trong ô cấu hình `o`, nối lại. */
+  trangThai?: { nhan: string; o: string; khoa: readonly string[]; khiTrong: string };
+}
+
 /** Loại phòng live. Mỗi loại có một nhúm tính năng của riêng nó. */
-export type RoomKind = 'ke-chuyen' | 'san-bar' | 'dam-cuoi' | 'lop-hoc';
+export type RoomKind = 'ke-chuyen' | 'san-bar' | 'dam-cuoi' | 'lop-hoc' | 'dai-chien';
 
 /** Loại phòng theo thứ tự hiện trên trang. Mở một dạng live mới = thêm một dòng
  *  ở đây rồi gắn `room` cho các module của nó. */
@@ -162,6 +182,7 @@ export const LOAI_PHONG: readonly { id: RoomKind; name: string }[] = [
   { id: 'san-bar', name: 'Live Sàn Bar' },
   { id: 'dam-cuoi', name: 'Live Đám Cưới' },
   { id: 'lop-hoc', name: 'Live Lớp Học' },
+  { id: 'dai-chien', name: 'Live Đại Chiến' },
 ];
 
 /** `x` có phải id một loại phòng đã khai trong `LOAI_PHONG` không. */
@@ -203,7 +224,7 @@ export const TINH_NANG_HE = {
    *  (lời dặn riêng ở `mc.dan` của thiết kế). Phòng kể chuyện không có thẻ này:
    *  MC chính là người kể truyện, cài đặt MC nằm trong tính năng Kể chuyện (ô
    *  `mc-ke-chuyen`), chào khách cũng do MC lo nên không có module chào riêng. */
-  mc: { room: ['lop-hoc'] },
+  mc: { room: ['lop-hoc', 'dai-chien'] },
   /** Nhân vật ảo: thiết kế nào khai `crowd.lines` thì dùng. Sàn bar chỉ có
    *  vũ công 3D, không khai đám đông. Lớp học: ngồi ghế và nói chuyện, không
    *  trả lời, không điểm (module `do-chu`). */
@@ -255,6 +276,8 @@ export interface ModuleUi {
   /** Tính năng chính của loại phòng (vd Kể chuyện ở phòng kể chuyện): thẻ
    *  đứng đầu phần riêng của phòng, trên cả thẻ MC. */
   theDau?: boolean;
+  /** Các thẻ riêng tách từ cấu hình module, đứng ngay dưới thẻ của nó. */
+  theTach?: readonly TheTach[];
 }
 
 export interface ModuleManifest<C = Json> extends ModuleUi {

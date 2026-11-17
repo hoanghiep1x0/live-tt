@@ -1719,3 +1719,166 @@ body {
     opacity: 0;
   }
 }
+
+/* ---- Màn hình chào kết thúc (`parts/KetThuc.tsx`) ----
+   Phủ trên cùng khung khi người vận hành bật công tắc "Màn hình chào kết
+   thúc": nền tối mờ cho phòng phía sau lùi lại, thẻ giữa tông vàng ấm như
+   màn chờ, đồng hồ đếm ngược lớn. Hiện dần lên, không bật phụt. */
+.ket-thuc {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6cqw;
+  background: radial-gradient(ellipse at 50% 40%, rgba(40, 18, 6, 0.72), rgba(6, 3, 1, 0.92));
+  backdrop-filter: blur(0.6cqw);
+  animation: ket-thuc-hien 1.2s ease-out both;
+  pointer-events: none;
+}
+.ket-thuc-the {
+  position: relative;
+  width: 100%;
+  max-width: 84cqw;
+  padding: 7cqw 6cqw 6cqw;
+  border-radius: 4cqw;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(60, 28, 10, 0.92), rgba(26, 12, 4, 0.94));
+  border: 0.35cqw solid rgba(242, 196, 90, 0.7);
+  box-shadow: 0 1.5cqw 5cqw rgba(0, 0, 0, 0.6), 0 0 4cqw rgba(242, 196, 90, 0.25);
+  animation: ket-thuc-noi 1.2s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.ket-thuc-sen {
+  position: absolute;
+  left: 50%;
+  top: -5cqw;
+  width: 10cqw;
+  height: 10cqw;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffe7a8 0%, #f2c45a 45%, rgba(242, 196, 90, 0) 72%);
+  animation: ket-thuc-sang 3s ease-in-out infinite alternate;
+}
+.ket-thuc-nhan {
+  margin: 0;
+  font-size: 2.6cqw;
+  letter-spacing: 0.5cqw;
+  text-transform: uppercase;
+  color: rgba(255, 231, 168, 0.75);
+}
+.ket-thuc-loi {
+  margin: 2cqw 0 3cqw;
+  font-size: 6cqw;
+  line-height: 1.25;
+  font-weight: 800;
+  color: #fff3d6;
+  text-shadow: 0 0.4cqw 1.2cqw rgba(0, 0, 0, 0.6);
+}
+.ket-thuc-dem-nhan {
+  margin: 0;
+  font-size: 3cqw;
+  color: rgba(255, 243, 214, 0.8);
+}
+.ket-thuc-dem {
+  margin: 0.5cqw 0 2cqw;
+  font-size: 15cqw;
+  line-height: 1;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.4cqw;
+  color: var(--gold, #f2c45a);
+  text-shadow: 0 0 3cqw rgba(242, 196, 90, 0.55);
+}
+.ket-thuc-hen,
+.ket-thuc-het {
+  margin: 0;
+  font-size: 3.6cqw;
+  font-weight: 700;
+  color: #ffe7a8;
+}
+.ket-thuc-het {
+  margin: 2cqw 0;
+  font-size: 6.4cqw;
+  line-height: 1.3;
+  animation: ket-thuc-sang 2.4s ease-in-out infinite alternate;
+}
+.ket-thuc-top {
+  margin-top: 4cqw;
+  padding-top: 3cqw;
+  border-top: 0.2cqw solid rgba(242, 196, 90, 0.3);
+}
+.ket-thuc-top-nhan {
+  margin: 0 0 2cqw;
+  font-size: 2.8cqw;
+  color: rgba(255, 243, 214, 0.75);
+}
+.ket-thuc-top-ds {
+  display: flex;
+  justify-content: center;
+  gap: 4cqw;
+}
+.ket-thuc-ban {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1cqw;
+  max-width: 20cqw;
+}
+.ket-thuc-ban img,
+.ket-thuc-ban i {
+  width: 11cqw;
+  height: 11cqw;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 0.35cqw solid var(--gold, #f2c45a);
+  box-shadow: 0 0 1.6cqw rgba(242, 196, 90, 0.5);
+}
+.ket-thuc-ban i {
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-size: 5cqw;
+  font-weight: 800;
+  color: #fff3d6;
+  background: rgba(60, 28, 10, 0.9);
+}
+.ket-thuc-ban b {
+  font-size: 2.6cqw;
+  color: #fff3d6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.ket-thuc-luu {
+  margin: 4cqw 0 0;
+  font-size: 3cqw;
+  color: rgba(255, 231, 168, 0.85);
+}
+@keyframes ket-thuc-hien {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ket-thuc-noi {
+  from {
+    opacity: 0;
+    transform: translateY(4cqw) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ket-thuc-sang {
+  from {
+    opacity: 0.75;
+  }
+  to {
+    opacity: 1;
+  }
+}

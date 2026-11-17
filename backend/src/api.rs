@@ -396,6 +396,7 @@ pub async fn post_tts(
             // Sổ chi phí: giọng Edge / Google qua 9router là miễn phí; nhà khác
             // tính theo gói của họ, máy không biết giá — ghi "chưa rõ".
             if let Some(id) = &phong {
+                st.bao_su_co(id, crate::su_co::GIONG, None);
                 let d = crate::chi_phi::Dung { ky_tu: doc.ky_tu, ..Default::default() };
                 let usd = crate::chi_phi::giong_mien_phi(&doc.giong).then_some(0.0);
                 st.ghi_chi_phi(id, crate::chi_phi::GIONG, &d, usd);
@@ -413,7 +414,12 @@ pub async fn post_tts(
         Err(crate::tts::TtsError::Invalid(m)) => Err(AppError::BadRequest(m)),
         // Nhà cung cấp từ chối: lỗi của họ hoặc của khoá, không phải của người
         // vừa bấm. 502 để trang quản lý phân biệt được với lỗi nhập liệu.
-        Err(crate::tts::TtsError::Provider(m)) => Err(AppError::Upstream(m)),
+        Err(crate::tts::TtsError::Provider(m)) => {
+            if let Some(id) = phong.filter(|id| st.design_exists(id)) {
+                st.bao_su_co(&id, crate::su_co::GIONG, Some(m.clone()));
+            }
+            Err(AppError::Upstream(m))
+        }
     }
 }
 

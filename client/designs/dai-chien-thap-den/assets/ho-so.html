@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hồ sơ người chơi</title>
+<style>
+:root{--nen:#120b26;--khoi:#1e1440;--vien:rgba(230,194,122,.35);--vang:#ffd980;--chu:#f6efe2;--mo:#b9aed2}
+*{box-sizing:border-box}
+body{margin:0;background:var(--nen);color:var(--chu);font:14px/1.45 'Be Vietnam Pro',system-ui,'Segoe UI',sans-serif}
+main{max-width:1180px;margin:0 auto;padding:22px 16px 48px}
+h1{margin:0;font-size:22px;color:var(--vang)}
+.phu{margin:2px 0 16px;color:var(--mo);font-size:13px}
+.so-lieu{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.o-so{background:var(--khoi);border:1px solid var(--vien);border-radius:10px;padding:10px 13px}
+.o-so small{display:block;color:var(--mo);font-size:12px}
+.o-so b{font-size:20px;color:var(--vang);font-variant-numeric:tabular-nums}
+.thanh{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+button,input{font:inherit;color:var(--chu);background:var(--khoi);border:1px solid var(--vien);border-radius:8px;padding:6px 11px}
+button{cursor:pointer;font-weight:600}
+button:hover{border-color:var(--vang)}
+button[aria-selected=true]{background:linear-gradient(#ffe48f,#e8a52c);color:#3a2206;border-color:transparent}
+input[type=search]{min-width:220px;flex:1}
+input[type=number]{width:96px}
+label{color:var(--mo);font-size:13px}
+.day{margin-left:auto}
+.bang-cuon{overflow-x:auto;background:var(--khoi);border:1px solid var(--vien);border-radius:10px}
+table{width:100%;border-collapse:collapse;min-width:860px}
+th,td{padding:8px 11px;text-align:left;border-bottom:1px solid rgba(255,255,255,.07);white-space:nowrap}
+th{color:var(--vang);font-size:12.5px;font-weight:700}
+th[data-k]{cursor:pointer}
+td.so,th.so{text-align:right;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+.ng{display:flex;align-items:center;gap:9px}
+.ng img,.ng i{width:30px;height:30px;border-radius:50%;object-fit:cover;background:#3a2c63;box-shadow:0 0 0 1px var(--vang);flex:none}
+.ng b{display:block;font-weight:700;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.ng a{color:var(--mo);font-size:12px;text-decoration:none}
+.ng a:hover{color:var(--vang)}
+.nho{font-size:12px;padding:3px 8px}
+.the-ve{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:rgba(111,209,63,.18);color:#a5ec7c}
+tr.mo td{background:rgba(255,217,128,.05)}
+tr.chi>td{padding:0}
+tr.chi table{min-width:0}
+.trong{padding:34px 16px;text-align:center;color:var(--mo)}
+.ghi{margin-top:12px;color:var(--mo);font-size:12.5px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <h1>Hồ sơ người chơi</h1>
+  <p class="phu">Live Đại Chiến · chỉ khách thật, lưu trên máy này. Mỗi phiên giữ top 10 và những người có tặng quà.</p>
+  <section class="so-lieu" id="tong"></section>
+  <div class="thanh">
+    <div role="tablist" style="display:flex;gap:6px">
+      <button role="tab" id="tab-ng" aria-selected="true">Người chơi</button>
+      <button role="tab" id="tab-ph" aria-selected="false">Phiên đấu</button>
+    </div>
+    <input type="search" id="tim" placeholder="Tìm tên hoặc nick" aria-label="Tìm tên hoặc nick">
+    <label>1 xu = <input type="number" id="ti-gia" min="0" step="1" placeholder="đồng"> đồng</label>
+    <div class="day">
+      <button id="lam-moi">Làm mới</button>
+      <button id="xuat">Xuất CSV</button>
+    </div>
+  </div>
+  <div class="bang-cuon" id="khung"></div>
+  <p class="ghi">Số tiền chỉ là ước tính từ tỉ giá bạn nhập ở trên. Điểm và xu là tổng theo từng phiên đã lưu.</p>
+</main>
+<script>
+'use strict';
+const SO='/s/so/dai-chien-thap-den/ho-so';
+const $=s=>document.querySelector(s);
+let phien=[],nguoi=[],che='ng',cot='xu',giam=true,moPhien=null;
+function el(t,lop,chu){const e=document.createElement(t);if(lop)e.className=lop;if(chu!==undefined)e.textContent=chu;return e}
+const gio=t=>t?new Date(t).toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'}):'—';
+const so=n=>Number(n||0).toLocaleString('vi-VN');
+const lk=u=>'https://www.tiktok.com/@'+encodeURIComponent(u);
+function tiGia(){const v=+$('#ti-gia').value;return v>0?v:0}
+const tien=x=>{const g=tiGia();return g?so(x*g)+' đ':'—'};
+try{$('#ti-gia').value=localStorage.getItem('ho-so-ti-gia')||''}catch{}
+function gop(){const m=new Map();for(const p of phien.slice().sort((a,b)=>a.id-b.id))for(const n of p.nguoi||[]){let g=m.get(n.user);if(!g){g={user:n.user,ten:n.ten,anh:'',soPhien:0,diem:0,xu:0,lanTop:0,dau:n.vao,cuoi:0};m.set(n.user,g)}g.ten=n.ten;if(n.anh)g.anh=n.anh;g.soPhien++;g.diem+=n.diem||0;g.xu+=n.xu||0;if(n.hang>0&&n.hang<=10)g.lanTop++;g.dau=Math.min(g.dau,n.vao||g.dau);g.cuoi=Math.max(g.cuoi,n.thay||0);g.nhanVat=n.nhanVat;g.cap=n.cap;g.phe=n.phe;g.veSau=n.veSau}nguoi=[...m.values()]}
+function anh(u){const i=el('img');i.alt='';i.referrerPolicy='no-referrer';i.loading='lazy';if(/^https:\/\//i.test(u||''))i.src=u;i.onerror=()=>i.replaceWith(el('i'));return u?i:el('i')}
+function oNguoi(n){const d=el('div','ng');d.append(anh(n.anh));const c=el('div');c.append(el('b','',n.ten));const a=el('a','', '@'+n.user);a.href=lk(n.user);a.target='_blank';a.rel='noopener noreferrer';c.append(a);d.append(c);return d}
+function hang(ds){const tr=el('tr');for(const x of ds){const td=el('td',x&&x.lop||'');if(x&&x.nut)td.append(x.nut);else td.textContent=x&&x.chu!==undefined?x.chu:x;tr.append(td)}return tr}
+function dau(ds){const tr=el('tr');for(const[c,k,lop]of ds){const th=el('th',lop||'',c+(k&&cot==k?(giam?' ▼':' ▲'):''));if(k){th.dataset.k=k;th.onclick=()=>{if(cot==k)giam=!giam;else{cot=k;giam=true}ve()}}tr.append(th)}const h=el('thead');h.append(tr);return h}
+function nutChep(u){const b=el('button','nho','Chép link');b.onclick=async()=>{try{await navigator.clipboard.writeText(lk(u));b.textContent='Đã chép'}catch{b.textContent='Không chép được'}setTimeout(()=>b.textContent='Chép link',1500)};return b}
+function veTong(){const t=$('#tong');t.replaceChildren();const xu=nguoi.reduce((s,n)=>s+n.xu,0);for(const[c,v]of[['Người đã lưu',so(nguoi.length)],['Phiên đấu',so(phien.length)],['Tổng xu quà',so(xu)],['Tiền ước tính',tien(xu)]]){const o=el('div','o-so');o.append(el('small','',c),el('b','',v));t.append(o)}}
+function veNguoi(){const q=$('#tim').value.trim().toLowerCase();const ds=nguoi.filter(n=>!q||n.ten.toLowerCase().includes(q)||n.user.toLowerCase().includes(q)).sort((a,b)=>{const x=a[cot],y=b[cot],k=typeof x=='string'?String(x).localeCompare(String(y),'vi'):(x||0)-(y||0);return giam?-k:k});if(!ds.length)return trong(phien.length?'Không có ai khớp.':'Chưa có dữ liệu. Hồ sơ được lưu khi phòng đang live có khách thật.');const t=el('table');t.append(dau([['Người chơi','ten'],['Số phiên','soPhien','so'],['Lần vào top 10','lanTop','so'],['Tổng điểm','diem','so'],['Tổng xu','xu','so'],['Tiền ước tính','','so'],['Nhân vật hiện tại','nhanVat'],['Phe','phe'],['Lần đầu','dau'],['Online gần nhất','cuoi'],['','']]));const b=el('tbody');for(const n of ds)b.append(hang([{nut:oNguoi(n)},{chu:so(n.soPhien),lop:'so'},{chu:so(n.lanTop),lop:'so'},{chu:so(n.diem),lop:'so'},{chu:so(n.xu),lop:'so'},{chu:tien(n.xu),lop:'so'},`${n.nhanVat||'—'} · C${n.cap||1}`,n.phe||'—',gio(n.dau),gio(n.cuoi),{nut:nutChep(n.user)}]));t.append(b);$('#khung').replaceChildren(t)}
+function vePhien(){const q=$('#tim').value.trim().toLowerCase();const ds=phien.filter(p=>!q||(p.nguoi||[]).some(n=>n.ten.toLowerCase().includes(q)||n.user.toLowerCase().includes(q)));if(!ds.length)return trong('Chưa có phiên nào khớp.');const t=el('table'),h=el('thead'),r=el('tr');for(const[c,l]of[['Bắt đầu'],['Kết thúc'],['Kênh'],['Bản đồ'],['Thời lượng','so'],['Người được lưu','so'],['Tổng xu','so'],['']]) r.append(el('th',l||'',c));h.append(r);t.append(h);const b=el('tbody');for(const p of ds){const ng=p.nguoi||[],xu=ng.reduce((s,n)=>s+(n.xu||0),0),mo=moPhien==p.id,nut=el('button','nho',mo?'Thu gọn':'Xem top');nut.onclick=()=>{moPhien=mo?null:p.id;ve()};const tr=hang([gio(p.batDau),p.ketThuc?gio(p.ketThuc):'Đang chạy',p.kenh?'@'+p.kenh:'—',p.banDo||'—',{chu:Math.round((p.giay||0)/60)+' phút',lop:'so'},{chu:so(ng.length),lop:'so'},{chu:so(xu),lop:'so'},{nut}]);if(mo)tr.className='mo';b.append(tr);if(mo){const c=el('tr','chi'),td=el('td');td.colSpan=8;const t2=el('table'),h2=el('thead'),r2=el('tr');for(const[x,l]of[['Hạng','so'],['Người chơi'],['Điểm','so'],['Xu','so'],['Nhân vật'],['Vào lúc'],['Online gần nhất'],['Vòng sau']])r2.append(el('th',l||'',x));h2.append(r2);t2.append(h2);const b2=el('tbody');for(const n of ng.slice().sort((a,c)=>(a.hang||1e9)-(c.hang||1e9))){const ve=n.veSau?{nut:el('span','the-ve','Được vào')}:'—';b2.append(hang([{chu:n.hang||'—',lop:'so'},{nut:oNguoi(n)},{chu:so(n.diem),lop:'so'},{chu:so(n.xu),lop:'so'},`${n.nhanVat||'—'} · C${n.cap||1}`,gio(n.vao),gio(n.thay),ve]))}t2.append(b2);td.append(t2);c.append(td);b.append(c)}}t.append(b);$('#khung').replaceChildren(t)}
+function trong(c){$('#khung').replaceChildren(el('div','trong',c))}
+function ve(){veTong();$('#tab-ng').setAttribute('aria-selected',che=='ng');$('#tab-ph').setAttribute('aria-selected',che=='ph');che=='ng'?veNguoi():vePhien()}
+async function tai(){try{const r=await fetch(SO,{cache:'no-store'});if(!r.ok)throw 0;const d=await r.json();phien=Array.isArray(d.phien)?d.phien:[];gop();ve()}catch{trong('Không đọc được hồ sơ. Trang này cần mở từ app Live Studio.')}}
+function xuat(){const anToan=v=>{let c=String(v??'');if(/^[=+\-@\t\r]/.test(c))c="'"+c;return '"'+c.replace(/"/g,'""')+'"'};const dong=[['Tên','Nick','Link','Số phiên','Lần vào top 10','Tổng điểm','Tổng xu','Nhân vật hiện tại','Phe','Lần đầu','Online gần nhất']];for(const n of nguoi)dong.push([n.ten,n.user,lk(n.user),n.soPhien,n.lanTop,n.diem,n.xu,n.nhanVat,n.phe,gio(n.dau),gio(n.cuoi)]);const blob=new Blob(['﻿'+dong.map(d=>d.map(anToan).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}),a=el('a');a.href=URL.createObjectURL(blob);a.download='ho-so-nguoi-choi.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+$('#tab-ng').onclick=()=>{che='ng';ve()};$('#tab-ph').onclick=()=>{che='ph';ve()};$('#tim').oninput=ve;$('#lam-moi').onclick=tai;$('#xuat').onclick=xuat;
+$('#ti-gia').oninput=()=>{try{localStorage.setItem('ho-so-ti-gia',$('#ti-gia').value)}catch{}ve()};
+tai();
+</script>
+</body>
+</html>

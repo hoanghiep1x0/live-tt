@@ -16,7 +16,7 @@ const nghi = (tu: number, lyDo = 'chuyen') => ({ giaiLao: { truyenSau: 'Sọ D�
 
 describe('giờ nghỉ giữa hai truyện', () => {
   it('đọc ô giaiLao của module Kể truyện', () => {
-    expect(giaiLaoCua(nghi(1_000))).toEqual({ truyenSau: 'Sọ Dừa', lyDo: 'chuyen', tu: 1_000, han: 0 });
+    expect(giaiLaoCua(nghi(1_000))).toEqual({ truyenSau: 'Sọ Dừa', lyDo: 'chuyen', tu: 1_000, han: 0, giaoLuu: false });
     expect(giaiLaoCua({ giaiLao: { truyenSau: 'A', lyDo: 'chuyen', tu: 5, han: 22_000 } })?.han).toBe(22_000);
     expect(giaiLaoCua({})).toBeNull();
     expect(giaiLaoCua(null)).toBeNull();

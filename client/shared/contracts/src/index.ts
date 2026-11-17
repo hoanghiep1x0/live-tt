@@ -44,6 +44,7 @@ export type {
   ConfigFieldType,
   ModuleAction,
   ModuleUi,
+  TheTach,
   RoomKind,
   ModuleManifest,
   Ctx,
@@ -89,7 +90,7 @@ export {
 export type { DoanDoc, GiongCoNha, GiongTrongDan, NguonGiong } from './giong';
 
 export { designManifestSchema } from './design';
-export type { DesignCard, DesignManifest, DesignOption, DesignStatus, DesignInfo } from './design';
+export type { DesignCard, DesignManifest, DesignOption, DesignStatus, DesignInfo, ViTriThe } from './design';
 
 export { WS_PATH, DEFAULT_PORT } from './wire';
 export type { Down, KhoanChiPhi, KieuNguon, SoChiPhi, TrangThaiNguon, Up } from './wire';

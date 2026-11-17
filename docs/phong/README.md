@@ -19,7 +19,7 @@ docs/phong/
 | `san-bar` | Sàn bar | `hop-dem` → `san-bar-hop-dem`, `bai-bien` → `san-bar-bai-bien` | [san-bar/](san-bar/README.md) |
 | `ke-chuyen` | Phòng kể chuyện | mặc định → `ke-chuyen` (id có trước quy ước) | [04 — Viết thiết kế](../04-viet-thiet-ke.md) |
 | `lop-hoc` | Lớp học | `chu` → `lop-hoc-chu` | [lop-hoc/](lop-hoc/README.md) |
-| `dai-chien` | Live Đại Chiến (game, đang nghiên cứu) | `thap-den` → `dai-chien-thap-den` (chưa có mã) | [dai-chien/](dai-chien/README.md) |
+| `dai-chien` | Live Đại Chiến (game, bản đầu) | `thap-den` → `dai-chien-thap-den` | [dai-chien/](dai-chien/README.md) |
 
 ## Thêm loại hoặc kiểu mới
 

@@ -110,6 +110,10 @@ pub struct AiCfg {
     /// Ai đọc gì (`VaiGiong`).
     #[serde(default, rename = "vaiGiong")]
     pub vai_giong: VaiGiong,
+    /// MC chạy bằng gì: `claude`, `codex` (tài khoản qua CLI) hoặc `api`. Rỗng là
+    /// theo `mc.aiChu` của thiết kế; thiết kế không khai thì đi API như cũ.
+    #[serde(default, rename = "aiChu")]
+    pub ai_chu: String,
     /// MC gửi câu trả lời vào KHUNG CHÁT TikTok (ngoài việc nói trên màn).
     #[serde(default, rename = "chatTiktok")]
     pub chat_tiktok: bool,
@@ -184,6 +188,7 @@ impl Default for AiCfg {
             anh_size: String::new(),
             voice_id: String::new(),
             vai_giong: VaiGiong::default(),
+            ai_chu: String::new(),
             chat_tiktok: false,
             chat_moi_15: chat_moi_15_mac_dinh(),
             // Mặc định TẮT: phòng trống mà vẫn gọi AI mỗi lượt là đốt tiền
@@ -1339,7 +1344,9 @@ fn dan_va_loi(cfg: &AiCfg, chup: &Value, dan_goc: &str) -> (String, String) {
         dan.push_str("\n\nLời dặn thêm của người vận hành:\n");
         dan.push_str(&them.chars().take(MAX_DAN_THEM).collect::<String>());
     }
-    let loi = format!("<tin_phong>\n{chup}\n</tin_phong>\n\nViết câu MC tiếp theo.");
+    // Nhịp giao lưu (`giao_luu.rs`): lời dặn cách nói riêng đi kèm lượt này.
+    let them_luot = crate::giao_luu::loi_dan_luot(chup).map(|d| format!("{d}\n")).unwrap_or_default();
+    let loi = format!("<tin_phong>\n{chup}\n</tin_phong>\n\n{them_luot}Viết câu MC tiếp theo.");
     (dan, loi)
 }
 
@@ -1491,6 +1498,10 @@ const DAN_VIET: &str = "Bạn viết nội dung cho một phòng live kể truy�
 
 /// Thân yêu cầu nhờ AI viết chữ cho một ô cấu hình. Hàm thuần.
 pub fn than_viet(kind: ProviderKind, model: &str, what: &str, extra: &str, boi_canh: &str) -> Value {
+    than_chat(kind, model, DAN_VIET, &nhac_viet(what, extra, boi_canh), 4_000)
+}
+
+fn nhac_viet(what: &str, extra: &str, boi_canh: &str) -> String {
     let mut nhac = String::new();
     let b = boi_canh.trim();
     if !b.is_empty() {
@@ -1505,7 +1516,7 @@ pub fn than_viet(kind: ProviderKind, model: &str, what: &str, extra: &str, boi_c
         nhac.push_str("\n\nÝ của người vận hành: ");
         nhac.push_str(&y.chars().take(MAX_Y).collect::<String>());
     }
-    than_chat(kind, model, DAN_VIET, &nhac, 4_000)
+    nhac
 }
 
 /// Dọn phần trả lời: gỡ rào ```, cắt theo trần.
@@ -1534,6 +1545,28 @@ pub async fn viet(
         return loi_json(StatusCode::BAD_REQUEST, "ô này không nhờ AI viết được");
     }
     let cfg = st.ai_config(&design_id);
+    if let Some(cong) = crate::cli_goi::cong_phong(None, &cfg.ai_chu) {
+        let loi = nhac_viet(&what, &xin.extra, &xin.context);
+        let id = design_id.clone();
+        let kq = tokio::task::spawn_blocking(move || {
+            crate::cli_goi::goi_viet(cong, &id, DAN_VIET, &loi, "", "")
+        })
+        .await;
+        return match kq {
+            Ok(Ok(tra)) => {
+                st.ghi_chi_phi(&design_id, crate::chi_phi::VIET, &tra.dung, tra.usd);
+                Json(json!({ "text": don_chu(&tra.chu) })).into_response()
+            }
+            Ok(Err(e)) => {
+                tracing::warn!("nhờ AI viết qua CLI: {e}");
+                loi_json(StatusCode::BAD_GATEWAY, &format!("không nhờ được AI viết: {e}"))
+            }
+            Err(e) => {
+                tracing::warn!("nhờ AI viết qua CLI: tác vụ hỏng: {e}");
+                loi_json(StatusCode::INTERNAL_SERVER_ERROR, "không nhờ được AI viết")
+            }
+        };
+    }
     let Some((nha, p)) = secrets::tim(&st.layout, &cfg.provider, NHA_CUNG_CAP, secrets::Use::Chat)
     else {
         return loi_json(StatusCode::BAD_REQUEST, &thieu_nha(&cfg.provider, "Chat"));
@@ -1661,6 +1694,29 @@ pub fn cho_sau_loi(so_lan: u32) -> Duration {
     Duration::from_secs((30u64 << so_lan.min(5)).min(600))
 }
 
+/// Khoảng cách tối thiểu giữa các lượt trong giờ nghỉ đổi truyện khi AI đang hỏng.
+const HEN_DU_PHONG_NGHI: Duration = Duration::from_secs(10);
+
+/// Lượt thay AI khi AI lỗi hay không trả lời: còn đoạn thì đọc nguyên văn đoạn kế.
+///
+/// Đã kể hết đoạn vẫn phải có lượt thay: `da_bao`, `da_nghi` chỉ được ghi khi
+/// một lượt chạy xong, không có lượt là phòng đứng ở cuối truyện tới khi AI
+/// sống lại, mà lịch thử lại có thể lùi tới 10 phút. `cau_chuyen` có khi lượt
+/// này là lượt báo chuyển tiếp; các lượt còn lại lúc hết truyện thì im.
+///
+/// `None` là lượt không có việc bắt buộc (MC chỉ trò chuyện): để lỗi đi đường
+/// lùi lịch như thường. Hàm thuần.
+fn luot_du_phong(doan: Option<&str>, het_truyen: bool, cau_chuyen: Option<String>) -> Option<LuotMc> {
+    let cau = |chu: String| CauMc { chu, giong: None, viec: None };
+    if let Some(d) = doan {
+        return Some(LuotMc { ke: Some(cau(d.to_string())), ..LuotMc::default() });
+    }
+    het_truyen.then(|| LuotMc {
+        noi: cau_chuyen.filter(|c| !c.is_empty()).map(cau).into_iter().collect(),
+        ..LuotMc::default()
+    })
+}
+
 pub async fn chay(st: Arc<AppState>) {
     use std::sync::Mutex;
     use tokio::time::Instant;
@@ -1678,9 +1734,13 @@ pub async fn chay(st: Arc<AppState>) {
     // Bình luận mới nhất đã kéo lượt MC lên sớm, theo phòng — một tin chỉ kéo
     // một lần: AI đọc xong mà chọn im thì không kéo lại mỗi giây.
     let mut da_keo: HashMap<String, i64> = HashMap::new();
+    // Toast sự cố (`su_co.rs`): nguồn TikTok theo từng phòng, ổ cứng nửa phút một lần.
+    let mut canh_nguon: HashMap<String, crate::su_co::CanhNguon> = HashMap::new();
+    let mut nhip_dem: u32 = 0;
 
     loop {
         dong_ho.tick().await;
+        nhip_dem = nhip_dem.wrapping_add(1);
         // Phòng đang phát trước, rồi tới các phòng đang xem thử (đang có cửa sổ
         // mở — đóng hết thì phiên xem thử bị bỏ và MC ở đó thôi gọi).
         let mut phong: Vec<(String, bool)> = st.live().into_iter().map(|id| (id, true)).collect();
@@ -1695,6 +1755,22 @@ pub async fn chay(st: Arc<AppState>) {
             // phòng trông như trống — đợi tới lượt MC là không bao giờ mở được
             // giờ nghỉ, không bao giờ bật được nhân vật minh hoạ.
             canh_mat_nguon(&st, &id, dang_phat, crate::state::bay_gio_ms(), &mut mat_ket_noi);
+            let nguon = st.nguon();
+            let co_nguon = dang_phat && nguon.cfg.kind != crate::source::SourceKind::Tat;
+            let loi_nguon = canh_nguon.entry(id.clone()).or_default().nhip(
+                co_nguon,
+                nguon.problem.as_deref(),
+                crate::state::bay_gio_ms(),
+            );
+            st.bao_su_co(&id, crate::su_co::NGUON, loi_nguon);
+            if nhip_dem % 30 == 1 {
+                crate::su_co::canh_o_cung(&st, &id);
+            }
+            // Màn chào kết thúc (`ket_thuc.rs`): MC chào tạm biệt một câu, truyện
+            // tạm dừng, không gọi AI tới khi người vận hành tắt màn kết.
+            if crate::ket_thuc::xu_ly(&st, &id, dang_phat, crate::state::bay_gio_ms()) {
+                continue;
+            }
             // Lượt trước chưa về thì chờ: gọi chồng lên nhau là MC nói hai câu
             // cùng lúc và hoá đơn API nhân đôi.
             if st.ai_dang_chay() {
@@ -1757,9 +1833,14 @@ pub async fn chay(st: Arc<AppState>) {
                     .and_then(|v| khach_moi_nhan(v, bay_gio, &kenh))
                     .filter(|t| da_keo.get(&id).is_none_or(|cu| t > cu));
                 let gan_day = st.the_mc_gan_day(&id, bay_gio, cach_the);
+                // Nhịp giao lưu: MC nhận phần chào — khách vừa vào là kéo lượt.
+                let giao_luu_mo = st
+                    .module_state(&id, "story")
+                    .ok()
+                    .is_some_and(|m| crate::giao_luu::dang(&m.config));
                 let som = !gan_day
                     && v.as_ref().is_some_and(|v| {
-                        (!san_khau_chao && khach_cho_chao(v, bay_gio, &kenh))
+                        ((!san_khau_chao || giao_luu_mo) && khach_cho_chao(v, bay_gio, &kenh))
                             || khach_chao_mc(v, bay_gio, &kenh)
                     });
                 let dap_chat = !gan_day && tin_moi.is_some();
@@ -1782,7 +1863,7 @@ pub async fn chay(st: Arc<AppState>) {
             // Kể truyện chọn "Claude" (tài khoản Claude qua Claude Code): không
             // cần kết nối API nào.
             let story_cfg = st.module_state(&id, "story").ok().filter(|m| m.enabled).map(|m| m.config);
-            let cong_cli = crate::cli_goi::cong_cua(story_cfg.as_ref());
+            let cong_cli = crate::cli_goi::cong_phong(story_cfg.as_ref(), &cfg.ai_chu);
             let p = if cong_cli.is_some() {
                 None
             } else {
@@ -1828,6 +1909,13 @@ pub async fn chay(st: Arc<AppState>) {
                 .design_config(&id)
                 .ok()
                 .is_some_and(|c| c.get("chaoVao").and_then(Value::as_bool) != Some(false));
+            // Nhịp giao lưu (`giao_luu.rs`): sân khấu nhường phần chào cho MC.
+            let giao_luu_tu = story_cfg
+                .as_ref()
+                .filter(|c| crate::giao_luu::dang(c))
+                .and_then(crate::truyen_sau::giai_lao)
+                .map(|(_, _, tu)| tu);
+            let san_khau_chao = san_khau_chao && giao_luu_tu.is_none();
             if san_khau_chao {
                 chup["vuaVao"] = Value::Array(Vec::new());
                 chup["choChao"] = Value::Bool(false);
@@ -1856,6 +1944,11 @@ pub async fn chay(st: Arc<AppState>) {
                 if rong {
                     chup["choChao"] = Value::Bool(false);
                 }
+            }
+            // Nhịp giao lưu: chào người vào sau khi nhịp mở, ai mới là chào
+            // ngay lượt này (không theo nhịp chào thường).
+            if let Some(tu) = giao_luu_tu {
+                crate::giao_luu::loc_vua_vao(&mut chup, tu, now);
             }
 
             // Chát chào khách vào phòng, nếu người vận hành đã bật và còn nhịp.
@@ -1910,8 +2003,13 @@ pub async fn chay(st: Arc<AppState>) {
             // trong phòng lúc ấy. Đọc lại chứ không tính lại: tính lại mỗi nhịp
             // thì số người đổi là đồng hồ trên sân khấu nhảy cóc.
             let han_nghi = truyen.as_ref().map_or(0, crate::truyen_sau::han_cua);
+            let giao_luu_dang = truyen.as_ref().is_some_and(crate::giao_luu::dang);
             let het_gio_nghi = |td: &crate::ke_truyen::TienDo| {
-                crate::truyen_sau::het_giai_lao(td.bao_luc, now, soi_dong, han_nghi)
+                if giao_luu_dang {
+                    crate::giao_luu::het(td.bao_luc, now, han_nghi)
+                } else {
+                    crate::truyen_sau::het_giai_lao(td.bao_luc, now, soi_dong, han_nghi)
+                }
             };
             if tu_chuyen
                 && het.is_some_and(|td| {
@@ -1931,8 +2029,23 @@ pub async fn chay(st: Arc<AppState>) {
             // khách, hỏi cảm nghĩ, nhá trước truyện kế; hết giờ nghỉ mới mở truyện mới.
             let nghi_giua =
                 tu_chuyen && het.is_some_and(|td| td.da_bao && (!td.da_nghi || !het_gio_nghi(td)));
-            let sap_het_nghi =
-                het.is_some_and(|td| crate::truyen_sau::sap_het_giai_lao(td.bao_luc, now, soi_dong, han_nghi));
+            let sap_het_nghi = het.is_some_and(|td| {
+                if giao_luu_dang {
+                    crate::giao_luu::sap_het(td.bao_luc, now, han_nghi)
+                } else {
+                    crate::truyen_sau::sap_het_giai_lao(td.bao_luc, now, soi_dong, han_nghi)
+                }
+            });
+            // Lượt này nằm trong nhịp giao lưu (giờ nghỉ đổi truyện có cờ).
+            let giao_luu_nay = giao_luu_dang && nghi_giua;
+            if let (true, Some(td)) = (giao_luu_nay, het) {
+                chup["giaoLuu"] = crate::giao_luu::boi_canh(td.bao_luc, now, han_nghi);
+            }
+            // Cài đặt nhịp giao lưu, đọc mỗi lượt — đổi là áp dụng ngay.
+            let gl_sau = truyen.as_ref().map_or(0, crate::giao_luu::sau_may_truyen);
+            let gl_han = truyen
+                .as_ref()
+                .map_or(crate::giao_luu::GIAY_MAC_DINH * 1000, crate::giao_luu::thoi_luong_ms);
             // Giờ nghỉ SỰ CỐ — không vẽ được ảnh ("anh", `anh_truyen` mở): trong
             // giờ nghỉ KHÔNG kể, MC chào, trò chuyện; vẽ lại được thì đóng và kể
             // tiếp. Quá 24 giờ thì thôi chờ, kể không ảnh. (Mất nguồn thì không
@@ -2030,10 +2143,11 @@ pub async fn chay(st: Arc<AppState>) {
                 .map(|t| t.tiep);
             // Lượt dự phòng khi AI lỗi, không trả lời, hay trả thiếu: đọc nguyên
             // văn đoạn kế — truyện không bao giờ đứng vì một lượt AI hỏng.
-            let du_phong: Option<LuotMc> = tiep_now.and_then(|i| cac_doan.get(i)).map(|d| LuotMc {
-                ke: Some(CauMc { chu: d.clone(), giong: None, viec: None }),
-                ..LuotMc::default()
-            });
+            let du_phong = luot_du_phong(
+                tiep_now.and_then(|i| cac_doan.get(i)).map(String::as_str),
+                het.is_some(),
+                bao_chuyen.then(|| crate::truyen_sau::cau_chuyen_tiep_thu(so_da_ke)),
+            );
             them_boi_canh(&mut chup, ten_truyen.zip(doan), (bot.enabled, bot.count), &dan, ke);
             // Phân vai của truyện (người phân vai đã làm lúc viết): giọng dẫn,
             // giọng từng nhân vật, không khí từng đoạn — chỉ giọng đọc được.
@@ -2078,6 +2192,10 @@ pub async fn chay(st: Arc<AppState>) {
             {
                 o.insert("vaiGiong".into(), v);
             }
+            // Phòng tự chạy logic ở sân khấu báo tình hình lên; phòng khác không có khoá này.
+            if let (Some(b), Some(o)) = (crate::boi_canh_phong::lay(&id, now), chup.as_object_mut()) {
+                o.insert("tinhHinhPhong".into(), b);
+            }
             let dan_rieng = st.dan_mc(&id);
             let dan_goc = dan_rieng.as_deref().unwrap_or(DAN_GOC);
             // Gọi qua đâu: API (thân yêu cầu dựng sẵn) hay Claude Code (lời dặn +
@@ -2093,7 +2211,12 @@ pub async fn chay(st: Arc<AppState>) {
                     May::Cli {
                         cong,
                         phong: id.clone(),
-                        truyen: ten_truyen.unwrap_or_default().to_string(),
+                        // Không kể truyện thì đổi session mỗi 30 phút cho khỏi phình.
+                        truyen: if story_cfg.is_some() {
+                            ten_truyen.unwrap_or_default().to_string()
+                        } else {
+                            (now / 1_800_000).to_string()
+                        },
                         dan,
                         loi,
                         model: crate::cli_goi::model_viec(story_cfg.as_ref(), cong, true),
@@ -2186,9 +2309,11 @@ pub async fn chay(st: Arc<AppState>) {
                         // Cắt bớt câu nói với khách: mỗi câu là một lần khung
                         // truyện phải nhường chỗ, ba câu liền là mạch truyện
                         // đứt hẳn một quãng. Phần lớn lượt chỉ còn một câu.
-                        let toi_da = crate::ke_truyen::so_cau_voi_khach(
-                            crate::state::bay_gio_ms().unsigned_abs(),
-                        );
+                        let toi_da = if giao_luu_nay {
+                            crate::giao_luu::CAU_MOI_LUOT
+                        } else {
+                            crate::ke_truyen::so_cau_voi_khach(crate::state::bay_gio_ms().unsigned_abs())
+                        };
                         // Khách xin truyện qua chát: xếp vào hàng chờ, truyện
                         // kế tiếp lấy từ đầu hàng (`truyen_sau::chuan_bi`).
                         for (ten, khach) in std::mem::take(&mut luot.xin) {
@@ -2219,7 +2344,8 @@ pub async fn chay(st: Arc<AppState>) {
                         );
                         let mut dem_tu_dem: usize = so_chu;
                         for c in luot.noi {
-                            if crate::ke_truyen::la_noi_voi_khach(&c.chu, c.viec.as_deref())
+                            if !giao_luu_nay
+                                && crate::ke_truyen::la_noi_voi_khach(&c.chu, c.viec.as_deref())
                                 && !st2.duoc_the_mc(
                                     &id,
                                     crate::state::bay_gio_ms(),
@@ -2238,7 +2364,8 @@ pub async fn chay(st: Arc<AppState>) {
                             // AI nhớ vài lượt rồi quên — mà thẻ MC hỏi "cả nhà
                             // thấy thế nào" hiện dày là thứ chủ phòng kêu nhiều
                             // nhất. Bỏ câu hỏi thôi, lời kể lượt này vẫn chạy.
-                            if crate::ke_truyen::hoi_ca_phong(&c.chu, c.viec.as_deref())
+                            if !giao_luu_nay
+                                && crate::ke_truyen::hoi_ca_phong(&c.chu, c.viec.as_deref())
                                 && !st2.duoc_hoi_phong(&id, crate::state::bay_gio_ms())
                             {
                                 tracing::info!(
@@ -2272,7 +2399,11 @@ pub async fn chay(st: Arc<AppState>) {
                                 && !st2.duoc_noi_trong_nghi(
                                     &id,
                                     moc_nghi,
-                                    crate::ke_truyen::CAU_MOI_GIO_NGHI,
+                                    if giao_luu_nay {
+                                        crate::giao_luu::CAU_MOI_NHIP
+                                    } else {
+                                        crate::ke_truyen::CAU_MOI_GIO_NGHI
+                                    },
                                 )
                             {
                                 tracing::info!(
@@ -2375,13 +2506,20 @@ pub async fn chay(st: Arc<AppState>) {
                                 let luc = crate::state::bay_gio_ms();
                                 td.bao_luc = luc;
                                 let so_nguoi = st2.session_view().map_or(0, |v| v.totals.viewers);
-                                crate::truyen_sau::dat_giai_lao(
-                                    &st2,
-                                    &id,
-                                    Some((&ten_sau2, "chuyen")),
-                                    luc,
-                                    so_nguoi,
-                                );
+                                // Cứ sau `giaoLuuSau` truyện: giờ nghỉ này là
+                                // nhịp giao lưu (`giao_luu.rs`), dài hơn.
+                                let xong = crate::giao_luu::xong_mot_truyen(&id);
+                                if crate::giao_luu::den_luot(xong, gl_sau) {
+                                    crate::giao_luu::mo(&st2, &id, &ten_sau2, luc, gl_han);
+                                } else {
+                                    crate::truyen_sau::dat_giai_lao(
+                                        &st2,
+                                        &id,
+                                        Some((&ten_sau2, "chuyen")),
+                                        luc,
+                                        so_nguoi,
+                                    );
+                                }
                             }
                             if nghi_giua {
                                 td.da_nghi = true;
@@ -2426,7 +2564,11 @@ pub async fn chay(st: Arc<AppState>) {
                         };
                         // Đang chờ ảnh truyện sau: lượt dày hơn (≤ 20 giây) để
                         // phòng không im và chuyển ngay khi ảnh đủ.
-                        if dang_cho && !bao_chuyen { hen.min(Duration::from_secs(20)) } else { hen }
+                        let hen = if dang_cho && !bao_chuyen { hen.min(Duration::from_secs(20)) } else { hen };
+                        // AI đang hỏng mà đang giờ nghỉ: gọi thưa ra, khỏi đập
+                        // vào API hỏng mỗi ba giây, vẫn kịp đổi truyện đúng giờ.
+                        let hen = if dung_du_phong && nghi_giua { hen.max(HEN_DU_PHONG_NGHI) } else { hen };
+                        if giao_luu_nay { hen.min(crate::giao_luu::HEN_TOI_DA) } else { hen }
                     }
                     Ok(Err(e)) => {
                         tracing::warn!("MC: {e}");
@@ -2451,6 +2593,27 @@ pub async fn chay(st: Arc<AppState>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ai_hong_luot_du_phong_giu_truyen_chay_toi_truyen_sau() {
+        // Còn đoạn: đọc nguyên văn đoạn kế.
+        let l = luot_du_phong(Some("Đoạn hai."), false, None).unwrap();
+        assert_eq!(l.ke.unwrap().chu, "Đoạn hai.");
+        assert!(l.noi.is_empty());
+        // Hết đoạn, tới lượt báo chuyển: nói câu chuyển tiếp viết sẵn, không kể gì.
+        let l = luot_du_phong(None, true, Some("Chờ xíu xíu nha".into())).unwrap();
+        assert_eq!(l.noi.len(), 1);
+        assert_eq!(l.noi[0].chu, "Chờ xíu xíu nha");
+        assert!(l.ke.is_none());
+        // Lượt nghỉ giữa hai truyện: vẫn có lượt để giờ nghỉ đi tiếp, chỉ là im.
+        let l = luot_du_phong(None, true, None).unwrap();
+        assert!(l.noi.is_empty() && l.ke.is_none());
+        // Kho câu chuyển tiếp trống: im, không đọc chuỗi rỗng.
+        assert!(luot_du_phong(None, true, Some(String::new())).unwrap().noi.is_empty());
+        // Đang kể dở mà lượt này không tới phiên kể, hay phòng chưa có truyện:
+        // không có lượt thay, lỗi đi đường lùi lịch như cũ.
+        assert!(luot_du_phong(None, false, None).is_none());
+    }
 
     #[test]
     fn luot_mc_doc_ra_lenh_co_kiem_soat() {

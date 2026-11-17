@@ -453,6 +453,19 @@ pub fn cong_cua(story: Option<&Value>) -> Option<Cong> {
     }
 }
 
+/// Công cụ MC của một phòng: có tính năng Kể chuyện thì theo ô của tính năng đó,
+/// không có thì theo ô `aiChu` của thẻ người dẫn. Rỗng hoặc `api` là đi qua API.
+pub fn cong_phong(story: Option<&Value>, chon: &str) -> Option<Cong> {
+    if story.is_some() {
+        return cong_cua(story);
+    }
+    match chon {
+        "claude" => Some(Cong::Claude),
+        "codex" => Some(Cong::Codex),
+        _ => None,
+    }
+}
+
 /// Model CLI của một việc theo công cụ: Claude dùng `cliModel*`, Codex dùng
 /// `codexModel*` (để trống là model mặc định của tài khoản). Hàm thuần.
 pub fn model_viec(story: Option<&Value>, cong: Cong, mc: bool) -> String {
@@ -538,5 +551,27 @@ mod tests {
         assert!(doc_ket_qua("không phải json").is_none());
         let loi = doc_ket_qua(r#"{"is_error":true,"result":"hết hạn mức"}"#).unwrap();
         assert!(loi.loi);
+    }
+}
+
+#[cfg(test)]
+mod thu_cong_phong {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn phong_co_ke_chuyen_chi_nghe_o_cua_ke_chuyen() {
+        let c = json!({ "aiChu": "api" });
+        assert!(cong_phong(Some(&c), "claude").is_none());
+        let c = json!({ "aiChu": "codex" });
+        assert!(cong_phong(Some(&c), "") == Some(Cong::Codex));
+    }
+
+    #[test]
+    fn phong_khac_theo_the_nguoi_dan() {
+        assert!(cong_phong(None, "claude") == Some(Cong::Claude));
+        assert!(cong_phong(None, "codex") == Some(Cong::Codex));
+        assert!(cong_phong(None, "api").is_none());
+        assert!(cong_phong(None, "").is_none());
     }
 }

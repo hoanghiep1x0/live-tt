@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { anhChoDoan, boVai, cachKeCua, khungHien } from '@live/contracts';
+import { anhChoDoan, boVai, khungHien } from '@live/contracts';
 import { duocNoi, guiLenh } from '@live/stage-sdk';
 import type { StagePartProps } from '@live/stage-sdk';
 import type { Config } from './manifest';
 import type { State } from './core';
-import { catDoan, chuPhuDe, dongHo, loiChaoKhung } from './core';
+import { catDoan, chuPhuDe, dongHo, loiChaoKhung, tinTuDoc } from './core';
 import { trongSuot as trongSuotCua } from './manifest';
 import './stage.css';
 
@@ -156,18 +156,13 @@ export function Stage({ config, modState }: StagePartProps<Config, State>) {
   // thì máy chủ vẫn tưởng MC ở đoạn cũ, MC kể lại đúng mấy đoạn vừa đọc, khung
   // lùi theo — người xem nghe một đoạn hai lần. Chỉ cửa sổ đang giữ quyền nói
   // mới báo: cửa sổ im không chờ giọng nên chạy đoạn nhanh hơn tiếng thật.
-  // Giờ nghỉ thì KHÔNG báo gì: lõi đã dừng đoạn, báo tiếp là đẩy tiến độ của
-  // máy chủ đi trong lúc khung không hề kể.
-  const tuDoc =
-    cachKeCua(config) !== 'tu-doc' &&
-    config.giaiLao === null &&
-    modState.daDoc &&
-    modState.loiKe === null &&
-    modState.doan >= 0;
+  const tin = tinTuDoc(config, modState);
+  const tenTuDoc = tin?.ten;
+  const doanTuDoc = tin?.doan;
   useEffect(() => {
-    if (!tuDoc || !duocNoi()) return;
-    guiLenh({ t: 'tu-doc', ten: config.title, doan: modState.doan });
-  }, [tuDoc, config.title, modState.doan]);
+    if (tenTuDoc === undefined || doanTuDoc === undefined || !duocNoi()) return;
+    guiLenh({ t: 'tu-doc', ten: tenTuDoc, doan: doanTuDoc });
+  }, [tenTuDoc, doanTuDoc]);
 
   // Giờ nghỉ: KHÔNG vẽ thẻ truyện — để lộ màn chờ của thiết kế ("Chào cả nhà"
   // + đồng hồ) phía sau, chỉ đặt thêm dải giới thiệu truyện sắp kể. Module

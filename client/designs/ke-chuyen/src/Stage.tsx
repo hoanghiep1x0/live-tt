@@ -38,6 +38,8 @@ import { VaoPhong } from './parts/VaoPhong';
 import { aiCanChao, CACH_MAC_DINH_GIAY, cauChao, soChaoMoi } from './parts/chao-vao';
 import { TungHoa } from './parts/TungHoa';
 import { LenhGhe } from './parts/LenhGhe';
+import { KetThuc } from './parts/KetThuc';
+import { KET_THUC_GIAY_MAC_DINH, KET_THUC_HEN_MAC_DINH, KET_THUC_LOI_MAC_DINH } from './parts/ket-thuc';
 
 /** Lựa chọn của riêng phòng này, hiện thành thẻ "Khung phòng" ở bảng xem.
  *
@@ -47,6 +49,8 @@ import { LenhGhe } from './parts/LenhGhe';
 export const LUA_CHON: readonly DesignCard[] = [
   {
     id: 'khung',
+    // Ít khi đổi: xuống cuối ngăn xem thử, nhường chỗ cho thẻ dùng thường xuyên.
+    viTri: 'cuoi',
     name: 'Khung phòng',
     icon: '🖼',
     summary: 'Bố cục của riêng phòng này, không phải tính năng',
@@ -63,6 +67,7 @@ export const LUA_CHON: readonly DesignCard[] = [
   },
   {
     id: 'chao-vao',
+    viTri: 'cuoi',
     name: 'Chào khách vào phòng',
     icon: '👋',
     summary: 'Giọng chào ngay lúc khách bước vào, đọc song song với lời kể',
@@ -88,6 +93,7 @@ export const LUA_CHON: readonly DesignCard[] = [
   },
   {
     id: 'an-ui',
+    viTri: 'cuoi',
     name: 'Cảnh an ủi',
     icon: '🫂',
     summary: 'Khán giả đang ngồi ghế chạy lên ôm bé và cậu bé',
@@ -140,6 +146,47 @@ export const LUA_CHON: readonly DesignCard[] = [
         type: 'toggle',
         value: AN_UI_MAC_DINH.khachGoi,
         hint: 'Một mình khách đó lên ôm, đè lên lượt tự động. Tắt thì lời mời gõ “ôm” trên màn cũng tắt',
+      },
+    ],
+  },
+  {
+    id: 'ket-thuc',
+    // Ngay dưới thẻ Kể truyện: tính năng chính của phòng luôn đứng đầu.
+    viTri: 'sau-the-dau',
+    name: 'Màn hình chào kết thúc',
+    icon: '🌙',
+    summary: 'Bật trước khi tắt live: màn chào cảm ơn kèm đồng hồ đếm ngược, MC chào tạm biệt',
+    toggle: {
+      key: 'ketThuc',
+      label: 'Bật màn hình chào kết thúc',
+      type: 'toggle',
+      value: false,
+    },
+    fields: [
+      {
+        key: 'ketThucGiay',
+        label: 'Đếm ngược kết thúc sau',
+        short: 'Đếm ngược (giây)',
+        type: 'number',
+        unit: 'giây',
+        min: 10,
+        max: 600,
+        value: KET_THUC_GIAY_MAC_DINH,
+        hint: 'Bật công tắc là màn chào hiện lên và bắt đầu đếm. Về 0 thì đổi sang lời hẹn gặp lại, đứng đó tới lúc bạn tắt live. Tắt công tắc là truyện kể tiếp như cũ.',
+      },
+      {
+        key: 'ketThucLoi',
+        label: 'Lời cảm ơn',
+        short: 'Lời cảm ơn',
+        type: 'text',
+        value: KET_THUC_LOI_MAC_DINH,
+      },
+      {
+        key: 'ketThucHen',
+        label: 'Lời hẹn gặp lại',
+        short: 'Hẹn gặp lại',
+        type: 'text',
+        value: KET_THUC_HEN_MAC_DINH,
       },
     ],
   },
@@ -240,11 +287,27 @@ export function Stage() {
     const ds = ai?.vaiGiong?.chao;
     return Array.isArray(ds) ? ds.filter((x): x is string => typeof x === 'string') : [];
   };
+  // Màn hình chào kết thúc (thẻ "Màn hình chào kết thúc").
+  const ketThuc = thietKe['ketThuc'] === true;
+  const ketThucGiay =
+    typeof thietKe['ketThucGiay'] === 'number' ? thietKe['ketThucGiay'] : KET_THUC_GIAY_MAC_DINH;
+  const ketThucLoi =
+    typeof thietKe['ketThucLoi'] === 'string' && thietKe['ketThucLoi'].trim() !== ''
+      ? thietKe['ketThucLoi']
+      : KET_THUC_LOI_MAC_DINH;
+  const ketThucHen =
+    typeof thietKe['ketThucHen'] === 'string' && thietKe['ketThucHen'].trim() !== ''
+      ? thietKe['ketThucHen']
+      : KET_THUC_HEN_MAC_DINH;
   const chaoBat = thietKe['chaoVao'] !== false;
   const chaoGiay = typeof thietKe['chaoVaoGiay'] === 'number' ? thietKe['chaoVaoGiay'] : CACH_MAC_DINH_GIAY;
   const noi = useNoi();
+  // Nhịp giao lưu: MC chào từng khách mới bằng lời riêng, sôi nổi — sân khấu
+  // tạm nghỉ phần tự chào, kẻo khách bị chào hai lần.
+  const giaoLuu = nghiCho?.giaoLuu === true;
   useEffect(() => {
-    if (!chaoBat || !duocNoi()) return;
+    // Đang chào kết thúc thì thôi chào khách mới vào.
+    if (!chaoBat || giaoLuu || ketThuc || !duocNoi()) return;
     const nhom = aiCanChao(s.session.recentFeed, Date.now(), soChao.current, chaoGiay);
     const cau = cauChao(nhom.map((f) => f.name));
     if (cau === '') return;
@@ -256,7 +319,7 @@ export function Stage() {
     // Trước đây nó có làn riêng chạy song song — chủ phòng nghe thử rồi chốt
     // bỏ, hai giọng cùng lúc nghe ra cái máy chứ không ra người dẫn truyện.
     noi(cau, giong);
-  }, [s.session.recentFeed, chaoBat, chaoGiay, noi]);
+  }, [s.session.recentFeed, chaoBat, chaoGiay, noi, giaoLuu, ketThuc]);
   // Cảnh an ủi CHẠY ĐỘC LẬP với nhân vật ảo. Trước đây nó buộc chung công tắc
   // đó, mà chủ phòng tắt nhân vật ảo mặc định — nên cảnh này không bao giờ
   // chạy. Người chạy lên ôm bốc từ những ai đang NGỒI GHẾ (`chonNguoiOm`), và
@@ -525,6 +588,15 @@ export function Stage() {
 
       {/* Lời mời gõ "ôm" chỉ hiện khi gõ "ôm" thật sự gọi được một lượt. */}
       <GoiYLenh nhip={nhip} batAnUi={batAnUi && cfgAnUi.khachGoi} />
+
+      {/* Màn hình chào kết thúc phủ trên cùng khi người vận hành bật. */}
+      <KetThuc
+        bat={ketThuc}
+        giay={ketThucGiay}
+        loi={ketThucLoi}
+        hen={ketThucHen}
+        top={s.session.topGivers}
+      />
 
       <footer className="stage-hints">
         {/* Dòng đầu KHÔNG chép nguyên bản cũ ("Gõ ghế B4 · chỗ của tôi · #mã ·

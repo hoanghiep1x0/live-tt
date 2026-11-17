@@ -13,10 +13,13 @@ pub mod ai_cli;
 pub mod cli_goi;
 pub mod kho_da_ke;
 pub mod ke_truyen;
+pub mod giao_luu;
+pub mod ket_thuc;
 pub mod anh_truyen;
 pub mod chat_tiktok;
 pub mod chi_phi;
 pub mod api;
+pub mod boi_canh_phong;
 pub mod bot;
 pub mod designs;
 pub mod events;
@@ -35,6 +38,7 @@ pub mod so;
 pub mod source;
 pub mod state;
 pub mod store;
+pub mod su_co;
 pub mod truyen_sau;
 pub mod tts;
 pub mod tu_do;
@@ -130,6 +134,7 @@ pub fn router(st: Arc<AppState>) -> Router {
         // Dọn ảnh AI vẽ không còn truyện nào dùng.
         .route("/s/media/:design_id/don", post(media::don))
         .route("/s/viet/:design_id", post(ai::viet))
+        .route("/s/boi-canh/:design_id", post(boi_canh_phong::nhan))
         .route("/s/providers", get(api::list_secrets_public))
         // Ô "AI tạo ảnh" hỏi app có cầu nối muse.ai không (chỉ có ở app desktop).
         .route("/s/muse", get(muse::trang_thai))
@@ -142,6 +147,7 @@ pub fn router(st: Arc<AppState>) -> Router {
             "/s/thiet-ke/:design_id/link",
             get(api::get_link_phat).put(api::put_link_phat),
         )
+        .route("/s/truyen-sau/:design_id/ap-dung", post(truyen_sau::post_ap_dung))
         .route("/s/truyen-kho/:design_id", get(kho_da_ke::get_kho))
         .route("/s/truyen-kho/:design_id/ke-lai", post(kho_da_ke::post_ke_lai))
         .route("/s/truyen-kho/:design_id/xoa", post(kho_da_ke::post_xoa))

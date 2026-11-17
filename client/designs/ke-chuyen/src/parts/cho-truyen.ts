@@ -17,6 +17,9 @@ export interface GiaiLao {
   /** Giờ chờ máy chủ đã chốt cho lần này (ms), co theo số người trong phòng.
    *  0 là bản cũ chưa ghi ô này — khi ấy về mốc 40 giây. */
   han: number;
+  /** Giờ nghỉ này là NHỊP GIAO LƯU (máy chủ `giao_luu.rs`): MC chào khách
+   *  mới liên tục, nên sân khấu tạm nghỉ phần tự chào của mình. */
+  giaoLuu: boolean;
 }
 
 /** Ô `giaiLao` trong cấu hình module Kể truyện; sai kiểu thì coi như không có. */
@@ -32,6 +35,7 @@ export function giaiLaoCua(cfg: unknown): GiaiLao | null {
     lyDo: typeof o['lyDo'] === 'string' ? o['lyDo'] : 'chuyen',
     tu,
     han: typeof o['han'] === 'number' && o['han'] > 0 ? o['han'] : 0,
+    giaoLuu: o['giaoLuu'] === true,
   };
 }
 

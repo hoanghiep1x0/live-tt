@@ -18,7 +18,7 @@ hết máu ở cấp thấp nhất thì văng khỏi map và phải thả tim đ
 | Vào game | Vào phòng là thành **trứng**; thả tim càng nhanh càng sớm nở thành nhân vật |
 | Điểm và máu | **Tách riêng**. Điểm lớn thì nhân vật to hơn và xếp hạng cao; máu là sức bền trong trận |
 | Thua | Cấp 2 trở lên hết máu thì **tụt một cấp và đánh tiếp**. Cấp 1 hết máu mới **văng khỏi map**. Chỉ khi đã chết tim mới thành máu: nạp đủ 5 tim thì quay lại với 100 máu nhưng chưa có giáp, yếu như người mới, và **mất một nửa điểm** |
-| Điều khiển | Nhân vật tự chạy, tự hút vào nhau. Người xem gõ `C` `V` `X` `B` `Z`; lệnh nhắm mục tiêu chỉ có tác dụng **trong tầm** |
+| Điều khiển | Nhân vật tự chạy, tự hút vào nhau. Người xem gõ `Chạy` `Đuổi` `X` `Stop` `Z`; lệnh nhắm mục tiêu chỉ có tác dụng **trong tầm** |
 | Phe | Mỗi loại nhân vật là một phe. **Cùng phe không đánh nhau ở đầu phiên, càng về cuối càng dễ quay sang đánh nhau**; nhân vật ưu tiên tìm người khác phe và hai bên cùng lao vào nhau |
 | Map | **Một sân đấm bốc rộng, quây kín 4 phía**, chia 4 khu nối nhau, mỗi khu có boss gom điểm; càng về cuối Sương càng thu ngắn sân |
 | Camera | **Bám một nhân vật đến khi chính nhân vật đó bị out khỏi sân**; chỉ đổi cảnh sớm khi có lệnh `đâu` hoặc nhân vật đang quay bật Vòng Bảo Vệ. Trên live mọi người xem chung một hình, nên camera chỉ theo một mục tiêu mỗi lúc |
@@ -70,7 +70,7 @@ Luật chơi và cách bốc map thì ai xem vài buổi cũng chép được; n
 | Trạng thái | Chuyển sang | Điều kiện |
 |---|---|---|
 | Ngoài xem | Trứng | Vào phòng hoặc có tim đầu tiên (sự kiện vào phòng có thể không về đủ khi đông ⚠) |
-| Trứng | Nhân vật cấp 1: 100 máu, 20 giáp, 20 lực | **Tự nở sau 45 giây** ⚠; mỗi tim rút ngắn 1/20 thời gian, đủ **20 tim** là nở ngay. Trứng nứt dần theo tiến độ |
+| Trứng | Nhân vật cấp 1: 100 máu, 20 giáp, 20 lực | **Tự nở sau 10 giây**; mỗi tim rút ngắn 1/5 thời gian, đủ **5 tim** là nở ngay. Trứng nứt dần theo tiến độ |
 | Trứng | Ngoài xem | Bị ăn; 30 giây sau có trứng mới |
 | Nhân vật | Rời map (chết) | Máu về 0 |
 | Rời map | Nhân vật 100 máu, chưa có giáp, ở Map 1 | Nạp đủ **5 tim**; tim dư không tính |
@@ -102,10 +102,10 @@ Các số giáp, lực là số tạm ⚠. **Biến hình theo cấp**, nên hì
 
 **Điểm là kinh nghiệm**, đơn vị phụ dùng để lên cấp và xếp hạng. Có điểm từ hai việc chính:
 
-- **Thắng trận:** ăn Sao Rơi của người thua.
+- **Thắng trận:** được đảm bảo 70% Sao Rơi của người thua, 30% còn lại phải tranh.
 - **Nghỉ:** từ 3 giây không giao tranh trở đi (không trong trận, không chạy, không đuổi, không ở trong Sương), mỗi giây hồi 5 máu và 3 giáp. **Đầy cả máu lẫn giáp mới tích điểm**, 0,2 điểm mỗi giây ⚠.
 
-Trứng và sao cảm ơn chỉ hồi máu, không cho điểm. Lệnh `B` là cách chủ động nghỉ, vì trong 5 giây đó không hút và không bị hút. Cần đo xem nghỉ có giúp người đứng yên leo hạng quá nhanh không ⚠.
+Trứng và sao cảm ơn chỉ hồi máu, không cho điểm. Lệnh `Stop` là cách chủ động nghỉ, vì trong 5 giây đó không hút và không bị hút. Cần đo xem nghỉ có giúp người đứng yên leo hạng quá nhanh không ⚠.
 
 **Lên hoặc xuống cấp đều về lại 100 máu và đầy giáp của cấp mới.**
 
@@ -133,25 +133,25 @@ Lệnh         = 1,5 ở đòn đầu sau X hoặc đuổi kịp bằng V; 2 n�
 - **Người bị đánh** là người ít máu hơn trong cặp: có **mũi tên đỏ nhấp nháy trên đầu** để phân biệt với người đang đánh. Bằng máu thì tính người vào sau. Cả hai vẫn bắn nhau, để người yếu có quà hoặc tim vẫn lật được kèo.
 - Tụt dưới **30% máu đầu trận** là **tự bỏ chạy**. Lọt lại vào tầm bắn của người đang đuổi thì trúng một đòn; cạn máu thì chết.
 - Cùng về 0 trong một nhịp: ai dư cao hơn thì sống với `0,01`; bằng nhau nữa thì người vào sớm hơn (tính theo giây, không hiện ra).
-- **Thua là rơi sao, phải đi gần mới ăn được.** Phần thưởng `5 + 50% điểm kẻ thua`, `50% máu đầu trận của kẻ thua` và `25% máu đầu trận` quy ra giáp được chia đều thành **1–12 Sao Rơi** quanh chỗ kẻ thua gục (cứ 3 điểm một sao). **Ai tới trước ăn trước**; người hạ được 3 giây chỉ đi nhặt, không vào trận mới, nhưng người khác vẫn có thể cướp. Máu không vượt trần. Sao Rơi không tính vào số sao hóa vũ khí. Kẻ thua vừa hồi sinh dưới 30 giây thì chỉ rơi 1 sao +1 điểm, không hồi máu, để không nuôi người yếu lấy điểm ⚠. Chết vì Sương thì rơi sao bằng nửa điểm bị mất. Người thua không ăn được sao của chính mình.
+- **Thua là rơi sao: 70% tự bay về người hạ gục và được cộng ngay ⚠, 30% rơi tại chỗ, phải đi gần mới ăn được.** Phần thưởng `5 + 50% điểm kẻ thua`, `50% máu đầu trận của kẻ thua` và `25% máu đầu trận` quy ra giáp được chia đều thành **1–12 Sao Rơi** quanh chỗ kẻ thua gục (cứ 3 điểm một sao). **Ai tới trước ăn trước**; người hạ được 3 giây chỉ đi nhặt, không vào trận mới, nhưng người khác vẫn có thể cướp. Máu không vượt trần. Sao Rơi không tính vào số sao hóa vũ khí. Kẻ thua vừa hồi sinh dưới 30 giây thì chỉ rơi 1 sao +1 điểm, không hồi máu, để không nuôi người yếu lấy điểm ⚠. Chết vì Sương thì rơi sao bằng nửa điểm bị mất. Người thua không ăn được sao của chính mình.
 - **Thua ở cấp 2 trở lên:** không văng khỏi sân. **Tụt đúng 1 cấp**, điểm còn một nửa (nằm trong khoảng điểm của cấp mới), về 100 máu, đầy giáp của cấp đó, được bảo vệ 2 giây rồi đánh tiếp. Boss to vì vậy có thể thua người nhỏ mà chưa bị loại.
 - **Chết:** chỉ xảy ra khi cấp 1 hết máu. Mất một nửa điểm, thả 5 tim để hồi sinh với 100 máu nhưng **chưa có giáp**, nên vẫn yếu như mới nở cho tới khi nghỉ, nhặt sao hoặc lên cấp.
 - **Tim:** còn sống thì tim làm đòn mạnh hơn (Nhịp), không cộng máu ⚠. Chết rồi tim mới thành máu.
 
 ### Hồi Sức sau khi thắng
 
-Hạ được đối thủ (làm đối thủ out hoặc tụt cấp) thì người thắng được **Hồi Sức 30 giây**: không ai chọn làm mục tiêu được, kể cả lệnh `V`, `Z` và đòn lan. Trong lúc đó nhân vật cũng không đánh ai và không ăn trứng, vẫn nhặt Sao Rơi, vẫn hồi 5 máu và 3 giáp mỗi giây, đầy thì tích điểm như nghỉ thường. Trên tên có dấu ☾. Thắng khi vẫn đang trong một trận khác (do đòn lan hoặc phản đòn) thì chưa tính ⚠.
+Hạ được đối thủ (làm đối thủ out hoặc tụt cấp) thì người thắng được **Hồi Sức 30 giây**: không ai chọn làm mục tiêu được, kể cả lệnh `Đuổi`, `Z` và đòn lan. Trong lúc đó nhân vật cũng không đánh ai và không ăn trứng, vẫn nhặt Sao Rơi, vẫn hồi 5 máu và 3 giáp mỗi giây, đầy thì tích điểm như nghỉ thường. Trên tên có dấu ☾. Thắng khi vẫn đang trong một trận khác (do đòn lan hoặc phản đòn) thì chưa tính ⚠.
 
 ### Vòng Bảo Vệ
 
-- Ai cũng có. **Tự bật** sau mỗi 5 phút kể từ lúc nở hoặc lần bật trước, không cần gõ lệnh.
-- Trong **30 giây** không ai tấn công được, kể cả đòn lan và lệnh đuổi; hết giờ thì **tự mờ dần rồi biến mất**.
-- Đang đánh thì chờ đánh xong mới bật, để không cắt ngang trận ⚠.
+- Ai cũng có. **Tự bật** sau mỗi 4 phút kể từ lúc nở hoặc lần bật trước, không cần gõ lệnh.
+- Trong **8 giây** không ai tấn công được, kể cả đòn lan và lệnh đuổi; hết giờ thì **tự mờ dần rồi biến mất**.
+- Trên không không có vòng. Đang đánh thì chờ đánh xong mới bật, để không cắt ngang trận ⚠.
 - Trong lúc có vòng thì nhân vật cũng không đánh ai ⚠, nhưng vẫn nhặt sao và vẫn hồi khi nghỉ. Sương vẫn trừ máu.
 
 ### Giờ nghỉ giải lao
 
-Khi **25 giây không có quà** hoặc trên sân **từ 6 người trở xuống** ⚠, sân luân phiên 20 giây nghỉ, 20 giây đánh ⚠. Có quà là hết nghỉ ngay.
+Khi **25 giây không có quà** hoặc trên sân **từ 6 người trở xuống** ⚠, sân đánh trước 54 giây rồi nghỉ 6 giây, lặp lại ⚠. Có quà là hết nghỉ ngay.
 
 Trong lúc nghỉ, nhân vật không vào trận mới và không ăn trứng, vẫn nhặt sao, vẫn hồi và tích điểm như nghỉ thường. Mỗi nhân vật ngẫu nhiên làm một việc, có bong bóng lời ngắn và MC dẫn:
 
@@ -168,7 +168,7 @@ Lời than chỉ than về sân và cơn buồn ngủ, **không xin quà, không
 ### Phe
 
 - Phe lấy theo loại nhân vật lúc nở, có vòng màu dưới chân: **Lửa** (Đốm Ngoạm), **Tro** (Cún Tro), **Cây** (Mầm Cây), **Ma** (Ma Trơi), **Người** (Cu Tí, Bé Na) ⚠. **Lên hay xuống cấp đều không đổi phe**: nhân vật giữ đúng loại lúc nở. Loại chưa vẽ dòng tiến hóa riêng thì giữ hình của loại đó ở mọi cấp, không mượn hình loại khác.
-- **Cùng phe trong phạm vi 24 đơn vị thì không tấn công nhau** ⚠: không khóa cặp, không nhắm bằng `V` hoặc `Z`, không dính đòn lan. Tầm bắn và tầm lệnh đều nhỏ hơn hoặc bằng 24, nên ở mốc 1 cùng phe không bao giờ đánh nhau.
+- **Cùng phe trong phạm vi 24 đơn vị thì không tấn công nhau** ⚠: không khóa cặp, không nhắm bằng `Đuổi` hoặc `Z`, không dính đòn lan. Tầm bắn và tầm lệnh đều nhỏ hơn hoặc bằng 24, nên ở mốc 1 cùng phe không bao giờ đánh nhau.
 - **Càng về cuối, tỉ lệ hòa trong cùng phe càng giảm và họ bắt đầu tấn công nhau** ⚠: mốc 1 hòa 100%, mốc 2 hòa 75%, mốc 3 hòa 50%, mốc 4 hòa 25%, mốc 5 hòa 0%. Mỗi cặp bốc lại sau mỗi 5 giây. Khi đã được đánh nhau, nhân vật vẫn ưu tiên người khác phe trước. Trên sân chỉ còn một phe thì hết hòa ngay, để vẫn tìm được quán quân.
 - **Khác phe được ưu tiên:** nhân vật tìm người khác phe trong bán kính 18 đơn vị, từ 30 điểm là 24 đơn vị. Hai người **cùng cấp**: một bên chọn mục tiêu thì bên kia nếu đang rảnh cũng quay sang và **cùng chạy lao vào nhau** để sớm vào tầm bắn. Khác cấp thì không kéo bên kia quay lại, để cấp cao còn đi tìm người cùng cấp.
 
@@ -201,7 +201,7 @@ Mục tiêu còn xa hơn 10 đơn vị thì nhân vật dùng kỹ năng di chuy
 | Lửa | Tên Lửa Mông | Bay lên trên phương tiện bay, xịt lửa sau lưng |
 | Tro | Cún Đói Phóng Nhanh | Phóng nhanh, bụi bay sau lưng |
 | Cây | Lướt Trên Lá | Lướt nhanh, lá bay theo |
-| Ma | Tàng Hình Giả Trân | Gần như trong suốt |
+| Ma | Lướt Khói Hồn Nhiên | Lướt nhanh, kéo vệt khói xanh, không tàng hình |
 | Người | Xe Bay Hạng Sang | Đứng trên phương tiện bay |
 
 ### Chiêu thức theo cấp
@@ -251,22 +251,23 @@ Các số trong bảng là máu. **Mỗi đòn mất tối đa 34 máu** để t
 
 ## 6. Lệnh gõ
 
-Cả bình luận phải đúng bằng lệnh (bỏ qua hoa thường). Người chơi dùng điện thoại nên **không có phím bấm thật**, lệnh là bình luận. Dấu cách không dùng được vì cầu nối bỏ bình luận rỗng, thay bằng `B`.
+Cả bình luận phải đúng bằng lệnh (bỏ qua hoa thường). Người chơi dùng điện thoại nên **không có phím bấm thật**, lệnh là bình luận. Dấu cách không dùng được vì cầu nối bỏ bình luận rỗng, thay bằng `Stop`.
 
 | Lệnh | Tác dụng | Dùng được khi | Hồi lệnh |
 |---|---|---|---|
-| `C` | **Bỏ chạy** 5 giây, tốc độ +25%, tự tìm hướng | Đang đánh hoặc bị đuổi; trong trận thì đối thủ được một đòn miễn phí | 15 giây |
-| `V` | **Đuổi** 4 giây, tốc độ +100%, nhắm người vừa chạy khỏi mình; vào tầm bắn là trúng một đòn | Có người trong tầm 16 đơn vị | 12 giây |
+| `Chạy` | **Bỏ chạy** 5 giây, tốc độ +25%, tự tìm hướng | Đang đánh hoặc bị đuổi; trong trận thì đối thủ được một đòn miễn phí | 15 giây |
+| `Đuổi` | **Đuổi** 4 giây, tốc độ +100%, nhắm người vừa chạy khỏi mình; vào tầm bắn là trúng một đòn | Có người trong tầm 16 đơn vị | 12 giây |
 | `X` | **Quay lại giao chiến** | Đang chạy | 10 giây |
-| `B` | **Đứng lại** 5 giây: không hút, không bị hút, chỉ `V` nhắm được; sau đó tự bị hút vào trứng, sao hoặc nhân vật gần nhất | Không trong trận | 15 giây |
+| `Stop` | **Đứng lại** 5 giây: không hút, không bị hút, chỉ `Đuổi` nhắm được; sau đó tự bị hút vào trứng, sao hoặc nhân vật gần nhất | Không trong trận | 15 giây |
 | `Z` | **Săn đối thủ lớn** 9 giây, tốc độ +50%: nhắm boss hoặc người điểm cao hơn mình gần nhất **trong tầm 24 đơn vị**; ngoài tầm thì lệnh không có tác dụng | Từ 20 điểm, không trong trận | 20 giây |
+| `Măm măm`, `Ăn` | **Đi ăn** 6 giây, nhanh gấp 2,4 lần: lao tới đồ ăn gần nhất, ăn xong tự tìm món kế tiếp, trên đường không bị hút vào trận | Không trong trận | 15 giây |
 | `t tên` | **Nhắm đánh** người có tên đó trong tầm 24 đơn vị: chạy tới và vào trận. Không nhắm được người cùng phe đang hòa, người có Vòng Bảo Vệ hoặc đang Hồi Sức | Không trong trận | 15 giây ⚠ |
 | `p2` | Sang phòng 2 khi kênh đông mở nhiều phòng song song | Không trong trận, không đang chạy | 20 giây |
 | `đâu` | **Camera chuyển đến vị trí của mình 6 giây**, kèm mũi tên chỉ nhân vật | Luôn | Mỗi người 60 giây; cả phòng tối thiểu 8 giây một lần ⚠ |
 
-Ba lệnh khắc nhau: **`V` bắt `C`, `X` phạt `V`, `C` tránh `X`**.
+Ba lệnh khắc nhau: **`Đuổi` bắt `Chạy`, `X` phạt `Đuổi`, `Chạy` tránh `X`**.
 
-Độ trễ bình luận chưa đo ⚠, nên lệnh là "thế" kéo dài vài giây, `V` và `X` nhớ đối thủ trong 10 giây. Trứng chưa nở gõ lệnh thì hiện chữ "Thả tim để nở". Chữ phản hồi hiện nhỏ trên nhân vật, không đọc giọng.
+Độ trễ bình luận chưa đo ⚠, nên lệnh là "thế" kéo dài vài giây, `Đuổi` và `X` nhớ đối thủ trong 10 giây. Trứng chưa nở gõ lệnh thì hiện chữ "Thả tim để nở". Chữ phản hồi hiện nhỏ trên nhân vật, không đọc giọng.
 
 **Tự tìm hướng chạy.** Mỗi 0,3 giây chấm điểm 12 hướng: càng xa kẻ đe dọa càng tốt, chỗ trống được cộng, sát tường hoặc Sương bị trừ, giữ hướng cũ được cộng nhẹ. Kẹt quá 1,5 giây thì tự húc ra khe hở gần nhất.
 
@@ -411,7 +412,7 @@ y=0     (TikTok che: tên kênh, số xem)
 y=220   Mốc hiện tại, đồng hồ, top 5 theo điểm
 y=300   Toàn màn hình là map 3D; camera theo boss
 y=1280  Bản đồ nhỏ góc phải; phần dưới có bình luận phủ mờ ⚠
-y=1640  Dòng nhắc: thả tim để nở · C chạy · V đuổi · X đánh · B đứng · Z săn
+y=1640  Dòng nhắc: thả tim để nở · Chạy · Đuổi · X đánh · Stop · Z săn
 ```
 
 **Camera** lướt chậm, chuyển mục tiêu và đổi độ xa đều mượt, xoay chậm quanh trận đang quay và **bám theo một nhân vật đến khi chính nhân vật đó bị out khỏi sân**, nán thêm khoảng 1,6 giây để thấy sao rơi, rồi chọn người mới, ưu tiên người trong trận có boss và điểm cao. Tụt cấp, bỏ chạy, hạ được đối thủ hay đang rảnh đều chưa đổi cảnh.
@@ -563,7 +564,7 @@ File tạm trên hpc chỉ để trong `/mnt/D/dung-3d/.tmp`.
 | Khoảnh khắc | Lời |
 |---|---|
 | Mở phiên | "Sử Tháp ghi lại, đêm qua: {doan_su}. Đêm nay, ai sẽ viết tiếp?" |
-| Dạy lệnh | "Thả tim để nở! Gõ C chạy, V đuổi, X quay lại đánh, B đứng lại!" |
+| Dạy lệnh | "Thả tim để nở! Gõ Chạy, Đuổi, X quay lại đánh, Stop đứng lại!" |
 | Nở trứng | "Trứng của {ten} nứt rồi! Một chiến binh vừa ra đời!" |
 | Trứng bị ăn | "Ơi {ten}, trứng của bạn bị cắn rồi, thả tim đi nào!" |
 | Tự lên map | "{ten} đủ lửa rồi! Tháp đưa bạn lên {map}!" |
@@ -596,6 +597,8 @@ Nhân vật nói bằng bong bóng lời đúng theo hành động, mỗi ngư�
 **Chiêu phải bay tới tận người bị đánh** ⚠: hai người giao chiến đứng cách xa nhau để thấy rõ đường bay của chiêu; đạn bám theo mục tiêu đang di chuyển, có vệt sáng kéo sau và nổ sáng ngay chỗ trúng, kể cả trận trên trời. Người bị đánh chỉ mất máu khi chiêu chạm tới.
 
 **Võ mồm trước khi đánh** ⚠: ghép cặp xong hai bên nói với nhau theo một đoạn hội thoại liền mạch, người này đáp đúng câu người kia, dưới đất 2 câu, trên trời 4 câu, rồi mới tung chiêu. Chỉ trêu ghẹo, không có lời kích động bạo lực.
+
+**Đấu đội trên trời** ⚠: có hơn 2 người trên trời thì thành đấu đội. Mỗi đội ra đòn tự động; tim thả cho thành viên đội nào thì đội đó đánh nhanh dần tới mức liên tục. Bên thua, điểm chia đều cho thành viên đội thắng. Trên màn hình chỉ hiện số tim hai đội, không có lời kêu gọi.
 
 **Cảnh ra mắt thú cưỡi** ⚠: thú cưỡi là phần trình diễn đẹp nhất, nên mỗi lần xuất hiện có camera cận cảnh, hào quang, sao bay quanh, nhãn vàng và âm thanh riêng. Chỉ để đẹp, không tăng sức mạnh. Âm thanh tạo bằng code, có nút tắt.
 
@@ -679,7 +682,7 @@ Nhân vật nói bằng bong bóng lời đúng theo hành động, mỗi ngư�
 | Câu hỏi | Khuyến nghị |
 |---|---|
 | Còn sống thì tim có tăng đòn không | Có, nếu không người xem sẽ ngừng bấm |
-| Lệnh đứng lại | `B`, nằm cạnh `C` `V` `X` |
+| Lệnh đứng lại | `Stop`, nằm cạnh `Chạy` `Đuổi` `X` |
 | Quyết định vị trí chuỗi màn | Trong một buổi live; nhiều kênh để giai đoạn sau |
 | Tên game và thế giới | Giữ: thả tim là thắp lửa, trứng lửa nở thành chiến binh |
 | Bảng Top tim riêng cho người không tặng quà | Nên có |

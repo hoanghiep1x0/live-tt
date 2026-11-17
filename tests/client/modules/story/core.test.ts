@@ -15,6 +15,7 @@ import {
   moduleStory as mod,
   schema,
   coHinhNao,
+  tinTuDoc,
   trongSuot,
 } from '@live/mod-story';
 import { ctx, kiemModule } from '../_helper';
@@ -28,6 +29,42 @@ function loiNoi(effects: Effect[]): string | undefined {
   const e = effects.find((x) => x.kind === 'say');
   return e?.kind === 'say' ? e.text : undefined;
 }
+
+describe('báo máy chủ đoạn đã tự đọc', () => {
+  const CHIN_DOAN = Array.from({ length: 9 }, (_, i) => `Đoạn ${i + 1}.`).join('\n');
+  const truyen = (title: string) => ({ ...MC_KE, title, passages: CHIN_DOAN });
+  /** Module đang ở đoạn `doan`, đoạn đó do chính nó tự đọc thay MC. */
+  const daTuDoc = (title: string, doan: number) => ({
+    ...core.init(truyen(title)),
+    doan,
+    daDoc: true,
+    loiKe: null,
+  });
+
+  it('đúng truyện đang kể thì báo tên và số đoạn', () => {
+    expect(tinTuDoc(truyen('Tấm Cám'), daTuDoc('Tấm Cám', 2))).toEqual({ ten: 'Tấm Cám', doan: 2 });
+  });
+
+  it('lần vẽ ngay lúc đổi truyện: số đoạn của truyện cũ không được gán cho truyện mới', () => {
+    expect(tinTuDoc(truyen('Sự tích cây vú sữa'), daTuDoc('Bà nội và bát cháo hành', 8))).toBeNull();
+  });
+
+  it('sau onConfig của truyện mới thì không còn gì để báo', () => {
+    const st = daTuDoc('Bà nội và bát cháo hành', 8);
+    const moi = { ...truyen('Sự tích cây vú sữa'), passages: 'Một.\nHai.' };
+    expect(tinTuDoc(moi, core.onConfig?.(st, moi) ?? st)).toBeNull();
+  });
+
+  it('không báo khi MC đang kể, chưa đọc, giờ nghỉ, hay phòng tự đọc', () => {
+    const ten = 'Tấm Cám';
+    expect(tinTuDoc(truyen(ten), { ...daTuDoc(ten, 2), loiKe: 'MC kể' })).toBeNull();
+    expect(tinTuDoc(truyen(ten), { ...daTuDoc(ten, 2), daDoc: false })).toBeNull();
+    expect(tinTuDoc(truyen(ten), { ...daTuDoc(ten, 2), doan: -1 })).toBeNull();
+    const nghi = { truyenSau: 'X', lyDo: 'chuyen', tu: 1, batBot: false, han: 5000 };
+    expect(tinTuDoc({ ...truyen(ten), giaiLao: nghi } as typeof MC_KE, daTuDoc(ten, 2))).toBeNull();
+    expect(tinTuDoc({ ...MAC_DINH, title: ten }, daTuDoc(ten, 2))).toBeNull();
+  });
+});
 
 describe('manifest', () => {
   it('đúng mọi điều buộc với module', () => {
@@ -245,7 +282,7 @@ describe('giờ nghỉ (máy chủ ghi ô giaiLao)', () => {
     expect(schema.parse({}).giaiLao).toBeNull();
     expect(schema.parse({}).boAnh).toBe(false);
     const c = schema.parse({ giaiLao: { truyenSau: 'Tấm Cám', lyDo: 'anh', tu: 5 } });
-    expect(c.giaiLao).toEqual({ truyenSau: 'Tấm Cám', lyDo: 'anh', tu: 5, batBot: false, han: 0 });
+    expect(c.giaiLao).toEqual({ truyenSau: 'Tấm Cám', lyDo: 'anh', tu: 5, batBot: false, han: 0, giaoLuu: false });
     // Cờ "đã tự bật nhân vật minh hoạ" phải giữ được qua một lần lưu cấu hình.
     expect(schema.parse({ giaiLao: { truyenSau: 'A', lyDo: 'ket-noi', batBot: true } }).giaiLao?.batBot).toBe(true);
   });
@@ -253,7 +290,7 @@ describe('giờ nghỉ (máy chủ ghi ô giaiLao)', () => {
   it('giờ nghỉ thì DỪNG đoạn — màn chờ đang hiện, giọng không được đọc tiếp', () => {
     const nghi = {
       ...MAC_DINH,
-      giaiLao: { truyenSau: 'Sọ Dừa', lyDo: 'chuyen' as const, tu: 1_000, batBot: false, han: 0 },
+      giaiLao: { truyenSau: 'Sọ Dừa', lyDo: 'chuyen' as const, tu: 1_000, batBot: false, han: 0, giaoLuu: false },
     };
     const s = core.init(nghi);
     // Không có đoạn nào lên, không có câu nào được đọc.

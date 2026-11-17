@@ -1,0 +1,23 @@
+{
+  "id": "dai-chien-thap-den",
+  "category": "dai-chien",
+  "style": "thap-den",
+  "name": "Live Đại Chiến · Tháp Đèn Trời",
+  "icon": "⚔️",
+  "summary": "Đấu trường cho cả phòng: thả tim nở nhân vật, gõ lệnh trong bình luận, giao chiến dưới đất và trên trời",
+  "version": "0.1.0",
+  "canvas": {
+    "width": 1080,
+    "height": 1920
+  },
+  "slots": [],
+  "provides": [
+    "tts",
+    "audio"
+  ],
+  "mc": {
+    "dan": "mc-dan.md",
+    "aiChu": "claude"
+  },
+  "entry": "dist/index.html"
+}

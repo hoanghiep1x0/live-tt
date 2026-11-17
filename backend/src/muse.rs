@@ -14,7 +14,7 @@
 //! đè ô nhập của nhau.
 
 use std::sync::{Arc, Mutex, OnceLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use axum::extract::{Path as AxPath, State};
 use axum::http::StatusCode;
@@ -58,11 +58,16 @@ pub trait CauNoiMuse: Send + Sync {
 
 static CAU_NOI: OnceLock<Arc<dyn CauNoiMuse>> = OnceLock::new();
 /// Vẽ song song tối đa ngần này tab muse.ai. Mỗi tab một lượt một lúc: tab là
-/// một khung chat, hai lượt chồng nhau là điền đè ô nhập của nhau.
-pub const SO_KENH: usize = 3;
-static KENH: [Mutex<()>; SO_KENH] = [Mutex::new(()), Mutex::new(()), Mutex::new(())];
+/// một khung chat, hai lượt chồng nhau là điền đè ô nhập của nhau. Không để
+/// nhiều hơn: dồn nhiều yêu cầu một lúc là muse.ai treo.
+pub const SO_KENH: usize = 2;
+static KENH: [Mutex<()>; SO_KENH] = [Mutex::new(()), Mutex::new(())];
 /// muse chỉ vẽ chừng 4 ảnh mỗi trả lời: mỗi phần giao một tab là ngần này đoạn.
 pub const DOAN_MOI_PHAN: usize = 4;
+/// Hai lần gửi lên muse.ai, tính chung mọi tab, cách nhau ít nhất ngần này.
+pub const CACH_GUI: Duration = Duration::from_secs(30);
+/// Mốc sớm nhất được gửi lượt kế tiếp.
+static LUOT_KE: Mutex<Option<Instant>> = Mutex::new(None);
 
 /// Một ảnh lẻ muse vẽ chừng nửa phút; cả truyện vài phút.
 const CHO_MOT_ANH: Duration = Duration::from_secs(4 * 60);
@@ -84,10 +89,34 @@ fn cau_noi() -> Result<&'static Arc<dyn CauNoiMuse>, String> {
         .ok_or_else(|| "Tạo ảnh bằng muse.ai chỉ chạy trong app desktop (npm run app)".to_string())
 }
 
+/// Xếp một lượt gửi vào hàng: trả (phải chờ bao lâu, mốc cho lượt sau đó). Hàm
+/// thuần.
+pub fn xep_luot(ke: Option<Instant>, now: Instant, cach: Duration) -> (Duration, Instant) {
+    let duoc = ke.map_or(now, |m| m.max(now));
+    (duoc - now, duoc + cach)
+}
+
+/// Chờ tới lượt gửi (`CACH_GUI`). Giữ chỗ xong mới ngủ, ngoài khoá, nên các tab
+/// cùng xin một lúc được xếp lần lượt. Gọi SAU khi đã giữ tab: giữ chỗ trước
+/// thì tab bận vài phút làm chỗ đã xếp mất ý nghĩa.
+fn cho_toi_luot() {
+    let cho = {
+        let mut ke = LUOT_KE.lock().unwrap_or_else(|e| e.into_inner());
+        let (cho, sau) = xep_luot(*ke, Instant::now(), CACH_GUI);
+        *ke = Some(sau);
+        cho
+    };
+    if !cho.is_zero() {
+        tracing::info!(giay = cho.as_secs(), "muse.ai: giãn cách, chờ tới lượt gửi");
+        std::thread::sleep(cho);
+    }
+}
+
 /// Gửi lên đúng tab `kenh`.
 fn gui(kenh: usize, loi: &str, cho: Duration, chat_moi: bool) -> Result<Vec<Manh>, String> {
     let c = cau_noi()?;
     let _luot = KENH[kenh % SO_KENH].lock().unwrap_or_else(|e| e.into_inner());
+    cho_toi_luot();
     c.gui(kenh % SO_KENH, loi, cho, chat_moi)
 }
 
@@ -99,10 +128,12 @@ fn gui_ranh(loi: &str, cho: Duration) -> Result<(usize, Vec<Manh>), String> {
     let c = cau_noi()?;
     for (k, khoa) in KENH.iter().enumerate() {
         if let Ok(_luot) = khoa.try_lock() {
+            cho_toi_luot();
             return c.gui(k, loi, cho, true).map(|m| (k, m));
         }
     }
     let _luot = KENH[0].lock().unwrap_or_else(|e| e.into_inner());
+    cho_toi_luot();
     c.gui(0, loi, cho, true).map(|m| (0, m))
 }
 
@@ -571,6 +602,25 @@ pub async fn post_ve_truyen(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cac_tab_xin_cung_luc_duoc_xep_cach_nhau() {
+        let t0 = Instant::now();
+        let c = Duration::from_secs(30);
+        // Lượt đầu gửi ngay.
+        let (cho, ke) = xep_luot(None, t0, c);
+        assert_eq!(cho, Duration::ZERO);
+        // Các tab khác xin cùng lúc: xếp lần lượt, không gửi dồn.
+        let (cho, ke) = xep_luot(Some(ke), t0, c);
+        assert_eq!(cho, c);
+        let (cho, ke) = xep_luot(Some(ke), t0, c);
+        assert_eq!(cho, c * 2);
+        // Đã qua mốc từ lâu: gửi ngay, không chờ bù, lượt sau tính từ lúc này.
+        let sau = ke + Duration::from_secs(5);
+        let (cho, ke) = xep_luot(Some(ke), sau, c);
+        assert_eq!(cho, Duration::ZERO);
+        assert_eq!(ke, sau + c);
+    }
 
     fn anh(n: u8) -> AnhMuse {
         AnhMuse { byte: vec![n], duoi: "webp" }

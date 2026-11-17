@@ -3,7 +3,7 @@
 Phòng live dạng game giải đấu: ai vào phòng cũng thành trứng mang avatar của mình, thả tim để nở thành nhân vật, các nhân vật tự đánh nhau trên map ngẫu nhiên,
 người xem gõ lệnh ngắn để chạy, đuổi, quay lại đánh. Hết phiên (thời lượng do người live đặt) tìm ra một quán quân. Mỗi **kiểu** là một thế giới khác trên cùng cách chơi đó.
 
-**Trạng thái: đang nghiên cứu, chưa có mã.**
+**Trạng thái: đã có phòng bản đầu ở `client/designs/dai-chien-thap-den/`, chưa thử trên phiên thật.**
 
 **Sổ luật:** [luat.md](luat.md) ghi các luật đã chốt, tách lớp lõi và lớp thế giới để sau này đổi game dễ.
 
@@ -28,6 +28,7 @@ người xem gõ lệnh ngắn để chạy, đuổi, quay lại đánh. Hết p
 | Đo độ trễ, đợt tim, vùng che của TikTok | chưa làm |
 | Thử MimicMotion với động tác đánh | chưa làm |
 | Đọc quy định TikTok về quà đổi lợi thế và kết quả ngẫu nhiên | chưa làm |
-| Mã | chưa làm |
+| Phòng bản đầu: game chạy trong iframe, bảng card `BangXem`, MC theo `mc-dan.md`, tình hình trận gửi qua `POST /s/boi-canh/:id` | đã làm, chưa thử với app đang chạy |
+| Tách luật thành module `dai-chien` | chưa làm |
 
 Bản chơi thử: [live-dai-chien.html](live-dai-chien.html). Trang tải ảnh trong `nhan-vat/` nên cần mở qua máy chủ tĩnh, ví dụ `python -m http.server` trong thư mục này. Phím P để dừng hình và chỉ chỗ cần sửa.

@@ -88,6 +88,23 @@ export function giongTuDoc(config: Config): string {
   return typeof pv?.giongDan === 'string' ? pv.giongDan : '';
 }
 
+/** Tin báo máy chủ rằng module vừa tự đọc một đoạn thay MC, `null` là không có
+ *  gì để báo. Giờ nghỉ cũng không báo: lõi đã dừng đoạn, báo tiếp là đẩy tiến
+ *  độ của máy chủ đi trong lúc khung không hề kể.
+ *
+ *  Tên truyện lấy từ `state.config`, tức truyện mà `state.doan` thuộc về. Lúc
+ *  đổi truyện có một lần vẽ mà `config` đã là truyện mới còn `state` vẫn của
+ *  truyện cũ (`onConfig` chạy sau effect của phần vẽ); ghép hai bên lại là báo
+ *  "truyện mới đã đọc tới đoạn cuối của truyện cũ", truyện mới mất luôn.
+ *
+ *  Hàm thuần. */
+export function tinTuDoc(config: Config, state: State): { ten: string; doan: number } | null {
+  if (cachKeCua(config) === 'tu-doc' || config.giaiLao !== null) return null;
+  if (!state.daDoc || state.loiKe !== null || state.doan < 0) return null;
+  if (state.config.title !== config.title) return null;
+  return { ten: state.config.title, doan: state.doan };
+}
+
 export const core: ModuleCore<Config, State> = {
   init(config) {
     return {

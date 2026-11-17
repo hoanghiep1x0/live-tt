@@ -97,6 +97,8 @@ export const designManifestSchema = z.object({
         .regex(/^[a-z0-9][a-z0-9._/-]{0,79}$/, 'mc.dan là đường dẫn tương đối trong thư mục thiết kế')
         .refine((x) => !x.split('/').includes('..'), 'mc.dan không được ra ngoài thư mục thiết kế')
         .optional(),
+      /** Công cụ mặc định của MC ở phòng này. Không khai thì đi API. */
+      aiChu: z.enum(['api', 'claude', 'codex']).optional(),
     })
     .optional(),
   entry: z.string().default('dist/index.html'),
@@ -137,7 +139,14 @@ export interface DesignCard {
   toggle?: DesignOption;
   /** Các ô còn lại, hiện trong thân thẻ. */
   fields: readonly DesignOption[];
+  /** Chỗ của thẻ trong ngăn xem thử:
+   *  - `dau` (mặc định): đầu nhóm, trên cả tính năng chính của phòng;
+   *  - `sau-the-dau`: ngay dưới tính năng chính (`theDau`, vd thẻ Kể truyện);
+   *  - `cuoi`: cuối danh sách — cho thẻ ít khi phải đụng tới. */
+  viTri?: ViTriThe;
 }
+
+export type ViTriThe = 'dau' | 'sau-the-dau' | 'cuoi';
 
 /** Trạng thái phát của một thiết kế, hiện trên thẻ ở trang quản lý. */
 export type DesignStatus = 'live' | 'off' | 'error';

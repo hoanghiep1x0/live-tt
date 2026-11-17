@@ -8,7 +8,8 @@
 
 .bx-nut,
 .bx-ngan,
-.bx-tam {
+.bx-tam,
+.bx-toasts {
   font: 13px/1.45 ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
   color: #f4efe6;
 }
@@ -55,21 +56,63 @@
   isolation: isolate;
 }
 
-.bx-ngan-dau {
-  flex: none;
-  padding: 14px 54px 12px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+/* Tay kéo ở mép trái: kéo đổi độ rộng ngăn, bấm đúp về mặc định. Lấn ra
+   ngoài mép 5px cho dễ trúng; lớp 3 để nằm trên cả modal (`.bx-tam` lớp 2). */
+.bx-ngan-keo {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -5px;
+  z-index: 3;
+  width: 10px;
+  cursor: col-resize;
+  touch-action: none;
 }
-.bx-ngan-dau b {
-  display: block;
-  font-size: 12.5px;
+/* Vạch sáng dọc mép khi trỏ vào hay đang kéo. */
+.bx-ngan-keo::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 2px;
+  background: transparent;
+  transition: background 0.15s;
 }
-.bx-ngan-dau small {
-  display: block;
-  margin-top: 2px;
-  font-size: 11.5px;
-  color: #9b958a;
+/* Núm nhỏ giữa mép, để biết chỗ này kéo được. */
+.bx-ngan-keo::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: 6px;
+  height: 46px;
+  margin-top: -23px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  transition: background 0.15s;
 }
+.bx-ngan-keo:hover::before,
+.bx-ngan-keo:focus-visible::before,
+.bx-dang-keo .bx-ngan-keo::before {
+  background: rgba(242, 196, 90, 0.55);
+}
+.bx-ngan-keo:hover::after,
+.bx-ngan-keo:focus-visible::after,
+.bx-dang-keo .bx-ngan-keo::after {
+  background: #f2c45a;
+}
+.bx-ngan-keo:focus-visible {
+  outline: none;
+}
+/* Đang kéo: cả trang giữ con trỏ kéo và không bôi đen chữ khi rê qua. */
+.bx-dang-keo,
+.bx-dang-keo * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
 
 /* Danh sách thẻ kéo được: ngăn cao bằng trang, chỉ khúc giữa cuộn. */
 .bx-ngan-than {
@@ -105,6 +148,60 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #9b958a;
+}
+/* Ngăn không có dòng tiêu đề: dòng mục ĐẦU TIÊN đứng ngang nút ✕ (cố định
+   top 12px, cao 34px) và chừa chỗ bên phải cho nó, để thẻ đầu không bị đè. */
+.bx-ngan-than > .bx-muc:first-child {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  margin-top: 2px;
+  margin-right: 44px;
+}
+
+/* Khối gập/mở nhóm "Tính năng chung". */
+.bx-muc-gap {
+  font-family: inherit;
+  gap: 8px;
+  padding: 0 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.15s, border-color 0.15s;
+}
+.bx-muc-gap:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(242, 196, 90, 0.45);
+}
+.bx-muc-gap small {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.bx-muc-gap i {
+  font-style: normal;
+  font-size: 12px;
+  transform: rotate(-90deg);
+  transition: transform 0.15s;
+}
+.bx-muc-gap[aria-expanded='true'] i {
+  transform: none;
+}
+.bx-chung {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bx-chung[hidden] {
+  display: none;
 }
 .bx-muc-phong {
   display: flex;
@@ -276,6 +373,21 @@
 }
 .bx-the-nut button[aria-pressed='false'] {
   opacity: 0.7;
+}
+/* Thẻ riêng: tên thẻ đã nói ô này là gì nên bỏ nhãn và lời gợi ý, cho thẻ thấp. */
+.bx-the-tach .bx-hang {
+  margin-top: 9px;
+}
+/* Thẻ một ô thì tên thẻ đã nói ô đó là gì; từ hai ô trở lên phải có nhãn. */
+.bx-the-tach[data-mot-o='true'] .bx-hang > label,
+.bx-the-tach .bx-goi {
+  display: none;
+}
+.bx-the-bao {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 11px;
+  color: #f6e2b0;
 }
 .bx-the-tt {
   flex-basis: 100%;
@@ -1201,6 +1313,86 @@ select.bx-o option {
   color: #ffb3a6;
   border-left: 2px solid #ff7a66;
   padding-left: 6px;
+}
+
+/* Toast sự cố: góc phải trên, ngay dưới nút ⚙ / ✕, nằm trên cả ngăn và hộp
+   cấu hình. Vùng trống giữa các toast không chặn chuột. */
+.bx-toasts {
+  position: fixed;
+  top: 54px;
+  right: 12px;
+  z-index: 10002;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(336px, calc(100vw - 24px));
+  max-height: calc(100vh - 66px);
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+.bx-toast {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 10px 8px 10px 12px;
+  border-radius: 10px;
+  background: rgba(58, 18, 14, 0.97);
+  border: 1px solid #ff7a66;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+  animation: bx-toast-vao 0.2s ease-out;
+}
+
+.bx-toast-icon {
+  color: #ff9a8a;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.bx-toast-than b {
+  display: block;
+  color: #ffd9d2;
+}
+
+.bx-toast-than p {
+  margin: 2px 0 0;
+  color: #ffc4b9;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+.bx-toast-x {
+  align-self: start;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #ffc4b9;
+  cursor: pointer;
+}
+
+.bx-toast-x:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+@keyframes bx-toast-vao {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bx-toast {
+    animation: none;
+  }
 }
 
 /* Ô "Ảnh theo truyện": mỗi mốc một thẻ, ảnh nhỏ bên trái, lời tả bên phải. */

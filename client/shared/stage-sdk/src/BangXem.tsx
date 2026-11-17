@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, PointerEvent as SuKienTro, ReactNode } from 'react';
+import { docRong, kepRong, luuRong, RONG_TOI_THIEU } from './keo-ngan';
+import { dongTrangThai, duongApDung, oDaTach } from './the-tach';
 import { batViec, chonMau, doiKieu, giongQua, hienO, KIEU_LAM_DUOC, LOAI_PHONG, loiNhap, MAU_NHA, nanId, nhapMoi, nhapTu, oChonGiong, TAB_GIONG, TEN_KIEU, tenKetNoi, tenViec, thanGhi, thuocPhong, TINH_NANG_HE, VIEC_AI } from '@live/contracts';
-import type { ConfigField, Json, KetNoiAi, KieuNha, NhapKetNoi, ViecAi } from '@live/contracts';
+import type { ConfigField, Json, KetNoiAi, KieuNha, NhapKetNoi, TheTach, ViecAi, ViTriThe } from '@live/contracts';
 import { AI_MAC_DINH, BOT_MAC_DINH } from './state';
 import { ONhanh, OConfig } from './OConfig';
 import { SO_MODULE, timDangKy } from './registry';
@@ -8,13 +11,14 @@ import { guiLenh } from './state';
 import { NutModule } from './NutModule';
 import { ModalGiong, TheGiong } from './GiongDoc';
 import { BangChiPhi } from './BangChiPhi';
+import { ToastSuCo } from './ToastSuCo';
 import {
   nhaMacDinh,
   O_BAT_ANH,
   O_CO_ANH,
   O_DAN,
   O_GIONG_MC,
-  O_NHIP,
+  O_AI_CHU, O_NHIP,
   O_SANG_TAO,
   O_TRAN,
   oModel,
@@ -144,7 +148,8 @@ function Modal({
   // Mở từ nút có hộp phụ (`popup`) trên thẻ: chỉ ô đó và các ô phụ của nó, không chia tab.
   const goc = o === undefined ? undefined : ui.fields.find((f) => f.key === o);
   // Chỉ những ô đang có tác dụng với cấu hình hiện tại (`hienKhi`).
-  const oHien = ui.fields.filter((f) => hienO(f, cfg));
+  const daTach = oDaTach(ui);
+  const oHien = ui.fields.filter((f) => hienO(f, cfg) && !daTach.has(f.key));
   const tabs =
     goc === undefined
       ? chiaTab(oHien)
@@ -315,12 +320,98 @@ function The({ id, mo }: { id: string; mo: (o?: string) => void }) {
   );
 }
 
+/** Thẻ riêng tách từ cấu hình module: công tắc và các ô ngay trên thẻ, cộng
+ *  nút "Áp dụng" để chạy luôn. Dựng từ `ui.theTach`, không biết tên module. */
+function TheRieng({ id, the }: { id: string; the: TheTach }) {
+  const s = useStage();
+  const [bao, datBao] = useState('');
+  const [dangGui, datDangGui] = useState(false);
+  const hen = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(hen.current), []);
+
+  const dk = timDangKy(id);
+  if (dk === undefined) return null;
+
+  const cfg = cauHinhCua(id, s.config[id]);
+  const bat = cfg[the.congTac] === true;
+  // Module đang tắt thì lõi không chạy, sửa ở đây cũng chưa có tác dụng.
+  const roi = !s.noiDuoc || !s.enabled.includes(id);
+  const oThe = dk.ui.fields.filter((f) => the.fields.includes(f.key) && hienO(f, cfg));
+  // Thẻ chỉ có công tắc: lời giải thích của ô đó hiện luôn trên thẻ, vì không
+  // còn hộp cấu hình nào hiện nó nữa (`oDaTach`).
+  const goiY = oThe.length === 0 ? dk.ui.fields.find((f) => f.key === the.congTac)?.hint : undefined;
+  const dong = dongTrangThai(the, cfg);
+  const nut = the.apDung;
+  const phong = s.cuaMinh ?? s.live;
+
+  const baoTam = (chu: string): void => {
+    datBao(chu);
+    clearTimeout(hen.current);
+    hen.current = setTimeout(() => datBao(''), 8000);
+  };
+  const apDung = (): void => {
+    if (nut === undefined || phong === null) return;
+    datDangGui(true);
+    void fetch(duongApDung(nut.duong, phong), { method: 'POST' })
+      .then((r) => r.json() as Promise<{ chu?: string }>)
+      .then((d) => baoTam(d.chu ?? 'Đã áp dụng.'))
+      .catch(() => baoTam('Chưa áp dụng được, máy chủ không trả lời.'))
+      .finally(() => datDangGui(false));
+  };
+
+  return (
+    <article className="bx-the bx-the-tach" data-bat={bat} data-mot-o={oThe.length === 1}>
+      <div className="bx-the-dau">
+        <span className="bx-icon">{the.icon}</span>
+        <span className="bx-ten">
+          <b>{the.name}</b>
+          <small>{the.summary}</small>
+        </span>
+        <input
+          type="checkbox"
+          className="bx-cong"
+          checked={bat}
+          disabled={roi}
+          aria-label={`Bật ${the.name}`}
+          onChange={(e) => suaCauHinh(id, the.congTac, e.target.checked)}
+        />
+      </div>
+
+      {oThe.map((f) => (
+        <OConfig
+          key={f.key}
+          moduleId={id}
+          field={f}
+          value={cfg[f.key] ?? null}
+          cfg={cfg}
+          suaKhac={(k, v) => suaCauHinh(id, k, v)}
+          disabled={roi}
+          onChange={(v) => suaCauHinh(id, f.key, v)}
+        />
+      ))}
+
+      {goiY === undefined ? null : <p className="bx-the-nhac">{goiY}</p>}
+
+      {nut === undefined ? null : (
+        <div className="bx-the-nut">
+          <button type="button" disabled={roi || dangGui || phong === null} onClick={apDung}>
+            {nut.icon === undefined ? null : <span aria-hidden>{nut.icon}</span>}
+            {dangGui ? 'Đang áp dụng…' : nut.label}
+          </button>
+          {dong === '' ? null : <p className="bx-the-tt" data-bat={bat}>{dong}</p>}
+          {bao === '' ? null : <p className="bx-the-bao" role="status">{bao}</p>}
+        </div>
+      )}
+    </article>
+  );
+}
+
 /** Thẻ lựa chọn của chính thiết kế — khung dọc hay ngang, đồ đạc của phòng.
  *
  *  Đứng riêng trên đầu, KHÔNG nằm lẫn với các thẻ tính năng: tắt một tính năng
  *  thì phòng vẫn thế, còn đổi mấy ô này là đổi hình hài căn phòng. Thiết kế nào
  *  không khai lựa chọn nào thì thẻ không hiện. */
-function TheThietKe() {
+function TheThietKe({ viTri }: { viTri: ViTriThe }) {
   const s = useStage();
   const luaChon = useLuaChonThietKe();
   const cfg = useThietKe();
@@ -329,7 +420,7 @@ function TheThietKe() {
 
   return (
     <>
-      {luaChon.map((the) => {
+      {luaChon.filter((the) => (the.viTri ?? 'dau') === viTri).map((the) => {
         const bat = the.toggle === undefined ? true : cfg[the.toggle.key] !== false;
         return (
           <article key={the.id} className="bx-the bx-the-thietke" data-bat={bat}>
@@ -1016,6 +1107,8 @@ function TheMc({ mo }: { mo: () => void }) {
   const roi = !s.noiDuoc;
   const ai = s.ai ?? AI_MAC_DINH;
   const ds = useNhaAi();
+  // Tài khoản Claude / ChatGPT qua CLI thì không cần chọn kết nối API.
+  const chayApi = ai.aiChu !== 'claude' && ai.aiChu !== 'codex';
 
   return (
     <article className="bx-the bx-the-mc" data-bat={ai.enabled}>
@@ -1043,11 +1136,19 @@ function TheMc({ mo }: { mo: () => void }) {
           onChange={(v) => suaAi('everySec', v)}
         />
         <ONhanh
-          field={oNha('provider', 'Kết nối', 'chat', 'mc', ds, ai.provider)}
-          value={ai.provider}
+          field={O_AI_CHU}
+          value={ai.aiChu ?? 'api'}
           disabled={roi || !ai.enabled}
-          onChange={(v) => suaAi('provider', v)}
+          onChange={(v) => suaAi('aiChu', v)}
         />
+        {chayApi ? (
+          <ONhanh
+            field={oNha('provider', 'Kết nối', 'chat', 'mc', ds, ai.provider)}
+            value={ai.provider}
+            disabled={roi || !ai.enabled}
+            onChange={(v) => suaAi('provider', v)}
+          />
+        ) : null}
       </div>
       {s.aiLoi === null || !ai.enabled ? null : (
         <p className="bx-the-nhac bx-the-loi">Lượt vừa rồi lỗi: {s.aiLoi}</p>
@@ -1072,6 +1173,8 @@ type TabMc = (typeof TAB_MC)[number]['id'];
 
 function ModalMc({ dong }: { dong: () => void }) {
   const [tab, setTab] = useState<TabMc>('chu');
+  // Vẽ ảnh là việc của phòng kể truyện; phòng khác không có chỗ dùng ảnh do AI vẽ.
+  const coVeAnh = useLoaiPhong() === 'ke-chuyen';
   const s = useStage();
   const ai = s.ai ?? AI_MAC_DINH;
   // Chỉ khoá khi mất nối máy chủ: chưa phát vẫn chỉnh được — lệnh áp vào chính phòng của trang (docs/02 §10).
@@ -1095,7 +1198,7 @@ function ModalMc({ dong }: { dong: () => void }) {
           </button>
         </div>
         <div className="bx-tabs" role="tablist">
-          {TAB_MC.map((t) => (
+          {TAB_MC.filter((t) => t.id !== 'anh' || coVeAnh).map((t) => (
             <button
               key={t.id}
               type="button"
@@ -1285,14 +1388,72 @@ function TheNhanVatAo() {
   );
 }
 
+/** Tay kéo ở mép trái ngăn: kéo sang trái cho rộng ra, sang phải cho hẹp lại;
+ *  bấm đúp về độ rộng mặc định của thiết kế. Bàn phím: ← → (giữ Shift bước to).
+ *
+ *  Chỉ đổi `--bx-ngan-rong` của ngăn — thẻ, ô và modal bên trong đều theo
+ *  độ rộng ngăn sẵn rồi, nên tự giãn ra mà không phải sửa từng thẻ. */
+function TayKeoNgan({
+  rong,
+  dat,
+  dangRong,
+}: {
+  rong: number | null;
+  dat: (r: number | null) => void;
+  dangRong: () => number;
+}) {
+  const keo = useRef(false);
+  const tha = (e: SuKienTro<HTMLDivElement>): void => {
+    if (!keo.current) return;
+    keo.current = false;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    document.body.classList.remove('bx-dang-keo');
+  };
+  // Đóng ngăn giữa lúc đang kéo thì tay kéo mất trước khi kịp nhả.
+  useEffect(() => () => document.body.classList.remove('bx-dang-keo'), []);
+
+  return (
+    <div
+      className="bx-ngan-keo"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Kéo để đổi độ rộng ngăn"
+      aria-valuenow={Math.round(rong ?? dangRong())}
+      aria-valuemin={RONG_TOI_THIEU}
+      tabIndex={0}
+      title="Kéo để đổi độ rộng · bấm đúp để về mặc định"
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        keo.current = true;
+        document.body.classList.add('bx-dang-keo');
+      }}
+      onPointerMove={(e) => {
+        if (keo.current) dat(kepRong(window.innerWidth - e.clientX, window.innerWidth));
+      }}
+      onPointerUp={tha}
+      onPointerCancel={tha}
+      onDoubleClick={() => dat(null)}
+      onKeyDown={(e) => {
+        const buoc = e.shiftKey ? 64 : 16;
+        if (e.key === 'ArrowLeft') dat(kepRong(dangRong() + buoc, window.innerWidth));
+        else if (e.key === 'ArrowRight') dat(kepRong(dangRong() - buoc, window.innerWidth));
+        else return;
+        e.preventDefault();
+      }}
+    />
+  );
+}
+
 /** Bảng xem thử: một ngăn bên phải, cuộn được, mỗi tính năng một thẻ.
  *
  *  Lệnh đi lên bằng kênh `RoomCommand` của hợp đồng, không phải một cửa REST
  *  riêng — cùng đường mà luật tự động và AI sẽ dùng sau này. Nên mọi thay đổi ở
  *  đây tác động thẳng vào phiên đang live, không phải một bản xem trước. */
-export function BangXem() {
+export function BangXem({ theRieng, moSan }: { theRieng?: ReactNode; moSan?: boolean } = {}) {
   const s = useStage();
-  const [mo, setMo] = useState(false);
+  const [mo, setMo] = useState(moSan === true);
   const [sua, setSua] = useState<{ id: string; o?: string } | null>(null);
   const [suaMc, setSuaMc] = useState(false);
   const [suaKho, setSuaKho] = useState(false);
@@ -1300,6 +1461,20 @@ export function BangXem() {
   const [an] = useState(trongObs);
   const loaiPhong = useLoaiPhong();
   const hop = useHopThietKe();
+  // Độ rộng ngăn do người vận hành kéo ở mép trái; `null` là theo thiết kế.
+  // Đọc theo `cuaMinh`, mà lúc trang mới mở nó còn `null` (chưa nối) — nên đọc
+  // lại khi đổi, và CHỈ ghi khi chính tay kéo: ghi theo hiệu ứng thì lúc vừa
+  // biết tên phòng nó ghi đè `null` lên độ rộng đã nhớ.
+  const daNho = useMemo(() => docRong(s.cuaMinh), [s.cuaMinh]);
+  const [vuaKeo, setVuaKeo] = useState<number | null | undefined>(undefined);
+  const rong = vuaKeo === undefined ? daNho : vuaKeo;
+  const datRong = (r: number | null): void => {
+    setVuaKeo(r);
+    luuRong(s.cuaMinh, r);
+  };
+  const ngan = useRef<HTMLElement>(null);
+  // Nhóm "Tính năng chung" mặc định gập; mở lại trang là gập lại.
+  const [moChung, setMoChung] = useState(false);
 
   if (an) return null;
 
@@ -1311,6 +1486,8 @@ export function BangXem() {
 
   return (
     <>
+      <ToastSuCo />
+
       {dangMoModal ? null : <NutVe />}
 
       {dangMoModal ? null : (
@@ -1330,25 +1507,44 @@ export function BangXem() {
       {dangMoModal || mo ? null : <BangChiPhi />}
 
       {!mo ? null : (
-        <aside className="bx-ngan" aria-label="Xem thử tính năng">
-          <div className="bx-ngan-dau">
-            <b>Xem thử — ngăn này không lên sóng</b>
-            <small>
-              {s.live !== null && s.live === s.cuaMinh
-                ? 'phòng này đang phát — chỉnh là áp thẳng vào phiên đang live'
-                : `phòng này chưa phát — chỉnh thử trước khi lên sóng${s.live === null ? '' : ` (đang phát ${s.live})`}`}
-            </small>
-          </div>
-
+        <aside
+          ref={ngan}
+          className="bx-ngan"
+          aria-label="Xem thử tính năng"
+          style={rong === null ? undefined : ({ '--bx-ngan-rong': `${rong}px` } as CSSProperties)}
+        >
+          <TayKeoNgan
+            rong={rong}
+            dat={datRong}
+            dangRong={() => ngan.current?.getBoundingClientRect().width ?? RONG_TOI_THIEU}
+          />
+          {/* Không có dòng tiêu đề: nhường chiều cao cho thẻ. Dòng "Tính năng
+              chung" đầu danh sách đứng ngang nút ✕ (xem `bang-xem.css`). */}
           <div className="bx-ngan-than">
             {/* Dùng chung lên trên (chỉ còn Kết nối AI), rồi mọi thứ của
                 riêng loại phòng này: lựa chọn của thiết kế, MC, nhân vật ảo và
                 tính năng. Cùng cách xếp với trang quản lý, để người vận hành
                 không phải học hai bố cục. */}
-            <h3 className="bx-muc">Tính năng chung</h3>
-            <TheLienKet />
-            <TheKhoAi mo={() => setSuaKho(true)} />
-            <TheGiong mo={() => setSuaGiong(true)} />
+            {/* Ba thẻ chung ít phải đụng giữa buổi: mặc định gập lại thành
+                một khối, bấm vào khối thì hiện cả ba. Gập bằng `hidden` chứ
+                không gỡ thẻ ra, để chữ đang gõ dở trong ô link không mất. */}
+            <button
+              type="button"
+              className="bx-muc bx-muc-gap"
+              aria-expanded={moChung}
+              aria-controls="bx-chung"
+              title={moChung ? 'Thu gọn' : 'Hiện Link phát sóng, Kết nối AI, Giọng đọc'}
+              onClick={() => setMoChung(!moChung)}
+            >
+              <span>Tính năng chung</span>
+              <small>🔗 Link · 🔑 AI · 🗣 Giọng</small>
+              <i aria-hidden="true">▾</i>
+            </button>
+            <div id="bx-chung" className="bx-chung" hidden={!moChung}>
+              <TheLienKet />
+              <TheKhoAi mo={() => setSuaKho(true)} />
+              <TheGiong mo={() => setSuaGiong(true)} />
+            </div>
 
             {/* Chỉ loại phòng của chính thiết kế này: tính năng của loại khác
                 không chạy được ở đây (`hopPhong`), hiện ra chỉ làm rối. */}
@@ -1359,17 +1555,20 @@ export function BangXem() {
               return (
                 <div key={p.id} className="bx-muc-phong">
                   <h3 className="bx-muc">Tính năng dành riêng cho “{p.name}”</h3>
-                  <TheThietKe />
+                  <TheThietKe viTri="dau" />
+                  {theRieng}
                   {/* Tính năng chính của phòng (`theDau`) đứng trên thẻ MC. */}
                   {ds
                     .filter((m) => m.ui.theDau === true)
                     .map((m) => (
-                      <The
-                        key={m.id}
-                        id={m.id}
-                        mo={(o) => setSua(o === undefined ? { id: m.id } : { id: m.id, o })}
-                      />
+                      <Fragment key={m.id}>
+                        <The id={m.id} mo={(o) => setSua(o === undefined ? { id: m.id } : { id: m.id, o })} />
+                        {(m.ui.theTach ?? []).map((t) => (
+                          <TheRieng key={t.id} id={m.id} the={t} />
+                        ))}
+                      </Fragment>
                     ))}
+                  <TheThietKe viTri="sau-the-dau" />
                   {coMc ? <TheMc mo={() => setSuaMc(true)} /> : null}
                   {coAo ? <TheNhanVatAo /> : null}
                   {ds.length === 0 && !coMc && !coAo ? (
@@ -1378,13 +1577,16 @@ export function BangXem() {
                     ds
                       .filter((m) => m.ui.theDau !== true)
                       .map((m) => (
-                        <The
-                          key={m.id}
-                          id={m.id}
-                          mo={(o) => setSua(o === undefined ? { id: m.id } : { id: m.id, o })}
-                        />
+                        <Fragment key={m.id}>
+                          <The id={m.id} mo={(o) => setSua(o === undefined ? { id: m.id } : { id: m.id, o })} />
+                          {(m.ui.theTach ?? []).map((t) => (
+                            <TheRieng key={t.id} id={m.id} the={t} />
+                          ))}
+                        </Fragment>
                       ))
                   )}
+                  {/* Thẻ ít khi đụng tới (thiết kế khai `viTri: 'cuoi'`). */}
+                  <TheThietKe viTri="cuoi" />
                 </div>
               );
             })}

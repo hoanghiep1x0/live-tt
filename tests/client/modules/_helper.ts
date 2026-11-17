@@ -56,6 +56,13 @@ export function kiemModule<C extends object, S>(m: LiveModule<C, S>): void {
   for (const k of quick) {
     expect(keys, `ô chỉnh nhanh "${k}" không có trong fields`).toContain(k);
   }
+  for (const the of man.theTach ?? []) {
+    const cong = man.fields.find((f) => f.key === the.congTac);
+    expect(cong?.type, `công tắc thẻ "${the.id}" phải là ô toggle`).toBe('toggle');
+    for (const k of the.fields) {
+      expect(keys, `ô "${k}" của thẻ "${the.id}" không có trong fields`).toContain(k);
+    }
+  }
   for (const f of man.fields) {
     if (f.type !== 'select' && f.type !== 'gallery') continue;
     expect(f.options?.length, `${f.type} "${f.key}" thiếu options`).toBeGreaterThan(0);

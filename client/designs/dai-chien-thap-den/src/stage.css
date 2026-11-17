@@ -1,0 +1,111 @@
+/* Live Đại Chiến — khung 9:16, bên trong là game chạy riêng trong iframe. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+#san-khau {
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+
+.stage {
+  position: relative;
+  width: min(100vw, calc(100vh * 9 / 16));
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  background: #14100f;
+}
+
+/* Game vẽ theo khổ 360×640 rồi phóng cả khối, để chữ trên hình giữ đúng tỉ lệ ở 1080×1920. */
+.dai-chien-game {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 360px;
+  height: 640px;
+  border: 0;
+  transform-origin: 0 0;
+}
+
+/* Bản chơi thử: khung game sang trái để bảng ⚙ không che. */
+body.thu #san-khau {
+  place-items: center start;
+  padding-left: 12px;
+}
+
+/* Thẻ riêng của phòng trong bảng ⚙. */
+.sd-hang {
+  align-items: center;
+  flex-wrap: nowrap;
+}
+.sd-hang .bx-o {
+  flex: 1;
+  min-width: 0;
+}
+.bx-kho-sua.sd-gui {
+  align-self: stretch;
+  padding: 0 14px;
+  background: #2f9e5b;
+  border-color: #2f9e5b;
+  color: #fff;
+  font-size: 12px;
+}
+.bx-kho-sua.sd-gui:hover {
+  background: #38b36a;
+}
+.sd-vol {
+  width: 100%;
+}
+.sd-buoc {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+.sd-buoc b {
+  text-align: center;
+  color: #ffd166;
+}
+.sd-buoc textarea {
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.4;
+}
+.sd-chan {
+  gap: 6px;
+}
+
+/* Toast kết quả nút Kết nối: nằm dưới toast sự cố. */
+.sd-toast-noi {
+  top: 124px;
+}
+.bx-toast.sd-toast-xong {
+  background: rgba(14, 58, 34, 0.97);
+  border-color: #4ade80;
+}
+.bx-toast.sd-toast-cho {
+  background: rgba(16, 40, 66, 0.97);
+  border-color: #7ad7ff;
+}
+
+.bx-kho-sua.sd-nguy {
+  border-color: #ff7a66;
+  color: #ffb3a6;
+}
+.sd-ghi {
+  display: block;
+  margin-top: 7px;
+  color: rgba(244, 239, 230, 0.6);
+  font-size: 11px;
+  line-height: 1.4;
+}

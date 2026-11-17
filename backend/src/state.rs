@@ -1,6 +1,6 @@
 //! Trạng thái chung của máy chủ: thiết kế đang phát, cấu hình module, bus phát xuống.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -75,6 +75,8 @@ pub struct AppState {
     /// Lỗi lượt MC gần nhất của từng phòng (hết hạn mức, sai khoá…). Thẻ MC ở
     /// bảng xem hiện câu này; lượt thành công thì xoá.
     ai_loi: RwLock<HashMap<String, String>>,
+    /// Sự cố đang diễn ra của từng phòng, khoá là loại sự cố (`su_co.rs`).
+    su_co: RwLock<HashMap<String, BTreeMap<String, String>>>,
     nguon: RwLock<SourceCfg>,
     /// Đổi nguồn là tăng số này; tác vụ nguồn cũ thấy số khác thì tự thoát.
     the_he_nguon: AtomicU64,
@@ -157,6 +159,7 @@ impl AppState {
             xem_thu: RwLock::new(HashMap::new()),
             dang_xem: RwLock::new(HashMap::new()),
             ai_loi: RwLock::new(HashMap::new()),
+            su_co: RwLock::new(HashMap::new()),
             nguon: RwLock::new(SourceCfg::default()),
             the_he_nguon: AtomicU64::new(0),
             loi_nguon: RwLock::new(None),
@@ -685,6 +688,8 @@ impl AppState {
         }
         let loi = self.ai_loi.read().expect("khoá lỗi MC hỏng").get(id).cloned();
         ra.push(json!({ "t": "ai-loi", "loi": loi }));
+        let su_co = self.su_co.read().expect("khoá sự cố hỏng").get(id).cloned().unwrap_or_default();
+        ra.push(json!({ "t": "su-co", "ds": su_co }));
         if let Some(so) = self.so_chi_phi(id) {
             ra.push(json!({ "t": "chi-phi", "so": so }));
         }
@@ -775,6 +780,8 @@ impl AppState {
 
     /// Ghi lại tiến độ kể sau một lượt MC.
     pub fn ghi_tien_do_ke(&self, design_id: &str, td: crate::ke_truyen::TienDo) {
+        // Lưu ra tệp để mở lại app kể tiếp đúng đoạn (`ke_truyen::don_truyen_cu`).
+        crate::ke_truyen::luu_tien_do(&self.layout, design_id, &td, bay_gio_ms());
         self.ke_toi.write().expect("khoá kể truyện hỏng").insert(design_id.to_string(), td);
     }
 
@@ -832,6 +839,25 @@ impl AppState {
         };
         if doi {
             self.phat_cua(design_id, json!({ "t": "ai-loi", "loi": loi }));
+        }
+    }
+
+    /// Ghi (`Some`) hay xoá (`None`) một sự cố của phòng, rồi phát cả danh sách
+    /// xuống sân khấu. Không đổi gì thì không phát, gọi mỗi nhịp cũng được.
+    pub fn bao_su_co(&self, design_id: &str, khoa: &str, loi: Option<String>) {
+        let (doi, ds) = {
+            let mut g = self.su_co.write().expect("khoá sự cố hỏng");
+            let doi = match &loi {
+                Some(l) => {
+                    g.entry(design_id.to_string()).or_default().insert(khoa.to_string(), l.clone()).as_ref()
+                        != Some(l)
+                }
+                None => g.get_mut(design_id).is_some_and(|p| p.remove(khoa).is_some()),
+            };
+            (doi, g.get(design_id).cloned().unwrap_or_default())
+        };
+        if doi {
+            self.phat_cua(design_id, json!({ "t": "su-co", "ds": ds }));
         }
     }
 
@@ -1006,6 +1032,17 @@ impl AppState {
 
     /// Cau hinh MC do AI dan cua mot thiet ke.
     pub fn ai_config(&self, design_id: &str) -> crate::ai::AiCfg {
+        let mut cfg = self.ai_config_da_luu(design_id);
+        if cfg.ai_chu.is_empty() {
+            cfg.ai_chu = designs::read_manifest(&self.layout.design_manifest(design_id), design_id)
+                .ok()
+                .and_then(|m| m.mc?.ai_chu)
+                .unwrap_or_default();
+        }
+        cfg
+    }
+
+    fn ai_config_da_luu(&self, design_id: &str) -> crate::ai::AiCfg {
         let doc = match store::read_object(&self.layout.config_file(design_id)) {
             Ok(d) => d,
             Err(_) => return crate::ai::AiCfg::default(),
@@ -1558,6 +1595,29 @@ Hai khác." })).unwrap();
         // Ghi cấu hình khác của story (ảnh, lỗi…) mà truyện không đổi: không đếm.
         s.set_config("ke-chuyen", "story", json!({ "anhLoi": "" })).unwrap();
         assert_eq!(s.so_chi_phi("ke-chuyen").unwrap().truyen, ["Cây vú sữa", "Tấm Cám"]);
+    }
+
+    #[test]
+    fn su_co_chi_giu_thu_dang_mac_va_co_trong_ban_chup() {
+        let d = tempfile::tempdir().unwrap();
+        dung(d.path(), "ke-chuyen");
+        let s = state(d.path());
+        let ban_chup = || {
+            s.trang_thai_phong("ke-chuyen")
+                .into_iter()
+                .find(|t| t["t"] == "su-co")
+                .map(|t| t["ds"].clone())
+                .unwrap()
+        };
+        assert_eq!(ban_chup(), json!({}));
+        s.bao_su_co("ke-chuyen", "nguon", Some("đứt".into()));
+        s.bao_su_co("ke-chuyen", "giong", Some("hỏng".into()));
+        assert_eq!(ban_chup(), json!({ "giong": "hỏng", "nguon": "đứt" }));
+        s.bao_su_co("ke-chuyen", "nguon", None);
+        assert_eq!(ban_chup(), json!({ "giong": "hỏng" }));
+        // Xoá ở phòng chưa từng có sự cố: không sinh ô rỗng.
+        s.bao_su_co("phong-khac", "nguon", None);
+        assert!(!s.su_co.read().unwrap().contains_key("phong-khac"));
     }
 
     #[test]

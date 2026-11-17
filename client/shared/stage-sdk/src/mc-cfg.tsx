@@ -18,6 +18,18 @@ export function suaAi(key: string, v: Json): void {
   if (!duoc) console.warn('[xem thử] chưa nối được máy chủ');
 }
 
+export const O_AI_CHU: ConfigField = {
+  key: 'aiChu',
+  label: 'MC chạy bằng',
+  short: 'Chạy bằng',
+  type: 'select',
+  options: [
+    { value: 'claude', label: 'Claude' },
+    { value: 'codex', label: 'Codex' },
+    { value: 'api', label: 'API' },
+  ],
+};
+
 export const O_NHIP: ConfigField = {
   key: 'everySec',
   label: 'Nhịp khi không tự hẹn lượt sau',

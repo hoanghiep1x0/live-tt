@@ -1159,6 +1159,7 @@ fn chuan_bi(st: &AppState, id: &str, cfg: &Value) -> Result<(), String> {
     let mau = chon_tu_kho(kho_truyen(), &so, hien, loai);
     let mau_dat = mau.filter(|t| ban_co_san_dat(st, id, &t.ten, &t.doan, t.tu_sang_tac));
     let (ten, loai_ghi, doan, nguon, phong_cach, nhan_vat, phan_vai) = if let Some(t) = mau_dat {
+        st.bao_su_co(id, crate::su_co::VIET_TRUYEN, None);
         tu_kho(t)
     } else {
         // Truyện quen thuộc chưa kể trước; hết danh mục mới để AI sáng tác.
@@ -1168,12 +1169,20 @@ fn chuan_bi(st: &AppState, id: &str, cfg: &Value) -> Result<(), String> {
             _ => (None, loai),
         };
         match viet_bang_ai(st, id, loai_viet, ke_lai, &cam) {
-            Ok(v) => v,
+            Ok(v) => {
+                st.bao_su_co(id, crate::su_co::VIET_TRUYEN, None);
+                v
+            }
             // AI không viết được: lấy truyện trong kho (chưa kể thì trước,
             // không thì truyện kể lâu nhất) — phòng không bao giờ đứng chờ.
             Err(e) => {
-                let t = du_phong_kho(kho_truyen(), &so, hien, &gan_day).ok_or(e.clone())?;
+                let t = du_phong_kho(kho_truyen(), &so, hien, &gan_day, &dat).ok_or(e.clone())?;
                 tracing::warn!(thiet_ke = %id, ten = %t.ten, "AI chưa viết được truyện ({e}) — lấy truyện trong kho");
+                st.bao_su_co(
+                    id,
+                    crate::su_co::VIET_TRUYEN,
+                    Some(format!("{e}. Đang lấy tạm truyện trong kho nên có thể lệch thể loại đã chọn.")),
+                );
                 tu_kho(t)
             }
         }
@@ -1516,6 +1525,7 @@ pub fn du_phong_kho<'a>(
     da_ke: &[String],
     hien: &str,
     gan_day: &[String],
+    dat: &[String],
 ) -> Option<&'a TruyenKho> {
     let da: Vec<String> = da_ke.iter().map(|t| chuan(t)).collect();
     let moi: Vec<String> = gan_day.iter().map(|t| chuan(t)).collect();
@@ -1523,8 +1533,13 @@ pub fn du_phong_kho<'a>(
         ds.min_by_key(|t| da.iter().position(|d| *d == chuan(&t.ten)).map_or(0, |i| i + 1))
     };
     let khac_hien = |t: &&TruyenKho| chuan(&t.ten) != chuan(hien);
-    // Truyện kể trong ngày hôm nay thì bỏ qua, dù đây đã là đường dự phòng.
-    cu_nhat(&mut kho.iter().filter(khac_hien).filter(|t| !moi.contains(&chuan(&t.ten))))
+    let chua_ke_hom_nay = |t: &&TruyenKho| !moi.contains(&chuan(&t.ten));
+    let dung_loai = |t: &&TruyenKho| dat.iter().any(|l| chuan(l) == chuan(&t.loai));
+    // Chủ phòng đã chọn thể loại thì dự phòng cũng phải theo: AI hay quá hạn,
+    // lấy bừa một truyện trong kho là "Áp dụng" xong vẫn ra sai thể loại.
+    cu_nhat(&mut kho.iter().filter(khac_hien).filter(chua_ke_hom_nay).filter(dung_loai))
+        // Truyện kể trong ngày hôm nay thì bỏ qua, dù đây đã là đường dự phòng.
+        .or_else(|| cu_nhat(&mut kho.iter().filter(khac_hien).filter(chua_ke_hom_nay)))
         // Cả kho đều đã kể trong ngày: đành lấy truyện kể lâu nhất. Thà nghe
         // lại một truyện còn hơn phòng đứng im không có gì kể.
         .or_else(|| cu_nhat(&mut kho.iter().filter(khac_hien)))
@@ -1780,6 +1795,97 @@ pub fn chuyen_sang(st: &AppState, id: &str, now: i64) -> bool {
     }
 }
 
+/// Mỗi lần bấm "Áp dụng" là một thế hệ mới của phòng. Truyện đang viết dở lúc
+/// bấm được chuẩn bị theo thể loại CŨ — viết xong mà khác thế hệ thì bỏ.
+static THE_HE: Mutex<Option<HashMap<String, u64>>> = Mutex::new(None);
+
+fn the_he(id: &str) -> u64 {
+    let mut g = THE_HE.lock().unwrap_or_else(|e| e.into_inner());
+    g.get_or_insert_with(HashMap::new).get(id).copied().unwrap_or(0)
+}
+
+fn tang_the_he(id: &str) {
+    let mut g = THE_HE.lock().unwrap_or_else(|e| e.into_inner());
+    *g.get_or_insert_with(HashMap::new).entry(id.to_string()).or_insert(0) += 1;
+}
+
+/// Kết quả nút "Áp dụng" trên thẻ Thể loại truyện.
+#[derive(Debug, PartialEq, Eq)]
+pub enum ApDung {
+    /// Đã bỏ truyện máy tự chọn; vòng chuẩn bị sẽ tìm truyện theo lựa chọn mới.
+    DaBo(String),
+    /// Chưa có truyện nào sẵn: truyện chuẩn bị tới đây theo lựa chọn mới.
+    DangTim,
+    /// Đang giờ nghỉ đổi truyện, đã báo tên với khán giả: giữ nguyên.
+    DaBao(String),
+    /// Truyện kế tiếp là khách xin: khách đi trước, giữ nguyên.
+    KhachXin(String),
+}
+
+impl ApDung {
+    /// Câu báo lại cho người vận hành.
+    pub fn chu(&self) -> String {
+        const SAU: &str = "Lựa chọn mới áp dụng từ truyện sau đó.";
+        match self {
+            ApDung::DaBo(t) => format!("Đã bỏ “{t}”, đang tìm truyện theo lựa chọn mới…"),
+            ApDung::DangTim => "Đang tìm truyện theo lựa chọn mới…".to_string(),
+            ApDung::DaBao(t) if t.is_empty() => format!("Đang giờ nghỉ đổi truyện. {SAU}"),
+            ApDung::DaBao(t) => format!("“{t}” đã báo với khán giả nên giữ nguyên. {SAU}"),
+            ApDung::KhachXin(t) => format!("“{t}” là truyện khách xin nên giữ nguyên. {SAU}"),
+        }
+    }
+}
+
+/// Bấm "Áp dụng" thì làm gì với truyện kế tiếp. Cùng luật với `them_yeu_cau`:
+/// đã báo "Truyện tiếp theo" rồi thì không đổi — đổi lúc ấy là nói một đằng
+/// kể một nẻo. Truyện đang kể không bao giờ bị cắt. Hàm thuần.
+pub fn xet_ap_dung(cfg: &Value) -> ApDung {
+    let sau = cfg.get("truyenSau").cloned().unwrap_or_default();
+    let lay = |k: &str| sau.get(k).and_then(Value::as_str).unwrap_or_default().trim().to_string();
+    let ten = lay("title");
+    if cfg.get("giaiLao").is_some_and(|g| !g.is_null()) {
+        return ApDung::DaBao(ten);
+    }
+    if !lay("theoYeuCau").is_empty() {
+        return ApDung::KhachXin(ten);
+    }
+    if ten.is_empty() {
+        ApDung::DangTim
+    } else {
+        ApDung::DaBo(ten)
+    }
+}
+
+/// Bỏ truyện máy tự chọn nếu luật cho phép; trả kết quả xét.
+fn bo_truyen_may_chon(st: &AppState, id: &str) -> ApDung {
+    let Some(cfg) = cfg_story(st, id) else { return ApDung::DangTim };
+    let kq = xet_ap_dung(&cfg);
+    if let ApDung::DaBo(ten) = &kq {
+        match st.set_config(id, MODULE, json!({ "truyenSau": {} })) {
+            Ok(()) => tracing::info!(thiet_ke = %id, sau = %ten, "bỏ truyện kế tiếp để chọn lại theo thể loại mới"),
+            Err(e) => tracing::warn!(thiet_ke = %id, ?e, "không bỏ được truyện kế tiếp"),
+        }
+    }
+    kq
+}
+
+/// `POST /s/truyen-sau/:design_id/ap-dung` — nút "Áp dụng" trên thẻ Thể loại
+/// truyện: chạy luôn lựa chọn mới cho truyện kế tiếp, không chờ hết truyện đã
+/// chuẩn bị sẵn. Vòng `chay` thấy ô trống sẽ tự chuẩn bị lại trong vài giây.
+pub async fn post_ap_dung(
+    axum::extract::State(st): axum::extract::State<Arc<AppState>>,
+    axum::extract::Path(design_id): axum::extract::Path<String>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    if !crate::paths::valid_id(&design_id) {
+        let bao = json!({ "chu": "id thiết kế sai định dạng" });
+        return (axum::http::StatusCode::BAD_REQUEST, axum::Json(bao)).into_response();
+    }
+    tang_the_he(&design_id);
+    let kq = bo_truyen_may_chon(&st, &design_id);
+    axum::Json(json!({ "chu": kq.chu() })).into_response()
+}
+
 pub async fn chay(st: Arc<AppState>) {
     let mut dong_ho = tokio::time::interval(Duration::from_secs(5));
     let ban = Arc::new(Mutex::new(false));
@@ -1809,6 +1915,7 @@ pub async fn chay(st: Arc<AppState>) {
                 continue;
             }
             *ban.lock().expect("khoá truyện sau hỏng") = true;
+            let the_he_dau = the_he(&id);
             let (st2, ban2, hen2, loi2, id2) = (st.clone(), ban.clone(), hen.clone(), loi_lien.clone(), id.clone());
             tokio::spawn(async move {
                 let st3 = st2.clone();
@@ -1818,12 +1925,18 @@ pub async fn chay(st: Arc<AppState>) {
                     .unwrap_or_else(|e| Err(format!("tác vụ hỏng: {e}")));
                 if let Err(e) = kq {
                     tracing::warn!(thiet_ke = %id2, "truyện kế tiếp: {e}");
+                    st2.bao_su_co(&id2, crate::su_co::CHUAN_BI, Some(e.clone()));
                     let mut g = loi2.lock().expect("khoá lỗi hỏng");
                     let n = g.entry(id2.clone()).or_insert(0);
                     *n += 1;
                     hen2.lock().expect("khoá hẹn hỏng").insert(id2, Instant::now() + cho_sau_loi(*n - 1));
                 } else {
+                    st2.bao_su_co(&id2, crate::su_co::CHUAN_BI, None);
                     loi2.lock().expect("khoá lỗi hỏng").remove(&id2);
+                    // Bấm "Áp dụng" lúc truyện này đang viết: nó theo lựa chọn cũ.
+                    if the_he(&id2) != the_he_dau {
+                        bo_truyen_may_chon(&st2, &id2);
+                    }
                 }
                 *ban2.lock().expect("khoá truyện sau hỏng") = false;
             });
@@ -1835,6 +1948,32 @@ pub async fn chay(st: Arc<AppState>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ap_dung_chi_bo_truyen_may_tu_chon() {
+        let may = json!({ "truyenSau": { "title": "Tấm Cám" } });
+        assert_eq!(xet_ap_dung(&may), ApDung::DaBo("Tấm Cám".into()));
+        assert_eq!(xet_ap_dung(&json!({ "truyenSau": {} })), ApDung::DangTim);
+        assert_eq!(xet_ap_dung(&json!({})), ApDung::DangTim);
+    }
+
+    #[test]
+    fn ap_dung_giu_truyen_khach_xin_va_truyen_da_bao() {
+        let khach = json!({ "truyenSau": { "title": "Sọ Dừa", "theoYeuCau": "Lan" } });
+        assert_eq!(xet_ap_dung(&khach), ApDung::KhachXin("Sọ Dừa".into()));
+        let nghi = json!({ "truyenSau": { "title": "Sọ Dừa" }, "giaiLao": { "tu": 1 } });
+        assert_eq!(xet_ap_dung(&nghi), ApDung::DaBao("Sọ Dừa".into()), "đã báo tên thì không đổi");
+        let het_nghi = json!({ "truyenSau": { "title": "Sọ Dừa" }, "giaiLao": null });
+        assert_eq!(xet_ap_dung(&het_nghi), ApDung::DaBo("Sọ Dừa".into()));
+    }
+
+    #[test]
+    fn bam_ap_dung_sang_the_he_moi() {
+        let id = "thu-the-he";
+        let dau = the_he(id);
+        tang_the_he(id);
+        assert_ne!(the_he(id), dau, "truyện đang viết dở phải nhận ra đã cũ");
+    }
 
     #[test]
     fn doc_dan_y_goc_va_dua_cho_nguoi_soat() {
@@ -2152,14 +2291,31 @@ mod tests {
     }
 
     #[test]
+    fn du_phong_kho_theo_the_loai_da_chon() {
+        let kho = kho_truyen();
+        let loai = kho.first().unwrap().loai.clone();
+        let dat = vec![loai.clone()];
+        // Kho có truyện chưa kể ở thể loại khác đứng trước vẫn phải lấy đúng loại.
+        let khac: Vec<&TruyenKho> = kho.iter().filter(|t| t.loai != loai).collect();
+        assert!(!khac.is_empty(), "kho phải có từ hai thể loại để test có nghĩa");
+        assert_eq!(du_phong_kho(kho, &[], "", &[], &dat).unwrap().loai, loai);
+        // Thể loại tự gõ mà kho không có: vẫn phải có truyện, phòng không đứng im.
+        let la = vec!["thể loại không có trong kho".to_string()];
+        assert!(du_phong_kho(kho, &[], "", &[], &la).is_some());
+        // Cả thể loại đã kể trong ngày: không kể lại, sang truyện khác.
+        let cung: Vec<String> = kho.iter().filter(|t| t.loai == loai).map(|t| t.ten.clone()).collect();
+        assert_ne!(du_phong_kho(kho, &cung, "", &cung, &dat).unwrap().loai, loai);
+    }
+
+    #[test]
     fn du_phong_kho_chua_ke_truoc_roi_ke_lau_nhat() {
         let kho = kho_truyen();
         let ten: Vec<String> = kho.iter().map(|t| t.ten.clone()).collect();
         // Còn truyện chưa kể: lấy truyện chưa kể.
-        let t = du_phong_kho(kho, &ten[..3], &ten[3], &[]).unwrap();
+        let t = du_phong_kho(kho, &ten[..3], &ten[3], &[], &[]).unwrap();
         assert!(!ten[..4].contains(&t.ten));
         // Kể hết rồi: truyện kể lâu nhất (đầu sổ), khác truyện đang kể.
-        let t = du_phong_kho(kho, &ten, &ten[0], &[]).unwrap();
+        let t = du_phong_kho(kho, &ten, &ten[0], &[], &[]).unwrap();
         assert_eq!(t.ten, ten[1]);
     }
 
@@ -2352,10 +2508,10 @@ Hai.",
         // Đường dự phòng cũng phải tránh truyện kể trong ngày.
         let kho = kho_truyen();
         let ten: Vec<String> = kho.iter().map(|t| t.ten.clone()).collect();
-        let t = du_phong_kho(kho, &ten, &ten[0], &ten[1..3]).unwrap();
+        let t = du_phong_kho(kho, &ten, &ten[0], &ten[1..3], &[]).unwrap();
         assert!(!ten[1..3].contains(&t.ten), "truyện kể hôm nay không được lấy lại");
         // Cả kho đã kể trong ngày: vẫn phải có truyện, thà nghe lại còn hơn im.
-        assert!(du_phong_kho(kho, &ten, &ten[0], &ten).is_some());
+        assert!(du_phong_kho(kho, &ten, &ten[0], &ten, &[]).is_some());
     }
 
     #[test]

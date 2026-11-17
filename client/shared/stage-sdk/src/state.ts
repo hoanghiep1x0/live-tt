@@ -31,6 +31,8 @@ export interface StageState {
   ai: AiCfg;
   /** Lượt MC gần nhất lỗi gì, `null` là ổn. */
   aiLoi: string | null;
+  /** Sự cố máy chủ đang báo, khoá là loại sự cố. Rỗng là ổn. */
+  suCo: Readonly<Record<string, string>>;
   /** Sổ chi phí của buổi hiện tại ở phòng này, `null` là chưa có lượt gọi nào. */
   chiPhi: SoChiPhi | null;
   noiDuoc: boolean;
@@ -75,6 +77,8 @@ export interface AiCfg {
   /** Phát liên tục: phòng chưa có ai thì vẫn kể tiếp. Tắt thì vắng người là
    *  dừng chờ, có người lại kể tiếp chỗ đang dở. */
   phatLienTuc?: boolean;
+  /** MC chạy bằng gì: `claude`, `codex` hoặc `api`. */
+  aiChu?: string;
   /** Gõ câu chào khách mới vào KHUNG CHAT của phòng live TikTok. */
   chatTiktok?: boolean;
   /** Nhiều nhất ngần này tin chát trong mỗi 15 phút. 0 là thôi chát. */
@@ -173,6 +177,7 @@ export const BAN_DAU: StageState = {
   bot: BOT_MAC_DINH,
   ai: AI_MAC_DINH,
   aiLoi: null,
+  suCo: {},
   chiPhi: null,
   noiDuoc: false,
   hanhDong: [],
@@ -216,6 +221,8 @@ export function apTin(s: StageState, d: Down): StageState {
     }
     case 'ai-loi':
       return cuaToi(s, d.designId) ? { ...s, aiLoi: d.loi } : s;
+    case 'su-co':
+      return cuaToi(s, d.designId) ? { ...s, suCo: d.ds } : s;
     case 'chi-phi':
       return cuaToi(s, d.designId) ? { ...s, chiPhi: d.so } : s;
     case 'bot': {

@@ -40,6 +40,9 @@ pub const NGHI_HET_TRUYEN: Duration = Duration::from_secs(4);
 pub const NGHI_SAU_BAO_CHUYEN: Duration = Duration::from_secs(3);
 /// Nghỉ sau lượt chào khách giữa hai truyện, trước khi mở truyện mới.
 pub const NGHI_TRUOC_TRUYEN_MOI: Duration = Duration::from_secs(3);
+/// Sân khấu tự đọc lần lượt từng đoạn nên tin báo chỉ vượt đoạn kế tiếp khi lỡ
+/// mất vài tin (mạng chập, đổi cửa sổ giữ quyền nói). Quá ngần này là tin sai.
+pub const TU_DOC_NHAY_TOI_DA: usize = 2;
 
 impl TienDo {
     /// Tiến độ của truyện `dau`: giữ nguyên nếu vẫn truyện đó, không thì từ đầu.
@@ -66,9 +69,11 @@ impl TienDo {
     /// Không ghi thì máy chủ vẫn tưởng MC đang ở đoạn cũ: MC quay lại là kể
     /// lại đúng mấy đoạn phòng vừa đọc, khung truyện lùi về theo — người xem
     /// nghe một đoạn hai lần. Chỉ đi TỚI: đoạn đã qua (báo trễ, hai cửa sổ
-    /// cùng báo) hay truyện đã xong thì thôi. Trả `true` khi tiến độ đổi.
+    /// cùng báo) hay truyện đã xong thì thôi. Đi tới cũng chỉ từng bước ngắn
+    /// (`TU_DOC_NHAY_TOI_DA`): số đoạn nhảy xa là tin sai, trang mở từ bản cũ
+    /// vẫn có thể gửi tin như vậy lúc đổi truyện. Trả `true` khi tiến độ đổi.
     pub fn tu_doc(&mut self, i: usize, so_doan: usize, lap: bool, now: i64) -> bool {
-        if self.vua_xong || i < self.tiep || i >= so_doan {
+        if self.vua_xong || i < self.tiep || i >= so_doan || i > self.tiep + TU_DOC_NHAY_TOI_DA {
             return false;
         }
         self.da_ke(i, so_doan, lap);
@@ -540,6 +545,33 @@ pub fn dat_vai_giong_mac_dinh(st: &crate::state::AppState) {
 /// bằng đúng nội dung buổi trước là phát lại. Truyện mới do `truyen_sau.rs`
 /// chuẩn bị, MC mở ngay sau đó. Truyện người vận hành tự đặt (chưa kể bao giờ)
 /// thì giữ nguyên.
+/// Mở lại app (tắt / khởi động lại giữa buổi) trong ngần này thì truyện đang
+/// kể dở được KỂ TIẾP đúng đoạn đang dở, không bị bỏ giữa chừng. Tắt lâu hơn
+/// mới coi là buổi live mới và đổi truyện như cũ.
+pub const KE_TIEP_TRONG_MS: i64 = 30 * 60_000;
+
+fn tep_tien_do(layout: &crate::paths::Layout, id: &str) -> std::path::PathBuf {
+    layout.config_file(id).with_file_name("tien-do-ke.json")
+}
+
+/// Ghi tiến độ kể ra tệp, để mở lại app còn biết đang kể tới đâu. Gọi mỗi
+/// lần tiến độ đổi (`AppState::ghi_tien_do_ke`). Lỗi ghi thì bỏ qua: tệp này
+/// chỉ để kể tiếp sau khi mở lại, không có nó thì về luật cũ.
+pub fn luu_tien_do(layout: &crate::paths::Layout, id: &str, td: &TienDo, now: i64) {
+    let v = json!({ "dau": td.dau, "tiep": td.tiep, "vuaXong": td.vua_xong, "luc": now });
+    let _ = crate::store::write_json_atomic(&tep_tien_do(layout, id), &v);
+}
+
+/// Đoạn để kể tiếp sau khi mở lại app: cùng truyện (`dau`), đang kể dở (đã
+/// qua đoạn đầu, chưa xong), ghi gần đây. `None` thì về luật cũ. Hàm thuần.
+pub fn doan_ke_tiep(luu: &Value, dau: &str, now: i64) -> Option<usize> {
+    let cung = luu.get("dau").and_then(Value::as_str) == Some(dau);
+    let tiep = luu.get("tiep").and_then(Value::as_u64)? as usize;
+    let xong = luu.get("vuaXong").and_then(Value::as_bool).unwrap_or(false);
+    let luc = luu.get("luc").and_then(Value::as_i64).unwrap_or(0);
+    (cung && !xong && tiep > 0 && now - luc < KE_TIEP_TRONG_MS).then_some(tiep)
+}
+
 pub fn don_truyen_cu(st: &crate::state::AppState, id: &str) {
     let Ok(m) = st.module_state(id, "story") else { return };
     if !m.enabled {
@@ -553,6 +585,16 @@ pub fn don_truyen_cu(st: &crate::state::AppState, id: &str) {
     // MC tắt (phòng tự đọc) thì không dọn: không ai chuẩn bị truyện mới, dọn
     // xong là khung trống mãi.
     if !mc_ke(&cfg) {
+        return;
+    }
+    // Mở lại app giữa lúc đang kể (trong `KE_TIEP_TRONG_MS`): giữ truyện, kể
+    // tiếp đúng đoạn đang dở — không bỏ truyện giữa chừng mà mở truyện khác.
+    let cac_doan = crate::anh_truyen::cat_doan(cfg.get("passages").and_then(Value::as_str).unwrap_or_default());
+    let dau = crate::anh_truyen::dau_truyen(&ten, &cac_doan);
+    let luu = crate::store::read_json(&tep_tien_do(&st.layout, id)).ok().flatten().unwrap_or(Value::Null);
+    if let Some(tiep) = doan_ke_tiep(&luu, &dau, crate::state::bay_gio_ms()).filter(|t| *t < cac_doan.len()) {
+        tracing::info!(thiet_ke = %id, %ten, doan = tiep + 1, "mở lại app giữa truyện: kể tiếp đoạn đang dở");
+        st.ghi_tien_do_ke(id, TienDo { dau, tiep, ..TienDo::default() });
         return;
     }
     let gon = |t: &str| t.trim().to_lowercase();
@@ -622,6 +664,19 @@ pub fn thoi_gian_doc(so_chu: usize) -> Duration {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mo_lai_app_ke_tiep_doan_dang_do() {
+        let luu = json!({ "dau": "abc", "tiep": 5, "vuaXong": false, "luc": 1_000 });
+        assert_eq!(doan_ke_tiep(&luu, "abc", 60_000), Some(5));
+        assert_eq!(doan_ke_tiep(&luu, "khac", 60_000), None, "truyện khác thì không kể tiếp");
+        assert_eq!(doan_ke_tiep(&luu, "abc", 1_000 + KE_TIEP_TRONG_MS), None, "tắt lâu là buổi mới");
+        let xong = json!({ "dau": "abc", "tiep": 9, "vuaXong": true, "luc": 1_000 });
+        assert_eq!(doan_ke_tiep(&xong, "abc", 2_000), None, "kể xong rồi thì sang truyện mới");
+        let dau = json!({ "dau": "abc", "tiep": 0, "vuaXong": false, "luc": 1_000 });
+        assert_eq!(doan_ke_tiep(&dau, "abc", 2_000), None, "chưa kể đoạn nào thì như cũ");
+        assert_eq!(doan_ke_tiep(&Value::Null, "abc", 2_000), None);
+    }
 
     #[test]
     fn loi_moi_follow_chia_se() {
@@ -814,6 +869,18 @@ mod tests {
         // Đã xong thì báo gì cũng thôi; số đoạn lạ cũng bỏ.
         assert!(!td.tu_doc(2, 3, false, 10));
         assert!(!TienDo::cua(None, "d1").tu_doc(7, 3, false, 1));
+    }
+
+    #[test]
+    fn tin_tu_doc_nhay_xa_khong_lam_mat_truyen_moi() {
+        // Vừa đổi truyện, trang cũ báo số đoạn của truyện trước: bỏ.
+        let mut td = TienDo::cua(None, "moi");
+        assert!(!td.tu_doc(8, 9, false, 1));
+        assert_eq!(td.tiep, 0);
+        assert!(!td.vua_xong);
+        // Lỡ một hai tin thật: vẫn nhận, MC không kể lại đoạn phòng đã đọc.
+        assert!(td.tu_doc(TU_DOC_NHAY_TOI_DA, 9, false, 2));
+        assert_eq!(td.tiep, TU_DOC_NHAY_TOI_DA + 1);
     }
 
     #[test]

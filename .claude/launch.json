@@ -13,6 +13,22 @@
       "port": 5180
     },
     {
+      "name": "ke-chuyen",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "-w",
+        "@live/design-ke-chuyen",
+        "--",
+        "--port",
+        "5185",
+        "--strictPort"
+      ],
+      "port": 5185,
+      "autoPort": false
+    },
+    {
       "name": "xem-3d",
       "runtimeExecutable": "python",
       "runtimeArgs": [

@@ -73,6 +73,9 @@ export type Down =
   /** Lượt MC gần nhất lỗi gì (hết hạn mức, sai khoá…); `null` là lượt vừa rồi
    *  ổn. Thẻ MC ở bảng xem hiện câu này để người vận hành biết phải sửa gì. */
   | { t: 'ai-loi'; loi: string | null; designId?: string }
+  /** Sự cố đang diễn ra của phòng, khoá là loại sự cố. Phát lại cả danh sách
+   *  mỗi lần đổi; rỗng là phòng ổn. */
+  | { t: 'su-co'; ds: Record<string, string>; designId?: string }
   /** Sổ chi phí của buổi hiện tại (mỗi lượt gọi AI tốn bao nhiêu, số thật nhà
    *  cung cấp báo về). Phát lại cả sổ sau mỗi lượt gọi. */
   | { t: 'chi-phi'; so: SoChiPhi; designId?: string }

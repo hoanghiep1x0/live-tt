@@ -77,13 +77,16 @@ export const schema = z.object({
   giaiLao: z
     .object({
       truyenSau: z.string().max(120).default(''),
-      lyDo: z.enum(['chuyen', 'anh', 'ket-noi']).catch('chuyen').default('chuyen'),
+      lyDo: z.enum(['chuyen', 'anh', 'ket-noi', 'ket-thuc']).catch('chuyen').default('chuyen'),
       tu: z.number().default(0),
       /** Giờ chờ máy chủ đã chốt cho lần nghỉ này (ms), co theo số người trong
        *  phòng. 0 là bản cũ chưa ghi — sân khấu về mốc tối thiểu. */
       han: z.number().default(0),
       /** Giờ nghỉ sự cố này đã tự bật nhân vật minh hoạ — hết sự cố thì máy chủ tắt lại. */
       batBot: z.boolean().default(false),
+      /** Giờ nghỉ đổi truyện này là NHỊP GIAO LƯU (`giao_luu.rs`): dài hơn,
+       *  MC chào khách mới liên tục, sân khấu nhường phần chào cho MC. */
+      giaoLuu: z.boolean().default(false),
     })
     .nullable()
     .catch(null)
@@ -92,6 +95,15 @@ export const schema = z.object({
    *  phòng phía sau. Dải sáng quét và chữ vẫn chạy để khung không đứng im. */
   transparentBg: z.boolean().default(false),
   secPerPassage: z.number().int().min(3).max(300).default(18),
+  /** NHỊP GIAO LƯU: cứ sau ngần này truyện thì giờ nghỉ đổi truyện thành một
+   *  quãng giao lưu — MC chào khách mới liên tục, trò chuyện sôi nổi. 0 là tắt.
+   *  Máy chủ đọc mỗi lượt nên đổi là áp dụng ngay (`giao_luu.rs`). */
+  giaoLuuSau: z.number().int().min(0).max(10).default(2),
+  /** Công tắc trên thẻ "Nhịp giao lưu". Tách khỏi `giaoLuuSau` để tắt đi vẫn
+   *  giữ các số đã đặt; mặc định bật như trước khi có công tắc. */
+  giaoLuuBat: z.boolean().default(true),
+  /** Nhịp giao lưu kéo dài ngần này giây. */
+  giaoLuuGiay: z.number().int().min(30).max(180).default(90),
   readAloud: z.boolean().default(true),
   /** Thể loại và nguồn của truyện đang kể ("kho", "AI", "… · truyện mình kể") —
    *  máy chủ ghi khi chuyển truyện (`truyen_sau.rs`). */
@@ -231,6 +243,35 @@ export const manifest: ModuleManifest<Config> = {
   slots: ['screen'],
   needs: ['tts'],
   actions: [{ label: 'Đoạn sau', op: 'next', icon: '⏭' }],
+  // Cách phòng CHỌN truyện hay đổi giữa buổi: thẻ riêng, sửa ngay bên ngoài.
+  theTach: [
+    {
+      id: 'the-loai',
+      name: 'Thể loại truyện',
+      icon: '🏷️',
+      summary: 'Chỉ kể những thể loại bạn chọn. Tắt thì xoay vòng 12 thể loại',
+      congTac: 'theoTheLoai',
+      fields: ['theLoai'],
+      apDung: { label: 'Áp dụng', icon: '▶', duong: '/s/truyen-sau/{id}/ap-dung' },
+      trangThai: { nhan: 'Truyện kế tiếp', o: 'truyenSau', khoa: ['title', 'loai'], khiTrong: 'đang tìm…' },
+    },
+    {
+      id: 'giao-luu',
+      name: 'Nhịp giao lưu',
+      icon: '💬',
+      summary: 'Kể xong vài truyện thì dừng để MC chào khách, trò chuyện',
+      congTac: 'giaoLuuBat',
+      fields: ['giaoLuuSau', 'giaoLuuGiay'],
+    },
+    {
+      id: 'anh-hoac-dong-ho',
+      name: 'Ảnh hoặc đồng hồ ngẫu nhiên',
+      icon: '🎲',
+      summary: 'Mỗi truyện bốc hiện ảnh minh hoạ hoặc đồng hồ',
+      congTac: 'anhHoacDongHo',
+      fields: [],
+    },
+  ],
   // Tối đa 3 ô (luật chung của mọi module, `kiemModule`). "Đọc to" rời hàng
   // này nhường chỗ cho "Đồng hồ truyện": nó chỉ hiện ở lối tự đọc, mà gạt một
   // lần rồi thôi — vẫn còn ở tab Giọng. Hai công tắc khung (ảnh, đồng hồ) thì
@@ -254,6 +295,35 @@ export const manifest: ModuleManifest<Config> = {
       unit: 'giây',
       min: 3,
       max: 300,
+    },
+    // ── Nhịp giao lưu: sau mỗi N truyện dừng 1–2 phút cho MC chào khách mới,
+    // trò chuyện sôi nổi. Đổi là áp dụng ngay vào mạch truyện. ──
+    {
+      key: 'giaoLuuBat',
+      label: 'Nhịp giao lưu',
+      type: 'toggle',
+    },
+    {
+      key: 'giaoLuuSau',
+      hienKhi: [{ cachKe: ['mc-day-du', 'mc-tiet-kiem'], giaoLuuBat: [true] }],
+      label: 'Nhịp giao lưu sau mỗi',
+      short: 'Giao lưu sau',
+      type: 'number',
+      unit: 'truyện',
+      min: 0,
+      max: 10,
+      hint: 'Cứ kể xong ngần này truyện thì dừng một quãng giao lưu: MC chào từng khách mới vào, trò chuyện sôi nổi rồi mới kể truyện tiếp. Đổi là áp dụng ngay.',
+    },
+    {
+      key: 'giaoLuuGiay',
+      hienKhi: [{ cachKe: ['mc-day-du', 'mc-tiet-kiem'], giaoLuuBat: [true] }],
+      label: 'Thời gian dừng giao lưu',
+      short: 'Giao lưu (s)',
+      type: 'number',
+      unit: 'giây',
+      min: 30,
+      max: 180,
+      hint: 'Quãng giao lưu kéo dài bao lâu. 60–120 giây là vừa: đủ chào khách mới mà người đang chờ truyện không sốt ruột.',
     },
     // ── Truyện: truyện đang kể — tự chuyển đã tự lo, ít khi phải sửa tay. ──
     {

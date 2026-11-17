@@ -36,6 +36,9 @@ impl Default for Canvas {
 pub struct McKhai {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dan: Option<String>,
+    /// Công cụ mặc định của MC ở phòng này: `claude`, `codex` hoặc `api`.
+    #[serde(default, rename = "aiChu", skip_serializing_if = "Option::is_none")]
+    pub ai_chu: Option<String>,
 }
 
 /// Nhan vat ao cua rieng boi canh nay. Xem `bot.rs`: noi dung thuoc ve thiet
