@@ -173,7 +173,7 @@ export interface TheTach {
 }
 
 /** Loại phòng live. Mỗi loại có một nhúm tính năng của riêng nó. */
-export type RoomKind = 'ke-chuyen' | 'san-bar' | 'dam-cuoi' | 'lop-hoc' | 'dai-chien';
+export type RoomKind = 'ke-chuyen' | 'san-bar' | 'dam-cuoi' | 'lop-hoc' | 'dai-chien' | 'tu-tien';
 
 /** Loại phòng theo thứ tự hiện trên trang. Mở một dạng live mới = thêm một dòng
  *  ở đây rồi gắn `room` cho các module của nó. */
@@ -183,6 +183,7 @@ export const LOAI_PHONG: readonly { id: RoomKind; name: string }[] = [
   { id: 'dam-cuoi', name: 'Live Đám Cưới' },
   { id: 'lop-hoc', name: 'Live Lớp Học' },
   { id: 'dai-chien', name: 'Live Đại Chiến' },
+  { id: 'tu-tien', name: 'Live Tu Tiên' },
 ];
 
 /** `x` có phải id một loại phòng đã khai trong `LOAI_PHONG` không. */
@@ -224,7 +225,7 @@ export const TINH_NANG_HE = {
    *  (lời dặn riêng ở `mc.dan` của thiết kế). Phòng kể chuyện không có thẻ này:
    *  MC chính là người kể truyện, cài đặt MC nằm trong tính năng Kể chuyện (ô
    *  `mc-ke-chuyen`), chào khách cũng do MC lo nên không có module chào riêng. */
-  mc: { room: ['lop-hoc', 'dai-chien'] },
+  mc: { room: ['lop-hoc', 'dai-chien', 'tu-tien'] },
   /** Nhân vật ảo: thiết kế nào khai `crowd.lines` thì dùng. Sàn bar chỉ có
    *  vũ công 3D, không khai đám đông. Lớp học: ngồi ghế và nói chuyện, không
    *  trả lời, không điểm (module `do-chu`). */

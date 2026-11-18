@@ -1,0 +1,23 @@
+{
+  "id": "tu-tien-son-ha",
+  "category": "tu-tien",
+  "style": "son-ha",
+  "name": "Live Tu Tiên · Sơn Hà Tiên Lộ",
+  "icon": "⛰️",
+  "summary": "Tu tiên bằng bình luận trong thần thoại Sơn Tinh – Thủy Tinh: câu đố, độ kiếp, kéo co nước – núi, đánh yêu tinh",
+  "version": "0.1.0",
+  "canvas": {
+    "width": 1080,
+    "height": 1920
+  },
+  "slots": [],
+  "provides": [
+    "tts",
+    "audio"
+  ],
+  "mc": {
+    "dan": "mc-dan.md",
+    "aiChu": "claude"
+  },
+  "entry": "dist/index.html"
+}

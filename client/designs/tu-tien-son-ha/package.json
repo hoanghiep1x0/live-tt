@@ -1,0 +1,22 @@
+{
+  "name": "@live/design-tu-tien-son-ha",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@live/contracts": "*",
+    "@live/stage-sdk": "*",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "three": "0.169.0"
+  },
+  "devDependencies": {
+    "@live/dev-proxy": "*",
+    "@vitejs/plugin-react": "6.2.1",
+    "@types/three": "0.169.0"
+  }
+}

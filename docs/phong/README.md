@@ -20,6 +20,7 @@ docs/phong/
 | `ke-chuyen` | Phòng kể chuyện | mặc định → `ke-chuyen` (id có trước quy ước) | [04 — Viết thiết kế](../04-viet-thiet-ke.md) |
 | `lop-hoc` | Lớp học | `chu` → `lop-hoc-chu` | [lop-hoc/](lop-hoc/README.md) |
 | `dai-chien` | Live Đại Chiến (game, bản đầu) | `thap-den` → `dai-chien-thap-den` | [dai-chien/](dai-chien/README.md) |
+| `tu-tien` | Live Tu Tiên (game bình luận, bản đầu) | `son-ha` → `tu-tien-son-ha` | [tu-tien/](tu-tien/README.md) |
 
 ## Thêm loại hoặc kiểu mới
 
