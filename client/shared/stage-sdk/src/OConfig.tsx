@@ -4,6 +4,8 @@ import {
   bamMon,
   boLenSong,
   boList,
+  doiList,
+  tenMucList,
   khoaMon,
   locTuDo,
   mucList,
@@ -17,7 +19,7 @@ import type { ConfigField, Json } from '@live/contracts';
 import { OAnhTruyen, OKetNoi, ONguonAnh, ONguonChu, OTruyenSau } from './AnhTruyen';
 import { OKhoTruyen } from './KhoTruyen';
 import { OMcKeChuyen, OVaiGiong } from './McKeChuyen';
-import { useDesignId } from './Stage';
+import { useAsset, useDesignId } from './Stage';
 import { moduleAssetUrl } from './assets';
 import { useTuDo, xoaTuDo } from './tu-do';
 import { XemThuDo } from './XemThuDo';
@@ -516,28 +518,115 @@ function ODanhSachMuc({ moduleId, modId, field: f, value, disabled, onChange }: 
   const ds = mucList(value);
   const day = f.max !== undefined && ds.length >= f.max;
   const idCua = (m: Record<string, Json>, i: number): string => (typeof m['id'] === 'string' && m['id'] !== '' ? m['id'] : String(i));
-  const tenCua = (m: Record<string, Json>, i: number): string =>
-    typeof m['ten'] === 'string' && m['ten'] !== '' ? m['ten'] : `${f.label} ${i + 1}`;
+  const tenCua = (m: Record<string, Json>, i: number): string => tenMucList(f, m, i);
   const [chon, setChon] = useState('');
+  // Kéo-thả đổi thứ tự: mục đang kéo và chỗ đang rê qua.
+  const [keo, setKeo] = useState<number | null>(null);
+  const [qua, setQua] = useState<number | null>(null);
+  const doi = (tu: number, toi: number) => onChange(doiList(value, tu, toi));
   const i = Math.max(0, ds.findIndex((m, j) => idCua(m, j) === chon));
   const m = ds[i];
   // ô bật / tắt đầu tiên của mục (Bật nhóm, Có trong đám đông…) — hiện thành dấu trong bảng
   const bat = (f.fields ?? []).find((o) => o.type === 'toggle');
+  const asset = useAsset();
+  const luoi = f.luoi;
+  const chuO = (x: Record<string, Json>, k: string): string => {
+    const o = (f.fields ?? []).find((y) => y.key === k);
+    const v = x[k];
+    if (o?.type === 'select') return o.options?.find((y) => y.value === String(v))?.label ?? '';
+    if (v === null || v === undefined || v === '') return '';
+    return `${o?.short ?? ''} ${String(v)}${o?.unit ?? ''}`.trim();
+  };
   return (
     <div className="bx-ds">
       <span className="bx-ds-nhan">{f.label}</span>
       {f.hint === undefined ? null : <span className="bx-goi">{f.hint}</span>}
-      {ds.length === 0 ? null : (
+      {luoi === undefined || ds.length === 0 ? null : (
+        <div className="bx-luoi">
+          {ds.map((x, j) => {
+            const id = idCua(x, j);
+            const tai = luoi.anh !== undefined && typeof x[luoi.anh] === 'string' ? (x[luoi.anh] as string) : '';
+            const goc = luoi.macDinh !== undefined && typeof x[luoi.macDinh] === 'string' ? (x[luoi.macDinh] as string) : '';
+            const src = tai !== '' ? tai : goc !== '' ? asset(goc) : '';
+            const hinh = luoi.hinh !== undefined && typeof x[luoi.hinh] === 'string' ? (x[luoi.hinh] as string) : '';
+            const mau = luoi.mau !== undefined && typeof x[luoi.mau] === 'string' ? (x[luoi.mau] as string) : undefined;
+            const tat = bat !== undefined && x[bat.key] === false;
+            return (
+              <button
+                type="button"
+                key={id}
+                className={`bx-luoi-o${j === i && chon !== '' ? ' dang' : ''}${tat ? ' tat' : ''}`}
+                style={mau === undefined ? undefined : { borderColor: mau }}
+                title={`Sửa ${tenCua(x, j)}`}
+                onClick={() => setChon(id)}
+              >
+                <span className="bx-luoi-anh">{src !== '' ? <img src={src} alt="" loading="lazy" /> : <i>{hinh !== '' ? hinh : '🎁'}</i>}</span>
+                <b style={mau === undefined ? undefined : { color: mau }}>{tenCua(x, j)}</b>
+                <small>
+                  {tat
+                    ? 'đang tắt'
+                    : (luoi.phu ?? [])
+                        .map((k) => chuO(x, k))
+                        .filter((c) => c !== '')
+                        .join(' · ')}
+                </small>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {luoi !== undefined || ds.length === 0 ? null : (
         <table className="bx-muc-bang">
           <tbody>
             {ds.map((x, j) => {
               const id = idCua(x, j);
               return (
-                <tr key={id} className={j === i ? 'bx-muc-dang' : undefined}>
-                  <td className="bx-muc-so">{j + 1}</td>
+                <tr
+                  key={id}
+                  className={[j === i ? 'bx-muc-dang' : '', keo === j ? 'bx-muc-keo' : '', qua === j && keo !== j ? 'bx-muc-qua' : '']
+                    .join(' ')
+                    .trim() || undefined}
+                  draggable={!disabled}
+                  onDragStart={(e) => {
+                    setKeo(j);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(j));
+                  }}
+                  onDragOver={(e) => {
+                    if (keo === null) return;
+                    e.preventDefault();
+                    setQua(j);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (keo !== null) doi(keo, j);
+                    setKeo(null);
+                    setQua(null);
+                  }}
+                  onDragEnd={() => {
+                    setKeo(null);
+                    setQua(null);
+                  }}
+                >
+                  <td className="bx-muc-so" title="Kéo để đổi thứ tự">
+                    <span className="bx-muc-tay">⠿</span>
+                    {j + 1}
+                  </td>
                   <td className="bx-muc-ten">{tenCua(x, j)}</td>
                   <td className="bx-muc-bat">{bat === undefined ? null : x[bat.key] === false ? 'tắt' : '✓'}</td>
                   <td className="bx-muc-nut">
+                    <button type="button" className="bx-muc-len" title="Lên trên" disabled={disabled || j === 0} onClick={() => doi(j, j - 1)}>
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="bx-muc-len"
+                      title="Xuống dưới"
+                      disabled={disabled || j === ds.length - 1}
+                      onClick={() => doi(j, j + 1)}
+                    >
+                      ↓
+                    </button>
                     <button type="button" className="bx-muc-sua" disabled={j === i} onClick={() => setChon(id)}>
                       {j === i ? 'Đang sửa' : 'Sửa'}
                     </button>
@@ -567,10 +656,27 @@ function ODanhSachMuc({ moduleId, modId, field: f, value, disabled, onChange }: 
       >
         {day ? `Tối đa ${f.max}` : `+ Thêm ${f.label.toLowerCase()}`}
       </button>
-      {m === undefined ? null : (
+      {m === undefined || (luoi !== undefined && chon === '') ? null : (
         <section key={idCua(m, i)} className="bx-muc-the">
           <div className="bx-muc-the-dau">
             <b>Đang sửa: {tenCua(m, i)}</b>
+            {luoi === undefined ? null : (
+              <span className="bx-luoi-nut">
+                <NutChac
+                  className="bx-muc-bo"
+                  chu="Xoá"
+                  title={`Xoá ${tenCua(m, i)}`}
+                  disabled={disabled}
+                  lam={() => {
+                    onChange(boList(value, i));
+                    setChon('');
+                  }}
+                />
+                <button type="button" className="bx-muc-sua" onClick={() => setChon('')}>
+                  Xong
+                </button>
+              </span>
+            )}
           </div>
           {(f.fields ?? []).map((o) => (
             <OConfig

@@ -17,10 +17,10 @@ biết một mình không giữ nổi đất Văn Lang. Nên cả hai cùng mở
 
 | Phe | Chủ | Khẩu hiệu | Màu | Gõ để nhập |
 |---|---|---|---|---|
-| **Tản Viên Sơn Môn** | Sơn Tinh | *Nước dâng bao nhiêu, núi cao bấy nhiêu* | ngọc bích, vàng đất | `núi` |
-| **Long Cung Thủy Phủ** | Thủy Tinh | *Nước chảy đá mòn* | lam đậm, ngọc lam | `nước` |
+| **Sơn Tông Núi Thánh** | Sơn Tinh | *Nước dâng bao nhiêu, núi cao bấy nhiêu* | ngọc bích, vàng đất | `núi` |
+| **Thủy Tông Long Cung** | Thủy Tinh | *Nước chảy đá mòn* | lam đậm, ngọc lam | `nước` |
 
-Không phe nào là ác. Sơn Môn giữ người, giữ ruộng. Thủy Phủ mang phù sa, mang mưa cho lúa — và mang mối hận bị xử
+Không phe nào là ác. Sơn Tông giữ người, giữ ruộng. Thủy Tông mang phù sa, mang mưa cho lúa — và mang mối hận bị xử
 thiệt năm xưa (đến muộn có một bước chân). Người xem chọn phe vì thích, không vì "phe chính nghĩa".
 
 Mỗi giờ live là một **mùa lũ**. Trên màn hình, chân núi Ba Vì đứng giữa dòng nước: phe Nước thắng thì nước dâng ngập
@@ -115,7 +115,7 @@ Mặc định: 20:00 Chủ nhật Đại Yêu Dạ, 21:00 mỗi ngày Hội thi 
 
 ### Tổng kết năm (mùa)
 
-Mực nước > 0: Thủy Phủ thắng mùa. < 0: Sơn Môn thắng. 0: hòa. Người của phe thắng đang chơi +30. Mực nước về 0.
+Mực nước > 0: Thủy Tông thắng mùa. < 0: Sơn Tông thắng. 0: hòa. Người của phe thắng đang chơi +30. Mực nước về 0.
 Số mùa thắng của mỗi phe lưu bền.
 
 ## 5. Sử thi — kịch bản tự viết bằng tên người chơi
@@ -125,7 +125,7 @@ Mỗi việc trên sân thành một dòng sử thi chạy ở dải chữ, mang
 - "Lan lên núi Tản bái sư." / "Hùng xuống Long Cung nhận ấn rồng."
 - "Sét đánh chín lần, Mai vẫn đứng. Một vị Nguyên Anh ra đời."
 - "Tuấn tung đòn cuối — Hồ Tinh hóa khói, rơi lại Rùa Vàng."
-- "Nước rút! Sơn Môn giữ vững chân núi."
+- "Nước rút! Sơn Tông giữ vững chân núi."
 
 Tổ MC AI (lời dặn ở `mc-dan.md`) có ba giọng: **Cô Mây** dẫn chính và kể sử thi; **Lão Tiều** ông tiều phu núi Tản,
 bênh phe Núi; **Bé Sò** cô bé Long Cung, bênh phe Nước. Hai người cà khịa nhau theo đúng thế trận.

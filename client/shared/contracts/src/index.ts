@@ -29,6 +29,8 @@ export {
   hopThietKe,
   laLoaiPhong,
   boList,
+  doiList,
+  tenMucList,
   mucList,
   mucRoster,
   phuCauHinh,

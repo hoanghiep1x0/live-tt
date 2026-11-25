@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tàng Bảo Các — Sơn Hà Tiên Lộ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=Playfair+Display:wght@700;900&family=Noto+Serif:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header id="dau"></header>
+<main>
+  <section class="khoi">
+    <div class="khung">
+      <div class="dau-khoi">
+        <h2>Tàng Bảo Các</h2>
+        <p>Quà TikTok làm gì, linh thạch tiêu vào đâu, tu vi lên thế nào, trang bị và đồ rơi. Mọi con số lấy đúng từ game.</p>
+      </div>
+      <div class="tab" id="nhay">
+        <button data-den="qua">🎁 Quà TikTok</button><button data-den="thach">💎 Linh thạch</button><button data-den="tuvi">⚡ Tu vi</button>
+        <button data-den="kho">🏯 Kho đồ</button><button data-den="chu-ky">🎁 Quà chữ ký</button><button data-den="do-roi">🏺 Đồ rơi</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ QUÀ ============ -->
+  <section class="khoi" id="qua" style="padding-top:0">
+    <div class="khung">
+      <h2>Quà TikTok — hương hỏa dâng hai vị thần</h2>
+      <p class="mo">Trong truyện, quà là <b>hương hỏa</b>: thần nhận lòng thành thì đáp lại. Quà <b>không</b> mua thẳng được cảnh giới
+      (linh khí dừng ở ngưỡng, vẫn phải tự đột phá, tự độ kiếp) và <b>không</b> đổi thẳng ra đồ — đồ phải tự nhặt. Mỗi màn, cùng một món quà
+      có tác dụng khác nhau.</p>
+
+      <div class="the" style="margin-bottom:18px">
+        <h3 class="tieu-game" style="font-size:1.15rem">Năm bậc quà</h3>
+        <div class="bac-qua">
+          <div><b>1 · Hương Khói</b><small>1–9 xu</small></div>
+          <div><b>2 · Linh Đan</b><small>10–99 xu</small></div>
+          <div><b>3 · Pháp Bảo</b><small>100–499 xu</small></div>
+          <div><b>4 · Thần Thông</b><small>500–2.999 xu</small></div>
+          <div><b>5 · Thiên Đạo</b><small>3.000+ xu</small></div>
+        </div>
+        <p style="color:var(--chu-mo);margin:10px 0 0;font-size:.92rem">Tặng cùng một quà liên tục trong 8 giây là <b>combo</b>, cộng dồn. Mọi quà: 1 xu = 1 💎 linh thạch cho người tặng, +1 trận lực cho trận tu luyện của tông.</p>
+      </div>
+
+      <div class="cuon-ngang the" style="padding:8px">
+        <table class="bang bang-qua">
+          <thead><tr><th>Quà</th><th>🧘 Tu luyện</th><th>🏺 Ải · Địa Cung</th><th>👹 Đánh yêu tinh</th><th>⚔️ Đại Chiến</th><th>🏯 Lôi Đài</th></tr></thead>
+          <tbody id="bang-qua"></tbody>
+        </table>
+      </div>
+      <p style="color:var(--chu-mo);font-size:.9rem">⚡ linh khí · 💎 linh thạch. "Đệ tử dưới" = mỗi đồng môn cùng tông ngồi thấp hơn mình (tối đa 12 người) được truyền công.</p>
+
+      <div class="luoi luoi-2" style="margin-top:16px">
+        <div class="the">
+          <h3 class="tieu-game" style="font-size:1.1rem">⏳ Lúc cần quà gấp</h3>
+          <p style="margin:0 0 6px"><b>Cứu viện</b> (đánh yêu tinh): máu trung bình của tông dưới 25% → 20 giây, quà của người trong tông hồi máu cả tông (bậc quà × 8% máu), người ngã gượng dậy.</p>
+          <p style="margin:0"><b>Tử chiến</b> (Đại Chiến): trận khí tông dưới 20% → 30 giây, quà tính ×2 điểm. Mỗi loại một lần mỗi phe mỗi trận.</p>
+        </div>
+        <div class="the">
+          <h3 class="tieu-game" style="font-size:1.1rem">⭐ Nhánh trận dưới chân</h3>
+          <p style="margin:0">Quà của chính mình nâng <b>nhánh trận</b> (sao dưới chân): mốc 10 / 50 / 200 / 500 xu. Mỗi lần nhánh lên sao đẩy thêm 20 trận lực cho tông.
+          Trận tông: Tụ Linh (0) → Lạc Điểu (100) → Đồng Cổ (300) → Thiên Phù (800) → <b>Sơn Hà Đại Trận</b> (2000). Trận cấp N: mỗi câu đúng được thêm N − 1 💎.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LINH THẠCH ============ -->
+  <section class="khoi" id="thach">
+    <div class="khung">
+      <h2>💎 Linh thạch</h2>
+      <p class="mo">Của riêng từng người, ghi sổ lâu dài. Dùng để đổi đồ ở Tàng Bảo Các và Thành Trì Tự Do.</p>
+      <div class="luoi luoi-2">
+        <div class="the cuon-ngang">
+          <h3>Có từ đâu</h3>
+          <table class="bang"><tbody>
+            <tr><td>Quà</td><td>1 💎 mỗi xu</td></tr>
+            <tr><td>Mình đột phá</td><td>5 × cảnh giới mới (Luyện Khí 5 … Bất Tử 45)</td></tr>
+            <tr><td>Người khác trong phòng đột phá</td><td>1 × cảnh giới mới của họ, cho mỗi người đang online</td></tr>
+            <tr><td>Trận tu luyện của tông</td><td>cấp trận − 1 mỗi câu đúng (0 … 4)</td></tr>
+            <tr><td>Thả tim trong một buổi</td><td>mốc 50 / 200 / 500 / 1000 tim → 2 / 5 / 10 / 20</td></tr>
+            <tr><td>Hái linh thảo (gõ {2})</td><td>25% được +1</td></tr>
+            <tr><td>Cơ Duyên Giáng Thế (gõ {6})</td><td>36% được +3–6</td></tr>
+            <tr><td>Hộ pháp độ kiếp</td><td>20% cơ duyên +3 (kiếp qua thì ×2)</td></tr>
+            <tr><td>Thắng Lôi Đài</td><td>+8 (tối đa 10 lần mỗi buổi)</td></tr>
+            <tr><td>Hết Đại Chiến (đã tương tác)</td><td>thắng +80 · hòa +60 · thua +40</td></tr>
+            <tr><td>Tông hạ được yêu tinh</td><td>mỗi đệ tử đã ra tay +100</td></tr>
+            <tr><td>Mưa Linh Thạch (quà ≥ 500 xu của ai đó)</td><td>+1–3 cho tối đa 30 người</td></tr>
+          </tbody></table>
+        </div>
+        <div class="the cuon-ngang">
+          <h3>Tiêu vào đâu</h3>
+          <table class="bang"><tbody>
+            <tr><td>{T1}–{T9}</td><td>Trang phục · 50 – 1000</td></tr>
+            <tr><td>{D1}–{D9}</td><td>Đan dược · 20 – 560</td></tr>
+            <tr><td>{C1}–{C9}</td><td>Công pháp · 30 – 480</td></tr>
+            <tr><td>{P1}–{P9}</td><td>Linh thú · 100 – 1000</td></tr>
+            <tr><td>{luyện đan} / gõ {3}</td><td>Tụ Khí Đan: 20 💎 → +25 ⚡</td></tr>
+            <tr><td>{học võ} / gõ {4}</td><td>mua môn công pháp rẻ nhất chưa có</td></tr>
+          </tbody></table>
+          <p style="color:var(--chu-mo);font-size:.92rem;margin-bottom:0">Ước lượng chơi đều một giờ, không tặng quà: khoảng <b>150 💎</b>. Món đã có thì gõ lại mã chỉ để đổi sang dùng, không mất gì. Đang đánh (Đại Chiến, yêu tinh) thì không mua đổi được — chọn trước, mang vào trận.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TU VI ============ -->
+  <section class="khoi" id="tuvi">
+    <div class="khung">
+      <h2>⚡ Tu vi — linh khí và cảnh giới</h2>
+      <p class="mo">Không ai tự lên cấp: linh khí chỉ đến từ việc làm. Đủ ngưỡng thì linh khí dừng lại, trên đầu hiện "⬆ đột phá" — phải tự gõ {5} hay {đột phá}. Từ Nguyên Anh thì vào hàng độ kiếp.</p>
+      <div class="luoi luoi-2">
+        <div class="the cuon-ngang">
+          <h3>Linh khí có từ đâu</h3>
+          <table class="bang"><tbody>
+            <tr><td>Đáp đúng Thiên Vấn</td><td>+10; ba người nhanh nhất +6 / +4 / +2; chuỗi đúng từ câu 3 thêm tới +6</td></tr>
+            <tr><td>Tụ Linh Trận</td><td>mỗi đồng môn cùng đúng +1, mỗi trưởng lão +0,5 (trần theo cấp trận)</td></tr>
+            <tr><td>Gõ {1} vận công</td><td>+1, mỗi 20 giây</td></tr>
+            <tr><td>Gõ {2} hái linh thảo</td><td>+2, mỗi 45 giây; 5% Linh Chi Ngàn Năm +12</td></tr>
+            <tr><td>Thả tim</td><td>+1 mỗi tim (tối đa 15 mỗi 10 phút)</td></tr>
+            <tr><td>Quà</td><td>+2 mỗi xu; đồng môn ngồi dưới +1 mỗi 2 xu (trần 30)</td></tr>
+            <tr><td>Hộ pháp độ kiếp</td><td>+4 (kiếp qua ×2)</td></tr>
+            <tr><td>Vượt Ải Nhập Môn</td><td>người 1 / 2 / 3: +20 / +12 / +6</td></tr>
+            <tr><td>Thoát Địa Cung đầu tiên</td><td>+30 / +20 / +10</td></tr>
+            <tr><td>Tông hạ yêu tinh</td><td>mỗi đệ tử đã ra tay +40</td></tr>
+            <tr><td>Đồ chưa đủ cảnh giới để mặc</td><td>luyện hóa thành linh khí</td></tr>
+            <tr><td>Đan {D1}–{D5}</td><td>+25 / +50 (từ Luyện Khí) / +90 (từ Trúc Cơ) / +140 (từ Kết Đan) / đầy tới ngưỡng (từ Nguyên Anh)</td></tr>
+          </tbody></table>
+        </div>
+        <div class="the cuon-ngang">
+          <h3>Thang Trời</h3>
+          <table class="bang" id="bang-canh"><thead><tr><th>Cảnh giới</th><th>Linh khí</th><th>Lực chiến gốc</th><th>Vượt bậc</th></tr></thead><tbody></tbody></table>
+          <p style="color:var(--chu-mo);font-size:.92rem;margin-bottom:0">20 phút không tích được linh khí (kể cả đủ mà không chịu đột phá) thì bị cho về làm khách — tu vi, đồ, linh thạch vẫn giữ.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ KHO ĐỒ (dữ liệu ở js/tang-bao.js) ============ -->
+  <section class="khoi" id="kho">
+    <div class="khung">
+      <h2>🏯 Kho đồ của đệ tử</h2>
+      <p class="mo">Mỗi tông một Tàng Bảo Các; đổi bằng cách gõ mã trong bình luận (chữ hoa thường, có cách hay không đều được). Chưa có thì trừ linh thạch rồi dùng ngay; đã có thì chỉ đổi sang dùng. Đang đánh thì không đổi được — chọn trước, mang vào trận.
+      Các thẻ <b>sắp có</b> là thứ game đang thiết kế; số liệu ghi "dự kiến" có thể đổi.</p>
+      <div class="tab kho-tab" id="kho-tab"></div>
+      <div id="kho-noi"></div>
+      <div class="the" style="margin-top:16px">
+        <h3>Lực chiến = công + thủ + công pháp (+ linh thú)</h3>
+        <p style="margin:0">Cảnh giới cho lực chiến gốc; đồ, công pháp, linh thú và mọi thứ thêm sau này đều phải nằm trong một bảng hệ số chung — không bao giờ vượt cảnh giới.
+        Ví dụ: Kết Đan + cả bộ Linh phẩm + công pháp tầng 2 = 140 + 60 + 17 = <b>217</b>. Nguyên Anh + cả bộ Huyền phẩm + tầng 3 = 300 + 135 + 54 = <b>489</b>.
+        Đại Chiến chỉ so lực chiến <b>trong cùng phe</b>, nên phe mạnh không lấn được phe yếu.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="khoi" id="chu-ky">
+    <div class="khung">
+      <h2>🎁 Quà chữ ký <span class="nhan sap" style="vertical-align:middle">⏳ sắp có</span></h2>
+      <p class="mo">Ngoài tác dụng theo bậc, một số quà sẽ có tác dụng riêng để người xem nhớ tên. Đang thiết kế — tên và tác dụng có thể đổi.</p>
+      <div class="luoi luoi-2" id="ds-chu-ky"></div>
+    </div>
+  </section>
+
+  <!-- ============ ĐỒ RƠI ============ -->
+  <section class="khoi" id="do-roi">
+    <div class="khung">
+      <h2>🏺 Đồ rơi — và quà làm rơi thêm</h2>
+      <div class="luoi luoi-2">
+        <div class="the">
+          <h3>Ải Nhập Môn · Tranh Đoạt Bảo Vật</h3>
+          <div class="khung-dt anh-man" style="float:right;width:130px;margin:0 0 8px 12px"><img src="anh/man/dia-cung.webp" alt="Màn Tranh Đoạt Bảo Vật" loading="lazy"></div>
+          <p style="margin-top:0">Đồ rơi <b>theo cặp soi gương</b> — một món bên đường về Sơn Tông, một món y hệt bên đường về Thủy Tông. Càng gần lõi càng quý; ở 40% số lượt có <b>Rương Đồng</b> ở lõi (Địa phẩm, 1/3 là Thiên phẩm).</p>
+          <p><b>Quà làm rơi thêm:</b> trong màn mê cung, ai tặng quà (kể cả khách đứng xem) thì cứ <b>mỗi 10 xu</b> tích lũy rơi thêm một cặp vật phẩm; một món quà <b>từ 100 xu</b> rơi ngay một cặp đồ quý. Mỗi cặp rơi nhờ quà cộng 5 giây cho màn (tối đa 90 giây). Trên sân tối đa 12 món cùng lúc.</p>
+          <p style="margin-bottom:0;color:var(--chu-mo)">Đồ vẫn phải <b>tự đi tới nhặt</b> — người tặng không được giao thẳng.</p>
+        </div>
+        <div class="the">
+          <h3>Yêu tinh</h3>
+          <div class="khung-dt anh-man" style="float:right;width:130px;margin:0 0 8px 12px"><img src="anh/man/yeu-tinh.webp" alt="Màn Tiêu Diệt Quái Thú" loading="lazy"></div>
+          <p style="margin-top:0">Máu yêu tinh tụt mỗi 1/8 thì rơi một món; người kết liễu chắc chắn được một món. Người nhận rút thăm theo <b>phúc duyên</b>:</p>
+          <ul style="margin:0 0 8px;padding-left:1.2em">
+            <li>85% cho người ra tay, trọng số <b>1 + 2×√tim + 4×√xu quà</b> trong trận — tim và quà được ưu tiên mà vẫn hên xui;</li>
+            <li>15% cho người đang ngồi xem.</li>
+          </ul>
+          <p style="margin:0">Tông hạ được yêu: mỗi đệ tử đã ra tay +100 💎 +40 ⚡, ba người đánh mạnh nhất thêm một rương bảo vật, tông +30 Linh Mạch. Người có công còn được thần phe mình ban <b>linh vật</b>.</p>
+        </div>
+        <div class="the">
+          <h3>Đại Chiến</h3>
+          <p style="margin-top:0">Hết trận, người đã tương tác (bình luận, tim, quà) có cơ hội nhận <b>vật phẩm hiếm</b> phẩm cao: thắng 12% · hòa 9% · thua 6%; đầu công trạng phe và người hi sinh ×3. Vật phẩm hiếm được Vinh Danh "Chiến lợi phẩm Đại Chiến".</p>
+          <p style="margin:0;color:var(--chu-mo)">Sau trận có <b>chiến thương</b> 10 phút: lực chiến ×0,9 (thắng) · ×0,85 (hòa) · ×0,8 (thua).</p>
+        </div>
+        <div class="the">
+          <h3>Lôi Đài Đồng Môn</h3>
+          <p style="margin-top:0">Tặng đúng món quà của hạng nào là khiêu chiến người hạng ấy trong tông mình (chỉ người đứng trên mình). Thắng +8 💎 +5 ⚡, cùng cảnh giới thì lên hạng; thua không mất gì. Gõ {8} xem bảng Top.</p>
+          <div class="hang-qua" id="hang-ld"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer id="chan"></footer>
+<script src="js/site.js"></script>
+<script src="js/tang-bao.js"></script>
+<script>
+(function () {
+  var S = window.SHTL;
+  function kb(s) { return s.replace(/\{(.+?)\}/g, '<kbd>$1</kbd>'); }
+  document.querySelectorAll('main td, main p').forEach(function (e) { if (/\{.+?\}/.test(e.innerHTML)) e.innerHTML = kb(e.innerHTML); });
+  document.querySelectorAll('#nhay button').forEach(function (b) { b.onclick = function () { document.getElementById(b.dataset.den).scrollIntoView(); }; });
+
+  var QUA = [
+    ['Rose', 5655, 1], ["You're awesome", 15232, 1], ['GG', 6064, 1], ['Finger Heart', 5487, 5], ['Rosa', 8913, 10],
+    ['Perfume', 5658, 20], ['Doughnut', 5879, 30], ['Hand Heart', 5660, 100], ['Corgi', 6267, 299], ['Money Gun', 7168, 500],
+    ['Galaxy', 11046, 1000], ['Meteor Shower', 6563, 3000], ['Lion', 6369, 29999]
+  ];
+  var HANG = { 'Hand Heart': 1, 'Doughnut': 2, 'Perfume': 3, 'Rosa': 4, 'Finger Heart': 5, 'Rose': 6, 'GG': 7, "You're awesome": 8 };
+  function bac(x) { return x >= 3000 ? 5 : x >= 500 ? 4 : x >= 100 ? 3 : x >= 10 ? 2 : 1; }
+  function so(x) { return x.toLocaleString('vi-VN'); }
+  document.getElementById('bang-qua').innerHTML = QUA.map(function (q) {
+    var xu = q[2], b = bac(xu);
+    var tl = '+' + so(xu) + ' 💎 · +' + so(2 * xu) + ' ⚡<br><small>đệ tử dưới +' + Math.min(30, Math.ceil(xu / 2)) + ' ⚡</small>' + (b >= 4 ? '<br><b>🌧 Mưa Linh Thạch</b> cả phòng' : '');
+    var me = xu >= 100 ? '<b>rơi ngay cặp đồ quý</b>' : (xu >= 10 ? 'rơi thêm ' + Math.floor(xu / 10) + ' cặp vật phẩm' : 'tích lũy: đủ 10 xu rơi một cặp');
+    var yeu = b === 1 ? 'hồi máu mình + người yếu nhất tông' : b === 2 ? (xu >= 50 ? 'kết trận pháp theo căn cơ' : 'tích phúc duyên chia đồ') : b === 5 ? 'yêu tinh <b>−15% máu</b>' : 'đòn chí mạng <b>×' + (b === 3 ? 5 : 8) + '</b> + kết trận pháp';
+    var dc = xu < 10 ? 'Bạo Kích' : xu < 50 ? 'Liên Kích ×3' : xu < 200 ? 'Trận Pháp' : 'Tuyệt Kỹ <small>(−10% trận khí địch)</small>';
+    if (b === 5) dc += '<br><b>Thần thú xuất trận</b>';
+    var ld = HANG[q[0]] ? 'khiêu chiến <b>hạng ' + HANG[q[0]] + '</b>' : '';
+    ld += (ld ? '<br>' : '') + '<small>đấu thủ: ' + (xu < 10 ? 'Bạo Kích' : xu < 50 ? 'hồi 30% máu' : 'tuyệt kỹ ngay') + '</small>';
+    return '<tr><td class="o-qua"><img src="anh/qua/' + q[1] + '.webp" alt="" loading="lazy"><span><b>' + q[0] + '</b><small>' + so(xu) + ' xu · bậc ' + b + '</small></span></td>' +
+      '<td>' + tl + '</td><td>' + me + '</td><td>' + yeu + '</td><td>' + dc + '</td><td>' + ld + '</td></tr>';
+  }).join('');
+  document.getElementById('hang-ld').innerHTML = Object.keys(HANG).map(function (t) {
+    var q = QUA.filter(function (x) { return x[0] === t; })[0];
+    return '<span><img src="anh/qua/' + q[1] + '.webp" alt="">#' + HANG[t] + ' · ' + q[2] + ' xu</span>';
+  }).join('');
+
+  var LUC = [20, 50, 90, 140, 300, 500, 750, 1050, 1400, 1800];
+  document.querySelector('#bang-canh tbody').innerHTML = S.CANH_GIOI.map(function (g, i) {
+    return '<tr><td>' + g.ten + '</td><td>' + so(g.can) + '</td><td>' + LUC[i] + '</td><td>' + (g.hoPhap ? 'độ kiếp · ' + g.hoPhap + ' hộ pháp' : (i ? 'gõ đột phá' : '—')) + '</td></tr>';
+  }).join('');
+  window.SHTL_KHO.veKho(document.getElementById('kho-noi'), document.getElementById('kho-tab'));
+  window.SHTL_KHO.veChuKy(document.getElementById('ds-chu-ky'));
+})();
+</script>
+</body>
+</html>

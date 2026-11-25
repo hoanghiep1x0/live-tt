@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { boList, mucList, mucRoster, oChonGiong, suaList, suaRoster, themList } from '@live/contracts';
+import { boList, doiList, mucList, mucRoster, oChonGiong, suaList, suaRoster, tenMucList, themList } from '@live/contracts';
 import type { ConfigField, Json } from '@live/contracts';
 import { useDanGiong } from '../lib/danGiong';
 import { Switch } from './ui/switch';
@@ -74,7 +74,18 @@ function DanhSachMuc({ moduleId, field: f, value, disabled, onChange }: Props) {
         return (
           <fieldset key={id} className="form">
             <legend>
-              {typeof m['ten'] === 'string' && m['ten'] !== '' ? m['ten'] : `${f.label} ${i + 1}`}{' '}
+              {tenMucList(f, m, i)}{' '}
+              <button type="button" className="btn btn-ghost btn-sm" disabled={disabled || i === 0} onClick={() => onChange(doiList(value, i, i - 1))}>
+                ↑
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={disabled || i === ds.length - 1}
+                onClick={() => onChange(doiList(value, i, i + 1))}
+              >
+                ↓
+              </button>
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"

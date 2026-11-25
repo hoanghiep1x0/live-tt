@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xưởng Sơn Hà — Dựng game mới</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=Noto+Serif:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/xuong.css">
+</head>
+<body>
+<header id="dau"></header>
+<main class="khung">
+  <h1>Dựng game mới, thêm nhân vật mới</h1>
+  <p class="mo-dau">Mọi thứ trong Sơn Hà dựa trên <b>quy ước tên file</b>: code không cần biết file nào tồn tại, chỉ dò theo
+  tên. Có file thì dùng, chưa có thì lùi về bậc kế tiếp. Theo đúng quy ước này thì thêm nhân vật, thêm trang phục hay dựng
+  hẳn một game khác chỉ là sản xuất tài nguyên rồi chép vào đúng chỗ.</p>
+  <ul class="muc-luc-trang">
+    <li><a href="#du-lieu">1. Dữ liệu tối thiểu của một game</a></li>
+    <li><a href="#ten-file">2. Quy ước tên file và thứ tự lùi</a></li>
+    <li><a href="#thu-muc">3. Cấu trúc thư mục</a></li>
+    <li><a href="#thu-tu">4. Thứ tự dựng một game mới</a></li>
+    <li><a href="#them-nv">5. Thêm nhân vật / trang phục vào Sơn Hà</a></li>
+    <li><a href="#ma-lop">6. Đoạn code ghép lớp dùng lại được</a></li>
+  </ul>
+
+  <h2 id="du-lieu">1. Dữ liệu tối thiểu của một game</h2>
+  <p>Đây là năm bảng dữ liệu thuần, không dính hình. Hình nào cần làm sinh ra từ năm bảng này. Ở Sơn Hà chúng nằm trong
+  <code>loi/tang-bao.ts</code> và <code>loi/the-gioi.ts</code>.</p>
+  <div class="bang-cuon"><table>
+    <tr><th>Bảng</th><th>Trường</th><th>Sinh ra tài nguyên</th><th>Sơn Hà</th></tr>
+    <tr><td><b>Phe / tông</b></td><td>id, tên, màu sáng chủ đạo, vũ khí (cung / lao…)</td><td>tông màu nền, viền sáng nhân vật, động tác công</td><td><code>PHE</code></td></tr>
+    <tr><td><b>Nhân vật</b></td><td>id file (<code>son</code>, <code>son-nu</code>…), phe, giới</td><td>mọi file <code>&lt;nv&gt;-…</code></td><td><code>tenNv()</code>, <code>GIOI_GOC</code></td></tr>
+    <tr><td><b>Trang phục</b></td><td>mã, đuôi tên file, tên theo phe, giá, cảnh giới cần</td><td>2 tranh + 4 video × mỗi nhân vật</td><td><code>AO</code>, <code>DUOI_AO</code></td></tr>
+    <tr><td><b>Công pháp</b></td><td>mã, hệ (→ động tác), bậc, tên theo phe</td><td>tranh chiêu × phe, icon, chọn video động tác</td><td><code>CONG_PHAP</code>, <code>HE_CP</code></td></tr>
+    <tr><td><b>Vật phẩm dùng</b></td><td>mã, công dụng (→ kiểu hiệu ứng)</td><td>icon × phe, hiệu ứng trên người</td><td><code>DAN</code>, <code>DAN_TONG</code></td></tr>
+    <tr><td><b>Màn</b></td><td>id nền, loại (thiền / thử / trận…)</td><td>tranh nền, video nền, tiền cảnh</td><td><code>ManId</code>, <code>MAN</code></td></tr>
+  </table></div>
+
+  <h2 id="ten-file">2. Quy ước tên file và thứ tự lùi</h2>
+  <div class="bang-cuon"><table>
+    <tr><th>Cần hiện</th><th>Thứ tự thử (có file đầu tiên thì dùng)</th></tr>
+    <tr><td>Nhân vật ngồi thiền</td><td><code>&lt;nv&gt;-&lt;áo&gt;-thien.webm</code> → <code>&lt;nv&gt;-&lt;áo&gt;.webp</code> → <code>&lt;nv&gt;-c&lt;cảnh giới&gt;.webp</code> (lùi dần cảnh giới) → tranh giới gốc của phe</td></tr>
+    <tr><td>Nhân vật ra đòn</td><td><code>chien-&lt;nv&gt;-&lt;áo&gt;-&lt;động tác&gt;.webm</code> → <code>chien-&lt;nv&gt;-&lt;áo&gt;.webp</code> (tĩnh, đúng áo) → <code>chien-&lt;phe&gt;-&lt;giới&gt;.webp</code>. <b>Không</b> mượn động tác khác.</td></tr>
+    <tr><td>Nền màn</td><td><code>nen/&lt;id&gt;-dong.mp4</code> đè lên <code>nen/&lt;id&gt;.webp</code> (tranh hiện trước, video hoà vào khi đã chạy) → tranh Sảnh nhuộm màu màn</td></tr>
+    <tr><td>Tiền cảnh</td><td><code>nen/&lt;id&gt;-truoc.webp</code> → không có lớp</td></tr>
+    <tr><td>Chiêu</td><td><code>chieu/&lt;phe&gt;-c&lt;n&gt;.webp</code> (động hoặc tĩnh) → chiêu nhập môn C1 của phe</td></tr>
+    <tr><td>Icon</td><td><code>vp/&lt;mã&gt;-&lt;phe&gt;.webp</code> → emoji của loại món</td></tr>
+  </table></div>
+  <div class="meo">Game dò sẵn lúc nạp (thử tải từng tên một lần, nhớ kết quả vào bộ đệm), nên lúc chạy không phải đợi
+  mạng, cũng không có khung trống. Xem <code>tranh.nv</code>, <code>tranh.nen</code>, <code>nenDongCo</code> trong
+  <code>ve3d/canh-3d.ts</code>.</div>
+
+  <h2 id="thu-muc">3. Cấu trúc thư mục</h2>
+  <div class="loi-nhac"><span class="nguon">Cây thư mục</span>client/designs/&lt;game&gt;/
+  src/loi/          ← luật + dữ liệu thuần (không DOM, không Date.now, không Math.random)
+  src/ve3d/         ← vẽ: ghép lớp, cảnh thử, chiêu (DOM + three.js)
+  assets/
+    nhan-vat/       ← tranh + video nhân vật (&lt;nv&gt;-&lt;áo&gt;…, chien-…)
+    nen/            ← tranh nền, video nền (-dong.mp4), tiền cảnh (-truoc.webp)
+    chieu/          ← tranh chiêu công pháp
+    vp/             ← icon món
+    fx/, yeu/, than/ …
+web/&lt;game&gt;/tranh-goc/  ← ảnh gốc độ phân giải cao, video Muse gốc, ảnh nền xanh, ảnh soát
+web/&lt;game&gt;/cong-cu/    ← nv-video.py, nen-muse.py, tien-canh.py, cat-luoi.py, chieu-cp.py
+web/xuong-&lt;game&gt;/      ← trang bản thiết kế này (dữ liệu sinh bằng cong-cu/xuat-du-lieu.mjs)</div>
+
+  <h2 id="thu-tu">4. Thứ tự dựng một game mới</h2>
+  <ol class="buoc">
+    <li><b>Sổ phong cách</b>: một tranh mẫu phong cách (<code>mau-phong-cach.jpg</code>), bảng màu từng phe, những thứ cấm (Sơn Hà: không rồng Tàu, không chữ Hán).</li>
+    <li><b>Năm bảng dữ liệu</b> (§1) viết bằng code thuần trước, chưa cần hình.</li>
+    <li><b>Tranh nền</b> từng màn (ChatGPT), cùng khổ 1024×1536, chừa giữa sân trống cho nhân vật.</li>
+    <li><b>Video nền</b> (Muse → <code>nen-muse.py</code>) và <b>tiền cảnh</b> (<code>tien-canh.py</code>).</li>
+    <li><b>Nhân vật gốc</b> mỗi phe × giới, rồi tranh dáng thiền và dáng chiến cho từng trang phục.</li>
+    <li><b>Video nhân vật</b>: thiền + công + thủ + hồi (Muse nền xanh → <code>nv-video.py</code>).</li>
+    <li><b>Chiêu thức, icon, hiệu ứng</b> vật phẩm.</li>
+    <li><b>Kịch bản sự kiện</b>: viết dòng thời gian như trang <a href="kich-ban.html">Kịch bản</a> trước, rồi mới code.</li>
+    <li><b>Soát</b> theo <a href="san-xuat.html#soat">bảng soát</a>, chạy <code>xuat-du-lieu.mjs</code> xem tiến độ.</li>
+  </ol>
+
+  <h2 id="them-nv">5. Thêm nhân vật / trang phục vào Sơn Hà</h2>
+  <div class="luoi luoi-2">
+    <div class="the"><h3>Thêm một trang phục (ví dụ T10)</h3><ol>
+      <li><code>loi/tang-bao.ts</code>: thêm dòng vào <code>AO</code> (tên hai phe, giá, cảnh giới, <code>tranh: 'c10'</code>).</li>
+      <li><code>loi/the-gioi.ts</code>: thêm <code>'c10'</code> vào cuối <code>DUOI_AO</code>.</li>
+      <li>Làm cho cả 4 nhân vật: tranh thiền, tranh chiến, 4 video (<a href="san-xuat.html#thu-tu">quy trình</a>).</li>
+      <li>Sửa bảng giá trong <code>docs/phong/tu-tien/ban-do.md</code> §3b cho khớp, chạy test <code>tests/client/designs/tu-tien-son-ha</code>.</li>
+      <li>Chạy <code>xuat-du-lieu.mjs</code>: Danh mục tự có thêm cột T10.</li>
+    </ol></div>
+    <div class="the"><h3>Thêm một nhân vật (ví dụ nhân vật thứ ba của Sơn Tông)</h3><ol>
+      <li>Chọn id file (ví dụ <code>son-gia</code>), thêm vào <code>NHAN_VAT</code> trong <code>web/xuong-son-ha/cong-cu/xuat-du-lieu.mjs</code>.</li>
+      <li>Code chọn tranh (<code>duongTranh</code>, <code>tenNv</code> trong <code>loi/the-gioi.ts</code>) nhận thêm giới hoặc kiểu mới.</li>
+      <li>Vẽ nhân vật gốc, rồi 9 tranh thiền + 9 tranh chiến (gửi kèm nhân vật gốc để giữ mặt).</li>
+      <li>36 video (9 áo × thiền, công, thủ, hồi).</li>
+    </ol></div>
+  </div>
+
+  <h2 id="ma-lop">6. Đoạn code ghép lớp dùng lại được</h2>
+  <p>Đổi video của một lớp mà <b>không có khung trống</b>: video mới nạp ngầm, chờ <code>canplay</code>, hiện đè lên video
+  cũ cùng một chớp sáng ngắn rồi mới bỏ video cũ. Đặt <code>currentTime</code> ngẫu nhiên để nhiều người không thở cùng nhịp.</p>
+  <div class="loi-nhac"><span class="nguon">JavaScript · đổi video lớp nhân vật</span>/** Đổi video trong khối lớp `o` sang `src`; chưa có video thì dùng tranh dự phòng. */
+function doiVideo(o, src, duPhong, { lap = true, chop = true } = {}) {
+  const cu = o.querySelector('video, img');
+  const v = document.createElement('video');
+  v.muted = v.defaultMuted = true;          // bắt buộc gán thuộc tính thì trình duyệt mới cho tự phát
+  v.playsInline = true;
+  v.loop = lap;
+  v.className = cu?.className ?? '';
+  v.style.opacity = '0';
+  v.onerror = () => {                        // không có file → tranh tĩnh của chính bộ áo đó
+    const im = new Image();
+    im.className = v.className;
+    im.src = duPhong;
+    v.replaceWith(im);
+    cu?.remove();
+  };
+  v.addEventListener('canplay', () => {
+    if (lap) v.currentTime = Math.random() * (v.duration || 1);   // lệch pha mỗi người
+    v.play();
+    v.style.opacity = '1';
+    if (chop) v.animate([{ filter: 'brightness(2.6)' }, { filter: 'brightness(1)' }], { duration: 450, easing: 'ease-out' });
+    setTimeout(() => cu?.remove(), 250);     // cũ nằm dưới thêm 0,25 s để không lộ khung trống
+  }, { once: true });
+  v.src = src;
+  o.append(v);
+}</div>
+  <div class="loi-nhac"><span class="nguon">CSS · tiền cảnh trôi lệch tốc độ với nền (thị sai)</span>.sh-nen-dong.hien { animation: may-quay 38s ease-in-out infinite alternate; }
+.sh-nen-truoc       { animation: may-quay-gan 38s ease-in-out infinite alternate; pointer-events: none; }
+@keyframes may-quay     { from { transform: scale(1.01); } to { transform: scale(1.05) translate(-10px, -12px); } }
+/* Lớp gần đi xa hơn ~1,5 lần cùng chiều → mắt thấy chiều sâu. */
+@keyframes may-quay-gan { from { transform: scale(1.03); } to { transform: scale(1.09) translate(-16px, -18px); } }</div>
+</main>
+<footer id="chan"></footer>
+<script src="js/du-lieu.js"></script>
+<script src="js/xuong.js"></script>
+</body>
+</html>

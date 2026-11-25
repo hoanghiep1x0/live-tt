@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xưởng Sơn Hà — Tổng quan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=Noto+Serif:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/xuong.css">
+</head>
+<body>
+<header id="dau"></header>
+<main class="khung">
+  <h1>Bản thiết kế hình động nhiều lớp</h1>
+  <p class="mo-dau">Cách phòng live <b>Sơn Hà Tiên Lộ</b> ghép nhiều lớp video thành <b>một khung hình liền mạch</b>.
+  Khung hình đó luôn đổi theo người xem: ai đổi trang phục, uống đan, học công pháp hay tung chiêu thì chỉ lớp liên quan
+  đổi, các lớp khác vẫn chạy tiếp. Trang này ghi đủ tài nguyên đang có, kịch bản từng sự kiện và cách sản xuất, để làm
+  thêm nhân vật hay dựng game khác chỉ cần làm theo.</p>
+
+  <h2 id="mo-hinh">1. Mô hình tách lớp — xem trực tiếp</h2>
+  <p>Nhân vật mẫu là <b>đệ tử Thủy Tông (nữ)</b>, dùng đúng tài nguyên của game. Thử bốn sự kiện như khách gõ trong live:
+  <b>thay trang phục</b>, <b>mua công pháp</b>, <b>uống đan dược</b>, <b>thay vũ khí</b>. Mỗi sự kiện chỉ đổi đúng lớp liên
+  quan, các lớp khác vẫn chạy tiếp. Kéo <b>Tách lớp</b> để thấy từng lớp nằm ở đâu, tắt bật từng lớp để thấy lớp đó góp gì.
+  Dòng nhật ký ghi rõ mỗi bước dùng file nào, phần nào đã là video thật và phần nào còn tạm.</p>
+  <div class="mo-hinh">
+    <div class="san-khau-wrap"><div class="san-khau" id="sk"></div></div>
+    <div class="dieu-khien">
+      <div class="the">
+        <label for="tach"><b>Tách lớp</b> <span class="nhat nho">— nghiêng khung, đẩy các lớp ra xa nhau</span></label>
+        <input id="tach" type="range" min="0" max="100" value="0">
+      </div>
+      <div class="the">
+        <b>Thử sự kiện như khách gõ trong live</b>
+        <div class="loc" id="tab-sk" style="margin:8px 0"></div>
+        <div class="chon-mon" id="chon-mon"></div>
+        <div class="nhat-ky" id="nhat-ky"><span class="nhat">Chọn một món để chạy kịch bản.</span></div>
+      </div>
+      <div id="ds-lop"></div>
+    </div>
+  </div>
+
+  <h2 id="nguyen-tac">2. Nguyên tắc hình (người vận hành đã chốt)</h2>
+  <div class="luoi luoi-3">
+    <div class="the"><h3>① Nhân vật chuyển động bằng VIDEO</h3>Tranh tĩnh nhún tới nhún lui bị chê "như ma-nơ-canh". Mọi chuyển động của nhân vật (thiền, công, thủ, hồi) là <b>video nền trong suốt</b> (WebM VP9 alpha), mượt hơn hẳn ảnh động ít khung. Ảnh động WebP cũ chỉ còn là bản tạm.</div>
+    <div class="the"><h3>② Đúng động tác công pháp</h3>Sơn Tông đánh <b>cung</b>, Thủy Tông đánh <b>lao</b>. Hệ Thủ dựng khiên, hệ Máu vận khí hồi. Không mượn động tác của chiêu khác.</div>
+    <div class="the"><h3>③ Đúng trang phục đang mặc</h3>Mỗi bộ áo T1–T9 có bộ video riêng (thiền, công, thủ, hồi), mặt và áo giữ nhất quán. Bộ nào chưa có video thì dùng tranh tĩnh của chính bộ đó, không mượn bộ khác.</div>
+    <div class="the"><h3>④ Chiều sâu 3D</h3>Nền lùi xa (mờ và tối nhẹ, máy quay đẩy chậm), bóng đổ dưới chân, viền sáng nhân vật, tiền cảnh trôi nhanh hơn nền (thị sai).</div>
+    <div class="the"><h3>⑤ Kèm hiệu ứng khi cần</h3>Chiêu rời tay đúng khung ra đòn, cọc rung, số nảy, tia ✦. Ở màn PK <b>không dùng</b> hạt tròn hay quả cầu sáng.</div>
+    <div class="the"><h3>⑥ Nền từng màn cũng động</h3>Thác chảy, mây trôi, lá rơi, đèn lung linh. Mọi nền là video lặp liền, chuyển động chậm theo nhịp game, nước luôn chảy một chiều.</div>
+  </div>
+
+  <h3>Bảy luật để nhiều lớp nhìn như một video</h3>
+  <div class="bang-cuon"><table>
+    <tr><th>#</th><th>Luật</th><th>Vì sao / làm thế nào</th></tr>
+    <tr><td>1</td><td><b>Mỗi lớp một việc</b></td><td>Nền chỉ chứa cảnh, không vẽ người. Video nhân vật có kênh trong suốt, không dính mảng nền. Chiêu thức và hiệu ứng là lớp riêng. Nhờ vậy đổi một thứ không phải làm lại thứ khác.</td></tr>
+    <tr><td>2</td><td><b>Cùng nguồn sáng</b></td><td>Viền sáng của nhân vật lấy màu chủ đạo của nền: Thủy xanh ngọc <code>#78d2ff</code>, Sơn vàng ấm <code>#ffdc8c</code>. Bóng đổ luôn đổ xuống dưới chân. Video nhân vật làm trên nền một màu, không có ánh sáng riêng.</td></tr>
+    <tr><td>3</td><td><b>Neo cố định</b></td><td>Nhân vật luôn đứng ở cùng một điểm neo (chân giữa khung). Bộ áo mới thay đúng vào chỗ đó, nên lúc đổi áo không bị nhảy hình.</td></tr>
+    <tr><td>4</td><td><b>Đổi bằng hoà, không cắt</b></td><td>Đổi nền hoà trong 1,2 giây. Đổi áo dùng chớp sáng che đúng khung thay hình (0,9 giây). Video lặp hoà đuôi vào đầu 2 giây (<code>nen-muse.py</code>).</td></tr>
+    <tr><td>5</td><td><b>Chung một nhịp</b></td><td>Mọi lớp chạy chậm cùng tốc độ: nền 0,6× tốc độ gốc, nhân vật thở chu kỳ khoảng 4 giây, máy quay trôi 38 giây. Lớp nào nhanh hơn hẳn sẽ lộ là lớp dán đè.</td></tr>
+    <tr><td>6</td><td><b>Tiền cảnh che mép</b></td><td>Vật ở gần (san hô, đèn, lá) cắt từ chính tranh nền, đặt lên trên nhân vật và trôi lệch tốc độ. Mắt người xem tin nhân vật đứng trong cảnh, không phải dán lên cảnh.</td></tr>
+    <tr><td>7</td><td><b>Không trộn kiểu hoà màu</b></td><td>Không dùng <code>mix-blend-mode</code> (Chrome hoà sai khi có vật chuyển động). Lớp sáng dùng video có kênh trong suốt hoặc gradient có alpha.</td></tr>
+  </table></div>
+
+  <h2 id="kien-truc">3. Các lớp trong game (từ dưới lên trên)</h2>
+  <p>Khung 1080×1920, code ở <code>client/designs/tu-tien-son-ha/src</code>. Cột <b>Trạng thái</b> cho biết lớp đã chạy
+  trong game hay mới có trong bản thiết kế.</p>
+  <div class="bang-cuon"><table id="bang-lop"></table></div>
+
+  <h2 id="tien-do">4. Tiến độ tài nguyên</h2>
+  <div class="luoi luoi-4" id="tien-do-o"></div>
+  <p class="nho nhat">Số liệu đếm thẳng từ thư mục tài nguyên game. Chi tiết từng món ở <a href="tai-nguyen.html">Danh mục tài nguyên</a>.</p>
+
+  <h2>5. Đọc tiếp</h2>
+  <div class="luoi luoi-2">
+    <a class="the" href="tai-nguyen.html" style="text-decoration:none;color:inherit"><h3>📦 Danh mục tài nguyên</h3>4 nhân vật × 9 trang phục, 9 công pháp × 2 tông, 9 đan dược, 25 nền màn: món nào có, món nào thiếu, tên file.</a>
+    <a class="the" href="kich-ban.html" style="text-decoration:none;color:inherit"><h3>🎬 Kịch bản vận hành</h3>Dòng thời gian từng sự kiện (đổi áo, uống đan, học công pháp, PK, thiền, kết trận): mili-giây nào lớp nào làm gì.</a>
+    <a class="the" href="san-xuat.html" style="text-decoration:none;color:inherit"><h3>🏭 Quy trình sản xuất</h3>Từng loại tài nguyên: lời nhắc ChatGPT và Muse chép được, công cụ, thông số file, cách soát.</a>
+    <a class="the" href="tai-dung.html" style="text-decoration:none;color:inherit"><h3>🧩 Dựng game mới</h3>Quy ước tên, thư mục, thứ tự làm, cách code tự dò tài nguyên. Áp dụng cho nhân vật mới hoặc game khác.</a>
+  </div>
+</main>
+<footer id="chan"></footer>
+<script src="js/du-lieu.js"></script>
+<script src="js/xuong.js"></script>
+<script>
+(function () {
+  const { h, a } = XUONG_UI;
+  const D = XUONG;
+  const sk = document.getElementById('sk');
+  const PHE = 'thuy';
+  // Nhân vật mẫu: đệ tử Thủy Tông nữ (file `thuy-…`). Bộ áo đúng thứ tự T1–T9.
+  const nv = D.nhanVat.find((n) => n.id === 'thuy');
+  const aoThuy = nv.ao;
+  let aoDang = Math.max(0, aoThuy.findIndex((x) => x.duoi === 'tp5'));
+  let canh = 'ao-thuy';
+  let ban = false;
+  const fxCua = (id) => D.fx.find((f) => f.id === id);
+  const cho = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // ---------- Nhật ký: mỗi bước ghi lớp nào làm gì, file nào, thật hay tạm ----------
+  const nk = document.getElementById('nhat-ky');
+  const ghi = (lop, chu, tep, that) => {
+    if (nk.querySelector('.nhat')) nk.replaceChildren();
+    nk.append(h('div', { class: 'dong-nk' }, h('b', {}, lop), ' ', chu, tep ? h('code', {}, tep) : null, tep ? ' ' : null, that === undefined ? null : h('span', { class: `nhan ${that ? 'co' : 'thu'}` }, that ? 'video thật' : 'tạm')));
+    nk.scrollTop = nk.scrollHeight;
+  };
+
+  // ---------- Lớp nhân vật ----------
+  // Bộ áo có video thiền (WebM alpha) thì phát video, chưa có thì tranh tĩnh của chính bộ đó.
+  const veNguoi = (x = aoThuy[aoDang]) =>
+    x.co.vThien
+      ? h('video', { class: 'mh-nguoi video', id: 'mh-nguoi', src: a(x.tep.vThien), autoplay: true, muted: true, loop: true, playsinline: true })
+      : h('img', { class: 'mh-nguoi', id: 'mh-nguoi', src: a(x.tep.thien), alt: '' });
+  const bongBong = () => Array.from({ length: 16 }, (_, i) => h('i', { style: `--x:${(i * 61) % 100}%;--c:${4 + (i % 4) * 2}px;--t:${8 + (i % 5) * 2}s;--tre:${-(i * 1.3).toFixed(1)}s` }));
+  const LOP = [
+    { ma: 'L0', ten: 'Nền động', mo: 'Video Muse 14,5 giây, chậm 0,6×, lặp liền; máy quay trôi chậm. Đổi màn bằng hoà 1,2 giây', con: () => [h('video', { class: 'phu mh-nen', id: 'mh-nen', src: a('nen/ao-thuy-dong.mp4'), poster: a('nen/ao-thuy.webp'), autoplay: true, muted: true, loop: true, playsinline: true })] },
+    { ma: 'L1', ten: 'Bóng đổ, bục', mo: 'Bóng mềm dưới chân: nhân vật "chạm đất"', con: () => [h('i', { class: 'mh-bong' }), h('img', { class: 'mh-coc', id: 'mh-coc', src: a('fx/coc-thuy.webp'), alt: '' })] },
+    { ma: 'L2', ten: 'Nhân vật (trang phục)', mo: 'Video nền trong suốt đúng bộ áo đang mặc (thiền / công / thủ / hồi), neo cố định', con: () => [h('div', { class: 'mh-o-nguoi', id: 'mh-o-nguoi' }, veNguoi())] },
+    { ma: 'L3', ten: 'Chiêu, hiệu ứng, vũ khí', mo: 'Tranh chiêu, video hiệu ứng (biến trang, đan, binh khí hiện hình), biểu tượng vũ khí hộ thân', con: () => [h('div', { class: 'mh-fx', id: 'mh-fx' }), h('img', { class: 'mh-ho-than', id: 'mh-ho-than', alt: '' })] },
+    { ma: 'L4', ten: 'Tiền cảnh', mo: 'Vật ở gần cắt từ chính tranh nền, trôi lệch tốc độ (thị sai). Màn nào chưa tách thì không có lớp này', con: () => [h('img', { class: 'mh-truoc', id: 'mh-truoc', src: a('nen/ao-thuy-truoc.webp'), alt: '' })] },
+    { ma: 'L5', ten: 'Không khí', mo: 'Bong bóng, tia sáng bay qua cả người lẫn nền', con: () => [h('i', { class: 'mh-tia' }), h('div', { class: 'mh-khi', style: 'position:absolute;inset:0' }, bongBong())] },
+    { ma: 'L6', ten: 'Chữ, bảng (HUD)', mo: 'Tên màn, bảng sự kiện, thẻ người chơi: luôn trên cùng', con: () => [h('div', { class: 'mh-hud', id: 'mh-hud', html: 'THỦY TÔNG LONG CUNG<small>👘 Phòng Thử Đồ</small>' }), h('div', { class: 'mh-bang', id: 'mh-bang' }), h('div', { class: 'mh-the', id: 'mh-the' }, '')] },
+  ];
+  const dom = LOP.map((l, i) => {
+    const el = h('div', { class: 'lop', 'data-i': i }, h('span', { class: 'lop-ten' }, `${l.ma} · ${l.ten}`), l.con());
+    sk.append(el);
+    return el;
+  });
+  const dsLop = document.getElementById('ds-lop');
+  LOP.slice().reverse().forEach((l) => {
+    const i = LOP.indexOf(l);
+    const cb = h('input', { type: 'checkbox', checked: true, onchange: (e) => dom[i].classList.toggle('tat', !e.target.checked) });
+    dsLop.append(h('label', { class: 'hang' }, cb, h('b', {}, l.ma), h('span', {}, h('b', { style: 'color:var(--chu)' }, l.ten), h('br'), h('span', { class: 'nho nhat' }, l.mo))));
+  });
+  const tach = document.getElementById('tach');
+  const veTach = () => {
+    const t = tach.value / 100;
+    sk.parentElement.classList.toggle('tach', t > 0.02);
+    sk.style.transform = `translateY(${t * 22}%) rotateX(${t * 56}deg) rotateZ(${-t * 24}deg) scale(${1 - t * 0.5})`;
+    dom.forEach((el, i) => (el.style.transform = `translateZ(${i * t * 95}px)`));
+  };
+  tach.oninput = veTach;
+  veTach();
+
+  const $ = (id) => document.getElementById(id);
+  const fxLop = $('mh-fx');
+  const veThe = () => ($('mh-the').textContent = `Thủy nữ · ${aoThuy[aoDang].ma} ${aoThuy[aoDang].ten}`);
+  veThe();
+  const bang = (chu, giay = 3.2) => {
+    const b = $('mh-bang');
+    b.innerHTML = chu;
+    b.classList.remove('hien');
+    void b.offsetWidth;
+    b.classList.add('hien');
+    clearTimeout(b._t);
+    b._t = setTimeout(() => b.classList.remove('hien'), giay * 1000);
+  };
+
+  // ---------- Đổi màn (nền + tiền cảnh + chữ), hoà 1,2 giây như game ----------
+  const TEN_CANH = { 'ao-thuy': '👘 Phòng Thử Đồ', 'vo-thuy': '⚔ Võ Trường', thuy: '🧘 Sân thiền' };
+  async function datCanh(id) {
+    if (canh === id) return;
+    canh = id;
+    const n = D.nen.find((x) => x.id === id);
+    const cu = $('mh-nen');
+    const moi = h('video', { class: 'phu mh-nen', src: a(n.video ?? n.tranh), poster: a(n.tranh), autoplay: true, muted: true, loop: true, playsinline: true, style: 'opacity:0' });
+    cu.after(moi);
+    moi.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1200, fill: 'forwards' });
+    setTimeout(() => {
+      cu.remove();
+      moi.id = 'mh-nen';
+    }, 1250);
+    const truoc = $('mh-truoc');
+    truoc.style.opacity = '0';
+    if (n.truoc) setTimeout(() => ((truoc.src = a(n.truoc)), (truoc.style.opacity = '1')), 600);
+    $('mh-hud').innerHTML = `THỦY TÔNG LONG CUNG<small>${TEN_CANH[id] ?? id}</small>`;
+    $('mh-coc').classList.toggle('hien', id === 'vo-thuy');
+    sk.classList.toggle('vo', id === 'vo-thuy');
+    ghi('L0', `nền → ${n.ten}: `, n.video ?? n.tranh, !!n.video);
+    if (n.truoc) ghi('L4', 'tiền cảnh: ', n.truoc, true);
+  }
+
+  // ---------- Hiệu ứng: video alpha nếu đã có, chưa có thì CSS tạm cùng kiểu ----------
+  function choiFx(id, { lop = 'giua', lau = 2600 } = {}) {
+    const f = fxCua(id);
+    let el;
+    if (f?.co) {
+      el = h('video', { class: `mh-fx-vd ${lop}`, src: a(f.tep), autoplay: true, muted: true, playsinline: true });
+      el.onended = () => el.remove();
+    } else {
+      el = h('div', { class: `mh-fx-css ${id} ${lop}` }, Array.from({ length: 8 }, (_, i) => h('i', { style: `--i:${i}` })));
+      setTimeout(() => el.remove(), lau);
+    }
+    fxLop.append(el);
+    ghi('L3', `hiệu ứng ${f?.ten ?? id}: `, `fx/${id}.webm`, !!f?.co);
+    return el;
+  }
+  function chu(text, cls = '') {
+    const e = h('div', { class: `mh-so ${cls}` }, text);
+    fxLop.append(e);
+    setTimeout(() => e.remove(), 1600);
+  }
+  function datNguoi(el) {
+    const o = $('mh-o-nguoi');
+    const cu = o.firstElementChild;
+    el.style.opacity = '0';
+    o.append(el);
+    const hien = () => {
+      el.style.opacity = '1';
+      setTimeout(() => cu?.remove(), 250);
+    };
+    if (el.tagName === 'VIDEO') el.addEventListener('canplay', hien, { once: true });
+    else el.complete ? hien() : (el.onload = hien);
+    setTimeout(hien, 900);
+  }
+
+  // ---------- 1. Thay trang phục: video áo cũ → video biến trang che đúng lúc đổi → video áo mới ----------
+  async function thayDo(i) {
+    await datCanh('ao-thuy');
+    const cu = aoThuy[aoDang];
+    const moi = aoThuy[i];
+    bang(`👘 <b>Thử trang phục</b><br>${moi.ma} · ${moi.ten}`, 4.5);
+    ghi('L2', `áo cũ ${cu.ma}: `, cu.co.vThien ? cu.tep.vThien : cu.tep.thien, cu.co.vThien);
+    choiFx('bien-trang-thuy', { lop: 'nguoi-to', lau: 3200 });
+    await cho(1150); // đỉnh kén sáng: thay áo dưới lớp sáng
+    aoDang = i;
+    datNguoi(veNguoi(moi));
+    veThe();
+    ghi('L2', `áo mới ${moi.ma}: `, moi.co.vThien ? moi.tep.vThien : moi.tep.thien, moi.co.vThien);
+    ghi('L6', 'thẻ người chơi, bảng "Thử trang phục"');
+  }
+
+  // ---------- 2. Mua công pháp: sang Võ Trường, video động tác đúng hệ + chiêu đúng môn ----------
+  async function hocCongPhap(c) {
+    const t = c.tong[PHE];
+    await datCanh('vo-thuy');
+    bang(`📜 <b>${t.ten}</b><br><span>${c.heTen} · bậc ${c.bac} · ${c.mo}</span>`, 6);
+    const x = aoThuy[aoDang];
+    const k = { cong: 'vCong', thu: 'vThu', hoi: 'vHoi' }[c.dongTac];
+    const vid = x.co[k];
+    const nguoi = vid
+      ? h('video', { class: 'mh-nguoi video chien', src: a(x.tep[k]), autoplay: true, muted: true, playsinline: true })
+      : h('img', { class: 'mh-nguoi chien tam', src: a(x.co.chien ? x.tep.chien : nv.chienChung), alt: '' });
+    await cho(400);
+    datNguoi(nguoi);
+    ghi('L2', `động tác ${c.dongTac} của ${x.ma}: `, vid ? x.tep[k] : x.tep[k] + ' (chưa có → dáng chiến tĩnh)', vid);
+    for (let lan = 0; lan < 2; lan++) {
+      await cho(lan ? 2300 : 900);
+      if (!vid) {
+        nguoi.classList.remove('ra');
+        void nguoi.offsetWidth;
+        nguoi.classList.add('ra');
+      } else if (lan) {
+        nguoi.currentTime = 0;
+        nguoi.play();
+      }
+      await cho(vid ? 800 : 300);
+      if (t.loai === 'bay') {
+        const cp = h('img', { class: 'mh-cp-bay', src: a(t.chieu), alt: '' });
+        fxLop.append(cp);
+        setTimeout(() => cp.remove(), 700);
+        setTimeout(() => {
+          $('mh-coc').classList.remove('trung');
+          void $('mh-coc').offsetWidth;
+          $('mh-coc').classList.add('trung');
+          chu(`−${80 + Math.round(Math.random() * 60 * c.bac)}`);
+        }, 520);
+      } else {
+        const cp = h('img', { class: 'mh-cp-quanh', src: a(t.chieu), alt: '' });
+        fxLop.append(cp);
+        setTimeout(() => cp.remove(), 1500);
+        chu(c.he === 've' ? '🛡 Hộ thể' : '💚 Hồi phục', 'lanh');
+      }
+      if (!lan) ghi('L3', `chiêu ${t.loai === 'bay' ? 'bay vào cọc' : 'bùng quanh người'}: `, t.chieu, false);
+    }
+    await cho(2200);
+    await datCanh('ao-thuy');
+    datNguoi(veNguoi());
+    ghi('L2', 'về dáng thiền: ', aoThuy[aoDang].co.vThien ? aoThuy[aoDang].tep.vThien : aoThuy[aoDang].tep.thien, aoThuy[aoDang].co.vThien);
+  }
+
+  // ---------- 3. Uống đan: viên đan rơi chạm người → hiệu ứng đúng công dụng ----------
+  async function uongDan(d) {
+    const t = d.tong[PHE];
+    bang(`💊 <b>${t.ten}</b><br><span>${d.mo}</span>`, 3.6);
+    const vien = h('img', { class: 'mh-roi', src: a(t.icon), alt: '' });
+    fxLop.append(vien);
+    ghi('L3', 'viên đan rơi: ', t.icon, true);
+    await cho(800);
+    vien.remove();
+    const o = $('mh-o-nguoi').firstElementChild;
+    o?.animate([{ filter: 'brightness(1)' }, { filter: 'brightness(1.9) drop-shadow(0 0 22px #9ff)' }, { filter: 'brightness(1)' }], { duration: 1300 });
+    choiFx(`dan-${d.kieu}`, { lop: 'nguoi-to', lau: 2700 });
+    chu(d.mo.split(' · ')[0], 'lanh');
+    ghi('L2', 'video nhân vật vẫn chạy, chỉ loé màu đan');
+  }
+
+  // ---------- 4. Thay vũ khí: binh khí hiện hình → bay vào tay → biểu tượng hộ thân → chiêu binh khí ----------
+  async function thayVuKhi(p, m) {
+    const t = m.tong[PHE];
+    bang(`🗡 <b>${t.ten}</b><br><span style="color:${p.mau}">${p.ten} · công +${p.goc}</span>`, 4);
+    choiFx('binh-khi-thuy', { lop: 'ben', lau: 2600 });
+    const vk = h('img', { class: 'mh-vk-hien', src: a(t.icon.chung), alt: '', style: `--mau:${p.mau}` });
+    fxLop.append(vk);
+    ghi('L3', 'binh khí hiện hình, icon: ', t.icon.chung, true);
+    await cho(2300);
+    vk.remove();
+    const ht = $('mh-ho-than');
+    ht.src = a(t.icon.chung);
+    ht.style.setProperty('--mau', p.mau);
+    ht.classList.add('hien');
+    ghi('L3', 'biểu tượng hộ thân cạnh người (giữ suốt)');
+    await cho(500);
+    const ck = p.chieuVk[PHE];
+    if (ck.co) {
+      const cp = h('img', { class: 'mh-cp-bay vk', src: a(ck.p), alt: '' });
+      fxLop.append(cp);
+      setTimeout(() => cp.remove(), 700);
+      ghi('L3', 'chiêu binh khí: ', ck.p, false);
+    }
+  }
+
+  // ---------- Bảng chọn ----------
+  const tabSk = $('tab-sk');
+  const chon = $('chon-mon');
+  const TAB = [
+    ['ao', '👘 Thay trang phục'],
+    ['cp', '📜 Mua công pháp'],
+    ['dan', '💊 Uống đan dược'],
+    ['vk', '🗡 Thay vũ khí'],
+  ];
+  let tabDang = 'ao';
+  const nutMon = (anh, ma, ten, phu, chay) =>
+    h('button', {
+      type: 'button',
+      class: 'nut-mon',
+      title: ten,
+      onclick: async () => {
+        if (ban) return;
+        ban = true;
+        chon.classList.add('ban');
+        nk.replaceChildren();
+        try {
+          await chay();
+        } finally {
+          ban = false;
+          chon.classList.remove('ban');
+        }
+      },
+    }, anh ? h('img', { src: a(anh), alt: '', loading: 'lazy' }) : null, h('b', {}, ma), h('span', {}, ten), phu ? h('small', {}, phu) : null);
+  const veChon = () => {
+    tabSk.querySelectorAll('button').forEach((b) => b.classList.toggle('dang', b.dataset.id === tabDang));
+    chon.replaceChildren();
+    if (tabDang === 'ao') aoThuy.forEach((x, i) => chon.append(nutMon(x.tep.thien, x.ma, x.ten, x.co.vThien ? '🎬 video' : 'tranh', () => thayDo(i))));
+    if (tabDang === 'cp') D.congPhap.forEach((c) => chon.append(nutMon(c.tong[PHE].icon, c.ma, c.tong[PHE].ten, `${c.heTen} · ${c.gia}💎`, () => hocCongPhap(c))));
+    if (tabDang === 'dan') D.danDuoc.forEach((d) => chon.append(nutMon(d.tong[PHE].icon, d.ma, d.tong[PHE].ten, d.mo.split(' · ')[0], () => uongDan(d))));
+    if (tabDang === 'vk') D.trangBi.find((o) => o.o === 'vu').pham.forEach((p) => p.mon.forEach((m) => chon.append(nutMon(m.tong[PHE].icon.chung, m.ma, m.tong[PHE].ten, p.ten, () => thayVuKhi(p, m)))));
+  };
+  TAB.forEach(([id, t]) => tabSk.append(h('button', { type: 'button', 'data-id': id, onclick: () => ((tabDang = id), veChon()) }, t)));
+  veChon();
+
+  // Bảng lớp trong game.
+  const KT = [
+    ['canvas.sh-canh (sau)', 've3d/canh-3d.ts', 'Trời, sương, hạt three.js phía sau', 'co'],
+    ['.sh-nen › img / video.sh-nen-dong', 've3d/canh-3d.ts · nenVid', 'Tranh nền màn + video nền động nen/&lt;id&gt;-dong.mp4, máy quay 38 giây', 'co'],
+    ['.sh-nen::before', 'stage.css', 'Sương mỏng sát đáy', 'co'],
+    ['.sh-yeu', 've3d/canh-3d.ts', 'Yêu tinh (ảnh động FramePack)', 'co'],
+    ['.sh-than-thu-lop', 'Stage / CSS', 'Thần thú hai tông', 'co'],
+    ['.sh-lop-nguoi › .sh-av', 've3d/canh-3d.ts', 'Đệ tử: trang phục đang mặc (đang là tranh tĩnh → thay video thiền &lt;nv&gt;-&lt;áo&gt;-thien.webm), tên, bóng', 'thu'],
+    ['.sh-lop-nguoi › .sh-st', 've3d/san-thu.ts', 'Cảnh thử: Võ Trường (video động tác chien-&lt;nv&gt;-&lt;áo&gt;-&lt;cong|thu|hoi&gt;.webm) / Phòng Thử Đồ (đổi áo)', 'thu'],
+    ['.sh-cp-* , .sh-dan-hq', 've3d/chieu-cp.ts · hieuUngDan', 'Chiêu thức bay / quanh người, hiệu ứng đan dược', 'co'],
+    ['.sh-nen-truoc', 'cần thêm', 'Tiền cảnh cắt từ tranh nền nen/&lt;id&gt;-truoc.webp, thị sai', 'chua'],
+    ['.sh-khong-khi', 'cần thêm', 'Bong bóng, bụi sáng, lá rơi phía trước nhân vật (video alpha hoặc CSS)', 'chua'],
+    ['.sh-hud', 'Hud.tsx', 'Chữ, bảng, thẻ người chơi, quầy Tàng Bảo', 'co'],
+  ];
+  const TT = { co: ['co', 'đang chạy'], thu: ['thu', 'chạy, cần thay video'], chua: ['chua', 'cần thêm'] };
+  document.getElementById('bang-lop').innerHTML =
+    '<tr><th>Thứ tự</th><th>Phần tử</th><th>Code</th><th>Chứa gì</th><th>Trạng thái</th></tr>' +
+    KT.map((r, i) => `<tr><td>${i + 1}</td><td><code>${r[0]}</code></td><td><code>${r[1]}</code></td><td>${r[2]}</td><td><span class="nhan ${TT[r[3]][0]}">${TT[r[3]][1]}</span></td></tr>`).join('');
+
+  // Tiến độ.
+  const dem = (f) => D.nhanVat.reduce((s, n) => s + n.ao.filter((x) => x.co[f]).length, 0);
+  const tong = D.nhanVat.length * D.nhanVat[0].ao.length;
+  const O = [
+    ['Tranh thiền theo trang phục', dem('thien'), tong],
+    ['Dáng chiến theo trang phục', dem('chien'), tong],
+    ['Video thiền nền trong suốt', dem('vThien'), tong],
+    ['Video động tác (công / thủ / hồi)', dem('vCong') + dem('vThu') + dem('vHoi'), tong * 3],
+    ['Tranh chiêu thức', D.congPhap.reduce((s, c) => s + (c.tong.son.coChieu ? 1 : 0) + (c.tong.thuy.coChieu ? 1 : 0), 0), D.congPhap.length * 2],
+    ['Video nền động', D.nen.filter((n) => n.video).length, D.nen.length],
+    ['Video nền bản Muse (chậm, lặp liền)', D.nen.filter((n) => n.nguon === 'muse').length, D.nen.length],
+    ['Tiền cảnh tách lớp', D.nen.filter((n) => n.truoc).length, D.nen.length],
+  ];
+  const tdo = document.getElementById('tien-do-o');
+  O.forEach(([t, c, n]) => tdo.append(h('div', { class: 'the' }, h('div', { class: 'so-lon' }, `${c}/${n}`), h('div', { class: 'nho' }, t), h('div', { class: 'tien-do' }, h('i', { style: `width:${Math.round((100 * c) / n)}%` })))));
+})();
+</script>
+</body>
+</html>

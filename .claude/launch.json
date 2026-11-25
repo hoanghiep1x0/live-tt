@@ -58,6 +58,41 @@
       "autoPort": false
     },
     {
+      "name": "web-son-ha",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8772",
+        "--directory",
+        "web/son-ha-tien-lo"
+      ],
+      "port": 8772,
+      "autoPort": false
+    },
+    {
+      "name": "xuong-son-ha",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8773",
+        "--bind",
+        "127.0.0.1"
+      ],
+      "port": 8773,
+      "autoPort": false
+    },
+    {
+      "name": "nhan-file",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "web/son-ha-tien-lo/cong-cu/nhan-file.py"
+      ],
+      "port": 8791,
+      "autoPort": false
+    },
+    {
       "name": "backend",
       "runtimeExecutable": "cargo",
       "runtimeArgs": [

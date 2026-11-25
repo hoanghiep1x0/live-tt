@@ -1638,6 +1638,33 @@ select.bx-o option {
 .bx-muc-bang tr.bx-muc-dang td {
   background: rgba(242, 196, 90, 0.1);
 }
+/* Kéo-thả đổi thứ tự: dòng đang kéo mờ đi, dòng sắp thả vào có vạch vàng phía trên. */
+.bx-muc-bang tr[draggable='true'] {
+  cursor: grab;
+}
+.bx-muc-bang tr.bx-muc-keo td {
+  opacity: 0.45;
+}
+.bx-muc-bang tr.bx-muc-qua td {
+  box-shadow: inset 0 2px 0 #f2c45a;
+}
+.bx-muc-tay {
+  margin-right: 4px;
+  color: #6f6a62;
+}
+.bx-muc-len {
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: #f4efe6;
+  font: inherit;
+  cursor: pointer;
+}
+.bx-muc-len:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
 .bx-muc-so {
   width: 22px;
   color: #9b958a;
@@ -2211,4 +2238,106 @@ select.bx-o option {
 .bx-muc-nguy:hover:not(:disabled) {
   border-color: rgba(255, 120, 110, 0.85);
   background: rgba(255, 70, 60, 0.3);
+}
+
+/* Ô phức tạp của thẻ thiết kế (danh sách, chữ dài): nút tóm tắt, bấm mở hộp sửa đầy đủ. */
+.bx-q-mo {
+  cursor: pointer;
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font: inherit;
+}
+.bx-q-mo:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.bx-q-tom {
+  opacity: 0.85;
+  white-space: nowrap;
+}
+/* Ngăn phải hẹp: nút của dòng xếp hai hàng (↑ ↓ / Sửa Bỏ) để tên mục không bị bóp còn một chữ mỗi dòng. */
+.bx-muc-bang .bx-muc-nut {
+  width: 104px;
+  white-space: normal;
+}
+.bx-muc-bang .bx-muc-nut > button {
+  margin: 2px 0 2px 4px;
+}
+.bx-muc-bang .bx-muc-nut > button + button {
+  margin-left: 4px;
+}
+.bx-muc-bang .bx-muc-bat:empty {
+  width: 0;
+  padding: 0;
+}
+
+/* Ô `list` có `luoi`: lưới ô vật phẩm có ảnh — bấm một ô để sửa, viền theo màu phẩm, mục tắt thì mờ. */
+.bx-luoi {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+.bx-luoi-o {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 4px 6px;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.bx-luoi-o:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+.bx-luoi-o.dang {
+  background: rgba(242, 196, 90, 0.16);
+  box-shadow: 0 0 0 2px rgba(242, 196, 90, 0.7);
+}
+.bx-luoi-o.tat {
+  opacity: 0.45;
+}
+.bx-luoi-anh {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+}
+.bx-luoi-anh img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.bx-luoi-anh i {
+  font-size: 34px;
+  font-style: normal;
+  line-height: 1;
+}
+.bx-luoi-o b {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.bx-luoi-o small {
+  max-width: 100%;
+  overflow: hidden;
+  color: #9fd8b0;
+  font-size: 10.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bx-luoi-nut {
+  display: flex;
+  gap: 6px;
 }

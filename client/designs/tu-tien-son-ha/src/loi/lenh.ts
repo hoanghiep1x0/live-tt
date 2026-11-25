@@ -2,6 +2,7 @@
  *  nên so trên bản đã bỏ dấu và bỏ ký tự thừa. */
 
 import type { Huong } from './me-cung';
+import type { LoaiMa } from './tang-bao';
 import type { CanCo, Gioi, Ky, Phe } from './the-gioi';
 
 export type Lenh =
@@ -11,10 +12,17 @@ export type Lenh =
   | { k: 'danh' }
   | { k: 'ho' }
   | { k: 'toi' }
-  | { k: 'di'; huong: Huong }
+  | { k: 'di'; huong: Huong; so?: number }
   | { k: 'ky'; ky: Ky }
   | { k: 'vao' }
+  | { k: 'dot-pha' }
+  | { k: 'hoc-vo' }
+  | { k: 'dan' }
+  | { k: 'van-cong' }
+  | { k: 'hai' }
+  | { k: 'co-duyen' }
   | { k: 'can-co'; canCo: CanCo }
+  | { k: 'ma'; loai: LoaiMa; so: number }
   | { k: 'noi' };
 
 /** Bỏ dấu tiếng Việt, chữ thường, gộp khoảng trắng, bỏ ký tự không phải chữ số. */
@@ -30,8 +38,8 @@ export function chuan(chu: string): string {
     .trim();
 }
 
-const SON = new Set(['nui', 'son', 'son tinh', 'tan vien', 'phe nui', 'son mon', 'ba vi', 'vao nui', 'theo nui']);
-const THUY = new Set(['nuoc', 'thuy', 'thuy tinh', 'long cung', 'phe nuoc', 'thuy phu', 'vao nuoc', 'theo nuoc']);
+const SON = new Set(['nui', 'son', 'son tinh', 'tan vien', 'phe nui', 'son mon', 'son tong', 'ba vi', 'vao nui', 'theo nui']);
+const THUY = new Set(['nuoc', 'thuy', 'thuy tinh', 'long cung', 'phe nuoc', 'thuy phu', 'thuy tong', 'vao nuoc', 'theo nuoc']);
 const TOI = new Set(['toi', 'tu vi', 'tuvi', 'tv', 'xem toi', 'cua toi', 'cs', 'chi so']);
 
 /** Mũi tên gõ thẳng (bàn phím điện thoại có sẵn) — phải đọc trước khi bỏ ký tự lạ. */
@@ -50,10 +58,14 @@ export function docLenh(text: string): Lenh {
   const truoc = /^(nam|nu) (.+)$/.exec(c);
   const kem = sau ? { phe: sau[1]!, gioi: sau[2] as Gioi } : truoc ? { phe: truoc[2]!, gioi: truoc[1] as Gioi } : null;
   if (kem !== null) {
-    if (SON.has(kem.phe)) return { k: 'phe', phe: 'son', gioi: kem.gioi };
-    if (THUY.has(kem.phe)) return { k: 'phe', phe: 'thuy', gioi: kem.gioi };
+    // Ải Nhập Môn: "Nam - S", "nữ-t", "NU S" — S là Sơn Tông, T là Thủy Tông.
+    if (SON.has(kem.phe) || kem.phe === 's') return { k: 'phe', phe: 'son', gioi: kem.gioi };
+    if (THUY.has(kem.phe) || kem.phe === 't') return { k: 'phe', phe: 'thuy', gioi: kem.gioi };
   }
   if (c === 'nam' || c === 'nu') return { k: 'gioi', gioi: c };
+  // Tàng Bảo Các: "T3", "d 1", "C9", "p2" — mua hoặc dùng món số mấy.
+  const ma = /^([tdcp]) ?([1-9])$/.exec(c);
+  if (ma) return { k: 'ma', loai: ma[1] as LoaiMa, so: Number(ma[2]) };
   // "a", "A!!!", "đáp án b", "chọn c", "c c c" — chỉ một chữ cái lặp lại cũng tính.
   const dap = /^(?:dap an |chon |dap )?([abc])(?: \1)*$/.exec(c);
   if (dap) return { k: 'dap', chon: (dap[1]!.charCodeAt(0) - 97) as 0 | 1 | 2 };
@@ -62,6 +74,15 @@ export function docLenh(text: string): Lenh {
   // tin chỉ gồm "do" thì gần như luôn là người đang hô độ kiếp.
   if (/^(do|ho phap|ho|do kiep)( (do|ho))*$/.test(c)) return { k: 'ho' };
   if (TOI.has(c)) return { k: 'toi' };
+  // Tiêu linh thạch: học võ công, luyện đan.
+  if (['hoc vo', 'luyen vo', 'vo cong', 'tap vo', 'hoc vo cong'].includes(c)) return { k: 'hoc-vo' };
+  // Hoạt động tu luyện (cũng gõ được bằng số 1, 2, 6 lúc tu luyện).
+  if (['van cong', 'tu luyen', 'ngoi thien', 'thien'].includes(c)) return { k: 'van-cong' };
+  if (['hai', 'hai thao', 'hai linh thao', 'hai duoc', 'linh thao'].includes(c)) return { k: 'hai' };
+  if (['co duyen', 'nhan co duyen', 'cd'].includes(c)) return { k: 'co-duyen' };
+  if (['luyen dan', 'dan duoc', 'uong dan', 'doi dan', 'dan'].includes(c)) return { k: 'dan' };
+  // Lên cấp phải tự gõ: "đột phá", "lên cấp", "dp".
+  if (['dot pha', 'len cap', 'dp', 'pha canh', 'thang cap', 'len canh gioi'].includes(c)) return { k: 'dot-pha' };
   // Xin nhập môn mà không chọn phe: game tự xếp vào phe đang yếu hơn.
   if (['vao', 'tham gia', 'nhap mon', 'choi', 'tu tien', 'bai su'].includes(c)) return { k: 'vao' };
   // Hô trận pháp: "hồi", "thủ", "công", "phá" (lặp lại cũng tính), hoặc "hồi máu", "tăng công"…
@@ -72,7 +93,11 @@ export function docLenh(text: string): Lenh {
   const CAN: Record<string, CanCo> = { 'chien tuong': 'tuong', 'ho ve': 've', 'y su': 'y', 'pha quan': 'quan' };
   if (CAN[c] !== undefined) return { k: 'can-co', canCo: CAN[c]! };
   // Dẫn đường trong Địa Cung: "lên", "đi lên", "qua trái", "phải phải".
-  const di = /^(?:di |qua |sang |re |ben )?(len|tren|xuong|duoi|trai|phai)(?: \1)*$/.exec(c);
-  if (di) return { k: 'di', huong: DI[di[1]!]! };
+  // Đi nhiều bước: "lên 3" hoặc "lên lên lên" (Ải Nhập Môn đi đủ số bước; Địa Cung vẫn một bước).
+  const di = /^(?:di |qua |sang |re |ben )?(len|tren|xuong|duoi|trai|phai)((?: \1)*)(?: ([1-9]))?$/.exec(c);
+  if (di) {
+    const so = di[3] !== undefined ? Number(di[3]) : 1 + (di[2] === '' ? 0 : di[2]!.trim().split(' ').length);
+    return so > 1 ? { k: 'di', huong: DI[di[1]!]!, so } : { k: 'di', huong: DI[di[1]!]! };
+  }
   return { k: 'noi' };
 }

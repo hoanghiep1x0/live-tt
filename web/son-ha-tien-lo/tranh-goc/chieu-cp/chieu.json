@@ -1,0 +1,470 @@
+{
+  "son-c1": {
+    "ma": "C1",
+    "ten": "Sơn Ưng Tiễn",
+    "he": "Công",
+    "loai": "bay",
+    "chuyen_dong": "The golden spirit eagle beats its swept-back wings powerfully, feathers ripple, the energy trail streams and flickers backward to the left, small leaves and feathers drift off the trail. The arrow stays in place (in-place flight loop).",
+    "goc": "tranh-goc/chieu-cp-son/C1-son.png",
+    "co_goc": [
+      1301,
+      341
+    ],
+    "game": "assets/chieu/son-c1.webp",
+    "co_game": [
+      640,
+      168
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-son/nen-xam/C1-son.png",
+    "co_nen_xam": [
+      1408,
+      704
+    ],
+    "neo_dau": [
+      0.905,
+      0.566
+    ]
+  },
+  "son-c2": {
+    "ma": "C2",
+    "ten": "Thạch Bích Công",
+    "he": "Thủ",
+    "loai": "quanh",
+    "chuyen_dong": "The rock shield-wall rises up a little from the ground with dust, the engraved sun star and Lac birds glow brighter in a slow pulse, floating pebbles orbit slowly. Loop.",
+    "goc": "tranh-goc/chieu-cp-son/C2-son.png",
+    "co_goc": [
+      644,
+      644
+    ],
+    "game": "assets/chieu/son-c2.webp",
+    "co_game": [
+      448,
+      448
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-son/nen-xam/C2-son.png",
+    "co_nen_xam": [
+      768,
+      768
+    ],
+    "neo_dau": [
+      0.5,
+      0.5
+    ]
+  },
+  "son-c3": {
+    "ma": "C3",
+    "ten": "Linh Chi Quyết",
+    "he": "Máu",
+    "loai": "quanh",
+    "chuyen_dong": "The lingzhi mushroom glows softly with a breathing pulse, green healing motes and sparkles rise continuously upward, leaves sway gently. Loop.",
+    "goc": "tranh-goc/chieu-cp-son/C3-son.png",
+    "co_goc": [
+      608,
+      608
+    ],
+    "game": "assets/chieu/son-c3.webp",
+    "co_game": [
+      448,
+      448
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-son/nen-xam/C3-son.png",
+    "co_nen_xam": [
+      704,
+      704
+    ],
+    "neo_dau": [
+      0.5,
+      0.5
+    ]
+  },
+  "son-c4": {
+    "ma": "C4",
+    "ten": "Xuyên Vân Tiễn",
+    "he": "Phá",
+    "loai": "bay",
+    "chuyen_dong": "The drill arrow tip spins fast around its own axis, violet-white vortex rings rotate and slide backward along the shaft, the cloud tunnel churns and swirls, sparks at the tip. In-place flight loop.",
+    "goc": "tranh-goc/chieu-cp-son/C4-son.png",
+    "co_goc": [
+      1282,
+      321
+    ],
+    "game": "assets/chieu/son-c4.webp",
+    "co_game": [
+      640,
+      160
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-son/nen-xam/C4-son.png",
+    "co_nen_xam": [
+      1408,
+      704
+    ],
+    "neo_dau": [
+      0.855,
+      0.436
+    ]
+  },
+  "son-c5": {
+    "ma": "C5",
+    "ten": "Phá Sơn Liên Tiễn",
+    "he": "Công",
+    "loai": "bay",
+    "chuyen_dong": "Three arrows vibrate in flight, molten fire around them flows backward, broken rocks tumble and spin while drifting left and fading, glowing embers. In-place flight loop.",
+    "goc": "tranh-goc/chieu-cp-son/C5-son.png",
+    "co_goc": [
+      1250,
+      296
+    ],
+    "game": "assets/chieu/son-c5.webp",
+    "co_game": [
+      640,
+      152
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-son/nen-xam/C5-son.png",
+    "co_nen_xam": [
+      1344,
+      704
+    ],
+    "neo_dau": [
+      0.858,
+      0.274
+    ]
+  },
+  "son-c6": {
+    "ma": "C6",
+    "ten": "Tản Viên Hộ Thể",
+    "he": "Thủ",
+    "loai": "quanh",
+    "chuyen_dong": "The translucent golden-jade dome shimmers with a sweeping light reflection, engraved drum rings rotate slowly, the two golden Lac birds circle around the dome. Loop.",
+    "goc": "tranh-goc/chieu-cp-son/C6-son.png",
+    "co_goc": [
+      648,
+      648
+    ],
+    "game": "assets/chieu/son-c6.webp",
+    "co_game": [
+      448,
+      448
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-son/nen-xam/C6-son.png",
+    "co_nen_xam": [
+      768,
+      768
+    ],
+    "neo_dau": [
+      0.5,
+      0.5
+    ]
+  },
+  "son-c7": {
+    "ma": "C7",
+    "ten": "Mộc Linh Hồi Xuân",
+    "he": "Máu",
+    "loai": "quanh",
+    "chuyen_dong": "Vines spiral upward around the sacred tree, flowers open, pink petals and fireflies float upward, emerald light rays pulse from the ring at its base. Loop.",
+    "goc": "tranh-goc/chieu-cp-son/C7-son.png",
+    "co_goc": [
+      630,
+      630
+    ],
+    "game": "assets/chieu/son-c7.webp",
+    "co_game": [
+      448,
+      448
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-son/nen-xam/C7-son.png",
+    "co_nen_xam": [
+      704,
+      704
+    ],
+    "neo_dau": [
+      0.5,
+      0.5
+    ]
+  },
+  "son-c8": {
+    "ma": "C8",
+    "ten": "Đồng Cổ Lôi Tiễn",
+    "he": "Phá",
+    "loai": "bay",
+    "chuyen_dong": "The bronze drum face pulses with light, concentric shockwave rings expand outward from it, lightning bolts crackle and re-form along the arrow, bright flash at the tip. Loop.",
+    "goc": "tranh-goc/chieu-cp-son/C8-son.png",
+    "co_goc": [
+      1263,
+      341
+    ],
+    "game": "assets/chieu/son-c8.webp",
+    "co_game": [
+      640,
+      173
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-son/nen-xam/C8-son.png",
+    "co_nen_xam": [
+      1344,
+      704
+    ],
+    "neo_dau": [
+      0.869,
+      0.381
+    ]
+  },
+  "son-c9": {
+    "ma": "C9",
+    "ten": "Sơn Thần Vạn Tiễn",
+    "he": "Công",
+    "loai": "bay",
+    "chuyen_dong": "Hundreds of golden arrows shimmer and jitter as a swarm, the giant Lac bird shape flaps its wings once per loop, jade leaves swirl in the trail, divine light pulses. In-place flight loop.",
+    "goc": "tranh-goc/chieu-cp-son/C9-son.png",
+    "co_goc": [
+      1274,
+      402
+    ],
+    "game": "assets/chieu/son-c9.webp",
+    "co_game": [
+      640,
+      202
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-son/nen-xam/C9-son.png",
+    "co_nen_xam": [
+      1408,
+      704
+    ],
+    "neo_dau": [
+      0.867,
+      0.276
+    ]
+  },
+  "thuy-c1": {
+    "ma": "C1",
+    "ten": "Thủy Xà Thương",
+    "he": "Công",
+    "loai": "bay",
+    "chuyen_dong": "The translucent water snake slithers and coils around the spear shaft, its head snaps forward beside the tip, water ribbons stream backward, bubbles drift off. In-place flight loop.",
+    "goc": "tranh-goc/chieu-cp-thuy/C1-thuy.png",
+    "co_goc": [
+      1276,
+      298
+    ],
+    "game": "assets/chieu/thuy-c1.webp",
+    "co_game": [
+      640,
+      149
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-thuy/nen-xam/C1-thuy.png",
+    "co_nen_xam": [
+      1408,
+      704
+    ],
+    "neo_dau": [
+      0.894,
+      0.587
+    ]
+  },
+  "thuy-c2": {
+    "ma": "C2",
+    "ten": "Thủy Mạc Công",
+    "he": "Thủ",
+    "loai": "quanh",
+    "chuyen_dong": "Crystal water falls continuously down the shield-shaped curtain, the sun star in the center pulses with light, droplets and bubbles rise, waves at the base ripple. Loop.",
+    "goc": "tranh-goc/chieu-cp-thuy/C2-thuy.png",
+    "co_goc": [
+      630,
+      630
+    ],
+    "game": "assets/chieu/thuy-c2.webp",
+    "co_game": [
+      448,
+      448
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-thuy/nen-xam/C2-thuy.png",
+    "co_nen_xam": [
+      704,
+      704
+    ],
+    "neo_dau": [
+      0.5,
+      0.5
+    ]
+  },
+  "thuy-c3": {
+    "ma": "C3",
+    "ten": "Ngọc Châu Quyết",
+    "he": "Máu",
+    "loai": "quanh",
+    "chuyen_dong": "The clam shell opens slightly wider, the luminous pearl glows brighter in a breathing pulse, sparkling bubbles rise, water ribbons sway. Loop.",
+    "goc": "tranh-goc/chieu-cp-thuy/C3-thuy.png",
+    "co_goc": [
+      643,
+      643
+    ],
+    "game": "assets/chieu/thuy-c3.webp",
+    "co_game": [
+      448,
+      448
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-thuy/nen-xam/C3-thuy.png",
+    "co_nen_xam": [
+      768,
+      768
+    ],
+    "neo_dau": [
+      0.5,
+      0.5
+    ]
+  },
+  "thuy-c4": {
+    "ma": "C4",
+    "ten": "Xuyên Lãng Thương",
+    "he": "Phá",
+    "loai": "bay",
+    "chuyen_dong": "The spear spins on its axis, curling wave rings rotate and slide backward along the shaft like a vortex tunnel, foam sprays, violet glints. In-place flight loop.",
+    "goc": "tranh-goc/chieu-cp-thuy/C4-thuy.png",
+    "co_goc": [
+      1296,
+      338
+    ],
+    "game": "assets/chieu/thuy-c4.webp",
+    "co_game": [
+      640,
+      167
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-thuy/nen-xam/C4-thuy.png",
+    "co_nen_xam": [
+      1408,
+      704
+    ],
+    "neo_dau": [
+      0.855,
+      0.518
+    ]
+  },
+  "thuy-c5": {
+    "ma": "C5",
+    "ten": "Phá Lãng Thương Pháp",
+    "he": "Công",
+    "loai": "bay",
+    "chuyen_dong": "Three silver spears glide on a crashing white-foam wave, the wave rolls and breaks continuously, spray and droplets fly backward. In-place flight loop.",
+    "goc": "tranh-goc/chieu-cp-thuy/C5-thuy.png",
+    "co_goc": [
+      1277,
+      325
+    ],
+    "game": "assets/chieu/thuy-c5.webp",
+    "co_game": [
+      640,
+      163
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-thuy/nen-xam/C5-thuy.png",
+    "co_nen_xam": [
+      1408,
+      704
+    ],
+    "neo_dau": [
+      0.85,
+      0.262
+    ]
+  },
+  "thuy-c6": {
+    "ma": "C6",
+    "ten": "Long Lân Hộ Thể",
+    "he": "Thủ",
+    "loai": "quanh",
+    "chuyen_dong": "Light sweeps across the serpent-scale dome, scales shimmer one row after another, the water serpent on top slowly turns its head, base waves ripple. Loop.",
+    "goc": "tranh-goc/chieu-cp-thuy/C6-thuy.png",
+    "co_goc": [
+      638,
+      638
+    ],
+    "game": "assets/chieu/thuy-c6.webp",
+    "co_game": [
+      448,
+      448
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-thuy/nen-xam/C6-thuy.png",
+    "co_nen_xam": [
+      704,
+      704
+    ],
+    "neo_dau": [
+      0.5,
+      0.5
+    ]
+  },
+  "thuy-c7": {
+    "ma": "C7",
+    "ten": "Hồi Xuân Thủy Pháp",
+    "he": "Máu",
+    "loai": "quanh",
+    "chuyen_dong": "The little waterfall pours continuously, the pool ripples in rings, the pink lotus opens and glows, petals and bubbles float upward with aqua light. Loop.",
+    "goc": "tranh-goc/chieu-cp-thuy/C7-thuy.png",
+    "co_goc": [
+      652,
+      652
+    ],
+    "game": "assets/chieu/thuy-c7.webp",
+    "co_game": [
+      448,
+      448
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-thuy/nen-xam/C7-thuy.png",
+    "co_nen_xam": [
+      768,
+      768
+    ],
+    "neo_dau": [
+      0.5,
+      0.5
+    ]
+  },
+  "thuy-c8": {
+    "ma": "C8",
+    "ten": "Hải Long Lôi Thương",
+    "he": "Phá",
+    "loai": "bay",
+    "chuyen_dong": "The water serpent writhes around the lightning spear and roars, blue-violet bolts crackle and re-form along the trail, flashes at the spear tip. In-place flight loop.",
+    "goc": "tranh-goc/chieu-cp-thuy/C8-thuy.png",
+    "co_goc": [
+      1302,
+      328
+    ],
+    "game": "assets/chieu/thuy-c8.webp",
+    "co_game": [
+      640,
+      161
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-thuy/nen-xam/C8-thuy.png",
+    "co_nen_xam": [
+      1408,
+      704
+    ],
+    "neo_dau": [
+      0.877,
+      0.54
+    ]
+  },
+  "thuy-c9": {
+    "ma": "C9",
+    "ten": "Thủy Thần Cuồng Lan",
+    "he": "Công",
+    "loai": "bay",
+    "chuyen_dong": "The huge tidal wave rolls forward and curls, foam churns at its crest, the silver spears inside shimmer, the giant water serpent head roars and sways, pearls glint. In-place loop.",
+    "goc": "tranh-goc/chieu-cp-thuy/C9-thuy.png",
+    "co_goc": [
+      1323,
+      414
+    ],
+    "game": "assets/chieu/thuy-c9.webp",
+    "co_game": [
+      640,
+      200
+    ],
+    "nen_xam": "tranh-goc/chieu-cp-thuy/nen-xam/C9-thuy.png",
+    "co_nen_xam": [
+      1408,
+      704
+    ],
+    "neo_dau": [
+      0.856,
+      0.196
+    ]
+  }
+}

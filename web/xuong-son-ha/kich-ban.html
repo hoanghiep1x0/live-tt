@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xưởng Sơn Hà — Kịch bản vận hành</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=Noto+Serif:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/xuong.css">
+</head>
+<body>
+<header id="dau"></header>
+<main class="khung">
+  <h1>Kịch bản vận hành</h1>
+  <p class="mo-dau">Mỗi sự kiện trong live (đổi trang phục, uống đan, học công pháp, PK…) là một <b>kịch bản</b>: tới
+  mili-giây nào thì lớp nào đổi, lớp nào giữ nguyên. Nhờ đúng nhịp, khung hình luôn nhìn như một video duy nhất.
+  Số liệu lấy từ code đang chạy (<code>ve3d/san-thu.ts</code>, <code>ve3d/canh-3d.ts</code>, <code>stage.css</code>).
+  Cột <b>Đích</b> ghi phần sẽ đổi khi đã có video nhân vật.</p>
+  <div class="chu-giai" id="chu-giai"></div>
+  <ul class="muc-luc-trang" id="muc-kb" style="margin-top:14px"></ul>
+  <div id="ds-kb"></div>
+
+  <h2 id="luat-chung">Luật chung cho mọi kịch bản</h2>
+  <div class="bang-cuon"><table>
+    <tr><th>Tình huống</th><th>Cách xử lý</th><th>Code</th></tr>
+    <tr><td>Nhiều người mua cùng lúc</td><td>Xếp hàng tối đa 3 lượt cảnh thử, mỗi người mỗi loại một lượt. Hết hàng thì về sân thiền.</td><td><code>san-thu.ts · HANG_TOI_DA</code></td></tr>
+    <tr><td>Người mua không đứng trên màn</td><td>Vẫn được xếp cảnh thử. Hiệu ứng rơi đồ và đan chỉ vẽ cho người đang hiện, không vẽ vào chỗ trống.</td><td><code>canh-3d.ts · su()</code></td></tr>
+    <tr><td>Đang PK, Lôi Đài, Độ Kiếp</td><td>Không mở cảnh thử, không đổi nền: chỉ đổi lớp nhân vật tại chỗ (chớp áo) và hiện hiệu ứng đan.</td><td><code>duocThu</code></td></tr>
+    <tr><td>Chưa có video bộ áo đó</td><td>Dùng tranh tĩnh của chính bộ áo đó, không mượn bộ khác hay động tác khác.</td><td><code>xepCanhThu</code></td></tr>
+    <tr><td>Đổi video nhân vật</td><td>Video mới chờ <code>canplay</code> rồi mới hiện, hiện đè lên video cũ trong lúc chớp sáng 0,25 giây, không để khung trống.</td><td>(đích)</td></tr>
+    <tr><td>Video lặp</td><td>Mọi video loop phải nối liền (khung cuối khớp khung đầu). Cấm chạy xuôi rồi chạy ngược, vì nước sẽ chảy ngược lên.</td><td><code>nen-muse.py</code></td></tr>
+  </table></div>
+</main>
+<footer id="chan"></footer>
+<script src="js/du-lieu.js"></script>
+<script src="js/xuong.js"></script>
+<script>
+(function () {
+  const { h } = XUONG_UI;
+  const MAU = { nen: 'Nền / máy quay', nguoi: 'Nhân vật (video)', hieu: 'Chiêu / hiệu ứng', truoc: 'Tiền cảnh / không khí', hud: 'Chữ, bảng', am: 'Hàng chờ / hệ thống' };
+  const cg = document.getElementById('chu-giai');
+  Object.entries(MAU).forEach(([k, t]) => cg.append(h('span', {}, h('i', { class: `doan ${k}`, style: 'position:static;display:inline-block;width:12px;height:12px;padding:0' }), t)));
+
+  // Mỗi kịch bản: dài (ms), các hàng (lớp) với đoạn [bắt đầu, kết thúc, chữ, ghi chú] và mốc [t, chữ].
+  const KB = [
+    {
+      id: 'doi-ao', ten: '👘 Đổi / mua trang phục (gõ T1–T9) lúc tu luyện', dai: 9000,
+      mo: 'Khách gõ mã trang phục. Trên sân thiền, món đồ rơi xuống người, rồi màn chuyển sang Phòng Thử Đồ của tông người đó, chiếu cảnh thay áo 7,5 giây, xong về sân thiền.',
+      hang: [
+        { lop: 'am', ten: 'Hàng chờ', mo: 'san-thu.ts', doan: [[0, 300, 'xếp lượt', 'sanThu.them(): tối đa 3 lượt']] },
+        { lop: 'nen', ten: 'Nền', mo: 'ao-<tông>-dong.mp4', doan: [[0, 1200, 'hoà sang Phòng Thử Đồ', 'opacity 1,2 s'], [1200, 7500, 'video nền lùi xa: mờ 2,2px, tối nhẹ, máy quay đẩy vào 9 s', '.sh-nen.san-thu'], [7500, 8700, 'hoà về sân thiền', '']] },
+        { lop: 'nguoi', ten: 'Áo cũ', mo: '<nv>-<áo cũ>-thien.webm', doan: [[0, 900, 'video thiền áo cũ', 'đang: tranh .sh-st-cu'], [900, 1120, 'chớp trắng', 'brightness 3 → tắt']] },
+        { lop: 'nguoi', ten: 'Áo mới', mo: '<nv>-<áo mới>-thien.webm', doan: [[1050, 1500, 'hiện ×1,06', 'chớp che đúng khung thay'], [1500, 2100, 'thở', ''], [2100, 3000, 'khoe áo', 'đang: xoay 360°; đích: video khoe áo'], [3900, 4650, 'dạt trái ×0,82', 'nhường chỗ dáng chiến'], [4650, 7500, 'video thiền áo mới', '']] },
+        { lop: 'nguoi', ten: 'Dáng chiến', mo: 'chien-<nv>-<áo mới>-cong.webm', doan: [[4200, 5250, 'hiện bên phải', 'đang: tranh tĩnh; đích: video công'], [5250, 7500, 'video công lặp', '']] },
+        { lop: 'hieu', ten: 'Tia ✦', mo: 'chieuCp.vaCham', doan: [[900, 1500, 'tia ✦', 'vaCham(540, 960)']] },
+        { lop: 'hieu', ten: 'Bục sáng', mo: '.sh-st-buc', doan: [[0, 7500, 'bục sáng dưới chân, nhịp 2 s', '']] },
+        { lop: 'truoc', ten: 'Tiền cảnh / không khí', mo: 'ao-<tông>-truoc.webp', doan: [[0, 9000, 'thị sai + bong bóng / lá chạy suốt, không ngắt', 'đích']] },
+        { lop: 'hud', ten: 'Chữ', mo: '.sh-st-bang', doan: [[300, 7500, 'bảng tên người + tên áo (top 300)', 'quầy Vừa dùng, Top tạm ẩn']] },
+      ],
+      moc: [[900, 'đổi áo'], [7500, 'hết lượt']],
+      giu: 'Video nền không ngắt (chỉ đổi bộ lọc). Lớp không khí chạy suốt. Chớp sáng 0,9 giây che đúng lúc thay áo nên mắt không thấy chỗ cắt.',
+    },
+    {
+      id: 'cong-phap', ten: '📜 Học / dùng công pháp (gõ C1–C9) lúc tu luyện', dai: 10200,
+      mo: 'Màn chuyển sang Võ Trường của tông. Nhân vật mặc đúng bộ áo đang mặc, đánh đúng động tác của hệ công pháp vào cọc gỗ 9 giây. Sơn Tông người bên trái, cọc bên phải; Thủy Tông lật đối xứng.',
+      hang: [
+        { lop: 'nen', ten: 'Nền', mo: 'vo-<tông>-dong.mp4', doan: [[0, 1200, 'hoà sang Võ Trường', ''], [1200, 9000, 'video nền lùi xa + máy quay', ''], [9000, 10200, 'hoà về thiền', '']] },
+        { lop: 'nguoi', ten: 'Nhân vật', mo: 'chien-<nv>-<áo>-<cong|thu|hoi>.webm', doan: [[300, 2600, 'video động tác #1', 'chạy lại từ đầu mỗi 2,3 s'], [2600, 4900, '#2', ''], [4900, 7200, '#3', ''], [7200, 9000, 'thế đứng', '']] },
+        { lop: 'hieu', ten: 'Chiêu', mo: 'chieu/<tông>-c<n>.webp', doan: [[1100, 1600, 'bay', 'rời tay ở 0,8 s của video'], [3400, 3900, 'bay', ''], [5700, 6200, 'bay', '']] },
+        { lop: 'hieu', ten: 'Cọc + số', mo: 'coc-<tông>.webp', doan: [[1600, 2100, 'rung, −số', ''], [3900, 4400, 'rung', ''], [6200, 6700, 'rung', '']] },
+        { lop: 'truoc', ten: 'Bóng đổ, tia sáng', mo: '.sh-st-bong-*', doan: [[0, 9000, 'bóng dưới chân người và cọc, tia sáng chéo trôi', '']] },
+        { lop: 'hud', ten: 'Chữ', mo: '.sh-st-bang', doan: [[300, 9000, 'tên công pháp + công dụng', '']] },
+      ],
+      moc: [[1100, 'ra tay'], [3400, 'ra tay'], [5700, 'ra tay']],
+      giu: 'Hệ Thủ / Máu không bay chiêu: tranh chiêu bùng quanh người, kèm chữ "🛡 Hộ thể" / "💚 Hồi phục". Động tác theo hệ: Công, Phá → video công; Thủ → video thủ; Máu → video hồi. Chưa có video đúng động tác thì để tranh tĩnh, không mượn động tác khác.',
+    },
+    {
+      id: 'dan', ten: '💊 Uống đan dược (gõ D1–D9)', dai: 3800,
+      mo: 'Viên đan (tranh vp/D<n>-<tông>.webp) rơi từ trên xuống đúng người gõ. Lúc chạm người thì nhân vật loé màu đan và hiện hiệu ứng theo công dụng. Không đổi cảnh, video nhân vật vẫn chạy.',
+      hang: [
+        { lop: 'nen', ten: 'Nền', mo: '', doan: [[0, 3800, 'giữ nguyên', '']] },
+        { lop: 'nguoi', ten: 'Nhân vật', mo: 'video thiền đang chạy', doan: [[0, 800, 'video thiền', ''], [800, 2100, 'loé màu đan', '.sh-hap 1,3 s'], [2100, 3800, 'video thiền', '']] },
+        { lop: 'hieu', ten: 'Viên đan', mo: '.sh-roi', doan: [[0, 800, 'rơi xuống', 'sh-roi-vat 1,7 s'], [800, 2600, 'cột sáng + vòng + chữ kết quả', '"+25 linh khí"…']] },
+        { lop: 'hieu', ten: 'Hiệu ứng đan', mo: '.sh-dan-hq.dan-<kiểu>', doan: [[800, 3500, 'khí xoáy / cột sáng / lửa / khiên / hồn hỏa / hào quang', '8 vệt, trễ 0,17 s mỗi vệt']] },
+        { lop: 'hud', ten: 'Chữ', mo: '', doan: [[800, 2600, 'kết quả bật ra', '']] },
+      ],
+      moc: [[800, 'chạm người']],
+      giu: 'Hiệu ứng gắn vào khối nhân vật (con của .sh-av), nên nhân vật đổi video hay di chuyển thì hiệu ứng đi theo. Mỗi người chỉ một hiệu ứng đan một lúc (cái mới thay cái cũ).',
+    },
+    {
+      id: 'thien', ten: '🧘 Tu luyện: sân thiền (lúc không có sự kiện)', dai: 135000,
+      mo: 'Nền xoay vòng 4 cảnh thiền của tông đang tới lượt, mỗi cảnh 45 giây. Đệ tử ngồi thiền bằng video thiền đúng bộ áo đang mặc.',
+      hang: [
+        { lop: 'nen', ten: 'Nền', mo: '<tông>, <tông>-2…4', doan: [[0, 45000, 'cảnh 1', ''], [45000, 90000, 'cảnh 2', 'hoà 1,2 s'], [90000, 135000, 'cảnh 3', '']] },
+        { lop: 'nen', ten: 'Máy quay', mo: 'sh-nen-may-quay', doan: [[0, 38000, 'đẩy vào 5%', ''], [38000, 76000, 'lùi ra', ''], [76000, 114000, 'đẩy vào', ''], [114000, 135000, '…', '']] },
+        { lop: 'nguoi', ten: 'Đệ tử', mo: '<nv>-<áo>-thien.webm', doan: [[0, 135000, 'video thiền lặp (mỗi người lệch pha ngẫu nhiên để không thở cùng nhịp)', 'đích']] },
+        { lop: 'truoc', ten: 'Tiền cảnh / không khí', mo: '<id>-truoc.webp', doan: [[0, 135000, 'đổi theo cảnh, hoà cùng nền', 'đích']] },
+      ],
+      moc: [[45000, 'đổi cảnh'], [90000, 'đổi cảnh']],
+      giu: 'Video thiền phải bắt đầu ở thời điểm ngẫu nhiên (currentTime ngẫu nhiên). Nếu mọi người thở cùng nhịp sẽ lộ là cùng một video nhân bản.',
+    },
+    {
+      id: 'pk', ten: '⚔️ PK Đại Chiến: đơn đấu, kẻ đánh kẻ thủ', dai: 12000,
+      mo: 'Đơn đấu luân phiên: mỗi lượt một cặp, người đánh tiến lên ra đòn, người kia lùi và đỡ. Đổi vai liên tục. Ai hết máu rời màn, không đứng lại.',
+      hang: [
+        { lop: 'nen', ten: 'Nền', mo: 'lu-dong.mp4 …', doan: [[0, 12000, 'video nền trận', '']] },
+        { lop: 'nguoi', ten: 'Người đánh', mo: 'chien-…-cong.webm', doan: [[0, 1300, 'tiến + video công', 'quanKe 600–1300 ms'], [1300, 2600, 'lùi về hàng', ''], [5200, 6500, 'tiến + công', ''], [6500, 7800, 'lùi', '']] },
+        { lop: 'nguoi', ten: 'Người thủ', mo: 'chien-…-thu.webm', doan: [[0, 1300, 'lùi + video thủ', ''], [2600, 3900, 'phản đòn: tiến + công', ''], [3900, 5200, 'lùi', ''], [9000, 10500, 'hết máu → ngã, rời màn', 'nguoiNga']] },
+        { lop: 'hieu', ten: 'Chiêu', mo: 'chieu/…', doan: [[700, 1300, 'chiêu bay đúng công pháp', ''], [3200, 3900, 'chiêu', ''], [5900, 6500, 'chiêu', '']] },
+        { lop: 'hud', ten: 'Chữ', mo: 'thẻ Đấu Tướng', doan: [[0, 12000, 'thanh máu, thẻ Đấu Tướng (top 300, ×0,62)', '']] },
+      ],
+      moc: [[9000, 'hết máu']],
+      giu: 'Không dùng hạt tròn hay quả cầu sáng. Không cho hai bên cùng tiến cùng lùi. Kết trận: thần thôi đánh; ai nhận đủ linh thạch thì hiện bong bóng báo rồi rời màn; xong chuyển map.',
+    },
+    {
+      id: 'ket', ten: '🏁 Kết trận: nhận thưởng → chuyển map', dai: 8000,
+      mo: 'Trận thắng hoặc thua: hai thần dừng ra đòn. Từng người nhận đủ linh thạch thì hiện bong bóng báo, rồi đi ra khỏi màn. Hết người thì chuyển sang map kế.',
+      hang: [
+        { lop: 'nen', ten: 'Nền', mo: '', doan: [[0, 6800, 'giữ', ''], [6800, 8000, 'hoà sang map mới', '']] },
+        { lop: 'nguoi', ten: 'Thần', mo: 'Than (DaiChien.tsx)', doan: [[0, 8000, 'đứng thế, không dùng video ra đòn', 'ket = thắng/thua']] },
+        { lop: 'nguoi', ten: 'Đệ tử', mo: '.sh-av.sh-ra-ve', doan: [[600, 2200, 'người 1 nhận thưởng → ra', ''], [1400, 3000, 'người 2', ''], [2200, 3800, 'người 3', ''], [3000, 6600, '…', '']] },
+        { lop: 'hieu', ten: 'Bong bóng', mo: '.sh-bong-thuong', doan: [[600, 1600, '+linh thạch', ''], [1400, 2400, '+', ''], [2200, 3200, '+', '']] },
+      ],
+      moc: [[6800, 'chuyển map']],
+      giu: 'Không cắt cảnh khi còn người đứng. Bong bóng nổi lên rồi mờ dần, không nổ tung.',
+    },
+  ];
+
+  const muc = document.getElementById('muc-kb');
+  const ds = document.getElementById('ds-kb');
+  const fmt = (ms) => (ms >= 10000 ? `${Math.round(ms / 1000)}s` : `${(ms / 1000).toFixed(ms % 1000 ? 1 : 0)}s`);
+  KB.forEach((k) => {
+    muc.append(h('li', {}, h('a', { href: `#${k.id}` }, k.ten)));
+    const pt = (t) => `${(100 * t) / k.dai}%`;
+    const buoc = k.dai > 60000 ? 15000 : k.dai > 9000 ? 1000 : 500;
+    const thuoc = h('div', { class: 'thuoc' });
+    for (let t = 0; t <= k.dai; t += buoc) thuoc.append(h('span', { style: `left:${pt(t)}` }, fmt(t)));
+    const tg = h('div', { class: 'dong-tg' }, thuoc);
+    k.hang.forEach((r) => {
+      const ray = h('div', { class: 'ray' });
+      r.doan.forEach(([a, b, chu, ghi]) => ray.append(h('div', { class: `doan ${r.lop}`, style: `left:${pt(a)};width:calc(${pt(b - a)} - 2px)`, title: `${fmt(a)} → ${fmt(b)} · ${chu}${ghi ? ' · ' + ghi : ''}` }, chu)));
+      (k.moc || []).forEach(([t, chu], i) => r === k.hang[0] && ray.append(h('div', { class: 'diem', style: `left:${pt(t)}`, 'data-chu': chu })));
+      tg.append(h('div', { class: 'hang-tg' }, h('div', { class: 'ten' }, r.ten, h('small', {}, r.mo)), ray));
+    });
+    const bang = h('table', {}, h('tr', {}, h('th', {}, 'Lớp'), h('th', {}, 'Từ → tới'), h('th', {}, 'Việc'), h('th', {}, 'Ghi chú / đích')));
+    k.hang.forEach((r) => r.doan.forEach(([a, b, chu, ghi]) => bang.append(h('tr', {}, h('td', {}, h('b', {}, r.ten), h('br'), h('code', { class: 'nho' }, r.mo || '—')), h('td', {}, `${fmt(a)} → ${fmt(b)}`), h('td', {}, chu), h('td', { class: 'nho nhat' }, ghi || '')))));
+    ds.append(
+      h('section', {},
+        h('h2', { id: k.id }, k.ten),
+        h('p', {}, k.mo),
+        tg,
+        h('div', { class: 'meo' }, h('b', {}, 'Giữ liền mạch: '), k.giu),
+        h('details', {}, h('summary', { style: 'cursor:pointer;color:var(--vang);font-weight:700' }, 'Bảng chi tiết từng đoạn'), h('div', { class: 'bang-cuon', style: 'margin-top:8px' }, bang)),
+      ),
+    );
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,16 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import { denGio, docLich, sapToi } from '../../../../client/designs/tu-tien-son-ha/src/loi/lich';
+import { docChuoi } from '../../../../client/designs/tu-tien-son-ha/src/cai-dat';
 import {
   buoc,
   datLich,
+  datTheoLich,
+  datChuoi,
+  type Su,
+  lichSapToi,
   HOI_THI_SO_CAU,
   nhanTin,
   NHIP_LIVE,
   suKienKe,
-  taoThe,
+  taoThe as taoThe0,
   type Nhip,
   type The,
 } from '../../../../client/designs/tu-tien-son-ha/src/loi/core';
+
+/** Các test này kiểm luật câu đố lúc tu luyện (nay mặc định tắt, `cauTl`) — bật lại để vẫn kiểm được. */
+const taoThe = (...a: Parameters<typeof taoThe0>) => {
+  const t = taoThe0(...a);
+  t.cauTl = true;
+  return t;
+};
+import { docLenh } from '../../../../client/designs/tu-tien-son-ha/src/loi/lenh';
+import { nhapMonThang } from '../../../../client/designs/tu-tien-son-ha/src/loi/core';
 import { LINH_VAT, YEU } from '../../../../client/designs/tu-tien-son-ha/src/loi/the-gioi';
 
 function hat(seed = 1) {
@@ -25,9 +39,13 @@ function hat(seed = 1) {
 const VN = -420;
 /** Mốc thật của giờ địa phương VN. 2026-11-22 là Chủ nhật. */
 const luc = (iso: string) => Date.parse(`${iso}+07:00`);
-const xa: Nhip = { ...NHIP_LIVE, luDau: 1e12, yeuDau: 1e12, mua: 1e12 };
+const xa: Nhip = { ...NHIP_LIVE, nmDau: 1e12, luDau: 1e12, yeuDau: 1e12, mua: 1e12 };
 
 function noi(the: The, user: string, text: string, now: number, r: () => number) {
+  const l = docLenh(text);
+  if (l.k === 'phe' && the.pha.k !== 'nm' && (the.nguoi.get(user)?.phe ?? null) === null) {
+    return nhapMonThang(the, { kind: 'comment', user, ten: user, text }, l.phe, l.gioi, now, r);
+  }
   return nhanTin(the, { kind: 'comment', user, ten: user, text }, now, r);
 }
 
@@ -146,5 +164,125 @@ describe('Kinh Thư: logic truyền thuyết', () => {
     for (const [u, phe] of [['son1', 'son'], ['thuy1', 'thuy']] as const) {
       for (const id of the.nguoi.get(u)!.linhVat) expect(LINH_VAT.find((l) => l.id === id)!.phe).toBe(phe);
     }
+  });
+});
+
+describe('Lịch trình hằng ngày', () => {
+  it('đọc việc, phe đánh boss và dòng lặp mỗi giờ', () => {
+    const { ds, loi } = docLich('xx:05 moi-gio ai\n19:20 hang-ngay yeu-ngu son\n20:20 hang-ngay yeu-ho thuy\n21:00 hang-ngay yeu-moc ca\n20:45 hang-ngay pk\n20:10 t2 dia-cung');
+    expect(loi).toEqual([]);
+    expect(ds.map((d) => [d.loai, d.phe, d.moiGio])).toEqual([
+      ['ai', null, true],
+      ['yeu-ngu', 'son', false],
+      ['yeu-ho', 'thuy', false],
+      ['yeu-moc', null, false],
+      ['pk', null, false],
+      ['dia-cung', null, false],
+    ]);
+    expect(docLich('xx:05 hang-ngay ai').loi.length).toBe(1);
+    expect(docLich('20:00 hang-ngay yeu-ngu tim').loi.length).toBe(1);
+  });
+
+  it('dòng moi-gio chạy mỗi giờ đúng phút', () => {
+    const { ds } = docLich('xx:05 moi-gio ai');
+    expect(sapToi(ds, luc('2026-11-22T19:50:00'), VN)!.luc).toBe(luc('2026-11-22T20:05:00'));
+    expect(sapToi(ds, luc('2026-11-22T20:04:00'), VN)!.luc).toBe(luc('2026-11-22T20:05:00'));
+    expect(denGio(ds, luc('2026-11-22T20:06:00'), VN, new Set()).length).toBe(1);
+  });
+
+  it('chạy theo lịch: tới giờ thì Sơn Tông đánh Ngư Tinh, Thủy Tông chỉ đứng xem; không có yêu tinh theo nhịp', () => {
+    const t0 = luc('2026-11-22T19:20:00');
+    const r = hat(9);
+    const the = taoThe(t0 - 60_000, { ...xa, yeuDau: 0 });
+    datLich(the, docLich('19:20 hang-ngay yeu-ngu son').ds, VN);
+    datTheoLich(the, true);
+    noi(the, 's', 'núi', t0 - 30_000, r);
+    noi(the, 't', 'nước', t0 - 30_000, r);
+    // Trước giờ: dù nhịp yêu tinh đã tới, chạy theo lịch thì không mở.
+    for (let t = t0 - 50_000; t < t0 - 1_000; t += 250) buoc(the, t, r);
+    expect(the.pha.k).not.toBe('yeu');
+    let t = t0;
+    while (the.pha.k !== 'yeu' && t < t0 + 120_000) {
+      buoc(the, (t += 250), r);
+      for (const u of ['s', 't']) the.nguoi.get(u)!.lanCuoi = t;
+    }
+    const p = the.pha;
+    if (p.k !== 'yeu') throw new Error('không mở yêu tinh');
+    expect(p.yeu).toBe('ngu');
+    expect(p.phe).toBe('son');
+    noi(the, 't', 'đánh', t + 100, r);
+    expect(p.dmg.has('t')).toBe(false);
+    noi(the, 's', 'đánh', t + 200, r);
+    expect(p.dmg.has('s') || p.dmg.size === 0).toBe(true);
+  });
+
+  it('bảng lịch trình liệt kê việc sắp tới theo giờ', () => {
+    const the = taoThe(0, xa);
+    datLich(the, docLich('xx:05 moi-gio ai\n20:45 hang-ngay pk').ds, VN);
+    const ds = lichSapToi(the, luc('2026-11-22T20:00:00'), 4);
+    expect(ds.map((x) => x.ten)).toEqual(['Thử Thách Nhập Môn', 'Nước Dâng Đoạt Mị Nương', 'Thử Thách Nhập Môn', 'Thử Thách Nhập Môn']);
+  });
+});
+
+describe('Chuỗi sự kiện nối tiếp', () => {
+  it('thẻ mặc định: lịch mỗi giờ :00 Ải · :15 PK · :25 mê cung · :30 Thành Trì · :40 Lôi Đài · :45 Boss · :55 mê cung', () => {
+    const c = docChuoi({});
+    expect(c.nghi).toBe(3 * 60_000);
+    expect(c.ds.map((m) => `${m.batDau}:${m.viec}`)).toEqual(['0:ai', '15:pk', '25:dia-cung', '30:cho', '40:loi-dai', '45:yeu-luan', '55:dia-cung']);
+    // Danh sách lưu từ bản cũ (chưa có phút bắt đầu) thì dùng lịch chuẩn.
+    expect(docChuoi({ chuoi: [{ id: 'a', viec: 'pk' }] }).ds).toEqual(c.ds);
+    const c2 = docChuoi({
+      nghiPhut: 2,
+      chuoi: [
+        { id: 'b', viec: 'pk', batDau: -1 },
+        { id: 'a', viec: 'ai', bao: 'Vào ải nào!', batDau: 5 },
+      ],
+    });
+    expect(c2).toEqual({
+      nghi: 2 * 60_000,
+      ds: [
+        { viec: 'pk', phut: 0, bao: '', batDau: -1 },
+        { viec: 'ai', phut: 0, bao: 'Vào ải nào!', batDau: 5 },
+      ],
+    });
+  });
+
+  it('10 giây trước: thông báo (câu sửa tay), tới giờ mở sự kiện; xong thì nghỉ rồi tới sự kiện kế', () => {
+    const t0 = 1_000_000;
+    const r = hat(41);
+    const the = taoThe(t0, xa);
+    datChuoi(the, { nghi: 60_000, ds: [{ viec: 'ai', phut: 0, bao: 'Ải sắp mở, gõ Nam S!' }, { viec: 'yeu-ngu-son', phut: 2, bao: '' }] }, t0);
+    datTheoLich(the, true, t0);
+    noi(the, 's', 'núi', t0 + 1000, r);
+    noi(the, 'k', 'xin chào', t0 + 1000, r);
+    const ds: Su[] = [];
+    let t = t0;
+    while (the.pha.k !== 'nm' && t < t0 + 3 * 60_000) {
+      ds.push(...buoc(the, (t += 250), r));
+      for (const u of ['s', 'k']) the.nguoi.get(u)!.lanCuoi = t;
+    }
+    const bao = ds.find((x) => x.k === 'bao-truoc');
+    expect(bao).toMatchObject({ chu: 'Ải sắp mở, gõ Nam S!' });
+    expect(t - t0).toBeGreaterThanOrEqual(60_000);
+    expect(t - t0).toBeLessThan(60_000 + 20_000);
+    // Hết Ải: nghỉ 1 phút, 10 giây trước có câu mặc định cho Ngư Tinh, rồi Sơn Tông đánh Ngư Tinh 2 phút.
+    const ds2: Su[] = [];
+    while (the.pha.k !== 'yeu' && t < t0 + 10 * 60_000) {
+      ds2.push(...buoc(the, (t += 250), r));
+      for (const u of ['s', 'k']) the.nguoi.get(u)!.lanCuoi = t;
+    }
+    const p = the.pha;
+    if (p.k !== 'yeu') throw new Error('không tới sự kiện kế');
+    expect(p).toMatchObject({ yeu: 'ngu', phe: 'son', tong: 2 * 60_000 });
+    expect(ds2.find((x) => x.k === 'bao-truoc')).toMatchObject({ chu: expect.stringContaining('Ngư Tinh') });
+  });
+
+  it('bảng lịch trình liệt kê chuỗi theo thứ tự, lặp lại khi hết', () => {
+    const the = taoThe(0, xa);
+    datChuoi(the, { nghi: 60_000, ds: [{ viec: 'ai', phut: 0, bao: '' }, { viec: 'pk', phut: 0, bao: '' }] }, 1000);
+    datTheoLich(the, true, 1000);
+    const ds = lichSapToi(the, 2000, 4);
+    expect(ds.map((x) => x.ten)).toEqual(['Thử Thách Nhập Môn', 'Nước Dâng Đoạt Mị Nương', 'Thử Thách Nhập Môn', 'Nước Dâng Đoạt Mị Nương']);
+    expect(ds[0]!.luc).toBe(1000 + 60_000);
   });
 });

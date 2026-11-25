@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xếp hạng — Sơn Hà Tiên Lộ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=Playfair+Display:wght@700;900&family=Noto+Serif:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header id="dau"></header>
+<main>
+  <section class="khoi">
+    <div class="khung" style="max-width:980px">
+      <div class="dau-khoi">
+        <h2>Bảng xếp hạng</h2>
+        <p>Lực chiến, cảnh giới và danh hiệu của đệ tử hai tông — ghi theo sổ hồ sơ của phòng live.</p>
+      </div>
+      <div class="the tra-cuu">
+        <input id="tim" type="search" placeholder="🔍 Gõ vài chữ trong tên TikTok để tra đạo hữu" autocomplete="off">
+        <p class="ghi" id="cap-nhat"></p>
+      </div>
+      <div class="tab" id="tab-xh" style="margin-top:18px">
+        <button data-k="tat-ca" class="dang">🔥 Lực chiến</button><button data-k="son">⛰️ Sơn Tông</button><button data-k="thuy">🌊 Thủy Tông</button>
+        <button data-k="canh">⚡ Cảnh giới</button><button data-k="ld">🏯 Lôi Đài</button>
+      </div>
+      <div class="the bang-xh" id="bang-xh"></div>
+      <div class="luoi luoi-2" style="margin-top:16px" id="mua"></div>
+    </div>
+  </section>
+
+  <section class="khoi" id="danh-hieu">
+    <div class="khung" style="max-width:980px">
+      <div class="dau-khoi">
+        <h2>Bảng danh hiệu</h2>
+        <p id="dh-mo">Nhiều đường để được vinh danh: lực chiến, hương hỏa, diệt yêu, hộ pháp, mùa lũ, chuyên cần, lòng thành… Mỗi đường nhiều cấp, mỗi cấp một nhãn hiện cạnh tên trên màn live.</p>
+      </div>
+      <div class="tab kho-tab" id="dh-tab"></div>
+      <div id="dh-noi"></div>
+      <div class="the" style="margin-top:16px">
+        <h3 class="tieu-game" style="font-size:1.1rem">Nhãn hiện thế nào</h3>
+        <p style="margin:0;color:var(--chu-mo)">Mỗi người đeo tối đa hai nhãn cạnh tên (một nhãn tông môn + một nhãn tự chọn). Nhãn càng hiếm, khung càng rực: đồng → bạc → vàng → ngọc → lam → tím → hồng → đỏ → cầu vồng.
+        Thẻ <b>💡 đề xuất</b> là thiết kế cho game — cần game đếm thêm số liệu (tổng quà, số lần diệt yêu, hộ pháp, chuỗi ngày, tim…) vào sổ hồ sơ trước khi chạy.</p>
+      </div>
+    </div>
+  </section>
+</main>
+<footer id="chan"></footer>
+<script src="js/site.js"></script>
+<script src="js/danh-hieu.js"></script>
+<script src="du-lieu/xep-hang.js"></script>
+<script>
+(function () {
+  var S = window.SHTL, DH = window.SHTL_DH, D = window.SHTL_XEP_HANG || { nguoi: [], mua: {} };
+  var CHUC = { son: ['Tạp dịch', 'Ngoại môn', 'Nội môn', 'Chân truyền', 'Chấp sự', 'Trưởng lão', 'Đại trưởng lão', 'Hộ sơn tôn giả', 'Thái thượng', 'Lão tổ'],
+    thuy: ['Thủy dịch', 'Thủy binh', 'Thủy vệ', 'Đô thống', 'Tuần hải sứ', 'Thủy tướng', 'Thừa tướng', 'Trấn hải tôn giả', 'Thái thượng', 'Lão tổ'] };
+  var CAN = { tuong: '⚔', ve: '🛡', y: '💚', quan: '🗡' };
+  var LUC_GOC = [20, 50, 90, 140, 300, 500, 750, 1050, 1400, 1800];
+  var ds = D.nguoi.slice(), mau = false;
+  if (ds.length === 0) {
+    /* Chưa có sổ thật: hiện 12 trưởng lão NPC của game (loi/the-gioi.ts NPC_TRUONG_LAO), lực chiến gốc theo cảnh giới. */
+    mau = true;
+    ds = [['Cao Sơn', 'son', 7, 'nam', 'tuong'], ['Quý Minh', 'son', 7, 'nam', 've'], ['Thạch Lão', 'son', 6, 'nam', 've'], ['Mộc Nương', 'son', 6, 'nu', 'y'],
+      ['Vân Đồng', 'son', 5, 'nam', 'quan'], ['Lạc Sứ', 'son', 5, 'nu', 'y'], ['Quy Lão', 'thuy', 7, 'nam', 've'], ['Lý Ngư Tướng', 'thuy', 7, 'nam', 'tuong'],
+      ['Giao Nương', 'thuy', 6, 'nu', 'quan'], ['Bạng Nương', 'thuy', 6, 'nu', 'y'], ['Hải Mã Sứ', 'thuy', 5, 'nam', 'quan'], ['Thủy Vệ', 'thuy', 5, 'nu', 've']]
+      .map(function (x) { return { ten: x[0], phe: x[1], canh: x[2], gioi: x[3], canCo: x[4], luc: LUC_GOC[x[2]], ld: 0 }; });
+  }
+  document.getElementById('cap-nhat').innerHTML = mau
+    ? '⚠ Phòng live chưa có sổ đệ tử thật — bảng đang hiện <b>12 trưởng lão</b> của hai tông làm mẫu. Có sổ thì chạy <code>node web/son-ha-tien-lo/cong-cu/xuat-xep-hang.mjs</code> để cập nhật.'
+    : 'Cập nhật lúc ' + new Date(D.capNhat).toLocaleString('vi-VN') + ' · ' + ds.length + ' đệ tử';
+
+  function anh(n) {
+    var goc = n.phe === 'son' ? 'nam' : 'nu', tranh = [0, 1, 1, 1, 4, 4, 6, 6, 9, 9][n.canh];
+    return 'anh/nv/' + n.phe + (n.gioi && n.gioi !== goc ? '-' + n.gioi : '') + '-c' + tranh + '.webp';
+  }
+  var kieu = 'tat-ca';
+  function ve() {
+    var q = document.getElementById('tim').value.trim().toLowerCase();
+    var l = ds.slice();
+    if (kieu === 'son' || kieu === 'thuy') l = l.filter(function (n) { return n.phe === kieu; });
+    if (kieu === 'canh') l.sort(function (a, b) { return b.canh - a.canh || b.luc - a.luc; });
+    else if (kieu === 'ld') l.sort(function (a, b) { return b.canh - a.canh || b.ld - a.ld || b.luc - a.luc; });
+    else l.sort(function (a, b) { return b.luc - a.luc; });
+    var hang = l.map(function (n, i) { return { n: n, h: i + 1 }; });
+    if (q) hang = hang.filter(function (x) { return x.n.ten.toLowerCase().indexOf(q) >= 0; });
+    var G = S.CANH_GIOI;
+    document.getElementById('bang-xh').innerHTML = hang.length === 0 ? '<p style="margin:0;color:var(--chu-mo)">Không thấy đạo hữu nào.</p>' :
+      hang.slice(0, 100).map(function (x) {
+        var n = x.n;
+        return '<div class="dong-xh h' + Math.min(x.h, 4) + '"><b class="hang">' + (x.h <= 3 ? ['🥇', '🥈', '🥉'][x.h - 1] : x.h) + '</b>' +
+          '<span class="av" style="--hao:' + G[n.canh].hao + '"><img src="' + anh(n) + '" alt="" loading="lazy"></span>' +
+          '<span class="ten-xh"><b>' + (CAN[n.canCo] ? CAN[n.canCo] + ' ' : '') + n.ten + '</b>' +
+          '<small><span class="nhan ' + n.phe + '">' + (n.phe === 'son' ? 'Sơn Tông' : 'Thủy Tông') + '</span> ' + G[n.canh].ten + ' · ' + CHUC[n.phe][n.canh] + '</small>' +
+          '<span class="ds-nhan">' + DH.nhanLuc(n.luc) + '</span></span>' +
+          '<span class="luc-xh">🔥 ' + n.luc.toLocaleString('vi-VN') + '<small>lực chiến</small></span></div>';
+      }).join('');
+  }
+  document.querySelectorAll('#tab-xh button').forEach(function (b) {
+    b.onclick = function () { kieu = b.dataset.k; document.querySelectorAll('#tab-xh button').forEach(function (x) { x.classList.toggle('dang', x === b); }); ve(); };
+  });
+  document.getElementById('tim').oninput = ve;
+  ve();
+  var mua = D.mua || {};
+  document.getElementById('mua').innerHTML =
+    '<div class="the" style="text-align:center"><h3 class="tieu-son tieu-game">Sơn Tông Núi Thánh</h3><p style="margin:0">🏆 ' + (mua.son || 0) + ' năm thắng</p></div>' +
+    '<div class="the" style="text-align:center"><h3 class="tieu-thuy tieu-game">Thủy Tông Long Cung</h3><p style="margin:0">🏆 ' + (mua.thuy || 0) + ' năm thắng</p></div>';
+  document.getElementById('dh-mo').innerHTML += ' Hiện có <b>' + DH.BO.length + ' bộ, ' + DH.tongCap + ' cấp nhãn</b>.';
+  DH.veBo(document.getElementById('dh-noi'), document.getElementById('dh-tab'));
+})();
+</script>
+</body>
+</html>

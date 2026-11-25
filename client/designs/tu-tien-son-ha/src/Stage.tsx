@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import type { DesignCard, FeedItem } from '@live/contracts';
+import { DieuKhien } from './DieuKhien';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { FeedItem } from '@live/contracts';
 import { useAsset, useDesignId, useNoi, useSession, useStage, useThietKe } from '@live/stage-sdk';
 import { phat, type Tieng } from './am-thanh';
 import { DOT_PHA_MS, DOT_PHA_NGAN_MS } from './DotPha';
@@ -8,10 +9,15 @@ import { MeCung } from './MeCung';
 import { TUYET_KY_MS, VINH_DANH_MS, type NoiBat } from './NoiBat';
 import { locFeedMoi } from './loc-feed';
 import { docLich } from './loi/lich';
+import { TEN_AO } from './loi/the-gioi';
+import { docCaiDat, docKho, LUA_CHON, taoLich } from './cai-dat';
 import {
   buoc,
   datLich,
   datLuotPhe,
+  datNhip,
+  datTheoLich,
+  datChuoi,
   napHoSo,
   nhanTin,
   NHIP_LIVE,
@@ -25,10 +31,27 @@ import {
   type Su,
   type The,
   type TinVao,
+  giuMan,
+  nhayKe,
+  nhayMuc,
+  nhayTongKet,
+  nhayMe,
+  nhayNm,
+  nhayTiThi,
+  nhayTt,
+  moSuKienTl,
+  datKho,
+  nhayTuLuyen,
+  thaGiu,
 } from './loi/core';
 import { taoKhachGia } from './thu';
 import { H, taoCanh, W, type Canh } from './ve/canh';
 import { taoCanh3D } from './ve3d/canh-3d';
+
+/** Màn Đột Phá to (chiếm cả khung) chỉ là điểm nhấn hiếm: từ cảnh giới DP_TO_TU (Hóa Thần) trở lên, và cách màn to
+ *  trước ít nhất DP_TO_CACH. Còn lại chỉ có cột sáng + chữ nhỏ trên đầu nhân vật (lớp 3D, Su "dot-pha"). */
+const DP_TO_TU = 5;
+const DP_TO_CACH = 3 * 60_000;
 
 /** `?2d=1`: ép dùng cảnh 2D (máy phát không có card đồ hoạ, hoặc để so sánh). */
 const EP_2D = new URLSearchParams(location.search).has('2d');
@@ -36,50 +59,7 @@ const EP_2D = new URLSearchParams(location.search).has('2d');
 /** `/d/<phòng>/?thu=1`: khách giả chơi, không nhận dữ liệu thật, không ghi sổ. */
 export const THU = new URLSearchParams(location.search).has('thu');
 
-export const LUA_CHON: readonly DesignCard[] = [
-  {
-    id: 'son-ha',
-    name: 'Sơn Hà Tiên Lộ',
-    icon: '⛰️',
-    summary: 'Câu đố, độ kiếp, kéo co nước – núi, yêu tinh',
-    toggle: {
-      key: 'docTo',
-      label: 'Đọc to câu hỏi và sự kiện',
-      type: 'toggle',
-      value: true,
-      hint: 'Dùng giọng đọc của phòng. Tắt nếu MC AI đã dẫn đủ.',
-    },
-    fields: [
-      {
-        key: 'lich',
-        label: 'Lịch sự kiện theo giờ',
-        short: 'Lịch sự kiện',
-        type: 'textarea',
-        value: '20:00 cn dai-yeu\n21:00 hang-ngay hoi-thi\n12:00 t7,cn phuc-loc',
-        hint: 'Mỗi dòng: giờ · ngày (hang-ngay, cn, t2…t7, nhiều ngày cách dấu phẩy) · loại: dai-yeu (Đại Yêu Dạ), dai-lu (Đại Hồng Thủy), hoi-thi (Hội thi Ngọc Phả), phuc-loc (Giờ Linh Khí). Báo trước 15 phút trên màn.',
-      },
-      {
-        key: 'doiPhe',
-        label: 'Đổi môn phái ở màn tu luyện sau mỗi',
-        short: 'Lượt môn phái',
-        type: 'number',
-        value: 3,
-        min: 1,
-        max: 30,
-        step: 1,
-        unit: 'phút',
-        hint: 'Lúc tu luyện (câu hỏi) chỉ hiện một môn phái kèm tổng lực chiến, hết lượt thì đổi phe kia. Đại Chiến mới chia đôi hai phe.',
-      },
-      {
-        key: 'tiengHieuUng',
-        label: 'Tiếng chuông, sấm, đòn đánh',
-        short: 'Tiếng hiệu ứng',
-        type: 'toggle',
-        value: true,
-      },
-    ],
-  },
-];
+export { LUA_CHON };
 
 const SO = (id: string) => `/s/so/${id}/ho-so`;
 const GHI_MOI = 20_000;
@@ -112,13 +92,28 @@ const TIENG: Partial<Record<Su['k'], Tieng>> = {
   'dau-tuong': 'trong-lon',
   'quyet-chien': 'trong-lon',
   'phan-don': 'trung',
+  'cuong-bao': 'trong-lon',
+  'dien-rong': 'trong-lon',
+  'than-chieu': 'trong',
+  'canh-bao': 'trung',
+  'tp-ha': 'trong-lon',
+  'tp-thuong': 'trung',
+  'cuong-don': 'trung',
+  'bao-chieu': 'trong-lon',
+  'chieu-lon': 'trung',
+  'do-chieu': 'trong',
   'ky-nang': 'trong',
   'ky-ngo': 'dot-pha',
+  'nm-qua': 'dot-pha',
+  'bi-kip': 'qua',
   'pha-tran': 'trong-lon',
 };
 /** Việc làm rung cả khung: liên kích qua mốc, đảo chiều, đấu tướng, quyết chiến. */
 const RUNG = new Set<Su['k']>(['lien-kich', 'dao-chieu', 'dau-tuong', 'dau-tuong-ket', 'quyet-chien', 'ky-nang', 'pha-tran']);
 const TIENG_PHA: Partial<Record<string, Tieng>> = { hoi: 'cau', dap: 'dap', lu: 'lu', yeu: 'yeu', kiep: 'set' };
+
+/** Mở trong OBS: không vẽ thanh điều khiển (chỉ người vận hành xem trên trình duyệt mới thấy). */
+const LA_OBS = typeof window !== 'undefined' && ('obsstudio' in window || new URLSearchParams(location.search).get('obs') === '1');
 
 export function Stage() {
   const designId = useDesignId();
@@ -142,7 +137,8 @@ export function Stage() {
   const [thongBao, setThongBao] = useState<ThongBao | null>(null);
   const [dotPha, setDotPha] = useState<ThongBao | null>(null);
   /** Hàng chờ đột phá: ai đột phá cũng được ra giữa màn, lần lượt từng người. */
-  const hangDp = useRef<{ user: string; canh: number }[]>([]);
+  const dpToLuc = useRef(0);
+  const hangDp = useRef<{ user: string; canh: number; thach: number; phong: number }[]>([]);
   const dpHet = useRef(0);
   /** Điểm nhấn Đại Chiến (tuyệt kỹ) và đồ quý (bảo vật) — cũng xếp hàng, mỗi lần một cái. */
   const [noiBat, setNoiBat] = useState<NoiBat | null>(null);
@@ -153,15 +149,38 @@ export function Stage() {
   const [sanSang, setSanSang] = useState(THU);
 
   // Lịch theo giờ: đọc lại mỗi khi người vận hành sửa, áp nóng vào lõi.
-  const lichChu = typeof cauHinh['lich'] === 'string' ? cauHinh['lich'] : '';
+  // Lịch trình ghép từ các ô của thẻ 📅 (phút mỗi giờ, khung boss, sự kiện lớn).
+  const lichChu = taoLich(cauHinh);
   useEffect(() => {
     datLich(theRef.current, docLich(lichChu).ds, new Date().getTimezoneOffset());
   }, [lichChu]);
 
-  const doiPhe = typeof cauHinh['doiPhe'] === 'number' ? cauHinh['doiPhe'] : 3;
+  const doiPhe = typeof cauHinh['doiPhe'] === 'number' ? cauHinh['doiPhe'] : 2;
   useEffect(() => {
     if (!THU) datLuotPhe(theRef.current, doiPhe);
   }, [doiPhe]);
+  // Nhịp từ các thẻ cài đặt bên phải (cai-dat.ts). Bản thử giữ nhịp nhanh để xem trọn một vòng.
+  const caiDat = docCaiDat(cauHinh);
+  // Kho vật phẩm / cơ duyên / sự kiện sửa trên thẻ: áp ngay vào phiên đang chạy (cả bản thử).
+  const kho = docKho(cauHinh);
+  const khoaKho = JSON.stringify(kho);
+  useEffect(() => {
+    datKho(theRef.current, kho);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [khoaKho]);
+  const khoaCaiDat = JSON.stringify(caiDat);
+  useEffect(() => {
+    if (!THU) {
+      datNhip(theRef.current, caiDat.nhip, caiDat.tat, Date.now());
+      datChuoi(theRef.current, caiDat.chuoi, Date.now());
+      datTheoLich(theRef.current, caiDat.theoLich, Date.now());
+    } else {
+      // Bản thử cũng chạy lịch mỗi giờ (nhịp nhanh) để soát từng màn bằng thanh điều khiển bên phải khung.
+      datChuoi(theRef.current, caiDat.chuoi, Date.now());
+      datTheoLich(theRef.current, true, Date.now());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [khoaCaiDat]);
 
   const docTo = cauHinh['docTo'] !== false;
   const coTieng = cauHinh['tiengHieuUng'] !== false;
@@ -188,13 +207,21 @@ export function Stage() {
           k.classList.add('rung');
         }
       }
-      if (s.k === 'the') setThongBao({ loai: 'the', user: s.user, den: now + 6000 });
-      if (s.k === 'dot-pha') {
-        hangDp.current.push({ user: s.user, canh: s.canh });
+      // Thẻ tu vi (gõ "tôi", "7", hoặc mua thiếu linh thạch): chỉ hiện ở tu luyện và Thành Trì — màn mê cung, đánh
+      // boss, Đại Chiến cần chỗ cho trận, hiện thẻ sẽ che bản đồ / đội quân.
+      if (s.k === 'the' && ['cho', 'hoi', 'dap', 'tt'].includes(theRef.current.pha.k)) {
+        setThongBao({ loai: 'the', user: s.user, den: now + 6000 });
+      }
+      // Màn Đột Phá chiếm cả khung chỉ dành cho điểm nhấn: từ Kết Đan trở lên, hoặc ngẫu nhiên (DP_TO_HIEM) khi đã lâu
+      // chưa có màn to (DP_TO_CACH). Đột phá thường chỉ có hoạt ảnh nhỏ trên đầu nhân vật (lớp 3D, Su "dot-pha").
+      // Đang tỉ thí Lôi Đài: không chen màn Đột Phá to (người đột phá vẫn có cột sáng + chữ nhỏ trên đầu).
+      if (s.k === 'dot-pha' && theRef.current.loiDai?.tran == null && s.canh >= DP_TO_TU && now - dpToLuc.current >= DP_TO_CACH) {
+        dpToLuc.current = now;
+        hangDp.current.push({ user: s.user, canh: s.canh, thach: s.thach, phong: s.phong });
         // Phòng đông, nhiều người cùng lên: giữ 4 người mới nhất, khỏi xếp hàng cả phút.
         if (hangDp.current.length > 4) hangDp.current.splice(0, hangDp.current.length - 4);
       }
-      if ((s.k === 'nhat' && s.nguon === 'me') || s.k === 'thoat') {
+      if ((s.k === 'nhat' && (s.nguon === 'me' || s.nguon === 'nm')) || s.k === 'nhat-thach' || s.k === 'thoat' || s.k === 'nm-qua' || s.k === 'bi-kip') {
         hangMe.current.push(s);
         if (hangMe.current.length > 40) hangMe.current.shift();
       }
@@ -206,7 +233,7 @@ export function Stage() {
         hangNb.current.push({
           loai: 'vinh-danh',
           user: s.user,
-          tieuDe: `Thoát Địa Cung · hạng ${s.thu}`,
+          tieuDe: `Tranh Đoạt Bảo Vật · ra cửa hạng ${s.thu}`,
           vat: s.vat,
           lucTruoc: s.lucTruoc,
           lucSau: s.lucSau,
@@ -214,15 +241,28 @@ export function Stage() {
           den: 0,
         });
       }
-      if (s.k === 'nhat' && s.nguon === 'yeu' && (s.lucSau > s.lucTruoc || s.vat.pham >= 3)) {
+      if (s.k === 'nhat' && (s.nguon === 'yeu' || s.nguon === 'pk') && (s.nguon === 'pk' || s.lucSau > s.lucTruoc || s.vat.pham >= 3)) {
         hangNb.current.push({
           loai: 'vinh-danh',
           user: s.user,
-          tieuDe: 'Chiến lợi phẩm yêu tinh',
+          tieuDe: s.nguon === 'pk' ? 'Chiến lợi phẩm Đại Chiến' : 'Chiến lợi phẩm yêu tinh',
           vat: [s.vat],
           lucTruoc: s.lucTruoc,
           lucSau: s.lucSau,
           lk: s.lk,
+          den: 0,
+        });
+      }
+      // Vượt Ải Nhập Môn: vinh danh người mới, khoe bộ trang phục vừa được ban.
+      if (s.k === 'nm-qua') {
+        hangNb.current.push({
+          loai: 'vinh-danh',
+          user: s.user,
+          tieuDe: `Vượt Ải Nhập Môn${s.thu <= 3 ? ` · thứ ${s.thu}` : ''} · ${TEN_AO[s.phe][s.ao - 1] ?? 'đệ tử mới'}${s.bk > 0 ? ' · 📜 lĩnh ngộ võ công' : ''}`,
+          vat: s.vat,
+          lucTruoc: s.lucTruoc,
+          lucSau: s.lucSau,
+          lk: 0,
           den: 0,
         });
       }
@@ -251,8 +291,9 @@ export function Stage() {
     if (import.meta.env.DEV) Object.assign(window, { __shThu: { xuLy: (ds: Su[]) => xuLy.current(ds, Date.now()), the: theRef.current } });
   }, []);
 
-  // Khung 1080×1920 phóng vừa cửa sổ.
-  useEffect(() => {
+  // Khung 1080×1920 phóng vừa cửa sổ — tính TRƯỚC lần vẽ đầu (useLayoutEffect), không thì khung hiện cỡ
+  // gốc một lúc rồi mới co lại, trông như vỡ màn.
+  useLayoutEffect(() => {
     const el = khung.current;
     if (el === null) return;
     const do_ = () => setTile(el.clientWidth / W);
@@ -260,6 +301,19 @@ export function Stage() {
     const ro = new ResizeObserver(do_);
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  // Ẩn sân khấu tới khi tranh nền đã hiện (tối đa 3 giây), rồi hiện mờ dần — khỏi lộ khung trống lúc mới vào.
+  const [nenRa, datNenRa] = useState(false);
+  useEffect(() => {
+    const bat = Date.now();
+    const id = setInterval(() => {
+      if (document.querySelector('.sh-nen img.hien') !== null || Date.now() - bat > 3_000) {
+        datNenRa(true);
+        clearInterval(id);
+      }
+    }, 80);
+    return () => clearInterval(id);
   }, []);
 
   // Luật chơi chạy theo đồng hồ riêng, vẽ chạy theo khung hình: tab bị ẩn thì trình duyệt
@@ -284,6 +338,9 @@ export function Stage() {
     }
     canh.current = c;
     const khach = THU ? taoKhachGia() : null;
+    if (THU) (window as unknown as { __theThu?: () => The }).__theThu = () => theRef.current;
+    // Bản chơi thử: cho người thử (hoặc công cụ kiểm tra) gõ lệnh thay một khách — window.__goThu({ kind: 'comment', user, ten, text }).
+    if (THU) (window as unknown as { __goThu?: (tin: Parameters<typeof nhanTin>[1]) => void }).__goThu = (tin) => xuLy.current(nhanTin(theRef.current, tin, Date.now(), Math.random), Date.now());
     let lanKhach = 0;
     const luat = setInterval(() => {
       const now = Date.now();
@@ -294,7 +351,8 @@ export function Stage() {
       }
       if (daNap.current) xuLy.current(buoc(the, now, Math.random), now);
       // Đang đấu tướng thì để banner VS một mình giữa màn: tuyệt kỹ, vinh danh chờ đấu xong.
-      const dangDau = the.pha.k === 'lu' && the.pha.dau !== null;
+      // Ải Nhập Môn đang chạy: modal không che bản đồ — vinh danh người vượt ải chờ tới lúc ải đóng.
+      const dangDau = (the.pha.k === 'lu' && the.pha.dau !== null) || the.pha.k === 'nm';
       if (now >= nbHet.current && hangNb.current.length > 0 && !dangDau) {
         const nb = hangNb.current.shift()!;
         const dai = nb.loai === 'tuyet-ky' ? TUYET_KY_MS : VINH_DANH_MS;
@@ -302,22 +360,38 @@ export function Stage() {
         setNoiBat({ ...nb, den: now + dai });
       }
       // Lượt đột phá kế tiếp khi lượt trước đã xong — chỉ trong màn tu luyện.
-      if (now >= dpHet.current && hangDp.current.length > 0 && laTuLuyen(the.pha)) {
+      if (now >= dpHet.current && hangDp.current.length > 0 && laTuLuyen(the.pha) && the.loiDai?.tran == null) {
         const dp = hangDp.current.shift()!;
         const ngan = dp.canh < 3;
         dpHet.current = now + (ngan ? DOT_PHA_NGAN_MS : DOT_PHA_MS) + 300;
-        setDotPha({ loai: 'dot-pha', user: dp.user, canh: dp.canh, den: now + (ngan ? DOT_PHA_NGAN_MS : DOT_PHA_MS), ngan });
+        setDotPha({
+          loai: 'dot-pha',
+          user: dp.user,
+          canh: dp.canh,
+          den: now + (ngan ? DOT_PHA_NGAN_MS : DOT_PHA_MS),
+          ngan,
+          thach: dp.thach,
+          phong: dp.phong,
+        });
       }
       setNhip((x) => x + 1);
     }, 250);
     let raf = 0;
     let lanVe = 0;
+    // Vẽ đủ nhịp màn hình (60 hình/giây) cho chuyển động mượt; máy yếu (một khung vẽ lâu quá 13 ms, tính
+    // trung bình trượt) thì tự lùi về 30 hình/giây, khoẻ lại thì lên lại.
+    let tbVe = 6;
+    let cham = false;
     const ve = () => {
       raf = requestAnimationFrame(ve);
       const now = Date.now();
-      if (now - lanVe < 33) return;
+      if (cham && now - lanVe < 31) return;
       lanVe = now;
+      const t0 = performance.now();
       canh.current?.ve(theRef.current, now, anh.current);
+      tbVe += (performance.now() - t0 - tbVe) * 0.05;
+      if (!cham && tbVe > 13) cham = true;
+      else if (cham && tbVe < 7) cham = false;
     };
     raf = requestAnimationFrame(ve);
     return () => {
@@ -332,17 +406,30 @@ export function Stage() {
   useEffect(() => {
     if (THU) return;
     let huy = false;
-    void fetch(SO(designId))
-      .then((r) => (r.ok ? (r.json() as Promise<SoHoSo>) : {}))
-      .catch(() => ({}))
-      .then((d) => {
-        if (huy) return;
-        napHoSo(theRef.current, d);
-        daNap.current = true;
-        setSanSang(true);
-      });
+    let hen = 0;
+    // Chỉ chạy lõi khi đã ĐỌC ĐƯỢC sổ (máy chủ trả {} nếu sổ mới). Lỗi mạng / máy chủ chưa lên thì thử lại sau
+    // 3 giây — tuyệt đối không coi là sổ trống: nếu không, đệ tử cũ bị xem như khách mới (bắt vượt Ải lại) và lần
+    // ghi kế tiếp sẽ đè mất sổ cũ.
+    const nap = () => {
+      void fetch(SO(designId))
+        .then((r) => {
+          if (!r.ok) throw new Error(`sổ ${r.status}`);
+          return r.json() as Promise<SoHoSo>;
+        })
+        .then((d) => {
+          if (huy) return;
+          napHoSo(theRef.current, d);
+          daNap.current = true;
+          setSanSang(true);
+        })
+        .catch(() => {
+          if (!huy) hen = window.setTimeout(nap, 3_000);
+        });
+    };
+    nap();
     return () => {
       huy = true;
+      window.clearTimeout(hen);
     };
   }, [designId]);
 
@@ -409,11 +496,12 @@ export function Stage() {
 
   const now = Date.now();
   return (
-    <div className="stage" ref={khung}>
-      <div className="sh-khung" style={{ transform: `scale(${tile})` }}>
+    <>
+    <div className={`stage${LA_OBS ? "" : " lech"}`} ref={khung}>
+      <div className={`sh-khung${nenRa ? ' san-sang' : ''}`} style={{ transform: `scale(${tile})` }}>
         <canvas ref={vai} width={W} height={H} className="sh-canh" />
         <div ref={lop} className="sh-lop-nguoi" />
-        {theRef.current.pha.k === 'me' ? <MeCung the={theRef.current} anh={anh.current} asset={asset} hang={hangMe} /> : null}
+        {theRef.current.pha.k === 'me' || theRef.current.pha.k === 'nm' ? <MeCung the={theRef.current} anh={anh.current} asset={asset} hang={hangMe} /> : null}
         <Hud
           the={theRef.current}
           now={now}
@@ -426,5 +514,59 @@ export function Stage() {
         {THU ? <div className="sh-thu">BẢN CHƠI THỬ · khách giả</div> : null}
       </div>
     </div>
+    {LA_OBS ? null : (
+      <DieuKhien
+        the={theRef.current}
+        now={now}
+        ben={khung.current?.getBoundingClientRect() ?? null}
+        batDung={() => {
+          const t = Date.now();
+          if (theRef.current.giu) xuLy.current(thaGiu(theRef.current, t, Math.random), t);
+          else giuMan(theRef.current);
+          setNhip((x) => x + 1);
+        }}
+        ke={() => {
+          // Đang giữ màn mà bấm Màn kế: sang màn kế rồi giữ tiếp ở đó.
+          const dangGiu = theRef.current.giu;
+          xuLy.current(nhayKe(theRef.current, Date.now(), Math.random), Date.now());
+          if (dangGiu) giuMan(theRef.current);
+        }}
+        toi={(i) => {
+          xuLy.current(
+            i === -10 || i === -11
+              ? nhayTt(theRef.current, i === -10 ? 'son' : 'thuy', Date.now())
+              : i <= -101 && i >= -299
+              ? nhayMe(theRef.current, i > -200 ? 'son' : 'thuy', -i % 100, Date.now(), Math.random)
+              : i === -4 || i === -5
+              ? nhayNm(theRef.current, i === -4 ? 'son' : 'thuy', Date.now(), Math.random)
+              : i === -6 || i === -7
+              ? nhayTuLuyen(theRef.current, Date.now(), Math.random, i === -6 ? 'son' : 'thuy')
+              : i === -8 || i === -9
+              ? nhayTiThi(theRef.current, Date.now(), Math.random, i === -8 ? 'son' : 'thuy')
+              : i === -3
+              ? nhayTiThi(theRef.current, Date.now(), Math.random)
+              : i === -2
+              ? nhayTuLuyen(theRef.current, Date.now(), Math.random)
+              : i < 0
+                ? nhayTongKet(theRef.current, Date.now())
+                : nhayMuc(theRef.current, i, Date.now(), Math.random),
+            Date.now(),
+          );
+          // Nhảy tới màn nào thì GIỮ màn đó (không tự chuyển) tới khi bấm ▶ Chạy tiếp.
+          giuMan(theRef.current, i === -3 || i === -8 || i === -9);
+          setNhip((x) => x + 1);
+        }}
+        coDuyen={(id) => {
+          const t = Date.now();
+          const p = theRef.current.pha.k;
+          const m = theRef.current.khoSuKien.find((x) => x.id === id);
+          if ((p !== 'cho' && p !== 'hoi' && p !== 'dap') || m === undefined) return;
+          const ra: Su[] = [];
+          moSuKienTl(theRef.current, m.loai, t, ra, m);
+          xuLy.current(ra, t);
+        }}
+      />
+    )}
+    </>
   );
 }

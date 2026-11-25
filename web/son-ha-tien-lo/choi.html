@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cách vào live chơi — Sơn Hà Tiên Lộ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=Playfair+Display:wght@700;900&family=Noto+Serif:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header id="dau"></header>
+<main>
+  <section class="khoi">
+    <div class="khung" style="max-width:1000px">
+      <div class="dau-khoi">
+        <h2>Vào live, tự viết tiếp truyện</h2>
+        <p>Không tải game, không đăng ký. Mọi thứ diễn ra trong khung bình luận TikTok LIVE — gõ một chữ hay một con số là chơi. Ảnh dưới đây chụp thật từ game.</p>
+      </div>
+      <div class="the" style="text-align:center;margin-bottom:28px" id="o-kenh"></div>
+      <div class="luoi" style="gap:26px" id="ds-buoc"></div>
+
+      <div class="the" style="margin-top:28px">
+        <h3 class="tieu-game" style="font-size:1.3rem">Lịch một giờ = một năm ở Sơn Hà</h3>
+        <table class="bang"><tbody>
+          <tr><td>:00</td><td>🚪 Thử Thách Nhập Môn — vào tông</td></tr>
+          <tr><td>:15</td><td>⚔️ Đại Chiến mùa lũ</td></tr>
+          <tr><td>:25</td><td>🏺 Tranh Đoạt Bảo Vật (Địa Cung)</td></tr>
+          <tr><td>:30</td><td>🏯 Thành Trì Tự Do — đi chợ</td></tr>
+          <tr><td>:45</td><td>👹 Tiêu Diệt Quái Thú — yêu tinh lớn</td></tr>
+          <tr><td>:55</td><td>🏺 Tranh Đoạt Bảo Vật — chiến lợi phẩm</td></tr>
+          <tr><td>:58</td><td>🏆 Tổng kết năm</td></tr>
+        </tbody></table>
+        <p style="color:var(--chu-mo);margin-bottom:0">Dễ nhớ: <b>đầu giờ vào tông, giữa giờ đi chợ, cuối giờ đánh yêu</b>. Giữa các mốc là tu luyện; Ải còn mở xen khi có người mới. Lịch có thể đổi theo người vận hành phòng.</p>
+      </div>
+
+      <div class="the" style="margin-top:16px">
+        <h3 class="tieu-game" style="font-size:1.3rem">Tim và quà</h3>
+        <p style="margin-top:0"><b>Tim là lòng thành</b>: lúc tu luyện cho thêm chút linh khí, lúc đánh yêu là linh dược hồi máu, lúc Đại Chiến làm phe dễ bạo kích.</p>
+        <p><b>Quà là hương hỏa</b> dâng hai vị thần: thần đáp lại bằng linh thạch, linh khí, truyền công cho đồng môn ngồi dưới; trong trận, quà ra chiêu (dưới 10 xu Bạo Kích · 10 xu Liên Kích · 50 xu Trận Pháp · 200 xu Tuyệt Kỹ). Ở Lôi Đài, quà đúng hạng là lời khiêu chiến người hạng ấy.</p>
+        <p style="margin-bottom:0">Quà <b>không</b> mua thẳng được cảnh giới — vẫn phải tự đột phá, tự chịu lôi kiếp. Người không tặng quà vẫn lên được tới Bất Tử, chỉ chậm hơn. Vật phẩm trong game không quy đổi tiền thật.</p>
+      </div>
+    </div>
+  </section>
+</main>
+<footer id="chan"></footer>
+<script src="js/site.js"></script>
+<script>
+(function () {
+  var S = window.SHTL, L = S.LIVE;
+  function man(id) { return S.MAN.filter(function (m) { return m.id === id; })[0]; }
+  var BUOC = [
+    { tieu: 'Vào live — bạn là phàm nhân', anh: 'tu-luyen-thuy', chuong: 6,
+      chu: 'Vừa vào là có mặt ở hàng dưới cùng, như phàm nhân đứng dưới Sảnh Thiên Vấn. Ngọc Phả đang hỏi thì cứ trả lời — đáp đúng vẫn được linh khí, mấy người đúng nhanh nhất được thêm.',
+      go: '{A} {B} {C}' },
+    { tieu: 'Thử Thách Nhập Môn — chọn tông', anh: 'nhap-mon', chuong: 7,
+      chu: 'Ải mở đầu mỗi giờ và mở xen khi có người mới chờ. 30 giây để bước vào và chọn nhân vật. Không chọn thì được chia vào tông đang ít người.',
+      go: '{1} Nam Sơn Tông · {2} Nữ Sơn Tông · {3} Nam Thủy Tông · {4} Nữ Thủy Tông' },
+    { tieu: 'Đi tới cửa tông mình', anh: 'nhap-mon-di', chuong: 7,
+      chu: '60 giây đi mê cung soi gương tới đúng cửa tông đã chọn — cửa tông kia không mở cho bạn. Đồ và bí kíp rơi dọc đường, qua cửa mới thành của mình. Ba người tới trước được thêm linh khí.',
+      go: '{1} lên · {2} xuống · {3} trái · {4} phải · gõ {1 1 1} đi ba bước' },
+    { tieu: 'Tu luyện trong Tụ Linh Trận', anh: 'tu-luyen-son', chuong: 8,
+      chu: 'Ngồi kim tự tháp của tông: cảnh giới càng cao ngồi càng cao. Nhiều đồng môn cùng đáp đúng thì linh khí cộng hưởng, Linh Mạch của tông dày thêm. Bảng "Chơi nhanh" bên cạnh cho gõ số. Đủ linh khí thì trên đầu hiện "⬆ đột phá" — phải tự gõ.',
+      go: '{1} vận công · {2} hái linh thảo · {3} luyện đan · {4} học võ · {5} đột phá · {6} cơ duyên · {7} tu vi · {8} Top Lôi Đài' },
+    { tieu: 'Độ Kiếp — cả phòng hộ pháp', anh: 'do-kiep', chuong: 11,
+      chu: 'Từ Nguyên Anh, lên bậc phải chịu lôi kiếp trên đàn tế mặt trống đồng. Ai có mặt cũng gõ để che sét. Đủ hộ pháp là chắc qua và cả phòng được Phúc Lộc; người hộ pháp cũng được thưởng.',
+      go: '{1} {2} {3} hay {độ}' },
+    { tieu: 'Đại Chiến mùa lũ', anh: 'dai-chien', chuong: 13,
+      chu: 'Pháp tướng hai thần giáng chiêu trên cao, hai Chủ Tướng đối mặt, tinh binh hai bên. Trận tự đánh; bình luận là tiếp sức, tim làm phe dễ bạo kích, trận pháp kết bằng Linh Mạch của tông.',
+      go: 'bình luận bất kỳ · thả tim' },
+    { tieu: 'Góp sức cho tông', anh: 'dai-chien-go', chuong: 13,
+      chu: 'Bảng góp sức hiện ngay trong trận. Gõ số để hô trận pháp; khi bên kia sắp dính chiêu lớn thì gõ đúng số để đỡ.',
+      go: '{1} Công · {2} Thủ · {3} Hồi · {4} Phá' },
+    { tieu: 'Tranh Đoạt Bảo Vật', anh: 'dia-cung', chuong: 14,
+      chu: 'Nước rút, cửa Địa Cung lộ ra. Mỗi lệnh một bước, ai nhanh tới trước nhặt trước; đồ hai bên luôn rơi theo cặp. Ra tới cửa thì mặc đồ, được Vinh Danh.',
+      go: '{1} lên · {2} xuống · {3} trái · {4} phải' },
+    { tieu: 'Thành Trì Tự Do', anh: 'thanh-tri', chuong: 15,
+      chu: 'Chợ trung lập giữa núi và biển, không ai rút gươm. Đan Các bên trái, Tàng Kinh Các bên phải. Lúc tu luyện cũng đổi được ở Tàng Bảo Các.',
+      go: '{D1}–{D9} đan dược · {C1}–{C9} công pháp · {T1}–{T9} trang phục · {P1}–{P9} linh thú' },
+    { tieu: 'Tiêu Diệt Quái Thú', anh: 'yeu-tinh', chuong: 16,
+      chu: 'Yêu tinh trồi lên, tông khắc nó ra tay. Yêu tinh báo chiêu lớn kèm đếm ngược — gõ đúng số để cả tông đỡ. Ngã thì đồng đạo thả tim cứu. Hạ yêu thì thần phe mình ban linh vật cho người có công.',
+      go: '{5} đánh · {1} công · {2} thủ · {3} hồi · {4} phá' },
+    { tieu: 'Tổng kết năm', anh: 'tong-ket', chuong: 17,
+      chu: 'Hết giờ là hết năm. Thiên Đình ghi công: phe nào giữ được thế trận thì thắng năm, số năm thắng được ghi sổ lâu dài.',
+      go: '' }
+  ];
+  function kb(s) { return s.replace(/\{(.+?)\}/g, '<kbd>$1</kbd>'); }
+  document.getElementById('ds-buoc').innerHTML = BUOC.map(function (b, i) {
+    var m = man(b.anh);
+    return '<div class="the buoc-man"><div class="khung-dt"><img src="anh/man/' + b.anh + '.webp" alt="Màn ' + m.ten + '" loading="lazy"></div>' +
+      '<div><div class="so-buoc">' + (i + 1) + '</div><h3 class="tieu-game">' + b.tieu + '</h3>' +
+      '<p style="color:var(--chu-mo)">' + b.chu + '</p>' + (b.go ? '<div class="lenh">' + kb(b.go) + '</div>' : '') +
+      '<p style="margin:12px 0 0;font-size:.92rem"><span class="nhan">' + m.phut + '</span> <a href="doc.html?c=' + b.chuong + '">Trong truyện: chương ' + b.chuong + ' →</a></p></div></div>';
+  }).join('');
+  S.hienDan && S.hienDan();
+  var o = document.getElementById('o-kenh');
+  o.innerHTML = L.tiktok
+    ? '<h3>📺 Kênh live: ' + (L.ten || L.tiktok) + '</h3>' + (L.gio ? '<p style="color:var(--chu-mo)">Giờ live: ' + L.gio + '</p>' : '') +
+      '<a class="nut vang" href="' + L.tiktok + '" target="_blank" rel="noopener">Mở kênh TikTok</a>'
+    : '<h3>📺 Kênh live</h3><p style="color:var(--chu-mo);margin:0">Tên kênh và giờ live đang cập nhật.</p>';
+})();
+</script>
+</body>
+</html>

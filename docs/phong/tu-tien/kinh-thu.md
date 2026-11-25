@@ -29,6 +29,10 @@ Mỗi luật chơi phải trả lời được câu "vì sao". Chuỗi dưới �
    (Hồ Tinh), Biển Đông nơi đuôi Ngư Tinh chìm (Ngư Tinh), rừng già Phong Châu (Mộc Tinh). Ba nghìn năm sau, Lạc Long
    Quân đã về thủy cung từ lâu, phong ấn yếu dần, ba yêu thay phiên trồi lên.
    → Vì vậy yêu tinh xuất hiện định kỳ, và **hai phe phải tạm gác thù** để cùng đánh — đất Văn Lang là của cả hai.
+   Oán khí rò ra còn đánh thức các yêu cũ đời sau trong truyện dân gian: **Chằn Tinh** (trăn khổng lồ Thạch Sanh chém
+   bằng rìu — sợ rìu đồng Sơn Tông), **Đại Bàng Tinh** (chim cắp người, bay cao né đòn), **Hổ Tinh** (Ông Ba Mươi
+   thành tinh, hổ sợ nước — Thủy Tông đánh đau), **Giải Tinh** (cua khổng lồ biển sâu, mai như đá — đá núi đập vỡ).
+   Bảy con thay nhau trồi lên, không biết trước con nào.
 3. **Vì sao Thủy Tinh vẫn bảo vệ Văn Lang?** Thủy Tinh hận Sơn Tinh, không hận đất. Đất ấy là quê Mỵ Nương, và nước
    của Thủy Tinh mang phù sa cho lúa. Phe Nước không phải phe ác — họ là phe **chưa được công bằng**.
 4. **Câu đố từ đâu?** Thiên Đình ghi mọi điều trời đất biết vào **Ngọc Phả**. Ai trả lời đúng Thiên Vấn (câu hỏi rút từ
@@ -37,8 +41,12 @@ Mỗi luật chơi phải trả lời được câu "vì sao". Chuỗi dưới �
 5. **Cảnh giới.** Thang Trời mười bậc là lệ chung của Thiên Đình cho mọi kẻ tu — tín ngưỡng Việt vốn có Ngọc Hoàng,
    Thiên Đình, các thánh tu thành tiên, nên dùng tên cảnh giới quen thuộc của truyện tu tiên không lệch bối cảnh.
 6. **Vì sao độ kiếp cần cả phòng?** Lôi kiếp là phép thử của trời. Người tu một mình thì phải tự đúng; nhưng đồng đạo
-   đứng quanh **hộ pháp** thì chia nhau gánh sét. Trả lời đúng thì trời ban **Phúc Lộc** cho cả phòng — Mỵ Nương trên
+   đứng quanh **hộ pháp** thì chia nhau gánh sét. Đủ người che sét thì kiếp chắc qua và trời ban **Phúc Lộc** cho cả phòng; ai đứng ra hộ pháp cũng được trời ghi công
+   (linh khí, đôi khi cơ duyên linh thạch). Thiếu người thì người độ kiếp phải trông vào vận mình — Mỵ Nương trên
    núi Tản rải phúc mỗi khi có người thành tiên.
+   Lời răn khắc trên đàn tế: **"thất bại thì thân tử đạo tiêu"** — để người tu biết sợ. Nhưng hai vị thần thương
+   con dân: ngã kiếp chỉ ngã xuống đàn, nghỉ ba khắc rồi thử lại; hiếm lắm (một phần hai mươi) sét đánh trúng đạo cơ
+   mới rớt một cảnh giới (luật: Bản đồ §2).
 7. **Quà và tim làm gì?** Quà là **hương hỏa** dâng hai vị thần, tim là lòng thành. Không mua thẳng được cảnh giới
    hay công thủ, nhưng tăng **phúc duyên**: khi diệt yêu, thần chia đồ rơi theo phúc duyên. Cách chia: 85% số món
    cho người ra tay, rút thăm có trọng số theo tim và quà, nên top tim và quà được ưu tiên mà vẫn ngẫu nhiên; 15% cho
@@ -132,7 +140,7 @@ Cảnh giới càng cao, chức càng lớn, **ngồi càng cao** trên bàn c�
 đệ tử ngồi dưới). Người cao nhất ngồi hàng trên cùng chính giữa; hàng thiếu người là hàng dưới cùng. Ngang cảnh
 giới thì ai vào trước ngồi trên. Bảng ở `CHUC_VU` trong `the-gioi.ts`.
 
-| Cảnh giới | Sơn Môn (môn phái trên núi) | Thủy Phủ (triều đình Long Cung) | Ghế |
+| Cảnh giới | Sơn Tông (môn phái trên núi) | Thủy Tông (triều đình Long Cung) | Ghế |
 |---|---|---|---|
 | Phàm Nhân | Tạp dịch | Thủy dịch | thường |
 | Luyện Khí | Ngoại môn | Thủy binh | thường |
@@ -213,7 +221,7 @@ Mở live trễ tối đa 10 phút vẫn bắt kịp sự kiện; trễ hơn th�
 - **Tu luyện** (câu hỏi, độ kiếp, tổng kết): chỉ hiện **một môn phái** mỗi lượt, kèm tổng lực chiến. Hai phe
   thay nhau **ngẫu nhiên nhưng công bằng**: lượt dài 70–130% của N phút (chỉnh ở thẻ ⚙); hết lượt thường đổi phe,
   thỉnh thoảng giữ thêm một lượt — phe được hiện ít hơn thì dễ được giữ hơn. Kim tự tháp neo từ trên xuống: hàng 1 là người đứng đầu phe (Chưởng Môn / Long Soái), hàng 2 là Tả, Hữu Hộ Pháp,
-  hàng 3 là bốn trụ cột (Sơn Môn: Tứ Trấn Ba Vì — Trấn Đông, Tây, Nam, Bắc; Thủy Phủ: Tứ Tuần — Tuần Giang, Hồ, Đầm,
+  hàng 3 là bốn trụ cột (Sơn Tông: Tứ Trấn Ba Vì — Trấn Đông, Tây, Nam, Bắc; Thủy Tông: Tứ Tuần — Tuần Giang, Hồ, Đầm,
   Hải); hai hàng đầu xếp từ giữa, từ hàng 3 xếp từ trái sang; từ hàng 4 mỗi hàng 5 người;
   nhãn chức và tên luân phiên. Màn đột phá ghi lực chiến trước » sau. Đột phá chỉ hiện ở màn này (đột phá ở màn khác thì giữ lại, về tu luyện mới hiện).
 - **Đại Chiến (PK "Thiên Bình")**: hai kim tự tháp hai bên dưới chân hai thần, xếp theo **công trạng trong trận**
@@ -235,6 +243,9 @@ Mở live trễ tối đa 10 phút vẫn bắt kịp sự kiện; trễ hơn th�
   Tinh: Rễ Cổ Quấn Chân; Tam Yêu: Tam Yêu Loạn Kích — tên chiêu là lệ Sơn Hà). Đánh ~30% người vừa ra tay (tối đa
   6). Thủ cho tỉ lệ đỡ (thủ/250, trần 60%); không đỡ được thì choáng 4 giây, không đánh được. Thả tim thì hồi khí,
   tỉnh ngay.
+- Yêu tinh ngàn năm biết **tụ chiêu lớn**: oán khí cuộn lại vài hơi thở trước khi trút xuống, nên đệ tử tinh mắt
+  kịp hô trận đỡ — thủ trận chặn đòn quét, hồi trận giải độc / choáng, phá trận bẻ giáp, công trận cắt đứt khi yêu
+  hút máu hồi sức. Trời cho đỡ chiêu không tốn Linh Mạch, vì đó là mạng người (luật: Bản đồ §3e).
 - Mọi nhân vật có **vòng hào quang** sau lưng ngang vai: ảnh vòng tô màu cảnh giới xoay chậm, tia sáng xoay ngược.
 
 ## 11. Địa Cung Đồng Cổ và trang bị (lệ Sơn Hà)
@@ -258,6 +269,15 @@ Thiên. Phẩm cao cần cảnh giới tối thiểu: Linh từ Luyện Khí, Hu
 Chưa đủ cảnh giới thì món đó được luyện hoá thành linh khí. Tên đồ lấy từ đồ đồng Đông Sơn thật (rìu xéo, dao găm cán
 tượng người, giáp đồng che ngực, lục lạc, trống đồng). **Không có nỏ thần**, vì đó là đời An Dương Vương.
 
+**Kho trang bị theo tông:** mỗi tông, mỗi phẩm, mỗi ô có ba kiểu (biến thể a / b / c) cùng sức mạnh, khác tên và
+hình — Sơn Tông cầm cung, rìu, giáp lông trĩ; Thủy Tông cầm lao, đinh ba, giáp vảy cá. Giáp y may riêng cho nam và nữ.
+Danh sách đầy đủ ở Tàng Bảo Các trên trang truyện.
+- **Nhập môn được ban đồ:** đệ tử mới nhận ngay một binh khí, một giáp y (đúng giới), một bảo vật Phàm phẩm của tông
+  mình, mỗi món một kiểu ngẫu nhiên — hai người cùng tông vừa vào đã mặc khác nhau. Ai đã có đồ ở ô nào thì không
+  ban lại ô đó.
+- **Giữ đúng món của mình:** món nào về tay ai thì mang tên, hình theo tông và giới người đó, và giữ nguyên kiểu qua
+  mọi lần lưu sổ, tải lại. Chỉ thay khi tự mặc món tốt hơn.
+
 **Công thủ:** công gốc là 10 + 6×cảnh giới (bằng sát thương gốc đánh yêu xưa nay), thủ gốc là 8 + 5×cảnh giới; đồ
 cộng thêm. Lực chiến = công + thủ.
 - Đánh yêu tinh: sát thương gốc là công.
@@ -272,7 +292,7 @@ chữ bình luận, và trạng thái luôn hiện trên màn để cả phòng 
 
 ### Linh Mạch — tài nguyên của phe, nối tu luyện với chiến đấu
 
-Sơn Môn giữ mạch linh khí núi Tản; Thủy Phủ giữ long mạch dưới Long Cung. Mạch dày thì kết được trận pháp.
+Sơn Tông giữ mạch linh khí núi Tản; Thủy Tông giữ long mạch dưới Long Cung. Mạch dày thì kết được trận pháp.
 
 | Nguồn | Linh Mạch |
 |---|---|
@@ -287,19 +307,32 @@ giúp thắng → thắng lại dày mạch**.
 
 ### Bốn trận pháp (dùng chung cho Đại Chiến và đánh yêu tinh)
 
-| Lệnh | Sơn Môn | Thủy Phủ | Đại Chiến | Đánh yêu tinh |
+| Lệnh | Sơn Tông | Thủy Tông | Đại Chiến | Đánh yêu tinh |
 |---|---|---|---|---|
 | `hồi` | Linh Chi Ba Vì | Ngọc Trai Hồi Xuân | hồi 12% trận khí (mỗi Y Sư hô +3%, tối đa +9%) | cả phe tỉnh choáng, miễn phản đòn 5 giây |
 | `thủ` | Thạch Bích Hộ Sơn | Vảy Rồng Hộ Thể | đòn địch ×0,7 trong 10 giây | đỡ phản đòn +30% |
 | `công` | Trống Đồng Thúc Quân | Tù Và Long Cung | đòn mình ×1,3 trong 10 giây | sát thương ×1,3 |
 | `phá` | Rìu Đồng Phá Trận | Thuồng Luồng Xé Giáp | xoá khiên địch, địch nhận ×1,15 trong 8 giây | yêu tinh nhận ×1,2 |
 
-- **Phối hợp**: trận pháp chỉ kết khi đủ người trong phe cùng hô trong 8 giây — 20% số người ra tay, từ 1 đến 6. Hô
-  đúng trận pháp của căn cơ mình tính 2 phiếu. Mỗi trận pháp hồi chiêu 20 giây.
-- **Quà — hương hỏa thỉnh trận**: tặng quà giữa trận thì kết ngay trận pháp theo căn cơ của người tặng, không cần đủ
-  người hô, không tốn Linh Mạch (vẫn theo hồi chiêu).
+- **Trận pháp tự kết bằng Linh Mạch**: mỗi 12 giây, mỗi phe tự kết một trận pháp hợp tình thế (trận khí dưới nửa thì
+  Hồi; địch dựng khiên thì Phá; không thì Công, rồi Thủ). Lượt đầu mỗi trận thần ban miễn phí, sau đó mỗi lần tốn 10
+  Linh Mạch — phe tu luyện chăm thì có nhiều trận pháp. Mỗi trận pháp hồi chiêu 20 giây. Người chơi **không** hô
+  trận pháp bằng bình luận: chiêu thức gắn với quà, không ném lung tung.
+- **Quà — hương hỏa thỉnh trận**: quà từ 50 xu kết ngay trận pháp theo căn cơ của người tặng, không tốn Linh Mạch
+  (vẫn theo hồi chiêu).
 - **Thế khắc**: Phá khắc Thủ (xoá khiên); Hồi gỡ lại phần bị Công đánh; Công gặp Thủ thì hụt. Hai phe phải nhìn phe
   kia đang bật gì mà đáp lại — đó là nhịp phối hợp.
+- **PK tự động, chiêu theo quà**:
+  - Không ai làm gì trận vẫn chạy: mỗi 1,5 giây mỗi phe ra một **đòn thường** (tên chiêu thường theo cảnh giới Chủ
+    Tướng, hiệu ứng vừa phải), mạnh yếu theo tổng lực chiến phe so với trung bình hai phe (kẹp ×0,8–×1,25), bạo kích
+    may rủi 8%.
+  - **Bình luận** là tiếp sức: thêm một đòn thường (1,2 giây một lần). **Tim** hâm nóng phe: mỗi tim +1% tỉ lệ bạo
+    kích của đòn thường (nguội dần, trần 50%).
+  - **Quà** mới ra chiêu, theo mức xu: dưới 10 xu **Bạo Kích**; từ 10 xu **Liên Kích ×3**; từ 50 xu **Trận Pháp** theo
+    căn cơ; từ 200 xu **Tuyệt Kỹ** hiếm (10% trận khí địch, có màn riêng) kèm trận pháp.
+  - Hình ảnh: hai Chủ Tướng đứng to, dáng khiêu khích, đối mặt nhau; ra đòn thì bước lên rồi lui về và đổi sang khung
+    hình ra đòn; sau lưng là đội tinh binh và thú chiến (Núi: voi chín ngà; Nước: giao long); bên Núi đá dậy, bên Nước
+    mưa trút. Người trợ chiến cũng đứng dáng ra trận, không ngồi thiền.
 - **PK chính là hai Chủ Tướng**: mỗi phe một Chủ Tướng (người cảnh giới, rồi lực chiến cao nhất đang chơi; phe chưa
   có thì người ra tay đầu tiên nhận ấn). Đòn của Chủ Tướng nặng gấp ba, hiện to nhất ở đỉnh tháp, tên nằm cạnh thanh
   trận khí. Những người còn lại là **trợ chiến**: truyền công (đòn thường) và cùng hô trận pháp theo căn cơ. Chủ Tướng
@@ -375,8 +408,8 @@ mình trên màn.
 | Chặng | Chuyện | Trong game | Trạng thái |
 |---|---|---|---|
 | 1. Phàm nhân | Một người thường lạc vào đất Sơn Hà | Vào live là khách, hiện thành phàm nhân ở hàng dưới | đã có |
-| 2. Kỳ ngộ | Xuống Địa Cung, nhặt được bảo vật đồng cổ: duyên tu tiên bắt đầu | Phàm nhân nhặt được bảo vật trong mê cung thì **tự nhập môn** phe đang yếu hơn, có căn cơ, hiện màn "Kỳ ngộ · bước vào tiên lộ" | đã có |
-| 3. Nhập trận | Được các trưởng lão cho ngồi vào Tụ Linh Trận | Ngồi kim tự tháp cùng 6 **trưởng lão NPC** (Sơn Môn: Cao Sơn, Quý Minh…; Thủy Phủ: Quy Lão, Lý Ngư Tướng…); phe đủ 6 đệ tử thật thì NPC lui | đã có |
+| 2. Vượt ải | Muốn theo tiên lộ phải vượt Ải Nhập Môn: một mê cung hai cửa, mỗi cửa dẫn về một tông | Mỗi 10 phút ải mở (khi có khách chờ): 30 giây gõ `Nam S` / `Nữ S` / `Nam T` / `Nữ T` để bước vào, 60 giây đi tới đúng cửa tông là **nhập môn**, được ban ngẫu nhiên một trong năm bộ trang phục, đồ và bí kíp nhặt dọc đường | đã có |
+| 3. Nhập trận | Được các trưởng lão cho ngồi vào Tụ Linh Trận | Ngồi kim tự tháp cùng 6 **trưởng lão NPC** (Sơn Tông: Cao Sơn, Quý Minh…; Thủy Tông: Quy Lão, Lý Ngư Tướng…); phe đủ 6 đệ tử thật thì NPC lui | đã có |
 | 4. Tu luyện | Nghe Ngọc Phả, linh khí cả trận nối với nhau | Mạch sáng nối các ghế; ai đáp đúng thì linh khí chảy về đỉnh trận; mỗi đồng môn cùng đúng +1 linh khí, mỗi trưởng lão NPC +0,5 (tối đa +5) | đã có |
 | 5. Vượt hạn | Lôi kiếp thử người sắp lên cảnh giới | Độ kiếp, đồng đạo hộ pháp | đã có |
 | 6. Ra trận | Yêu tinh trồi lên; mùa lũ hai phe quyết đấu | Đánh boss, Đại Chiến hai Chủ Tướng, trận pháp, căn cơ | đã có |
@@ -387,3 +420,111 @@ mình trên màn.
 Vì sao trưởng lão NPC không lệch truyện: Cao Sơn và Quý Minh là hai vị thánh em của Tản Viên trong tín ngưỡng Tam vị
 Đức Thánh Tản; các tên còn lại và dàn thủy tộc là lệ Sơn Hà. NPC dừng ở Đại Thừa nên đệ tử thật vượt lên ngồi trên
 được. NPC chỉ ngồi trận tu luyện và truyền linh khí; ra trận đã có thần binh (§12).
+
+
+## 15. Lên cấp, xuất môn, trận tu luyện, linh thạch (lệ Sơn Hà)
+
+Bản đồ tra cứu mọi hệ thống, tài nguyên và lệnh: [ban-do.md](ban-do.md). Mục này chỉ ghi luật và lý do.
+
+- **Không ai tự lên cấp.** Linh khí chỉ đến từ việc làm (đáp đúng, tim, ra trận, xuống Địa Cung, hộ pháp). Đủ linh khí
+  thì dừng ở ngưỡng và hiện "⬆ đột phá" trên đầu; phải tự gõ `đột phá`. Dưới Nguyên Anh thì lên ngay; từ Nguyên Anh
+  thì vào hàng độ kiếp. Vì sao: trời chỉ chứng cho người tự bước qua cửa.
+- **Xuất môn — đã bỏ.** Đã nhập môn là đệ tử của tông mãi; vắng lâu quay lại vẫn ngồi đúng chỗ, không phải vượt Ải
+  lần nữa. Hai tông live hai nick riêng; Ải Nhập Môn của mỗi nick chỉ một cửa vào tông của nick đó.
+- **Vòng hào quang** sau lưng chỉ có từ Nguyên Anh, càng cao càng rực: Nguyên Anh, Hóa Thần một vòng; Luyện Hư, Đại
+  Thừa thêm tia; Chân Tiên, Bất Tử vòng kép.
+- **Linh thạch** (tên cũ: tín chỉ) là của riêng từng người. Sinh từ quà (1 xu = 1 linh thạch) và từ trận tu luyện của
+  phe. Tiêu vào: **Tụ Khí Đan** (`luyện đan`, 20 linh thạch → 25 linh khí), **võ công** (`học võ`), và sau này là
+  trang phục.
+- **Trận tu luyện của phe tự nâng cấp nhờ quà.** Quà của một môn đồ nâng **nhánh trận** của chính người đó (mốc 10 /
+  50 / 200 / 500 xu, hiện bằng sao dưới chân); mỗi lần nhánh lên cấp lại đẩy thêm 20 trận lực lên trận phe. Trận phe
+  có 5 cấp, mỗi cấp một tên: Tụ Linh Trận → Lạc Điểu Trận → Đồng Cổ Trận → Thiên Phù Trận → Sơn Hà Đại Trận (mốc 0 /
+  100 / 300 / 800 / 2000). Trận cấp N cho mỗi người đáp đúng thêm N − 1 linh thạch, và trần cộng hưởng linh khí 4 + N.
+- **Võ công.** Mỗi căn cơ một môn, tên theo phe, 5 tầng (30 / 60 / 120 / 240 / 480 linh thạch):
+
+| Căn cơ | Sơn Tông | Thủy Tông | Hỗ trợ mỗi tầng |
+|---|---|---|---|
+| Chiến Tướng | Phá Sơn Phủ Pháp | Nộ Triều Thương Pháp | đòn +8% |
+| Hộ Vệ | Thạch Bích Công | Long Lân Hộ Thể | đỡ phản đòn +5%, đòn +3% |
+| Y Sư | Linh Chi Quyết | Hồi Xuân Thủy Pháp | mỗi đòn tiếp sức hồi trận khí cho phe, đòn +3% |
+| Phá Quân | Xuyên Vân Tiễn | Xé Sóng Đao | bạo kích đánh yêu +3%, đòn +5% |
+
+
+## 16. Ải Nhập Môn (lệ Sơn Hà)
+
+- **Ai cũng phải vượt ải.** Khách (phàm nhân) không còn tự vào tông bằng `vào`, `núi`, `nước`, cũng không bị kéo vào
+  Đại Chiến hay Địa Cung. Muốn thành đệ tử thì vượt Ải Nhập Môn. Đệ tử cũ vào lại thì giữ nguyên tông, không phải vượt ải nữa.
+  Vì sao: hai tông chỉ nhận người tự tìm được cửa.
+- **Lịch.** Ải mở mỗi 10 phút, nhưng chỉ khi có khách đang chờ; phòng mới có một người thì ải mở ngay ở lượt kế (sau
+  phút đầu). 30 giây bước vào: gõ `Nam S`, `Nữ S` (Sơn Tông), `Nam T`, `Nữ T` (Thủy Tông) — chữ hoa thường, có gạch
+  hay không đều được; trong 30 giây đổi ý được. Ai lên tiếng mà chưa chọn nhân vật (hoặc chọn thiếu) thì được bốc
+  ngẫu nhiên: tông đang ít người, giới ngẫu nhiên, nhân vật cấp thấp nhất. Không ai bước vào thì ải đóng ngay.
+- **Đi.** 60 giây, gõ `lên` `xuống` `trái` `phải`; `lên 3` hay `lên lên lên` là ba bước liền (tối đa 4). Tới đúng cửa
+  tông mình chọn là vượt ải; cửa tông kia không mở cho mình.
+- **Dễ và công bằng.** Mê cung 9 × 11 sinh ngẫu nhiên mỗi lần nhưng nhiều ngả thông; đường ngắn nhất tới cửa chỉ 14–16
+  bước. Soi gương trái – phải nên hai cửa cách lối vào bằng nhau.
+- **Vật phẩm dọc đường.** Trong 70% đầu giờ chơi, lúc ngẫu nhiên, rơi 3 cặp đồ (cặp soi gương: một món trên đường tới
+  Cửa Sơn Tông, một món y hệt trên đường tới Cửa Thủy Tông), phẩm hên xui (đôi khi Huyền, Địa, Thiên phẩm). 30% số ải
+  có thêm một cặp **bí kíp võ công**. Đồ và bí kíp chỉ thành của mình khi vượt ải: đồ thì mặc (đủ cảnh giới) hoặc luyện
+  hoá thành linh khí; mỗi bí kíp +1 tầng võ công.
+- **Thưởng.** Vượt ải thứ 1 / 2 / 3 được 20 / 12 / 6 linh khí (sau đó 3). Ai cũng được ban ngẫu nhiên một trong năm
+  bộ **trang phục cơ bản** của nhân vật mình (mặc tới hết Kết Đan; từ Nguyên Anh đổi sang áo cảnh giới).
+- **Hết giờ chưa tới cửa** thì vẫn là khách, mất đồ nhặt dọc đường, chờ ải sau.
+
+## 17. Tàng Bảo Các (lệ Sơn Hà)
+
+- Mỗi tông có một Tàng Bảo Các giữ pháp y, đan dược, công pháp và linh thú. Đệ tử đổi bằng linh thạch, gõ mã món
+  (`T` trang phục, `D` đan dược, `C` công pháp, `P` pet, kèm số 1–9). Bảng giá và công dụng: [ban-do.md](ban-do.md) §3d.
+- Vì sao chỉ đổi lúc không đánh: ra trận thì mang theo thứ đã chọn từ trước; đổi giữa trận là lách luật.
+- Công pháp và pet là **lựa chọn**: mỗi người dùng một môn, theo một con. Đại Chiến và đánh yêu tinh dùng đúng thứ đó —
+  tên chiêu ra đòn là tên công pháp, pet cộng công thủ.
+- Công pháp luyện tới đâu thì chiêu **hiện hình** tới đó: Sơn Tông mượn khí núi Tản (đại bàng, đá, mây, trống đồng,
+  chim Lạc), Thủy Tông mượn khí Long Cung (rắn nước, sóng, ngọc trai, giao long). Môn Công / Phá thành mũi tên, ngọn
+  lao bay sang trận bên kia; môn Thủ / Máu thành vách đá, màn nước, nấm linh chi, sen hồng nở quanh người luyện.
+  Tranh và cách hiện: [chieu-thuc.md](chieu-thuc.md).
+- Đệ tử không ngồi mãi một chỗ: tông có nhiều nơi tĩnh tu (Sơn: đỉnh núi trên biển mây, rừng trúc bên thác, hang
+  ngọc trong lòng núi; Thủy: hồ sen dưới trăng, rạn san hô, bãi biển lúc bình minh), cứ ít lâu lại dời chỗ ngồi. Ai vừa lĩnh ngộ công pháp thì ra **Võ Trường** đánh thử vào cọc
+  tập cho đồng môn xem; ai vừa may áo mới thì vào **Phòng Thử Đồ** khoác thử trước gương — xong lại về chỗ tĩnh tu.
+- Đan trận (Bạo Khí, Kim Cương, Hồi Hồn, Hộ Kiếp) cất trong túi và tự dùng đúng lúc, người chơi không phải gõ giữa trận.
+
+## 18. Lịch trình hằng ngày (lệ Sơn Hà)
+
+- Phòng chạy theo một lịch trình cố định mỗi ngày để người xem có hẹn: giờ nào mở mê cung nào, giờ nào tông nào đánh yêu
+  tinh nào, giờ nào Đại Chiến. Người vận hành viết lịch ở thẻ 📅; cú pháp và lịch mẫu ở [ban-do.md](ban-do.md) §11.
+- Vì sao có lúc chỉ một tông đánh yêu tinh: theo truyện, mỗi con yêu khắc một tông (Ngư Tinh sợ đá núi, Hồ Tinh sợ nước),
+  nên lịch giao con nào cho tông khắc nó; tông kia đứng xem, cổ vũ. `ca` là hai tông cùng đánh.
+- Lịch mỗi giờ: :00 Ải Nhập Môn · :15 Đại Chiến tỉ võ · :25 mê cung nhận đồ · :30 Thành Trì Tự Do · :45 Boss lớn (luân
+  phiên ba con) · :55 mê cung nhận chiến lợi phẩm · :58 tổng kết năm. Người xem nhớ được "đầu giờ vào tông, giữa giờ đi
+  chợ, cuối giờ đánh boss". Ải vẫn mở xen giữa lúc tu luyện cho người mới vào live.
+
+## 19. Thành Trì Tự Do (lệ Sơn Hà)
+
+- Thành chợ trung lập giữa núi và biển: đệ tử hai tông cùng đến, không đánh nhau. Bên trái Đan Các (đan dược `D1`–`D9`),
+  bên phải Tàng Kinh Các (công pháp `C1`–`C9`). Mở 10 phút mỗi giờ.
+- Tàng Kinh Các giữ chiêu thức của **cả hai tông**: cùng một mã, Sơn Tông học chiêu cung (Sơn Ưng Tiễn, Xuyên Vân
+  Tiễn…), Thủy Tông học chiêu lao (Thủy Xà Thương, Xuyên Lãng Thương…). Hệ, bậc, giá như nhau — chỉ khác tên và dáng
+  đánh. Trên màn quầy kinh hiện chiêu từng tông lần lượt.
+
+## 20. Yêu tinh cuồng bạo (lệ Sơn Hà)
+
+- Yêu tinh ngàn năm không chết một lần: bị đánh gục, nó sống lại cuồng bạo, tà khí trút xuống cả trận. Đệ tử vào trận
+  được thần tông che chở — máu gấp ba người thường (300).
+- Tim của người xem là linh dược: mỗi tim hồi chín phần máu vừa mất. Một phần còn lại mất hẳn, nên phải hạ yêu cho kịp.
+- Ai đã lành mà vẫn thả tim thì tim ấy bay tới người mạnh nhất tông mình — tiếp sức cho mũi giáo đầu.
+- Tông nào ra sức nhiều hơn mà hạ được yêu thì được thưởng hậu (mỗi lượt yêu một lần); để cả đội ngã thì yêu tinh thắng.
+
+## 21. Tu luyện trăm đường
+
+Tu tiên không chỉ ngồi luận đạo trả lời câu đố. Đệ tử còn **vận công** tích từng sợi linh khí, **hái linh thảo**
+quanh núi (có khi gặp Linh Chi Ngàn Năm), lên lò luyện đan, học võ, đột phá. Thỉnh thoảng trời đất mở **Cơ Duyên
+Giáng Thế** — ai kịp gõ thì được ban linh khí, linh thạch, đan dược, hiếm khi một món pháp khí; hoặc **Linh Thảo Nở
+Rộ** — hái gấp đôi. Mọi việc gõ một con số, để người xem trên điện thoại chơi được ngay (luật: Bản đồ §3i).
+
+**Lôi Đài Đồng Môn.** Mỗi tông có một sân thí luyện với lôi đài để đồng môn tỉ thí — luyện võ, không phải thù
+hằn, nên thua không mất gì. Tông giữ một **bảng Top**: cảnh giới cao đứng trên (đột phá là lên hạng), cùng cảnh
+giới thì ai thắng khiêu chiến đứng trên. Muốn khiêu chiến ai thì dâng **lễ vật đúng hạng** người đó (hạng càng cao
+lễ càng hậu); nhiều người khiêu chiến thì xếp hàng. Lôi đài chỉ mở vào **giờ Lôi Đài** của tông môn (mỗi giờ một
+lần, sau phiên chợ Thành Trì): lễ vật dâng lúc tu luyện được ghi tên chờ, tới giờ mới lần lượt lên đài; ai không
+khiêu chiến thì đồng môn liền hạng ra đấu giao hữu. Người bị khiêu chiến đi vắng thì hình bóng của họ vẫn ra đài
+đỡ đòn theo đúng công lực. Trên đài gõ 1 công, 2 thủ, 3 tung tuyệt kỹ — chiêu là công pháp người đó đã học ở
+Tàng Kinh Các; chưa học gì thì dùng chiêu của tông (Sơn *Vạn Sơn Áp Đỉnh*, Thủy *Hồng Thủy Ngập Trời*). Chỉ đồng môn mới khiêu chiến nhau: hai tông đã có Đại Chiến. (Luật: Bản đồ §3j.)

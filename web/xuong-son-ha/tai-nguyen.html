@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xưởng Sơn Hà — Danh mục tài nguyên</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=Noto+Serif:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/xuong.css">
+</head>
+<body>
+<header id="dau"></header>
+<main class="khung">
+  <h1>Danh mục tài nguyên</h1>
+  <p class="mo-dau">Mọi món hình trong game: món nào đã có, món nào còn thiếu, file tên gì, dùng ở cảnh nào. Danh sách
+  sinh tự động từ code game (<code>loi/tang-bao.ts</code>, <code>loi/the-gioi.ts</code>) và thư mục
+  <code>client/designs/tu-tien-son-ha/assets/</code>.</p>
+  <ul class="muc-luc-trang">
+    <li><a href="#trang-phuc">Nhân vật × trang phục (T1–T9)</a></li>
+    <li><a href="#cong-phap">Công pháp & chiêu thức (C1–C9)</a></li>
+    <li><a href="#dan-duoc">Đan dược (D1–D9)</a></li>
+    <li><a href="#trang-bi">Vũ khí, giáp y, bảo vật (Địa Cung)</a></li>
+    <li><a href="#hieu-ung">Video hiệu ứng dùng chung</a></li>
+    <li><a href="#nen">Nền từng màn</a></li>
+    <li><a href="#khac">Pet, yêu tinh</a></li>
+  </ul>
+
+  <h2 id="trang-phuc">Nhân vật × trang phục</h2>
+  <p>Mỗi nhân vật có 9 bộ áo. Mỗi bộ cần <b>2 tranh tĩnh</b> (dáng thiền, dáng chiến) làm gốc và <b>4 video nền trong
+  suốt</b>: thiền, công, thủ, hồi. Video là thứ lên màn. Tranh tĩnh dùng để làm video và để thế chỗ khi video chưa có.</p>
+  <div class="bang-cuon" style="margin-bottom:14px"><table>
+    <tr><th>Tài nguyên</th><th>Tên file (trong <code>assets/nhan-vat/</code>)</th><th>Lên màn ở đâu</th></tr>
+    <tr><td>Tranh dáng thiền</td><td><code>&lt;nv&gt;-&lt;áo&gt;.webp</code></td><td>Gốc để làm video thiền; thế chỗ khi chưa có video</td></tr>
+    <tr><td>Tranh dáng chiến</td><td><code>chien-&lt;nv&gt;-&lt;áo&gt;.webp</code></td><td>Gốc để làm video công / thủ / hồi; thẻ Đấu Tướng</td></tr>
+    <tr><td><b>Video thiền</b></td><td><code>&lt;nv&gt;-&lt;áo&gt;-thien.webm</code></td><td>Sân thiền, Phòng Thử Đồ (áo mới), Thiên Bảng</td></tr>
+    <tr><td><b>Video công</b></td><td><code>chien-&lt;nv&gt;-&lt;áo&gt;-cong.webm</code></td><td>Võ Trường khi học công pháp hệ Công / Phá (Sơn giương cung bắn, Thủy phóng lao); PK ra đòn</td></tr>
+    <tr><td><b>Video thủ</b></td><td><code>chien-&lt;nv&gt;-&lt;áo&gt;-thu.webm</code></td><td>Võ Trường hệ Thủ (dựng khiên); PK đỡ đòn</td></tr>
+    <tr><td><b>Video hồi</b></td><td><code>chien-&lt;nv&gt;-&lt;áo&gt;-hoi.webm</code></td><td>Võ Trường hệ Máu (vận khí hồi); PK hồi máu</td></tr>
+  </table></div>
+  <p class="nho nhat"><code>&lt;nv&gt;</code>: <code>son</code> (Sơn nam), <code>son-nu</code>, <code>thuy</code> (Thủy nữ),
+  <code>thuy-nam</code>. <code>&lt;áo&gt;</code>: <code>tp1</code>…<code>tp5</code> (T1–T5), <code>c1</code> <code>c4</code> <code>c6</code> <code>c9</code> (T6–T9).
+  Ảnh động <code>…-dong-&lt;động tác&gt;.webp</code> cũ chỉ là bản tạm.</p>
+  <div class="loc" id="loc-nv"></div>
+  <div class="luoi luoi-4" id="ds-ao"></div>
+
+  <h2 id="cong-phap">Công pháp & chiêu thức</h2>
+  <p>Mỗi môn có tên riêng cho từng tông, cùng hệ, cùng bậc. Khi người xem học hoặc dùng một môn, game ghép
+  <b>video động tác của nhân vật</b> (theo hệ, theo bộ áo đang mặc) với <b>tranh chiêu</b> bay ra hoặc bùng quanh người.</p>
+  <div class="meo"><b>Một bộ áo chỉ cần 3 video động tác</b>, dùng chung cho mọi môn cùng hệ: Công và Phá dùng video
+  <code>-cong</code>, Thủ dùng <code>-thu</code>, Máu dùng <code>-hoi</code>. Phần riêng của từng môn là <b>tranh chiêu</b>
+  (lớp chiêu thức, cột cuối). Video nhân vật <b>không vẽ chiêu</b> vào, để chiêu luôn đúng môn đang dùng.</div>
+  <div class="bang-cuon"><table id="bang-cp"></table></div>
+  <h3>Lời nhắc Muse cho video động tác (đặt dáng chiến của bộ áo lên nền xanh trước)</h3>
+  <div id="ln-dong" class="luoi luoi-2"></div>
+
+  <h2 id="dan-duoc">Đan dược</h2>
+  <p>Uống đan thì viên đan rơi xuống người (0,8 giây), rồi trên nhân vật bùng hiệu ứng hợp công dụng trong khoảng 2,6 giây.
+  Hiệu ứng là một lớp riêng, gắn theo nhân vật, nên đổi áo hay đổi động tác cũng không làm hỏng.</p>
+  <div class="bang-cuon"><table id="bang-dan"></table></div>
+
+  <h2 id="trang-bi">Vũ khí, giáp y, bảo vật (Địa Cung)</h2>
+  <p>Nhặt trong Địa Cung, 3 ô × 5 phẩm × 3 biến thể (a, b, c) × 2 tông = <b>90 món</b>. Giáp y riêng nam và nữ. Phẩm cao
+  phải đủ cảnh giới mới mặc. Món nào cũng có icon (<code>do/kho/</code>). Binh khí còn có <b>chiêu binh khí</b> bay ra trên màn PK
+  (<code>chieu/vk/</code>, cùng phẩm dùng chung).</p>
+  <div class="chu-y"><b>Vũ khí là một lớp riêng, không vẽ vào video nhân vật.</b> 90 món × 36 bộ áo thì không thể làm video
+  từng cặp. Video nhân vật giữ binh khí theo công pháp của tông (Sơn cung, Thủy lao). Món đang cầm hiện ở ba chỗ: lúc nhận
+  món có <b>màn binh khí hiện hình</b> (video hiệu ứng + icon món phóng to bay vào tay); trên sân có <b>biểu tượng hộ thân</b>
+  lơ lửng cạnh người; khi ra đòn thì <b>chiêu binh khí</b> bay ra đúng phẩm.</div>
+  <div class="loc" id="loc-o"></div>
+  <div class="bang-cuon"><table id="bang-tb"></table></div>
+
+  <h2 id="hieu-ung">Video hiệu ứng dùng chung</h2>
+  <p>Mười video hiệu ứng nền trong suốt, dùng chung cho mọi nhân vật và mọi trang phục. Muse làm trên <b>nền đen thuần</b>,
+  rồi <code>python cong-cu/fx-video.py &lt;vào.mp4&gt; ../../client/designs/tu-tien-son-ha/assets/fx/&lt;id&gt;.webm</code> lấy độ sáng làm
+  kênh trong suốt. Thêm bao nhiêu trang phục cũng không phải làm lại phần này. Màn thay đồ luôn là: video thiền áo cũ →
+  <b>biến trang</b> che đúng lúc đổi → video thiền áo mới.</p>
+  <div class="luoi luoi-2" id="ds-fx"></div>
+
+  <h2 id="nen">Nền từng màn</h2>
+  <p>Mỗi màn có <b>tranh nền</b> (gốc), <b>video nền động</b> (lặp liền, chậm theo nhịp game) và về sau thêm
+  <b>tiền cảnh</b> tách lớp. Rê chuột lên ô để xem video chạy.</p>
+  <div class="loc" id="loc-nen"></div>
+  <div class="luoi luoi-4" id="ds-nen"></div>
+
+  <h2 id="khac">Pet, yêu tinh</h2>
+  <div class="luoi luoi-2">
+    <div class="the"><h3>Pet (P1–P9)</h3><div id="ds-pet" class="luoi luoi-3" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))"></div></div>
+    <div class="the"><h3>Yêu tinh</h3><p class="nho nhat">Ảnh động FramePack làm trên hpc (<code>assets/yeu/dong/</code>). Hướng tới: chuyển sang video WebM alpha như nhân vật.</p><div id="ds-yeu" class="luoi" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))"></div></div>
+  </div>
+</main>
+<footer id="chan"></footer>
+<script src="js/du-lieu.js"></script>
+<script src="js/xuong.js"></script>
+<script src="js/loi-nhac.js"></script>
+<script>
+(function () {
+  const { h, a, nhan } = XUONG_UI;
+  const D = XUONG;
+  const PHE = { son: 'Sơn Tông', thuy: 'Thủy Tông' };
+  const khoiLn = (nguon, chu) => {
+    const b = h('button', { class: 'chep', type: 'button' }, 'Chép');
+    b.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(chu);
+        b.textContent = 'Đã chép ✓';
+      } catch {
+        b.textContent = 'Không chép được';
+      }
+      setTimeout(() => (b.textContent = 'Chép'), 1600);
+    };
+    return h('div', { class: 'loi-nhac' }, h('span', { class: 'nguon' }, nguon), chu, b);
+  };
+  const fxCua = (id) => D.fx.find((f) => f.id === id);
+  const anh = (p, co, chu) => (co ? h('img', { src: a(p), alt: '', loading: 'lazy' }) : h('div', { class: 'trong' }, chu));
+
+  // ---------- Trang phục ----------
+  const locNv = document.getElementById('loc-nv');
+  const dsAo = document.getElementById('ds-ao');
+  let nvDang = D.nhanVat[0].id;
+  const veAo = () => {
+    locNv.querySelectorAll('button').forEach((b) => b.classList.toggle('dang', b.dataset.id === nvDang));
+    dsAo.replaceChildren();
+    const nv = D.nhanVat.find((n) => n.id === nvDang);
+    nv.ao.forEach((x) => {
+      const dong = (k, tam, ten) => h('li', {}, h('span', {}, ten), x.co[k] ? nhan(true, 'video ✓') : x.co[tam] ? h('span', { class: 'nhan thu' }, 'ảnh động tạm') : nhan(false, '', 'chưa'));
+      dsAo.append(
+        h('div', { class: 'o-ao' },
+          h('div', { class: 'hinh' }, anh(x.tep.thien, x.co.thien, 'chưa có tranh thiền'), anh(x.tep.chien, x.co.chien, 'chưa có dáng chiến')),
+          h('div', { class: 'chu' },
+            h('b', {}, `${x.ma} · ${x.ten}`),
+            h('span', { class: 'nho nhat' }, `${x.gia} linh thạch · ${x.can > 0 ? 'từ ' + D.canhGioi[x.can] : 'cơ bản'}`),
+            h('ul', {},
+              h('li', {}, h('span', {}, 'Video thiền'), x.co.vThien ? nhan(true, 'video ✓') : nhan(false, '', 'chưa')),
+              dong('vCong', 'tamCong', 'Video công'),
+              dong('vThu', 'tamThu', 'Video thủ'),
+              dong('vHoi', 'tamHoi', 'Video hồi'),
+            ),
+            h('div', { class: 'nho nhat', style: 'margin-top:6px' }, h('code', {}, x.tep.vThien.replace('nhan-vat/', ''))),
+          ),
+        ),
+      );
+    });
+  };
+  D.nhanVat.forEach((nv) => {
+    const xong = nv.ao.filter((x) => x.co.vThien).length;
+    locNv.append(h('button', { type: 'button', 'data-id': nv.id, onclick: () => ((nvDang = nv.id), veAo()) }, `${nv.ten} · video ${xong}/9`));
+  });
+  veAo();
+
+  // ---------- Công pháp ----------
+  const DONG = { cong: 'công (Sơn giương cung · Thủy phóng lao)', thu: 'thủ (dựng khiên)', hoi: 'hồi (vận khí)' };
+  const bangCp = document.getElementById('bang-cp');
+  bangCp.innerHTML = '<tr><th>Mã</th><th>Sơn Tông · cung</th><th>Thủy Tông · lao</th><th>Hệ · bậc · giá</th><th>Video nhân vật</th><th>Chiêu</th><th>Chuyển động của tranh chiêu (lời tả cho AI video)</th></tr>';
+  D.congPhap.forEach((c) => {
+    const o = (phe) => {
+      const t = c.tong[phe];
+      return h('td', {},
+        h('div', { style: 'display:flex;gap:8px;align-items:center' },
+          h('img', { src: a(t.icon), alt: '', width: 40, height: 40, loading: 'lazy', style: 'border-radius:8px' }),
+          h('b', {}, t.ten)),
+        t.coChieu ? h('img', { src: a(t.chieu), alt: '', loading: 'lazy', style: `margin-top:6px;max-height:70px;${phe === 'thuy' ? 'transform:scaleX(-1)' : ''}` }) : nhan(false, '', 'chưa có tranh chiêu'));
+    };
+    bangCp.append(
+      h('tr', {},
+        h('td', {}, h('b', {}, c.ma)),
+        o('son'),
+        o('thuy'),
+        h('td', {}, `${c.heTen} · bậc ${c.bac}`, h('br'), h('span', { class: 'nho nhat' }, `${c.gia} linh thạch · ${c.mo}`)),
+        h('td', {}, h('code', {}, `-${c.dongTac}.webm`), h('br'), h('span', { class: 'nho nhat' }, DONG[c.dongTac])),
+        h('td', {}, c.tong.son.loai === 'bay' ? 'bay sang đối thủ' : 'bùng quanh người'),
+        h('td', { class: 'nho' }, c.tong.son.chuyenDong, h('hr', { style: 'border:0;border-top:1px solid var(--vien)' }), c.tong.thuy.chuyenDong),
+      ),
+    );
+  });
+
+  const lnDong = document.getElementById('ln-dong');
+  [['cong', 'Công / Phá'], ['thu', 'Thủ'], ['hoi', 'Máu']].forEach(([d, t]) =>
+    ['son', 'thuy'].forEach((phe) => lnDong.append(khoiLn(`${PHE[phe]} · video ${t} → chien-<nv>-<áo>-${d}.webm`, LOI_NHAC.dongTac(d, phe)))),
+  );
+
+  // ---------- Đan dược ----------
+  const bangDan = document.getElementById('bang-dan');
+  bangDan.innerHTML = '<tr><th>Mã</th><th>Sơn Tông</th><th>Thủy Tông</th><th>Công dụng · giá</th><th>Hiệu ứng trên nhân vật</th><th>Video hiệu ứng</th></tr>';
+  D.danDuoc.forEach((d) => {
+    const o = (phe) => h('td', {}, h('div', { style: 'display:flex;gap:8px;align-items:center' }, d.tong[phe].coIcon ? h('img', { src: a(d.tong[phe].icon), alt: '', width: 40, height: 40, loading: 'lazy' }) : nhan(false, '', 'chưa'), h('span', {}, d.tong[phe].ten)));
+    bangDan.append(h('tr', {}, h('td', {}, h('b', {}, d.ma)), o('son'), o('thuy'), h('td', {}, d.mo, h('br'), h('span', { class: 'nho nhat' }, `${d.gia} linh thạch`)), h('td', {}, d.hieuUng), h('td', {}, h('code', {}, `fx/dan-${d.kieu}.webm`), ' ', nhan(fxCua(`dan-${d.kieu}`)?.co, 'video ✓', 'chưa (đang CSS)'))));
+  });
+
+  // ---------- Trang bị ----------
+  const locO = document.getElementById('loc-o');
+  const bangTb = document.getElementById('bang-tb');
+  let oDang = 'vu';
+  const veTb = () => {
+    locO.querySelectorAll('button').forEach((b) => b.classList.toggle('dang', b.dataset.id === oDang));
+    const o = D.trangBi.find((x) => x.o === oDang);
+    bangTb.replaceChildren(h('tr', {}, h('th', {}, 'Phẩm'), h('th', {}, 'Sơn Tông (a · b · c)'), h('th', {}, 'Thủy Tông (a · b · c)'), oDang === 'vu' ? h('th', {}, 'Chiêu binh khí PK') : null));
+    o.pham.forEach((p) => {
+      const tong = (t) =>
+        h('td', {}, h('div', { style: 'display:flex;gap:10px;flex-wrap:wrap' },
+          p.mon.map((m) => {
+            const anhs = Object.entries(m.tong[t].icon).map(([g, src]) => h('img', { src: a(src), alt: '', loading: 'lazy', width: 56, height: 56, title: g }));
+            return h('div', { style: `text-align:center;width:${oDang === 'ao' ? 124 : 76}px` }, anhs, h('div', { class: 'nho' }, h('b', {}, m.ma), ' ', m.tong[t].ten));
+          })));
+      bangTb.append(h('tr', {},
+        h('td', {}, h('b', { style: `color:${p.mau}` }, `${p.so} · ${p.ten}`), h('br'), h('span', { class: 'nho nhat' }, `từ ${p.canTen} · chỉ số gốc ${p.goc}`)),
+        tong('son'), tong('thuy'),
+        oDang === 'vu' ? h('td', {}, ['son', 'thuy'].map((t) => (p.chieuVk[t].co ? h('img', { src: a(p.chieuVk[t].p), alt: '', loading: 'lazy', style: `display:block;max-width:180px;margin:4px 0;${t === 'thuy' ? 'transform:scaleX(-1)' : ''}` }) : nhan(false)))) : null));
+    });
+  };
+  D.trangBi.forEach((o) => locO.append(h('button', { type: 'button', 'data-id': o.o, onclick: () => ((oDang = o.o), veTb()) }, `${o.ten} (${o.pham.length * 3 * 2} món)`)));
+  veTb();
+
+  // ---------- Video hiệu ứng ----------
+  const dsFx = document.getElementById('ds-fx');
+  D.fx.forEach((f) => {
+    const xem = f.co ? h('video', { src: a(f.tep), muted: true, loop: true, autoplay: true, playsinline: true, style: 'width:100%;max-height:220px;background:repeating-conic-gradient(#1b2032 0 25%,#151927 0 50%) 0 0/18px 18px;border-radius:8px' }) : null;
+    dsFx.append(h('div', { class: 'the' },
+      h('h3', {}, `${f.ten} `, nhan(f.co, 'video ✓', 'chưa')),
+      h('div', { class: 'nho nhat' }, `${f.nhom} · dùng cho: ${f.dung} · `, h('code', {}, f.tep)),
+      h('p', { class: 'nho' }, f.mo),
+      xem,
+      khoiLn('Muse · nền đen', LOI_NHAC.fx(f.id))));
+  });
+
+  // ---------- Nền ----------
+  const locNen = document.getElementById('loc-nen');
+  const dsNen = document.getElementById('ds-nen');
+  const LOC = [['tat', 'Tất cả'], ['muse', 'Video Muse (chuẩn)'], ['chatgpt', 'Video ChatGPT 5 giây (cần làm lại)'], ['chua', 'Chưa có video']];
+  let locDang = 'tat';
+  const veNen = () => {
+    locNen.querySelectorAll('button').forEach((b) => b.classList.toggle('dang', b.dataset.id === locDang));
+    dsNen.replaceChildren();
+    D.nen.filter((n) => locDang === 'tat' || (locDang === 'chua' ? !n.video : n.nguon === locDang)).forEach((n) => {
+      const vd = n.video ? h('video', { src: a(n.video), poster: a(n.tranh), muted: true, loop: true, playsinline: true, preload: 'none' }) : h('img', { src: a(n.tranh), alt: '', loading: 'lazy' });
+      const o = h('div', { class: 'o-ao o-nen', onmouseenter: () => vd.play?.(), onmouseleave: () => vd.pause?.() },
+        vd,
+        h('div', { class: 'chu' },
+          h('b', {}, n.ten),
+          h('code', { class: 'nho' }, n.id),
+          h('ul', {},
+            h('li', {}, h('span', {}, 'Video nền'), n.nguon === 'muse' ? nhan(true, 'Muse 14,5 s') : n.nguon === 'chatgpt' ? h('span', { class: 'nhan thu' }, 'ChatGPT 5 s') : nhan(false, '', 'chưa')),
+            h('li', {}, h('span', {}, 'Tiền cảnh'), nhan(!!n.truoc)),
+          ),
+        ),
+      );
+      dsNen.append(o);
+    });
+  };
+  LOC.forEach(([id, t]) => locNen.append(h('button', { type: 'button', 'data-id': id, onclick: () => ((locDang = id), veNen()) }, t)));
+  veNen();
+
+  // ---------- Pet, yêu ----------
+  const dsPet = document.getElementById('ds-pet');
+  D.pet.forEach((p) => dsPet.append(h('div', { style: 'text-align:center' }, p.coIcon ? h('img', { src: a(p.icon), alt: '', loading: 'lazy', style: 'width:72px' }) : h('div', { style: 'font-size:40px' }, p.hinh), h('div', { class: 'nho' }, `${p.ma} ${p.ten}`))));
+  const dsYeu = document.getElementById('ds-yeu');
+  D.yeu.forEach((y) => dsYeu.append(h('div', { style: 'text-align:center' }, h('img', { src: a(y.tranh), alt: '', loading: 'lazy', style: 'width:100px' }), h('div', { class: 'nho' }, y.id, ' ', y.dong.length ? nhan(true, `${y.dong.length} ảnh động`) : nhan(false)))));
+})();
+</script>
+</body>
+</html>

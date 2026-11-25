@@ -5,11 +5,20 @@ import {
   nhanTin,
   NHIP_LIVE,
   phienMoi,
-  taoThe,
+  taoThe as taoThe0,
   xuatHoSo,
   type Nhip,
   type The,
 } from '../../../../client/designs/tu-tien-son-ha/src/loi/core';
+
+/** Các test này kiểm luật câu đố lúc tu luyện (nay mặc định tắt, `cauTl`) — bật lại để vẫn kiểm được. */
+const taoThe = (...a: Parameters<typeof taoThe0>) => {
+  const t = taoThe0(...a);
+  t.cauTl = true;
+  return t;
+};
+import { docLenh } from '../../../../client/designs/tu-tien-son-ha/src/loi/lenh';
+import { HO_LK, HO_THACH, KIEP_ROT, KIEP_TU, nhapMonThang } from '../../../../client/designs/tu-tien-son-ha/src/loi/core';
 import { CANH_GIOI } from '../../../../client/designs/tu-tien-son-ha/src/loi/the-gioi';
 import { BO_CAU, CAU_KHO, bocCau, cauTinh } from '../../../../client/designs/tu-tien-son-ha/src/loi/cau-hoi';
 
@@ -23,13 +32,17 @@ function hat(seed = 1) {
 }
 
 const ABC = ['a', 'b', 'c'];
-const xa: Nhip = { ...NHIP_LIVE, luDau: 1e9, yeuDau: 1e9, mua: 1e9 };
+const xa: Nhip = { ...NHIP_LIVE, nmDau: 1e12, luDau: 1e9, yeuDau: 1e9, mua: 1e9 };
 
 function chay(the: The, tu: number, den: number, rand: () => number) {
   for (let t = tu; t <= den; t += 250) buoc(the, t, rand);
 }
 
 function noi(the: The, user: string, text: string, now: number, rand: () => number) {
+  const l = docLenh(text);
+  if (l.k === 'phe' && the.pha.k !== 'nm' && (the.nguoi.get(user)?.phe ?? null) === null) {
+    return nhapMonThang(the, { kind: 'comment', user, ten: user.toUpperCase(), text }, l.phe, l.gioi, now, rand);
+  }
   return nhanTin(the, { kind: 'comment', user, ten: user.toUpperCase(), text }, now, rand);
 }
 
@@ -102,7 +115,11 @@ describe('Lôi Kiếp', () => {
     n.lk = CANH_GIOI[4]!.can - 5;
     const { t, dung } = toiCauHoi(the, 200, r);
     noi(the, 'lan', dung, t + 100, r);
-    chay(the, t, t + NHIP_LIVE.hoi + NHIP_LIVE.dap + NHIP_LIVE.nghi + 1000, r);
+    chay(the, t, t + NHIP_LIVE.hoi + 500, r);
+    // Đủ linh khí rồi vẫn chưa độ kiếp: phải tự gõ "đột phá".
+    expect(n.choKiep).toBe(false);
+    noi(the, 'lan', 'đột phá', t + NHIP_LIVE.hoi + 600, r);
+    chay(the, t + NHIP_LIVE.hoi + 600, t + NHIP_LIVE.hoi + NHIP_LIVE.dap + NHIP_LIVE.nghi + 1000, r);
     return { the, r, n };
   }
 
@@ -113,40 +130,61 @@ describe('Lôi Kiếp', () => {
     expect(the.pha.k).toBe('kiep');
   });
 
-  it('trả lời sai nhưng đủ hộ pháp thì vẫn qua, không có Phúc Lộc', () => {
+  /** Chạy tới sát giờ phán, rồi phán với chuỗi số ngẫu nhiên định sẵn (số 1: tự vượt, số 2: rớt cảnh giới…). */
+  function phan(the: The, ds: number[]) {
+    const p = the.pha;
+    if (p.k !== 'kiep') throw new Error('chưa vào kiếp');
+    chay(the, p.den - 5000, p.den - 250, () => 0.9);
+    let i = 0;
+    buoc(the, p.den, () => ds[Math.min(i++, ds.length - 1)]!);
+  }
+
+  it('đủ hộ pháp (gõ 1 / 2 / 3, A hay "độ") thì chắc qua, cả phòng được Phúc Lộc, hộ pháp có quà', () => {
     const { the, r, n } = sanKiep(13);
     const p = the.pha;
     if (p.k !== 'kiep') throw new Error('chưa vào kiếp');
     const t = p.den - NHIP_LIVE.kiep + 1000;
-    for (const u of ['a1', 'a2', 'a3']) noi(the, u, 'độ', t, r);
-    noi(the, 'lan', ABC[(p.cau.dung + 1) % 3]!, t + 500, r);
-    chay(the, t, t + 6000, r);
+    noi(the, 'a1', '1', t, r);
+    noi(the, 'a2', 'A', t, r);
+    noi(the, 'a3', 'độ', t, r);
+    noi(the, 'lan', '2', t, r);
+    expect(p.ho.has('a1') && p.ho.has('a2') && p.ho.has('a3')).toBe(true);
+    expect(p.ho.has('lan')).toBe(false);
+    const thach = the.nguoi.get('a2')!.tinChi;
+    // Hộ pháp: a1 +linh khí (0.9), a2 trúng cơ duyên linh thạch (0.01), a3 +linh khí.
+    phan(the, [0.9, 0.01, 0.9]);
     expect(the.pha.k).toBe('kiep-ket');
     expect(n.canh).toBe(4);
-    expect(the.phucLoc).toBe(0);
-    expect(the.nguoi.get('a1')!.lk).toBeGreaterThan(0);
-  });
-
-  it('sai và thiếu hộ pháp thì ngã kiếp, mất linh khí, phải chờ', () => {
-    const { the, r, n } = sanKiep(17);
-    const p = the.pha;
-    if (p.k !== 'kiep') throw new Error('chưa vào kiếp');
-    const t = p.den - NHIP_LIVE.kiep + 1000;
-    noi(the, 'lan', ABC[(p.cau.dung + 1) % 3]!, t, r);
-    chay(the, t, t + 6000, r);
-    expect(n.canh).toBe(3);
-    expect(n.lk).toBeLessThan(CANH_GIOI[4]!.can);
-    expect(n.kiepLai).toBeGreaterThan(t);
-  });
-
-  it('trả lời đúng thì qua và cả phòng được Phúc Lộc', () => {
-    const { the, r, n } = sanKiep(19);
-    const p = the.pha;
-    if (p.k !== 'kiep') throw new Error('chưa vào kiếp');
-    noi(the, 'lan', ABC[p.cau.dung]!, p.den - 20_000, r);
-    chay(the, p.den - 20_000, p.den, r);
-    expect(n.canh).toBe(4);
     expect(the.phucLoc).toBe(2);
+    expect(the.nguoi.get('a1')!.lk).toBeGreaterThanOrEqual(HO_LK * 2);
+    expect(the.nguoi.get('a2')!.tinChi).toBeGreaterThanOrEqual(thach + HO_THACH * 2);
+  });
+
+  it('thiếu hộ pháp, vận không tới thì ngã kiếp: giữ cảnh giới và linh khí (thường), phải chờ', () => {
+    const { the, n } = sanKiep(17);
+    const lk = n.lk;
+    phan(the, [0.9, 0.9]);
+    expect(n.canh).toBe(3);
+    expect(n.lk).toBe(lk);
+    expect(n.kiepLai).toBeGreaterThan(0);
+  });
+
+  it('ngã kiếp hiếm khi (KIEP_ROT) rớt một cảnh giới', () => {
+    const { the, n } = sanKiep(17);
+    phan(the, [0.9, KIEP_ROT / 2]);
+    expect(n.canh).toBe(2);
+    expect(n.lk).toBe(CANH_GIOI[2]!.can);
+    const k = the.pha;
+    expect(k.k === 'kiep-ket' && k.rot).toBe(true);
+  });
+
+  it('thiếu hộ pháp vẫn có cơ may tự vượt (KIEP_TU), không có Phúc Lộc', () => {
+    const { the, n } = sanKiep(19);
+    phan(the, [KIEP_TU / 2]);
+    expect(n.canh).toBe(4);
+    expect(the.phucLoc).toBe(0);
+    const k = the.pha;
+    expect(k.k === 'kiep-ket' && k.qua && !k.nhoHo).toBe(true);
   });
 });
 
@@ -167,7 +205,9 @@ describe('Nhịp', () => {
       for (let i = 0; i < 4; i++) the.nguoi.get(`k${i}`)!.lanCuoi = t;
       for (const s of buoc(the, t, r)) if (s.k === 'pha' && s.pha !== 'cho' && !s.pha.endsWith('ket') && s.pha !== 'dap') thuTu.push(s.pha);
     }
-    expect(thuTu).toEqual(['kiep', 'yeu', 'kiep', 'hoi']);
+    // Giữa hai kiếp luôn có việc khác (yêu tinh trước), và hai lượt kiếp cách nhau ít nhất `kiepCach`.
+    expect(thuTu.slice(0, 2)).toEqual(['kiep', 'yeu']);
+    expect(thuTu.some((x, i) => x === 'kiep' && thuTu[i - 1] === 'kiep')).toBe(false);
   });
 });
 
@@ -190,25 +230,26 @@ describe('Mùa Lũ và Yêu Tinh', () => {
     expect(p.cong.get('a')!).toBeGreaterThan(p.cong.get('b')! * 0.7);
   });
 
-  it('phe ra tay nhiều hơn hẳn thì thắng, mực nước đổi theo; phe ít người có thần binh đánh bù', () => {
+  it('phe ra tay nhiều hơn hẳn thì thắng (có khi phá trận sớm), mực nước đổi theo; phe ít người có thần binh đánh bù', () => {
     const r = hat(24);
     const the = taoThe(0, { ...xa, luDau: 0 });
     for (const u of ['s1', 's2', 's3']) noi(the, u, 'núi', 10, r);
     noi(the, 't1', 'nước', 10, r);
     chay(the, 0, 4000, r);
-    expect(the.pha.k).toBe('lu');
+    const p = the.pha;
+    if (p.k !== 'lu') throw new Error();
     noi(the, 't1', 'đẩy', 4000, r); // ra tay một lần rồi thôi
-    for (let t = 4000; t < 4000 + NHIP_LIVE.lu; t += 1300) {
-      for (const u of ['s1', 's2', 's3']) noi(the, u, 'lên', t, r);
-      chay(the, t, t + 1250, r);
+    let ket: typeof the.pha | null = null;
+    // Không hết giờ: đánh tới khi một phe cạn trận khí (kiệt sức sau 4 phút bảo đảm trận kết trước ~7,5 phút).
+    for (let t = 4000; t < 4000 + 9 * 60_000 && ket === null; t += 250) {
+      if ((t - 4000) % 1250 === 0 && the.pha.k === 'lu') for (const u of ['s1', 's2', 's3']) noi(the, u, 'lên', t, r);
+      buoc(the, t, r);
+      if (the.pha.k === 'lu-ket') ket = the.pha;
     }
-    chay(the, 4000 + NHIP_LIVE.lu, 4000 + NHIP_LIVE.lu + 800, r);
-    expect(the.pha.k).toBe('lu-ket');
-    if (the.pha.k === 'lu-ket') {
-      expect(the.pha.thang).toBe('son');
-      // Thần binh có đánh bù cho phe Nước: điểm phe Nước lớn hơn hẳn một cú đẩy.
-      expect(the.pha.thuy).toBeGreaterThan(10);
-    }
+    expect(ket?.k).toBe('lu-ket');
+    if (ket?.k === 'lu-ket') expect(ket.thang).toBe('son');
+    // Thần binh có đánh bù cho phe Nước.
+    expect(p.binh.thuy).toBeGreaterThan(5);
     expect(the.muc).toBe(-1);
   });
 
@@ -228,6 +269,81 @@ describe('Mùa Lũ và Yêu Tinh', () => {
     expect(the.pha.thang).toBe(true);
     const tong = [...the.nguoi.values()].reduce((s, n) => s + n.linhVat.length, 0);
     expect(tong).toBeGreaterThanOrEqual(1);
+  });
+
+  /** Mở trận yêu tinh với ba đệ tử Sơn Tông đã ra tay một đòn. */
+  function moTranYeu(seed: number) {
+    const r = hat(seed);
+    const the = taoThe(0, { ...xa, yeuDau: 0 });
+    for (let i = 0; i < 3; i++) noi(the, `k${i}`, 'núi', 10, r);
+    chay(the, 0, 4000, r);
+    for (let i = 0; i < 3; i++) noi(the, `k${i}`, 'đánh', 4000, r);
+    if (the.pha.k !== 'yeu') throw new Error('chưa vào trận yêu tinh');
+    return { the, r, pha: the.pha };
+  }
+  const tim = (the: The, user: string, now: number, r: () => number) =>
+    nhanTin(the, { kind: 'like', user, ten: user.toUpperCase(), count: 1 }, now, r);
+
+  it('hết máu màn 1 thì Cuồng Bạo; hạ tiếp thì phe hạ yêu được thưởng một lần', () => {
+    const { the, r, pha } = moTranYeu(41);
+    pha.mau = 1;
+    noi(the, 'k0', 'đánh', 7000, r);
+    expect(the.pha.k).toBe('yeu');
+    expect(pha.cuong).toBe(true);
+    expect(pha.mau).toBe(pha.mauMax);
+    const truoc = [0, 1, 2].map((i) => the.nguoi.get(`k${i}`)!.tinChi);
+    pha.mau = 1;
+    noi(the, 'k1', 'đánh', 9000, r);
+    expect(the.pha.k).toBe('yeu-ket');
+    if (the.pha.k !== 'yeu-ket') return;
+    expect(the.pha.thang).toBe(true);
+    expect(the.pha.pheHa).toBe('son');
+    expect(the.pha.thuong?.thach).toBe(100);
+    [0, 1, 2].forEach((i) => expect(the.nguoi.get(`k${i}`)!.tinChi).toBeGreaterThanOrEqual(truoc[i]! + 100));
+  });
+
+  it('tim hồi 90% máu vừa mất; tim dư tiếp sức người mạnh nhất phe', () => {
+    const { the, r, pha } = moTranYeu(43);
+    the.nguoi.get('k0')!.canh = 5;
+    // k1 vừa trúng đòn mất 10 máu: một tim hồi 9.
+    pha.hp.set('k1', 290);
+    pha.hoiDuoc.set('k1', 9);
+    const ra = tim(the, 'k1', 5000, r);
+    expect(pha.hp.get('k1')).toBe(299);
+    expect(ra.some((s) => s.k === 'hoi-mau' && s.user === 'k1' && s.mau === 9)).toBe(true);
+    // Hết máu để hồi: tim dư sang người mạnh nhất phe (k0), +1% sát thương.
+    const ra2 = tim(the, 'k1', 5100, r);
+    expect(ra2.some((s) => s.k === 'buff' && s.tu === 'k1' && s.toi === 'k0' && s.so === 1)).toBe(true);
+    tim(the, 'k2', 5200, r);
+    expect(pha.buff.get('k0')?.so).toBe(2);
+    expect(pha.buff.get('k0')?.nguoi.size).toBe(2);
+  });
+
+  it('Cuồng Bạo đồ sát: không ai thả tim thì cả đội ngã, yêu tinh thắng', () => {
+    const { the, r, pha } = moTranYeu(47);
+    pha.mau = 1;
+    noi(the, 'k0', 'đánh', 7000, r);
+    expect(pha.cuong).toBe(true);
+    let t = 7000;
+    while (the.pha.k === 'yeu' && t < 400_000) {
+      t += 250;
+      buoc(the, t, r);
+    }
+    expect(the.pha.k).toBe('yeu-ket');
+    if (the.pha.k !== 'yeu-ket') return;
+    expect(the.pha.thang).toBe(false);
+    expect(the.pha.doSat).toBe(true);
+  });
+
+  it('ngã rồi thả tim kịp thì gượng dậy', () => {
+    const { the, r, pha } = moTranYeu(53);
+    pha.hp.set('k2', 0);
+    pha.hoiDuoc.set('k2', 40);
+    pha.nga.set('k2', 5000);
+    const ra = tim(the, 'k2', 6000, r);
+    expect(pha.nga.has('k2')).toBe(false);
+    expect(pha.hp.get('k2')).toBe(40);
+    expect(ra.some((s) => s.k === 'hoi-mau' && s.day)).toBe(true);
   });
 });
 

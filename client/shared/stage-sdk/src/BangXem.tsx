@@ -411,17 +411,31 @@ function TheRieng({ id, the }: { id: string; the: TheTach }) {
  *  Đứng riêng trên đầu, KHÔNG nằm lẫn với các thẻ tính năng: tắt một tính năng
  *  thì phòng vẫn thế, còn đổi mấy ô này là đổi hình hài căn phòng. Thiết kế nào
  *  không khai lựa chọn nào thì thẻ không hiện. */
+/** Ô sửa ngay được trên thẻ (một ô nhỏ). Ô danh sách, ô chữ dài… thì mở hộp sửa đầy đủ. */
+const O_NHANH_DUOC: ReadonlySet<string> = new Set(['number', 'toggle', 'select', 'range', 'time']);
+
+/** Chữ tóm tắt cho nút mở ô phức tạp trên thẻ: danh sách đếm số mục, chữ dài lấy đầu câu. */
+function tomTat(v: Json | undefined): string {
+  if (Array.isArray(v)) return `${v.length} mục`;
+  if (typeof v === 'string') return v.trim() === '' ? 'trống' : (v.trim().split(/\r?\n/)[0] ?? '').slice(0, 24);
+  return '';
+}
+
 function TheThietKe({ viTri }: { viTri: ViTriThe }) {
   const s = useStage();
   const luaChon = useLuaChonThietKe();
   const cfg = useThietKe();
   // Chỉ khoá khi mất nối máy chủ: chưa phát vẫn chỉnh được — lệnh áp vào chính phòng của trang (docs/02 §10).
   const roi = !s.noiDuoc;
+  const [moThe, datMoThe] = useState<string | null>(null);
+  const theMo = luaChon.find((t) => t.id === moThe);
 
   return (
     <>
       {luaChon.filter((the) => (the.viTri ?? 'dau') === viTri).map((the) => {
         const bat = the.toggle === undefined ? true : cfg[the.toggle.key] !== false;
+        const nhanh = the.fields.filter((f) => O_NHANH_DUOC.has(f.type));
+        const sau = the.fields.filter((f) => !O_NHANH_DUOC.has(f.type));
         return (
           <article key={the.id} className="bx-the bx-the-thietke" data-bat={bat}>
             <div className="bx-the-dau">
@@ -443,7 +457,7 @@ function TheThietKe({ viTri }: { viTri: ViTriThe }) {
             </div>
             {the.fields.length === 0 ? null : (
               <div className="bx-the-nhanh">
-                {the.fields.map((o) => (
+                {nhanh.map((o) => (
                   <ONhanh
                     key={o.key}
                     field={o}
@@ -452,11 +466,75 @@ function TheThietKe({ viTri }: { viTri: ViTriThe }) {
                     onChange={(v) => suaThietKe(o.key, v)}
                   />
                 ))}
+                {sau.map((o) => (
+                  <button key={o.key} type="button" className="bx-q bx-q-mo" title={o.label} onClick={() => datMoThe(the.id)}>
+                    <span className="bx-q-nhan">{o.short ?? o.label}</span>
+                    <span className="bx-q-tom">{tomTat(cfg[o.key])} ✏️</span>
+                  </button>
+                ))}
+                {sau.length > 0 ? null : (
+                  <button type="button" className="bx-q bx-q-mo" onClick={() => datMoThe(the.id)}>
+                    <span className="bx-q-tom">Sửa đầy đủ ✏️</span>
+                  </button>
+                )}
               </div>
             )}
           </article>
         );
       })}
+      {theMo === undefined ? null : (
+        // Hộp sửa đầy đủ một thẻ của thiết kế: mọi ô (cả danh sách kéo-thả, chữ dài), nằm trong ngăn phải.
+        <div className="bx-tam" role="dialog" aria-modal aria-label={theMo.name}>
+          <div className="bx-modal">
+            <div className="bx-dau2">
+              <span className="bx-icon">{theMo.icon}</span>
+              <span className="bx-ten">
+                <b>{theMo.name}</b>
+                <small>{theMo.summary}</small>
+              </span>
+              <button type="button" className="bx-x" onClick={() => datMoThe(null)} aria-label="Đóng">
+                ✕
+              </button>
+            </div>
+            <div className="bx-than">
+              {roi ? <p className="bx-muc-trong">Mất nối máy chủ — mở lại ứng dụng Live Studio rồi mới sửa được.</p> : null}
+              {theMo.toggle === undefined ? null : (
+                <label className="bx-dong bx-dong-chinh" htmlFor={`tk-bat-${theMo.id}`}>
+                  <span>
+                    <b>{theMo.toggle.label}</b>
+                    <small>{theMo.toggle.hint ?? ''}</small>
+                  </span>
+                  <input
+                    type="checkbox"
+                    id={`tk-bat-${theMo.id}`}
+                    checked={cfg[theMo.toggle.key] !== false}
+                    disabled={roi}
+                    onChange={(e) => suaThietKe(theMo.toggle?.key ?? '', e.target.checked)}
+                  />
+                </label>
+              )}
+              {theMo.fields.map((f) => (
+                <div key={f.key}>
+                  <OConfig
+                    moduleId={`tk-${theMo.id}`}
+                    field={f}
+                    value={cfg[f.key] ?? f.value ?? null}
+                    cfg={cfg}
+                    suaKhac={(k, v) => suaThietKe(k, v)}
+                    disabled={roi}
+                    onChange={(v) => suaThietKe(f.key, v)}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="bx-chan2">
+              <button type="button" className="bx-xong" onClick={() => datMoThe(null)}>
+                Xong
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

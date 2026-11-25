@@ -10,7 +10,7 @@ import { VongHao } from './VongHao';
 import { TranhCanh } from './DotPha';
 import type { NguoiChoi } from './loi/core';
 import { CANH_GIOI, PHE, type Phe } from './loi/the-gioi';
-import { PHAM, tenDo, type OTrangBi, type TrangBi } from './loi/trang-bi';
+import { hinhDo, PHAM, tenDo, type OTrangBi, type TrangBi } from './loi/trang-bi';
 
 export const TUYET_KY_MS = 2600;
 export const VINH_DANH_MS = 3400;
@@ -31,11 +31,18 @@ export type NoiBat =
 
 const HINH: Record<OTrangBi | 'ruong', string> = { vu: '⚔️', ao: '🛡️', bao: '📿', ruong: '🧰' };
 
-/** Hình món đồ: tranh `do/<ô>.webp` nếu đã vẽ, chưa có thì biểu tượng tạm. */
-export function HinhDo({ o, asset, lop }: { o: OTrangBi | 'ruong'; asset: (p: string) => string; lop?: string }) {
-  const [loi, setLoi] = useState(false);
-  if (loi) return <span className={`sh-hinh-do tam${lop ? ` ${lop}` : ''}`}>{HINH[o]}</span>;
-  return <img className={`sh-hinh-do${lop ? ` ${lop}` : ''}`} src={asset(`do/${o}.webp`)} alt="" onError={() => setLoi(true)} />;
+/** Hình món đồ: ảnh riêng của kho người vận hành → tranh biến thể theo tông + giới người cầm (`hinhDo`, khi có `vat`)
+ *  → tranh chung `do/<ô>.webp` → biểu tượng tạm. Hỏng bậc nào thì lùi bậc sau. */
+export function HinhDo({ o, asset, lop, anh, vat }: { o: OTrangBi | 'ruong'; asset: (p: string) => string; lop?: string; anh?: string | undefined; vat?: TrangBi | undefined }) {
+  const ds: string[] = [];
+  if (anh !== undefined && anh !== '') ds.push(anh);
+  if (vat !== undefined && vat.bt !== undefined) ds.push(asset(hinhDo(vat)));
+  ds.push(asset(`do/${o}.webp`));
+  const khoa = ds.join('|');
+  const [loi, setLoi] = useState<{ khoa: string; bac: number }>({ khoa, bac: 0 });
+  const bac = loi.khoa === khoa ? loi.bac : 0;
+  if (bac >= ds.length) return <span className={`sh-hinh-do tam${lop ? ` ${lop}` : ''}`}>{HINH[o]}</span>;
+  return <img className={`sh-hinh-do${lop ? ` ${lop}` : ''}`} src={ds[bac]} alt="" onError={() => setLoi({ khoa, bac: bac + 1 })} />;
 }
 
 export function TuyetKy({ n, nb, asset }: { n: NguoiChoi; nb: Extract<NoiBat, { loai: 'tuyet-ky' }>; asset: (p: string) => string }) {
@@ -44,7 +51,7 @@ export function TuyetKy({ n, nb, asset }: { n: NguoiChoi; nb: Extract<NoiBat, { 
     <div className={`sh-tk ${nb.phe}`} style={{ '--mau': mau } as CSSProperties}>
       <div className="sh-tk-dai" />
       <div className="sh-tk-nv">
-        <VongHao asset={asset} mau={mau} />
+        {n.canh >= 4 ? <VongHao asset={asset} mau={mau} /> : null}
         <TranhCanh phe={nb.phe} gioi={n.gioi} canh={n.canh} asset={asset} lop="sh-tk-tranh" />
       </div>
       <div className="sh-tk-chu">
@@ -62,15 +69,26 @@ export function TuyetKy({ n, nb, asset }: { n: NguoiChoi; nb: Extract<NoiBat, { 
   );
 }
 
-export function VinhDanh({ n, nb, asset }: { n: NguoiChoi; nb: Extract<NoiBat, { loai: 'vinh-danh' }>; asset: (p: string) => string }) {
+export function VinhDanh({
+  n,
+  nb,
+  asset,
+  goc = false,
+}: {
+  n: NguoiChoi;
+  nb: Extract<NoiBat, { loai: 'vinh-danh' }>;
+  asset: (p: string) => string;
+  /** Đang đánh yêu tinh / Đại Chiến: thu nhỏ xuống góc dưới bên phải, không che trận. */
+  goc?: boolean;
+}) {
   const mau = n.phe === null ? '#ffd24c' : PHE[n.phe].mauSang;
   const tang = nb.lucSau - nb.lucTruoc;
   return (
-    <div className="sh-vd" style={{ '--mau': mau } as CSSProperties}>
+    <div className={`sh-vd${goc ? ' goc' : ''}`} style={{ '--mau': mau } as CSSProperties}>
       <div className="sh-vd-hao" />
       <div className="sh-vd-nv">
-        <VongHao asset={asset} mau={CANH_GIOI[n.canh]?.hao ?? mau} />
-        <TranhCanh phe={n.phe} gioi={n.gioi} canh={n.canh} asset={asset} lop="sh-vd-tranh" />
+        {n.canh >= 4 ? <VongHao asset={asset} mau={CANH_GIOI[n.canh]?.hao ?? mau} /> : null}
+        <TranhCanh phe={n.phe} gioi={n.gioi} canh={n.canh} ao={n.ao} asset={asset} lop="sh-vd-tranh" />
       </div>
       <div className="sh-vd-chu">
         <small>{nb.tieuDe}</small>
@@ -94,7 +112,7 @@ export function VinhDanh({ n, nb, asset }: { n: NguoiChoi; nb: Extract<NoiBat, {
           <ul>
             {nb.vat.map((v, i) => (
               <li key={i} style={{ '--pham': PHAM[v.pham]!.mau } as CSSProperties}>
-                <HinhDo o={v.o} asset={asset} />
+                <HinhDo o={v.o} asset={asset} anh={v.anh} vat={v} />
                 <span>{tenDo(v)}</span>
               </li>
             ))}

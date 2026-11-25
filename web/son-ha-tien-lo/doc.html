@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đọc truyện — Sơn Hà Tiên Lộ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=Playfair+Display:wght@700;900&family=Noto+Serif:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body class="trang-doc">
+<div class="thanh-doc" id="thanh-doc"></div>
+<header id="dau"></header>
+<div class="dau-chuong">
+  <div class="nen-anh" id="nen-chuong"></div>
+  <div class="khung">
+    <div class="so" id="so-chuong"></div>
+    <h1 id="ten-chuong">Đang mở Ngọc Phả…</h1>
+  </div>
+</div>
+<article class="bai" id="bai"></article>
+<aside class="o-live an" id="o-live"></aside>
+<nav class="dieu-huong" id="dieu-huong"></nav>
+<div class="cong-cu">
+  <button id="nho" aria-label="Chữ nhỏ hơn">A−</button>
+  <button id="to" aria-label="Chữ to hơn">A+</button>
+  <button id="nen" aria-label="Đổi nền đọc">◐</button>
+</div>
+<footer id="chan"></footer>
+<script src="js/site.js"></script>
+<script>
+(function () {
+  var S = window.SHTL;
+  var so = parseInt(new URLSearchParams(location.search).get('c'), 10) || 1;
+  var ds = S.tatCaChuong();
+  var vt = ds.findIndex(function (c) { return c.so === so; });
+  var c = ds[vt];
+
+  /* Cỡ chữ, nền đọc (nhớ trên máy người đọc) */
+  var co = S.docLuu('coChu', 1.12);
+  function datCo() { document.documentElement.style.setProperty('--co-chu', co.toFixed(2) + 'rem'); }
+  datCo();
+  document.getElementById('nho').onclick = function () { co = Math.max(0.9, co - 0.06); datCo(); S.ghiLuu('coChu', co); };
+  document.getElementById('to').onclick = function () { co = Math.min(1.6, co + 0.06); datCo(); S.ghiLuu('coChu', co); };
+  if (S.docLuu('nenDoc', '') === 'giay') document.documentElement.dataset.doc = 'giay';
+  document.getElementById('nen').onclick = function () {
+    var giay = document.documentElement.dataset.doc !== 'giay';
+    if (giay) document.documentElement.dataset.doc = 'giay'; else delete document.documentElement.dataset.doc;
+    S.ghiLuu('nenDoc', giay ? 'giay' : '');
+  };
+
+  /* Thanh tiến độ đọc */
+  var thanh = document.getElementById('thanh-doc');
+  addEventListener('scroll', function () {
+    var h = document.documentElement.scrollHeight - innerHeight;
+    thanh.style.width = (h > 0 ? (scrollY / h) * 100 : 0) + '%';
+  }, { passive: true });
+
+  if (!c) { document.getElementById('ten-chuong').textContent = 'Không có chương này'; veNut(); return; }
+  document.getElementById('so-chuong').textContent = c.quyen.phu + ' · ' + c.quyen.ten + ' · Chương ' + c.so;
+  document.getElementById('ten-chuong').textContent = c.ten;
+  document.title = 'Chương ' + c.so + ': ' + c.ten + ' — Sơn Hà Tiên Lộ';
+  if (c.anh) document.getElementById('nen-chuong').style.backgroundImage = 'url(' + c.anh + ')';
+
+  if (!c.co) {
+    document.getElementById('bai').innerHTML = '<p class="loi-ke">Chương này Cô Mây còn đang chép. Tóm tắt: ' + c.tom + '</p>';
+    veNut();
+    return;
+  }
+
+  /* Mỗi chương là một tệp chuong/NN.js gọi SHTL.nhanChuong({...}) — mở thẳng tệp HTML vẫn chạy */
+  S.nhanChuong = function (d) {
+    document.getElementById('bai').innerHTML = S.dinhDang(d.chu);
+    if (d.live && d.live.length) {
+      var o = document.getElementById('o-live');
+      var MAN_CHUONG = { 1: 'yeu-tinh', 2: 'dai-chien', 3: 'do-kiep', 4: 'dia-cung', 5: 'nhap-mon', 6: 'tu-luyen-thuy', 7: 'nhap-mon-di', 8: 'tu-luyen-son', 9: 'tu-luyen-son', 10: 'tu-luyen-thuy', 11: 'do-kiep', 12: 'tu-luyen-thuy', 13: 'dai-chien', 14: 'dia-cung', 15: 'thanh-tri', 16: 'yeu-tinh', 17: 'tong-ket' };
+      var m = S.MAN.filter(function (x) { return x.id === MAN_CHUONG[c.so]; })[0];
+      o.innerHTML = (m ? '<div class="khung-dt anh-man"><img src="anh/man/' + m.id + '.webp" alt="Màn ' + m.ten + ' trong phòng live"></div>' : '') +
+        '<h3>🎮 Trong phòng live' + (m ? ' — màn ' + m.ten : '') + '</h3><ul>' + d.live.map(function (l) { return '<li>' + S.dinhDang(l).replace(/^<p class="mo-dau">|<\/p>$/g, '') + '</li>'; }).join('') + '</ul>' +
+        '<p style="margin:10px 0 0"><a href="choi.html">Cách vào live chơi →</a></p>';
+      o.classList.remove('an');
+    }
+    var daDoc = S.docLuu('daDoc', {}); daDoc[c.so] = 1; S.ghiLuu('daDoc', daDoc);
+    S.ghiLuu('dangDoc', c.so);
+  };
+  var sc = document.createElement('script');
+  sc.src = 'chuong/' + String(c.so).padStart(2, '0') + '.js';
+  sc.onerror = function () { document.getElementById('bai').innerHTML = '<p class="loi-ke">Không mở được tệp chương.</p>'; };
+  document.body.appendChild(sc);
+  veNut();
+
+  function veNut() {
+    var truoc = vt > 0 ? ds[vt - 1] : null, sau = vt >= 0 && vt < ds.length - 1 ? ds[vt + 1] : null;
+    document.getElementById('dieu-huong').innerHTML =
+      (truoc ? '<a class="nut" href="doc.html?c=' + truoc.so + '">← Chương ' + truoc.so + '</a>' : '') +
+      '<a class="nut" href="muc-luc.html">Mục lục</a>' +
+      (sau ? '<a class="nut ' + (sau.co ? 'vang' : '') + '" href="doc.html?c=' + sau.so + '">Chương ' + sau.so + (sau.co ? '' : ' (sắp ra)') + ' →</a>' : '');
+  }
+})();
+</script>
+</body>
+</html>

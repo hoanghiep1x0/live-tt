@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mục lục — Sơn Hà Tiên Lộ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=Playfair+Display:wght@700;900&family=Noto+Serif:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header id="dau"></header>
+<main class="khoi">
+  <div class="khung" style="max-width:860px">
+    <div class="dau-khoi">
+      <h2>Mục lục</h2>
+      <p>Sáu quyển, kể theo đúng thứ tự trời đất. Chương có dấu ✓ là bạn đã đọc.</p>
+    </div>
+    <div id="ds-quyen"></div>
+  </div>
+</main>
+<footer id="chan"></footer>
+<script src="js/site.js"></script>
+<script>
+(function () {
+  var S = window.SHTL, daDoc = S.docLuu('daDoc', {});
+  document.getElementById('ds-quyen').innerHTML = S.MUC_LUC.map(function (q) {
+    return '<section class="quyen"><div class="dau-quyen"><div><div class="so-q">' + q.phu + '</div><h2>' + q.ten + '</h2></div></div>' +
+      '<p class="mo-ta">' + q.mo + '</p><ul class="ds-chuong">' + q.chuong.map(function (c) {
+        var noi = '<span class="stt">' + c.so + '</span><span class="ten">' + c.ten + '<span class="tom">' + c.tom + '</span></span>';
+        return c.co
+          ? '<li class="' + (daDoc[c.so] ? 'da-doc' : '') + '"><a href="doc.html?c=' + c.so + '">' + noi + '</a></li>'
+          : '<li><span class="khoa">' + noi + '</span></li>';
+      }).join('') + '</ul></section>';
+  }).join('');
+})();
+</script>
+</body>
+</html>

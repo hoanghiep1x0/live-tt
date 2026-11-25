@@ -18,6 +18,10 @@ thì phần đó dùng hình dự phòng (người chơi: ảnh tròn có hào q
 | `yeu/ho.webp` | Hồ Tinh Chín Đuôi | **có** |
 | `yeu/moc.webp` | Mộc Tinh Rừng Già | **có** |
 | `yeu/tam.webp` | Tam Yêu Hợp Thể | **có** |
+| `yeu/chan.webp` | Chằn Tinh Hang Núi | **có** |
+| `yeu/bang.webp` | Đại Bàng Tinh | **có** |
+| `yeu/cop.webp` | Hổ Tinh Rừng Thiêng (ChatGPT trả nền ô caro giả — tách bằng BiRefNet) | **có** |
+| `yeu/giai.webp` | Giải Tinh Biển Sâu | **có** |
 | `than/son-tinh.webp`, `than/thuy-tinh.webp` | Hai thần cho màn Đại Chiến, 800×1200, đứng đối mặt nhau | **có** |
 | `nhan-vat/<phe>-c<0..9>.webp` | Mỗi cảnh giới một bộ, 1024×1024 ngồi thiền. Có: c0, c1, c4, c6, c9; thiếu c2, c3, c5, c7, c8 (mượn bộ dưới) | một phần |
 | `nen/sanh.webp` | Nền màn Sảnh Thiên Vấn (1024×1536) | **có** |
@@ -48,7 +52,7 @@ thì phần đó dùng hình dự phòng (người chơi: ảnh tròn có hào q
 Mỗi bậc **thêm** chứ không thay: vẽ bậc sau thì gửi kèm ảnh bậc trước và nói "giữ nguyên người này, chỉ thêm…".
 Vẽ một tấm một lần (kinh nghiệm dự án: nhờ nhiều tấm một lượt dễ lệch màu).
 
-### Phe Núi — Tản Viên Sơn Môn (đất, rừng, đồng thau, ngọc bích)
+### Phe Núi — Sơn Tông Núi Thánh (đất, rừng, đồng thau, ngọc bích)
 
 - **son-0 (Sơ)**: Thiếu niên đồ đệ núi Tản. Áo vải nâu đất xẻ ngực, khố nâu, chân đất, khăn chít đầu màu be thắt nút
   trên đỉnh. Cầm cành tre. Hào quang xám nhạt quanh người.
@@ -61,7 +65,7 @@ Vẽ một tấm một lần (kinh nghiệm dự án: nhờ nhiều tấm một 
 - **son-4 (Tiên)**: Mão đồng hình mặt trời trống đồng 14 cánh trên đầu, áo lụa vàng đất, hào quang sau lưng là mặt
   trời trống đồng có chim Lạc bay vòng. Vẻ uy nghi nhưng vẫn hiền.
 
-### Phe Nước — Long Cung Thủy Phủ (sóng, ngọc trai, lam, ngọc lam)
+### Phe Nước — Thủy Tông Long Cung (sóng, ngọc trai, lam, ngọc lam)
 
 - **thuy-0 (Sơ)**: Thiếu nữ (hoặc thiếu niên) Long Cung. Áo vải chàm, váy quấn chàm, vòng cổ vỏ sò trắng, tóc búi hai
   bên. Hào quang xám lam.
@@ -81,6 +85,11 @@ Vẽ một tấm một lần (kinh nghiệm dự án: nhờ nhiều tấm một 
 - **moc**: Mộc Tinh — cây chiên đàn nghìn năm thành tinh, thân xoắn, mặt là hốc cây có mắt xanh lục phát sáng, cành như
   tay vươn ra, rễ bò như chân.
 - **tam**: Tam Yêu Hợp Thể — Mộc Tinh làm thân, chín đuôi cáo trắng mọc sau lưng, Ngư Tinh quấn dưới chân như rắn biển;
+- **chan / bang / cop / giai** (2026-11-19): gửi kèm `yeu/ngu.webp` làm ảnh mẫu, nói "CÙNG PHONG CÁCH với ảnh mẫu", vẽ
+  từng con một trong cùng cuộc chat. Chằn Tinh: trăn khổng lồ cuộn trước hang đá, nanh độc, khói độc lục. Đại Bàng:
+  dang cánh lông đồng thau / đen tím, mây giông, sét. Hổ Tinh: chồm tới giơ vuốt, vằn như hoa văn trống đồng, lửa ma
+  cam. Giải Tinh: cua nhìn chính diện, mai đá đen khảm đồng, hai càng giơ cao, san hô, bọt độc tím. Đưa vào game:
+  `scripts/phong/tu-tien/yeu-dong/dua_tranh_yeu.py <png> <id>`.
   tà khí đỏ thẫm. Là trùm cuối của Đại Yêu Dạ.
 
 ## Xử lý khi xuất (script `dua_vao.py` trong lịch sử phiên; làm lại bằng tay thì theo đúng các bước)

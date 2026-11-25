@@ -13,10 +13,32 @@ import { PHAM, tenDo } from './loi/trang-bi';
  *  (cao hơn rộng) để dùng hết chiều dọc của khung. */
 export const ME_X = 20;
 export const ME_Y = 560;
-const OX = 94.5;
-const OY = 101;
+/** Khung vẽ cố định 1039,5 × 1313; ô tự co giãn theo số cột, số hàng (Địa Cung 11×13, Ải Nhập Môn 9×11). */
+const RONG = 1039.5;
+const CAO = 1313;
+/** Ải Nhập Môn thấp hơn một chút: dải dưới cùng là hàng người đứng chờ trước lối vào. */
+const CAO_NM = 1190;
+/** Hàng chờ: hai dãy avatar dưới bản đồ Ải (toạ độ trong khung vẽ). */
+const HANG_CHO_Y = [CAO_NM + 62, CAO_NM + 120];
+const R_CHO = 26;
+let OX = 94.5;
+let OY = 101;
+const coO = (me: Me) => {
+  OX = RONG / me.cot;
+  OY = (me.cot === 11 ? CAO : CAO_NM) / me.hang;
+};
 
-const HINH: Record<string, string> = { vu: '⚔️', ao: '🛡️', bao: '📿', ruong: '🧰' };
+/** Một cửa trên bản đồ: ô, chữ trên biển, màu, biển nằm mép trên hay mép dưới. */
+interface CuaVe {
+  o: number;
+  chu: string;
+  mau: string;
+  nen: string;
+  tren: boolean;
+}
+
+const HINH: Record<string, string> = { vu: '⚔️', ao: '🛡️', bao: '📿', ruong: '🧰', bk: '📜', thach: '💎' };
+const MAU_THACH = '#7fd8ff';
 
 interface Bay {
   x: number;
@@ -27,13 +49,15 @@ interface Bay {
   to: number;
 }
 
-function veTuong(me: Me, vao: { son: number; thuy: number }, ra: number): HTMLCanvasElement {
+function veTuong(me: Me, cua: CuaVe[]): HTMLCanvasElement {
+  coO(me);
   const cv = document.createElement('canvas');
   cv.width = me.cot * OX + 40;
   cv.height = me.hang * OY + 40;
   const g = cv.getContext('2d')!;
   g.translate(20, 20);
-  g.fillStyle = 'rgba(14, 10, 6, 0.6)';
+  // Mỏng để thấy tranh nền riêng của từng mê cung (nen/me-*.webp); tường vàng vẫn nổi.
+  g.fillStyle = 'rgba(14, 10, 6, 0.3)';
   g.beginPath();
   g.roundRect(-14, -14, me.cot * OX + 28, me.hang * OY + 28, 26);
   g.fill();
@@ -61,9 +85,7 @@ function veTuong(me: Me, vao: { son: number; thuy: number }, ra: number): HTMLCa
     g.fillStyle = q;
     g.fillRect(x - OX * 0.25, y - OY * 0.25, OX * 1.5, OY * 1.5);
   };
-  nenO(ra, 'rgba(255, 210, 90, 0.55)');
-  nenO(vao.son, 'rgba(111, 207, 143, 0.4)');
-  nenO(vao.thuy, 'rgba(94, 224, 230, 0.4)');
+  for (const c of cua) nenO(c.o, c.nen);
 
   const doan: [number, number, number, number][] = [];
   for (let o = 0; o < me.tuong.length; o++) {
@@ -105,7 +127,9 @@ function veTuong(me: Me, vao: { son: number; thuy: number }, ra: number): HTMLCa
   }
   // Biển tên ba cửa.
   const bien = (o: number, chu: string, mau: string, tren: boolean) => {
-    const x = ((o % me.cot) + 0.5) * OX;
+    g.font = '900 24px "Noto Serif", Georgia, serif';
+    const rong = g.measureText(chu).width + 26;
+    const x = Math.max(rong / 2 - 14, Math.min(me.cot * OX - rong / 2 + 14, ((o % me.cot) + 0.5) * OX));
     const y = tren ? -2 : me.hang * OY + 2;
     g.font = '900 24px "Noto Serif", Georgia, serif';
     const w = g.measureText(chu).width + 26;
@@ -121,9 +145,7 @@ function veTuong(me: Me, vao: { son: number; thuy: number }, ra: number): HTMLCa
     g.textBaseline = 'middle';
     g.fillText(chu, x, y + 1);
   };
-  bien(ra, 'CỬA RA', '#ffd77a', true);
-  bien(vao.son, 'CỬA NÚI', '#9fe8b8', false);
-  bien(vao.thuy, 'CỬA NƯỚC', '#9ff3ff', false);
+  for (const c of cua) bien(c.o, c.chu, c.mau, c.tren);
   return cv;
 }
 
@@ -178,10 +200,12 @@ export function MeCung({
     };
 
     // Bảo vật vẽ nhỏ: chỉ đủ thấy và biết phẩm qua màu quầng — người chơi mới là nhân vật chính.
+    /** Lúc (giây) thấy từng món lần đầu — để làm nổi đồ mới rơi. */
+    const thayLuc = new Map<number, number>();
     const veDo = (d: DoRoi, x: number, y: number, t: number) => {
-      const ten = d.loai === 'tb' ? d.vat.o : 'ruong';
-      const pham = d.loai === 'tb' ? d.vat.pham : 4;
-      const mau = PHAM[pham]!.mau;
+      const ten = d.loai === 'tb' ? d.vat.o : d.loai;
+      const pham = d.loai === 'tb' ? d.vat.pham : d.loai === 'thach' ? 0 : 4;
+      const mau = d.loai === 'thach' ? MAU_THACH : PHAM[pham]!.mau;
       const nhun = Math.sin(t * 3 + d.id) * 3;
       const r = 16 + pham * 2;
       const q = g.createRadialGradient(x, y, 1, x, y, r);
@@ -193,8 +217,9 @@ export function MeCung({
       g.arc(x, y, r, 0, Math.PI * 2);
       g.fill();
       g.globalAlpha = 1;
-      const co = d.loai === 'ruong' ? 40 : 28;
-      const im = layIcon(ten);
+      const co = d.loai === 'tb' ? 28 : d.loai === 'thach' ? 24 : 38;
+      // Linh thạch vẽ bằng biểu tượng 💎 (chưa có tranh riêng).
+      const im = d.loai === 'thach' ? null : layIcon(ten);
       if (im !== null) {
         g.drawImage(im, x - co / 2, y - co / 2 + nhun, co, co);
       } else {
@@ -213,42 +238,131 @@ export function MeCung({
       const { the, anh } = ref.current;
       const pha = the.pha;
       g.clearRect(0, 0, cv.width, cv.height);
-      if (pha.k !== 'me') {
+      if (pha.k !== 'me' && pha.k !== 'nm') {
         vi.clear();
         return;
       }
+      const nm = pha.k === 'nm';
       const me = pha.me;
       if (me !== meDang) {
         meDang = me;
-        tuong = veTuong(me, pha.vao, pha.ra);
+        tuong = veTuong(
+          me,
+          pha.k === 'nm'
+            ? [
+                { o: pha.vao, chu: 'LỐI VÀO', mau: '#ffd77a', nen: 'rgba(255, 210, 90, 0.4)', tren: false },
+                ...(pha.phe === 'son' || pha.phe === null
+                  ? [{ o: pha.cua.son, chu: '⛰️ CỬA SƠN TÔNG', mau: '#9fe8b8', nen: 'rgba(111, 207, 143, 0.55)', tren: true }]
+                  : []),
+                ...(pha.phe === 'thuy' || pha.phe === null
+                  ? [{ o: pha.cua.thuy, chu: 'CỬA THỦY TÔNG 🌊', mau: '#9ff3ff', nen: 'rgba(94, 224, 230, 0.55)', tren: true }]
+                  : []),
+              ]
+            : [
+                { o: pha.ra, chu: 'CỬA RA', mau: '#ffd77a', nen: 'rgba(255, 210, 90, 0.55)', tren: true },
+                ...(pha.phe !== null
+                  ? [{ o: pha.vao.son, chu: 'LỐI VÀO', mau: '#ffd77a', nen: 'rgba(255, 210, 90, 0.4)', tren: false }]
+                  : [
+                      { o: pha.vao.son, chu: 'CỬA NÚI', mau: '#9fe8b8', nen: 'rgba(111, 207, 143, 0.4)', tren: false },
+                      { o: pha.vao.thuy, chu: 'CỬA NƯỚC', mau: '#9ff3ff', nen: 'rgba(94, 224, 230, 0.4)', tren: false },
+                    ]),
+              ],
+        );
         vi.clear();
       }
+      coO(me);
       g.save();
       g.translate(20, 20);
       if (tuong !== null) g.drawImage(tuong, -20, -20);
 
-      // Cửa Ra nhấp nháy.
-      const pr = tam(pha.ra, me);
-      g.strokeStyle = '#ffd77a';
-      g.globalAlpha = 0.5 + 0.4 * Math.sin(t * 5);
-      g.lineWidth = 4;
-      g.beginPath();
-      g.arc(pr.x, pr.y, OX * 0.38 + Math.sin(t * 5) * 4, 0, Math.PI * 2);
-      g.stroke();
-      g.globalAlpha = 1;
-
-      for (const d of pha.do) {
-        const p = tam(d.o, me);
-        veDo(d, p.x, p.y, t);
+      // Cửa đích nhấp nháy: Cửa Ra của Địa Cung, hai cửa tông của Ải Nhập Môn.
+      const dich =
+        pha.k === 'nm'
+          ? pha.phe !== null
+            ? [{ o: pha.cua.son, mau: pha.phe === 'son' ? '#9fe8b8' : '#9ff3ff' }]
+            : [{ o: pha.cua.son, mau: '#9fe8b8' }, { o: pha.cua.thuy, mau: '#9ff3ff' }]
+          : [{ o: pha.ra, mau: '#ffd77a' }];
+      for (const d of dich) {
+        const q = tam(d.o, me);
+        g.strokeStyle = d.mau;
+        g.globalAlpha = 0.5 + 0.4 * Math.sin(t * 5);
+        g.lineWidth = 4;
+        g.beginPath();
+        g.arc(q.x, q.y, Math.min(OX, OY) * 0.38 + Math.sin(t * 5) * 4, 0, Math.PI * 2);
+        g.stroke();
       }
+      g.globalAlpha = 1;
+      const pr = tam(dich[0]!.o, me);
+
+      {
+        for (const d of pha.do) {
+          const p = tam(d.o, me);
+          // Đồ mới rơi: 6 giây đầu có vòng sáng nhấp nháy và tên món phía trên — cho cả phòng tranh nhau.
+          if (!thayLuc.has(d.id)) thayLuc.set(d.id, t);
+          const moi = t - thayLuc.get(d.id)!;
+          // Túi linh thạch nhỏ, rơi đều: không vòng sáng, không biển tên — khỏi rối màn.
+          if (moi < 6 && d.loai !== 'thach') {
+            const mau = d.loai === 'tb' ? PHAM[d.vat.pham]!.mau : '#ffd77a';
+            const nhip = 0.5 + 0.5 * Math.sin(t * 9);
+            g.strokeStyle = mau;
+            g.lineWidth = 4;
+            g.globalAlpha = 0.45 + 0.5 * nhip;
+            g.beginPath();
+            g.arc(p.x, p.y, 26 + nhip * 10, 0, Math.PI * 2);
+            g.stroke();
+            g.globalAlpha = 0.25 * (1 - (moi % 1));
+            g.beginPath();
+            g.arc(p.x, p.y, 26 + (moi % 1) * 40, 0, Math.PI * 2);
+            g.stroke();
+            g.globalAlpha = 1;
+            const ten = d.loai === 'tb' ? tenDo(d.vat) : d.loai === 'bk' ? '📜 Bí kíp' : '🧰 Rương';
+            g.font = '800 22px system-ui, sans-serif';
+            g.textAlign = 'center';
+            g.textBaseline = 'bottom';
+            const w = g.measureText(ten).width + 18;
+            g.fillStyle = 'rgba(10, 6, 20, 0.82)';
+            g.beginPath();
+            g.roundRect(p.x - w / 2, p.y - 62, w, 30, 10);
+            g.fill();
+            g.fillStyle = mau;
+            g.fillText(ten, p.x, p.y - 36);
+          }
+          veDo(d, p.x, p.y, t);
+        }
+      }
+      const daXong = (user: string) => {
+        if (pha.k === 'nm') return pha.vt.get(user)?.qua ?? true;
+        return pha.vt.get(user)?.thoat ?? true;
+      };
 
       // Người: trượt tới ô mới. Nhiều người chung một ô thì toả nhẹ ra cho khỏi chồng khít.
       const theoO = new Map<number, string[]>();
       for (const [user, v] of pha.vt) {
-        if (v.thoat) continue;
+        if (daXong(user)) continue;
         const ds = theoO.get(v.o) ?? [];
         ds.push(user);
         theoO.set(v.o, ds);
+      }
+      // Ải Nhập Môn, 30 giây bước vào: ai đã chọn nhân vật thì xếp hàng dưới bản đồ, trước lối vào;
+      // hết giờ chờ thì cả hàng trượt vào mê cung.
+      const choVao = pha.k === 'nm' && Date.now() < pha.moLuc;
+      if (choVao) {
+        const ds = [...pha.vt.keys()];
+        const moiDay = Math.max(1, Math.ceil(ds.length / 2));
+        const motDay = ds.length <= 14;
+        const buoc = Math.min(R_CHO * 2.5, (RONG - 60) / Math.max(1, (motDay ? ds.length : moiDay) - 1));
+        ds.forEach((user, i) => {
+          const day = motDay ? 0 : Math.floor(i / moiDay);
+          const j = motDay ? i : i % moiDay;
+          const soTrongDay = motDay ? ds.length : day === 0 ? moiDay : ds.length - moiDay;
+          const dich = { x: RONG / 2 + (j - (soTrongDay - 1) / 2) * buoc, y: HANG_CHO_Y[motDay ? 1 : day]! - (motDay ? 28 : 0) };
+          let p = vi.get(user);
+          if (p === undefined) vi.set(user, (p = { x: dich.x, y: dich.y + 60 }));
+          const k = Math.min(1, dt * 8);
+          p.x += (dich.x - p.x) * k;
+          p.y += (dich.y - p.y) * k;
+        });
+        theoO.clear();
       }
       for (const [o, ds] of theoO) {
         const goc = tam(o, me);
@@ -264,13 +378,14 @@ export function MeCung({
         });
       }
       for (const [user, v] of pha.vt) {
-        if (v.thoat) continue;
+        if (daXong(user)) continue;
         const n = the.nguoi.get(user);
         const p = vi.get(user);
         if (n === undefined || p === undefined) continue;
-        const r = 30;
-        // Phàm nhân (chưa có phe): viền xám — nhặt được bảo vật là đổi màu phe ngay.
-        const mau = n.phe === null ? '#d8d0c0' : PHE[n.phe].mauSang;
+        const r = choVao ? R_CHO : nm ? 34 : 30;
+        // Ải Nhập Môn: viền theo tông đã chọn. Địa Cung: viền theo phe.
+        const pheVe = 'phe' in v ? v.phe : n.phe;
+        const mau = pheVe === null ? '#d8d0c0' : PHE[pheVe].mauSang;
         g.shadowColor = CANH_GIOI[n.canh]!.hao;
         g.shadowBlur = 16;
         g.fillStyle = '#1a1208';
@@ -302,7 +417,7 @@ export function MeCung({
         g.arc(p.x, p.y, r - 1, 0, Math.PI * 2);
         g.stroke();
         // Số đồ đang mang: huy hiệu vàng góc trên phải.
-        if (v.tui.length > 0) {
+        if ('tui' in v && v.tui.length > 0) {
           const bx = p.x + r * 0.75;
           const by = p.y - r * 0.75;
           g.fillStyle = '#ffd24c';
@@ -319,9 +434,19 @@ export function MeCung({
 
       // Chữ bay: nhặt đồ (nhỏ, màu phẩm) và thoát ra (to, lực chiến tăng).
       for (const s of hang.current.splice(0)) {
-        if (s.k === 'nhat' && s.nguon === 'me') {
+        if (s.k === 'bi-kip') {
+          const p = tam(s.o, me);
+          bay.push({ x: p.x, y: p.y, chu: '📜 bí kíp võ công!', mau: '#ffd24c', luc: t, to: 24 });
+        } else if (s.k === 'nhat-thach') {
+          const p = tam(s.o, me);
+          bay.push({ x: p.x, y: p.y, chu: `+${s.so} 💎`, mau: MAU_THACH, luc: t, to: 24 });
+        } else if (s.k === 'nhat' && (s.nguon === 'me' || s.nguon === 'nm')) {
           const p = tam(s.o, me);
           bay.push({ x: p.x, y: p.y, chu: `nhặt ${tenDo(s.vat)}`, mau: PHAM[s.vat.pham]!.mau, luc: t, to: 19 });
+        } else if (s.k === 'nm-qua' && pha.k === 'nm') {
+          const q = tam(pha.cua[s.phe], me);
+          const ten = the.nguoi.get(s.user)?.ten ?? '';
+          bay.push({ x: q.x, y: q.y + 60, chu: `${ten} nhập ${PHE[s.phe].tenNgan}!`, mau: PHE[s.phe].mauSang, luc: t, to: 28 });
         } else if (s.k === 'thoat') {
           const ten = the.nguoi.get(s.user)?.ten ?? '';
           const tang = s.lucSau - s.lucTruoc;
@@ -352,5 +477,5 @@ export function MeCung({
     return () => cancelAnimationFrame(raf);
   }, [hang]);
 
-  return <canvas ref={vai} className="sh-me" width={11 * OX + 40} height={13 * OY + 40} style={{ left: ME_X - 20, top: ME_Y - 20 }} />;
+  return <canvas ref={vai} className="sh-me" width={RONG + 40} height={CAO + 40} style={{ left: ME_X - 20, top: ME_Y - 20 }} />;
 }

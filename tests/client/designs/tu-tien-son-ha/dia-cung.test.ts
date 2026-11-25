@@ -16,6 +16,7 @@ import {
   type Su,
   type The,
 } from '../../../../client/designs/tu-tien-son-ha/src/loi/core';
+import { nhapMonThang } from '../../../../client/designs/tu-tien-son-ha/src/loi/core';
 import { docLenh } from '../../../../client/designs/tu-tien-son-ha/src/loi/lenh';
 import { buocToi, ke, khoang, lanCan, oGiua, oGuong, taoMe, taoMeDoiXung } from '../../../../client/designs/tu-tien-son-ha/src/loi/me-cung';
 import {
@@ -36,9 +37,13 @@ function hat(seed = 1) {
 }
 
 /** Chỉ Địa Cung: mọi sự kiện khác đẩy thật xa. */
-const chiMe: Nhip = { ...NHIP_LIVE, luDau: 1e9, yeuDau: 1e9, mua: 1e9, meDau: 5_000 };
+const chiMe: Nhip = { ...NHIP_LIVE, nmDau: 1e12, luDau: 1e9, yeuDau: 1e9, mua: 1e9, meDau: 5_000 };
 
 function noi(the: The, user: string, text: string, now: number, r: () => number): Su[] {
+  const l = docLenh(text);
+  if (l.k === 'phe' && the.pha.k !== 'nm' && (the.nguoi.get(user)?.phe ?? null) === null) {
+    return nhapMonThang(the, { kind: 'comment', user, ten: user.toUpperCase(), text }, l.phe, l.gioi, now, r);
+  }
   return nhanTin(the, { kind: 'comment', user, ten: user.toUpperCase(), text }, now, r);
 }
 
@@ -114,8 +119,11 @@ describe('trang bị và công thủ', () => {
     expect(nenMac(5, { ao: kem }, tot)).toBe(true);
   });
 
-  it('không đồ thì công bằng sát thương gốc xưa nay (10 + 6×cảnh giới)', () => {
-    expect(chiSo(4, {}).cong).toBe(34);
+  it('lực chiến gốc: dưới Nguyên Anh tăng hàng chục, từ Nguyên Anh tăng hàng trăm', () => {
+    const goc = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((c) => chiSo(c, {}).cong + chiSo(c, {}).thu);
+    expect(goc).toEqual([20, 50, 90, 140, 300, 500, 750, 1050, 1400, 1800]);
+    for (let c = 1; c < 4; c++) expect(goc[c]! - goc[c - 1]!).toBeLessThan(100);
+    for (let c = 4; c < 10; c++) expect(goc[c]! - goc[c - 1]!).toBeGreaterThanOrEqual(100);
   });
 
   it('gần lõi Địa Cung ra đồ quý nhiều hơn', () => {
@@ -142,8 +150,8 @@ describe('trang bị và công thủ', () => {
     const so = xuatHoSo(the);
     const moi = taoThe(0, chiMe);
     napHoSo(moi, JSON.parse(JSON.stringify(so)));
-    expect(moi.nguoi.get('lan')!.tb.vu).toEqual({ o: 'vu', pham: 2, cong: 25, thu: 0 });
-    expect(congThu(moi.nguoi.get('lan')!).cong).toBe(10 + 25);
+    expect(moi.nguoi.get('lan')!.tb.vu).toMatchObject({ o: 'vu', pham: 2, cong: 25, thu: 0 });
+    expect(congThu(moi.nguoi.get('lan')!).cong).toBe(12 + 25);
   });
 });
 
@@ -165,26 +173,12 @@ describe('Địa Cung', () => {
   }
   const CHU = { len: 'lên', xuong: 'xuống', trai: 'trái', phai: 'phải' } as const;
 
-  it('đệ tử đứng ở cửa vào của phe mình; phàm nhân cũng xuống được', () => {
+  it('đệ tử đứng ở cửa vào của phe mình; phàm nhân không xuống được (phải vượt Ải Nhập Môn trước)', () => {
     const { the, r, t, p } = san(3);
     for (const [user, v] of p.vt) expect(v.o).toBe(p.vao[the.nguoi.get(user)!.phe!]);
     noi(the, 'khach', 'lên', t + 10, r);
-    expect(p.vt.has('khach')).toBe(true);
+    expect(p.vt.has('khach')).toBe(false);
     expect(the.nguoi.get('khach')!.phe).toBeNull();
-  });
-
-  it('kỳ ngộ: phàm nhân nhặt được bảo vật thì bước vào tiên lộ (nhập môn phe đang yếu hơn)', () => {
-    const { the, r, t, p } = san(9, 3); // 2 phe Nước (k0, k2), 1 phe Núi (k1)
-    noi(the, 'moi', 'xin chào', t + 10, r);
-    const n = the.nguoi.get('moi')!;
-    const v = p.vt.get('moi')!;
-    expect(v.o).toBe(p.vao.son); // phe Núi đang ít người hơn
-    const h = huongDi(p, 'moi');
-    p.do = [{ id: 99, o: ke(p.me, v.o, h)!, loai: 'tb', vat: { o: 'vu', pham: 0, cong: 6, thu: 0 } }];
-    const ds = noi(the, 'moi', CHU[h], t + 1000, r);
-    expect(n.phe).toBe('son');
-    expect(n.canCo).not.toBeNull();
-    expect(ds.some((s) => s.k === 'ky-ngo' && s.user === 'moi')).toBe(true);
   });
 
   it('bảo vật có hạn và không rơi đầy sân', () => {
@@ -218,6 +212,7 @@ describe('Địa Cung', () => {
   it('nhặt đồ chỉ vào túi; ra tới Cửa Ra mới mặc, lực chiến tăng', () => {
     const { the, r, t, p } = san(6);
     const n = the.nguoi.get('k0')!;
+    n.tb = {}; // bỏ đồ ban nhập môn để thấy rõ món nhặt
     const v = p.vt.get('k0')!;
     // Đặt đồ ngay ô kế bên, rồi đặt người cạnh Cửa Ra.
     const h = huongDi(p, 'k0');
@@ -246,7 +241,7 @@ describe('Địa Cung', () => {
     n.canh = 2;
     for (let x = t; x <= t + chiMe.me + 500; x += 250) buoc(the, x, r);
     expect(the.pha.k).toBe('me-ket');
-    expect(n.tb.ao).toEqual({ o: 'ao', pham: 1, cong: 0, thu: 14 });
+    expect(n.tb.ao).toMatchObject({ o: 'ao', pham: 1, cong: 0, thu: 14 });
   });
 
   it('mê cung đối xứng gương: Cửa Núi và Cửa Nước cách Cửa Ra bằng nhau', () => {
@@ -289,6 +284,7 @@ describe('PK Thiên Bình', () => {
     for (let i = 0; i < 4; i++) {
       noi(the, `s${i}`, 'núi', 100, r);
       noi(the, `t${i}`, 'nước', 100, r);
+      the.nguoi.get(`t${i}`)!.tb = {}; // người mới tinh, chưa cả đồ ban nhập môn
       const s = the.nguoi.get(`s${i}`)!;
       s.canh = 9;
       s.tb = { vu: { o: 'vu', pham: 4, cong: 64, thu: 0 } };
@@ -376,6 +372,7 @@ describe('PK Thiên Bình', () => {
     const { the, r } = sanLu(16);
     for (const u of ['a', 'b']) noi(the, u, 'núi', 100, r);
     noi(the, 'c', 'nước', 100, r);
+    for (const u of ['a', 'b', 'c']) the.nguoi.get(u)!.tb = {}; // bỏ đồ ban nhập môn: chỉ so công trạng
     let t = toiLu(the, r);
     noi(the, 'a', 'đẩy', t + 10, r);
     noi(the, 'b', 'đẩy', t + 10, r);
@@ -395,7 +392,7 @@ describe('PK Thiên Bình', () => {
     for (let x = t; x < t + 7_000; x += 250) ket.push(...buoc(the, x, r));
     const k = ket.find((s) => s.k === 'dau-tuong-ket');
     expect(k && k.k === 'dau-tuong-ket' && k.thang).toBe('son');
-    expect(p.son).toBeCloseTo(sonTruoc + 12, 5);
+    expect(p.son).toBeGreaterThanOrEqual(sonTruoc + 12); // +12 thưởng, cộng thêm đòn thường tự động
   });
 
   it('quyết chiến được báo một lần, MC hô', () => {
@@ -423,21 +420,15 @@ describe('PK Thiên Bình', () => {
     expect(butPha(p, 'son')).toBe(1);
   });
 
-  it('cao thủ của phe (hệ số ≥ ×1,4) tung tuyệt kỹ, mỗi 12 giây một lần', () => {
+  it('bình luận chỉ là tiếp sức: không tự ra tuyệt kỹ dù lực chiến cao', () => {
     const { the, r } = sanLu(12);
-    noi(the, 'a', 'núi', 100, r);
-    noi(the, 'b', 'núi', 100, r);
-    noi(the, 'c', 'núi', 100, r);
+    for (const u of ['a', 'b', 'c']) noi(the, u, 'núi', 100, r);
     const a = the.nguoi.get('a')!;
     a.canh = 9;
     a.tb = { vu: { o: 'vu', pham: 4, cong: 70, thu: 0 } };
     const t = toiLu(the, r);
-    noi(the, 'b', 'đẩy', t + 5, r);
-    noi(the, 'c', 'đẩy', t + 6, r);
-    const tk1 = noi(the, 'a', 'đẩy', t + 10, r).filter((s) => s.k === 'tuyet-ky');
-    const tk2 = noi(the, 'a', 'đẩy', t + 1300, r).filter((s) => s.k === 'tuyet-ky');
-    expect(tk1).toHaveLength(1);
-    expect(tk2).toHaveLength(0);
+    const ds = [...noi(the, 'b', 'đẩy', t + 5, r), ...noi(the, 'a', 'đẩy', t + 10, r), ...noi(the, 'a', 'đẩy', t + 1300, r)];
+    expect(ds.some((s) => s.k === 'tuyet-ky')).toBe(false);
   });
 });
 
@@ -549,7 +540,8 @@ describe('lượt môn phái ở màn tu luyện', () => {
     const the = taoThe(0, chiMe);
     noi(the, 'a', 'núi', 100, r);
     noi(the, 'b', 'núi', 100, r);
-    expect(tongLuc(the, 200, 'son')).toEqual({ luc: 2 * (10 + 8), so: 2 });
+    const doBan = (u: string) => Object.values(the.nguoi.get(u)!.tb).reduce((a, t) => a + t!.cong + t!.thu, 0);
+    expect(tongLuc(the, 200, 'son')).toEqual({ luc: 2 * (12 + 8) + doBan('a') + doBan('b'), so: 2 });
   });
 });
 
@@ -558,10 +550,185 @@ describe('lệnh dẫn đường', () => {
     ['lên', 'len'],
     ['đi xuống', 'xuong'],
     ['qua trái', 'trai'],
-    ['phải phải', 'phai'],
     ['⬆️', 'len'],
     ['→', 'phai'],
   ])('%s', (chu, huong) => {
     expect(docLenh(chu)).toEqual({ k: 'di', huong });
+  });
+
+  it.each([
+    ['phải phải', 'phai', 2],
+    ['lên lên lên', 'len', 3],
+    ['trái 4', 'trai', 4],
+    ['đi xuống 2', 'xuong', 2],
+  ])('%s là nhiều bước', (chu, huong, so) => {
+    expect(docLenh(chu)).toEqual({ k: 'di', huong, so });
+  });
+});
+
+describe('Ải Nhập Môn', () => {
+  const nhip: Nhip = { ...NHIP_LIVE, luDau: 1e12, yeuDau: 1e12, mua: 1e12, meDau: 1e12, nmDau: 5_000 };
+
+  /** Chạy tới khi ải mở (cần có khách đang chờ). */
+  function moAi(seed: number) {
+    const r = hat(seed);
+    const the = taoThe(0, nhip);
+    nhanTin(the, { kind: 'comment', user: 'k', ten: 'K', text: 'xin chào' }, 100, r);
+    let t = 100;
+    while (the.pha.k !== 'nm') {
+      buoc(the, (t += 250), r);
+      if (t > 120_000) throw new Error('ải không mở');
+    }
+    const p = the.pha;
+    if (p.k !== 'nm') throw new Error();
+    return { the, r, t, p };
+  }
+
+  /** Đi đường ngắn nhất tới cửa phe mình, mỗi bình luận một bước. */
+  function diToiCua(the: The, user: string, t: number, r: () => number) {
+    const p = the.pha;
+    if (p.k !== 'nm') throw new Error();
+    const v = p.vt.get(user)!;
+    let x = t;
+    for (let i = 0; i < 80 && !v.qua; i++) {
+      const toi = buocToi(p.me, v.o, new Set([p.cua[v.phe]]), () => 0)!;
+      const h = (['len', 'xuong', 'trai', 'phai'] as const).find((d) => ke(p.me, v.o, d) === toi)!;
+      noi(the, user, { len: 'lên', xuong: 'xuống', trai: 'trái', phai: 'phải' }[h], (x += 400), r);
+      buoc(the, (x += 400), r);
+    }
+    return x;
+  }
+
+  it('không có khách thì không mở ải', () => {
+    const r = hat(1);
+    const the = taoThe(0, nhip);
+    for (let t = 0; t < 60_000; t += 250) buoc(the, t, r);
+    expect(the.pha.k).not.toBe('nm');
+  });
+
+  it('gõ "Nam - S", "nữ T" trong 30 giây đầu là bước vào; chữ hoa thường như nhau', () => {
+    const { the, r, t, p } = moAi(2);
+    noi(the, 'a', 'Nam - S', t + 100, r);
+    noi(the, 'b', 'NỮ-t', t + 200, r);
+    noi(the, 'c', 'nu s', t + 300, r);
+    expect(p.vt.get('a')).toMatchObject({ phe: p.phe, gioi: 'nam', o: p.vao });
+    // Ải một cửa: ai bước vào cũng về tông của ải, chỉ giới theo chữ gõ.
+    expect(p.vt.get('b')).toMatchObject({ phe: p.phe, gioi: 'nu' });
+    expect(p.vt.get('c')).toMatchObject({ phe: p.phe, gioi: 'nu' });
+    // Chưa qua ải thì vẫn là khách.
+    expect(the.nguoi.get('a')!.phe).toBeNull();
+    // Hết 30 giây thì không bước vào được nữa.
+    noi(the, 'muon', 'nam s', p.moLuc + 10, r);
+    expect(p.vt.has('muon')).toBe(false);
+  });
+
+  it('lên tiếng trong 30 giây mà chưa chọn nhân vật thì được bốc ngẫu nhiên; đã chọn thì chat thêm không đổi', () => {
+    const { the, r, t, p } = moAi(13);
+    noi(the, 'x', 'chào cả nhà', t + 100, r);
+    const v = p.vt.get('x')!;
+    expect(v).toBeDefined();
+    expect(['son', 'thuy']).toContain(v.phe);
+    expect(['nam', 'nu']).toContain(v.gioi);
+    noi(the, 'y', 'Nam - T', t + 200, r);
+    noi(the, 'y', 'hay quá', t + 300, r);
+    expect(p.vt.get('y')).toMatchObject({ phe: p.phe, gioi: 'nam' });
+  });
+
+  it('hai cửa cách lối vào bằng nhau (mê cung soi gương)', () => {
+    for (const seed of [3, 4, 5, 6]) {
+      const { p } = moAi(seed);
+      expect(khoang(p.me, p.vao, p.cua.son)).toBe(khoang(p.me, p.vao, p.cua.thuy));
+    }
+  });
+
+  it('chưa hết 30 giây thì chưa đi được; tới đúng cửa phe mình là nhập môn, được ban trang phục', () => {
+    const { the, r, t, p } = moAi(7);
+    noi(the, 'a', 'nam s', t + 100, r);
+    noi(the, 'a', 'lên', t + 500, r);
+    buoc(the, t + 1000, r);
+    expect(p.vt.get('a')!.o).toBe(p.vao);
+    let x = t + 1000;
+    while (x < p.moLuc) buoc(the, (x += 250), r);
+    diToiCua(the, 'a', x, r);
+    const n = the.nguoi.get('a')!;
+    expect(p.vt.get('a')!.qua).toBe(true);
+    expect(n).toMatchObject({ phe: 'son', gioi: 'nam' });
+    expect(n.ao).toBeGreaterThanOrEqual(1);
+    expect(n.ao).toBeLessThanOrEqual(5);
+    expect(p.qua).toEqual(['a']);
+  });
+
+  it('"lên 3" đi ba bước liền (mỗi bước một nhịp ngắn)', () => {
+    const { the, r, p } = moAi(8);
+    noi(the, 'a', 'nam s', p.moLuc - 1000, r);
+    const v = p.vt.get('a')!;
+    v.o = 2 * p.me.cot + 4;
+    // Mở thông ba ô phía trên để thử.
+    for (const o of [v.o, v.o - p.me.cot, v.o - 2 * p.me.cot]) p.me.tuong[o] = p.me.tuong[o]! & ~1;
+    for (const o of [v.o - p.me.cot, v.o - 2 * p.me.cot]) p.me.tuong[o] = p.me.tuong[o]! & ~4;
+    const goc = v.o;
+    noi(the, 'a', 'lên 2', p.moLuc + 10, r);
+    for (let x = p.moLuc + 10; x < p.moLuc + 2000; x += 100) buoc(the, x, r);
+    expect(v.o).toBe(goc - 2 * p.me.cot);
+  });
+
+  it('hết giờ chưa tới cửa thì vẫn là khách, chờ ải sau', () => {
+    const { the, r, t, p } = moAi(9);
+    noi(the, 'a', 'nữ t', t + 100, r);
+    let x = t;
+    while (the.pha.k === 'nm') buoc(the, (x += 250), r);
+    expect(the.pha.k).toBe('nm-ket');
+    const k = the.pha;
+    if (k.k !== 'nm-ket') throw new Error();
+    expect(k.truot).toBe(1);
+    expect(the.nguoi.get('a')!.phe).toBeNull();
+  });
+
+  it('vật phẩm rơi theo cặp soi gương, nằm trên đường tới cửa; vượt ải thì đồ và bí kíp thành của mình', () => {
+    const { the, r, t, p } = moAi(11);
+    noi(the, 'a', 'nam s', t + 100, r);
+    let x = t + 100;
+    while (x < p.moLuc + the.nhip.nm * 0.95) buoc(the, (x += 250), r);
+    // Đồ đã rơi hết (chưa ai nhặt): từng cặp soi gương nhau, cách lối vào và cửa tông bằng nhau.
+    expect(p.do.length).toBeGreaterThanOrEqual(6);
+    for (const d of p.do) {
+      const g = oGuong(p.me, d.o);
+      expect(p.do.some((e) => e.o === g && e.loai === d.loai)).toBe(true);
+      const cua = d.o % p.me.cot < p.me.cot / 2 ? p.cua.son : p.cua.thuy;
+      // Túi linh thạch được rơi lệch đường tới cửa tối đa 4 bước (THACH_NM); vật phẩm thì nằm ngay trên đường.
+      const lech = khoang(p.me, p.vao, d.o) + khoang(p.me, d.o, cua) - khoang(p.me, p.vao, cua);
+      if (d.loai === 'thach') expect(lech).toBeLessThanOrEqual(4);
+      else expect(lech).toBe(0);
+    }
+  });
+
+  it('nhặt bí kíp rồi vượt ải thì lĩnh ngộ một môn công pháp; đồ nhặt được mặc hoặc luyện hoá', () => {
+    const { the, r, t, p } = moAi(12);
+    noi(the, 'a', 'nữ t', t + 100, r);
+    const v = p.vt.get('a')!;
+    let x = t + 100;
+    while (x < p.moLuc) buoc(the, (x += 250), r);
+    // Đặt sẵn bí kíp và một món đồ ngay trên đường đi.
+    const o1 = buocToi(p.me, v.o, new Set([p.cua.thuy]), () => 0)!;
+    const o2 = buocToi(p.me, o1, new Set([p.cua.thuy]), () => 0)!;
+    p.do = [
+      { id: 90, o: o1, loai: 'bk' },
+      { id: 91, o: o2, loai: 'tb', vat: { o: 'vu', pham: 0, cong: 6, thu: 0 } },
+    ];
+    p.hen = [];
+    diToiCua(the, 'a', x, r);
+    const n = the.nguoi.get('a')!;
+    expect(n.phe).toBe(p.phe);
+    expect(n.cp).toBe(1);
+    expect(n.tb.vu).toBeDefined();
+  });
+
+  it('khách không tự vào phe bằng "vào" hay "núi" ngoài giờ ải', () => {
+    const r = hat(10);
+    const the = taoThe(0, nhip);
+    nhanTin(the, { kind: 'comment', user: 'a', ten: 'A', text: 'vào' }, 100, r);
+    nhanTin(the, { kind: 'comment', user: 'b', ten: 'B', text: 'núi nam' }, 100, r);
+    expect(the.nguoi.get('a')!.phe).toBeNull();
+    expect(the.nguoi.get('b')!.phe).toBeNull();
   });
 });

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xưởng Sơn Hà — Quy trình sản xuất</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=Noto+Serif:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/xuong.css">
+</head>
+<body>
+<header id="dau"></header>
+<main class="khung">
+  <h1>Quy trình sản xuất</h1>
+  <p class="mo-dau">Cách làm từng loại tài nguyên, từ tranh gốc tới file đưa vào game. Lời nhắc trong các ô đều đã chạy
+  thật, bấm <b>Chép</b> để lấy. Lệnh chạy trong <code>web/son-ha-tien-lo</code>, trên Windows đặt
+  <code>PYTHONIOENCODING=utf-8</code> trước lệnh Python.</p>
+  <ul class="muc-luc-trang">
+    <li><a href="#thong-so">0. Thông số file</a></li>
+    <li><a href="#thu-tu">1. Thứ tự làm một bộ trang phục</a></li>
+    <li><a href="#tranh">2. Tranh dáng thiền, dáng chiến (ChatGPT)</a></li>
+    <li><a href="#video-nv">3. Video nhân vật (Muse, nền xanh)</a></li>
+    <li><a href="#video-nen">4. Video nền động (Muse)</a></li>
+    <li><a href="#tien-canh">5. Tiền cảnh tách lớp</a></li>
+    <li><a href="#khong-khi">6. Lớp không khí</a></li>
+    <li><a href="#chieu">7. Chiêu thức</a></li>
+    <li><a href="#dan">8. Đan dược</a></li>
+    <li><a href="#soat">9. Soát trước khi đưa vào game</a></li>
+  </ul>
+
+  <h2 id="thong-so">0. Thông số file</h2>
+  <div class="bang-cuon"><table>
+    <tr><th>Loại</th><th>Định dạng</th><th>Khổ</th><th>Độ dài · khung/giây</th><th>Dung lượng</th><th>Thư mục game</th></tr>
+    <tr><td><b>Video nhân vật thiền</b></td><td>WebM VP9 <code>yuva420p</code> (có alpha)</td><td>cạnh dài 600</td><td>~14,5 s lặp liền · 24</td><td>≤ 6 MB</td><td><code>nhan-vat/&lt;nv&gt;-&lt;áo&gt;-thien.webm</code></td></tr>
+    <tr><td><b>Video động tác</b> (công / thủ / hồi)</td><td>WebM VP9 alpha</td><td>cạnh dài 600</td><td>2–3 s chạy một lần · 24 · ra tay ở 0,8 s</td><td>≤ 2 MB</td><td><code>nhan-vat/chien-&lt;nv&gt;-&lt;áo&gt;-&lt;cong|thu|hoi&gt;.webm</code></td></tr>
+    <tr><td><b>Video nền</b></td><td>MP4 H.264 <code>yuv420p</code>, faststart, không tiếng</td><td>768×1152 (2:3)</td><td>~14,5 s lặp liền · 24</td><td>≤ 6 MB</td><td><code>nen/&lt;id&gt;-dong.mp4</code></td></tr>
+    <tr><td>Tranh nền</td><td>WebP</td><td>1024×1536</td><td>—</td><td>≤ 600 KB</td><td><code>nen/&lt;id&gt;.webp</code></td></tr>
+    <tr><td>Tiền cảnh</td><td>WebP RGBA</td><td>đúng khổ tranh nền</td><td>—</td><td>≤ 200 KB</td><td><code>nen/&lt;id&gt;-truoc.webp</code></td></tr>
+    <tr><td>Tranh nhân vật (gốc)</td><td>WebP RGBA</td><td>1024×1024</td><td>—</td><td>≤ 300 KB</td><td><code>nhan-vat/&lt;nv&gt;-&lt;áo&gt;.webp</code>, <code>chien-…</code></td></tr>
+    <tr><td>Chiêu thức</td><td>WebP (động được)</td><td>bay rộng 640 · quanh người 448²</td><td>1–2 s lặp</td><td>≤ 400 KB</td><td><code>chieu/&lt;tông&gt;-c&lt;n&gt;.webp</code></td></tr>
+    <tr><td>Icon món</td><td>WebP RGBA</td><td>vuông</td><td>—</td><td>≤ 60 KB</td><td><code>vp/&lt;mã&gt;-&lt;tông&gt;.webp</code></td></tr>
+  </table></div>
+  <div class="meo"><b>Vì sao WebM VP9 alpha:</b> sân khấu chạy trong Chromium (OBS Browser Source), giải mã được video có kênh
+  trong suốt. Video mượt hơn hẳn ảnh động WebP ít khung, file lại nhỏ hơn với cùng độ dài.</div>
+
+  <h2 id="thu-tu">1. Thứ tự làm một bộ trang phục</h2>
+  <ol class="buoc">
+    <li><b>Tranh dáng thiền</b> của bộ áo (đã có đủ 36/36) → <a href="#tranh">§2</a></li>
+    <li><b>Tranh dáng chiến</b> của bộ áo: Sơn cầm cung, Thủy cầm lao, cùng mặt, cùng áo → <a href="#tranh">§2</a></li>
+    <li><b>Video thiền</b>: tranh thiền → nền xanh → Muse → <code>nv-video.py tach</code> → <a href="#video-nv">§3</a></li>
+    <li><b>Video công, thủ, hồi</b>: tranh dáng chiến → nền xanh → Muse (3 lời nhắc) → <code>nv-video.py tach --mot-lan</code></li>
+    <li>Chạy <code>node web/xuong-son-ha/cong-cu/xuat-du-lieu.mjs</code>, xem <a href="tai-nguyen.html#trang-phuc">Danh mục</a> đã báo "video ✓".</li>
+    <li>Mở bản chơi thử, gõ mua bộ áo đó, xem Phòng Thử Đồ và Võ Trường → <a href="#soat">§9</a></li>
+  </ol>
+
+  <h2 id="tranh">2. Tranh dáng thiền, dáng chiến (ChatGPT Image)</h2>
+  <p>Gửi kèm tranh đã có của <b>chính nhân vật đó</b> (bộ T1 hoặc tranh cảnh giới) để giữ mặt. Luôn viết
+  <b>"Vẽ không nền"</b>: nếu chỉ nói "transparent background", ChatGPT hay vẽ ô caro giả. Tải về xong, kiểm alpha ở góc
+  ảnh phải bằng 0.</p>
+  <div class="loi-nhac"><span class="nguon">ChatGPT · dáng thiền một bộ áo</span>Vẽ không nền. Draw it WITHOUT BACKGROUND (transparent PNG), ONE SQUARE image 1:1.
+Image 1 = my game character (keep EXACTLY the same face, hairstyle and body). Image 2 = the costume "&lt;tên bộ áo&gt;".
+Draw this same character wearing exactly the costume of image 2, sitting in lotus meditation on a glowing lotus cloud,
+front view, eyes closed, hands in mudra on the knees, full body centered with generous empty margin.
+Ancient Vietnamese Dong Son xianxia style, same painting style and lighting as image 1. No Chinese dragons, no Chinese characters, no text.</div>
+  <div class="loi-nhac"><span class="nguon">ChatGPT · dáng chiến (Sơn = cung, Thủy = lao)</span>Vẽ không nền. Draw it WITHOUT BACKGROUND (transparent PNG), ONE SQUARE image 1:1.
+Same character and same costume as image 1 (keep face, hair, costume, colors EXACTLY).
+Full-body battle stance, 3/4 view facing &lt;RIGHT for Sơn | LEFT for Thủy&gt;, holding &lt;a Dong Son bronze longbow, arrow nocked | a silver spear with wave patterns&gt;,
+feet planted on the ground, weapon fully inside the frame, generous empty margin. No lotus, no halo, no text.</div>
+
+  <h2 id="video-nv">3. Video nhân vật (Muse, nền xanh)</h2>
+  <p>Muse (muse.ai, dùng <b>khung chat chính</b>, khung chat phụ bị khoá vùng) làm video 10 giây từ một ảnh. Muse không xuất
+  được nền trong suốt, nên mình đặt nhân vật lên <b>nền xanh lá thuần</b> rồi tự tách nền ra.</p>
+  <ol class="buoc">
+    <li><b>Nền xanh:</b> <code>python cong-cu/nv-video.py xanh assets/…/thuy-tp5.webp tranh-goc/nhieu-lop/thuy-tp5-xanh.png</code>
+      (khổ 1024×1536, nhân vật rộng ~92%).</li>
+    <li><b>Muse:</b> đính kèm ảnh nền xanh, dán lời nhắc bên dưới. Chờ khoảng 1–2 phút, tải video về (768×1152, 10 giây).</li>
+    <li><b>Tách nền + nối vòng:</b> <code>python cong-cu/nv-video.py tach tranh-goc/nhieu-lop/thuy-tp5-xanh.mp4 tranh-goc/nhieu-lop/thuy-tp5-thien.webm</code>.
+      Lệnh này làm chậm 0,6×, tách nền xanh, khử ám xanh ở viền, cắt sát nhân vật, hoà 2 giây đuôi vào đầu, xuất WebM alpha
+      và ảnh khung đầu để soát. Động tác chạy một lần (công, thủ, hồi) thì thêm <code>--mot-lan</code>.</li>
+    <li><b>Soát</b> ảnh <code>.png</code> trên nền đỏ và trên tranh nền thật: không còn viền xanh, lụa mỏng không bị khoét lỗ.</li>
+    <li>Chép <code>.webm</code> vào <code>client/designs/tu-tien-son-ha/assets/nhan-vat/</code>.</li>
+  </ol>
+  <div class="loi-nhac"><span class="nguon">Muse · video thiền (đã chạy: Thủy nữ T5 Nguyệt Dạ Y)</span>Create a video from this exact image: the same immortal &lt;maiden|young man&gt; sitting in lotus meditation on a glowing lotus cloud, keep the face, hair, costume, colors and painting style EXACTLY the same, keep the character in the same place and size. Static camera, gentle looping motion like an animated film: slow breathing (chest and shoulders rise and fall softly), eyes stay closed, long hair and the sheer sleeves and ribbons float and ripple slowly, the aura behind flows and swirls slowly, tassels sway a little, the lotus petals glow and pulse softly. The character does NOT move the hands, does not stand up, does not turn. The background must stay a perfectly flat, uniform pure green (#00FF00) chroma-key screen for the whole video: no shadows, no glow, no light, no particles on the green. Vertical format, as long as possible, seamless loop.</div>
+  <div class="loi-nhac"><span class="nguon">Muse · video CÔNG (Sơn: bắn cung · Thủy: phóng lao)</span>Create a video from this exact image: the same character in the same costume (keep face, hair, costume, colors and style EXACTLY). Static camera. One clear attack, animated-film quality: &lt;Sơn: the archer draws the bronze longbow fully, holds for a beat, then RELEASES the arrow to the &lt;right&gt;, the bowstring snaps forward, robe and sleeves whip with the recoil, then returns to the ready stance | Thủy: the warrior pulls the spear back, then THRUSTS / hurls it forward to the left in one powerful motion, sleeves and sash whip, then returns to the ready stance&gt;. The release happens about one third into the video. Feet stay planted, the character stays in place and keeps the same size. The background must stay a perfectly flat, uniform pure green (#00FF00) chroma-key screen: no shadows, no glow, no particles on the green.</div>
+  <div class="loi-nhac"><span class="nguon">Muse · video THỦ (dựng khiên)</span>Create a video from this exact image: the same character in the same costume (keep everything EXACTLY). Static camera. Defensive move: the character plants the feet, raises the &lt;bow|spear&gt; crosswise in front and braces, a translucent &lt;golden mountain-stone|blue water&gt; shield shimmers up in front of the body, sleeves and robe pushed back by an impact wave, then the shield fades and the character returns to the ready stance. Stays in place, same size. The background must stay a perfectly flat, uniform pure green (#00FF00) chroma-key screen: no shadows, no glow on the green.</div>
+  <div class="loi-nhac"><span class="nguon">Muse · video HỒI (vận khí)</span>Create a video from this exact image: the same character in the same costume (keep everything EXACTLY). Static camera. Healing qi circulation: the character closes the eyes, brings both hands together in front of the chest, soft &lt;green-gold|aqua&gt; light gathers in the palms and spirals up around the body, hair and sleeves lift gently, then the light sinks into the body and the character opens the eyes, ready stance. Stays in place, same size. The background must stay a perfectly flat, uniform pure green (#00FF00) chroma-key screen: no shadows, no glow on the green.</div>
+  <div class="chu-y"><b>Hay hỏng:</b> Muse thêm hạt sáng hay hào quang lên nền xanh (nhắc lại câu cuối của lời nhắc), đổi mặt
+  (gửi lại ảnh, nhấn "keep the face EXACTLY"), cho nhân vật đi ra khỏi khung (nhắc "stays in place"). Nhân vật có món màu
+  xanh lá đậm (lá, ngọc bích) thì đổi nền sang <b>xanh dương #0000FF</b> và sửa ngưỡng trong <code>khoa()</code>.</div>
+
+  <h2 id="video-nen">4. Video nền động (Muse)</h2>
+  <ol class="buoc">
+    <li>Đính kèm tranh nền gốc (<code>tranh-goc/san-thu/&lt;id&gt;.png</code> hoặc <code>tranh-goc/nen-dong/goc/&lt;id&gt;.png</code>), dán lời nhắc, kể đúng thứ gì động trong tranh đó.</li>
+    <li>Tải video về, lưu <code>tranh-goc/nen-dong/muse/&lt;id&gt;.mp4</code>.</li>
+    <li><code>python cong-cu/nen-muse.py tranh-goc/nen-dong/muse/&lt;id&gt;.mp4 &lt;id&gt;</code>: làm chậm 0,6×, hoà 2 giây đuôi vào đầu, ra <code>assets/nen/&lt;id&gt;-dong.mp4</code>.</li>
+    <li>Duyệt trong game: <code>http://localhost:5186/?thu=1&amp;nen=&lt;id&gt;</code> giữ cứng nền đó, rồi nút "Nhảy tới…" chọn đúng màn.</li>
+  </ol>
+  <div class="loi-nhac"><span class="nguon">Muse · video nền (đã chạy: son-3, son-4, ao-thuy)</span>Create a video from this exact image (vertical game background, keep the same composition and painting style): static camera, CLEARLY VISIBLE but CALM, SLOW natural motion like an animated film — &lt;kể từng thứ động: the waterfall pouring with foam and mist rising, the pool rippling and sparkling, bamboo swaying, leaves drifting, sun rays shimmering, fireflies / bubbles rising, jellyfish lanterns pulsing, curtains swaying…&gt;. Water always flows in one direction (down), bubbles always rise up, never reverse. &lt;Kể thứ đứng yên: the rocks, pillars, stone ground and floor pattern&gt; stay still. Vertical format, as long as possible, seamless loop.</div>
+
+  <h2 id="tien-canh">5. Tiền cảnh tách lớp</h2>
+  <p>Vật ở gần trong tranh nền (san hô góc dưới, đèn, cành lá, đá) được cắt ra thành lớp riêng, đặt <b>đè lên nhân vật</b>
+  và trôi lệch tốc độ với nền. Nhờ vậy nhân vật trông như đứng trong cảnh.</p>
+  <div class="loi-nhac"><span class="nguon">Lệnh · đã chạy cho ao-thuy</span>python cong-cu/tien-canh.py tranh-goc/san-thu/ao-thuy.png ao-thuy "0,1095 45,1088 82,1108 84,1250 110,1248 135,1255 175,1288 215,1303 245,1350 252,1420 232,1536 0,1536" "1024,1095 980,1088 945,1108 940,1240 905,1248 870,1258 830,1288 795,1308 778,1360 772,1420 790,1536 1024,1536"</div>
+  <p>Toạ độ đọc trên tranh gốc 1024×1536 (mở ảnh có lưới hoặc dùng công cụ xem toạ độ). Viền mờ 9 px. Ảnh soát lưu ở
+  <code>tranh-goc/nhieu-lop/&lt;id&gt;-truoc-soat.jpg</code>. Khi máy quay nền nhích, tiền cảnh nhích nhiều hơn khoảng 1,5 lần.</p>
+
+  <h2 id="khong-khi">6. Lớp không khí</h2>
+  <p>Bong bóng, bụi sáng, lá rơi, tia sáng chéo bay ngang qua cả nhân vật lẫn nền. Có hai cách:</p>
+  <div class="luoi luoi-2">
+    <div class="the"><h3>CSS / three.js (nhẹ, lặp hoàn hảo)</h3>Như mô hình ở trang Tổng quan: 12–20 hạt, mỗi hạt tốc độ và độ trễ khác nhau, mờ dần ở hai đầu. Hợp với bong bóng, bụi sáng. Màn PK không dùng hạt tròn.</div>
+    <div class="the"><h3>Video alpha (đẹp hơn với lá, cánh hoa)</h3>Muse làm "falling petals / leaves on pure black background", rồi lấy độ sáng làm alpha. Xuất WebM VP9 alpha 1080×1920, ≤ 4 MB, lặp liền.</div>
+  </div>
+
+  <h2 id="chieu">7. Chiêu thức</h2>
+  <p>18 tranh chiêu (9 công pháp × 2 tông) đã có, nền trong suốt thật. Muốn chiêu chuyển động thì thay
+  <code>assets/chieu/&lt;tông&gt;-c&lt;n&gt;.webp</code> bằng bản động cùng tên, game tự chạy. Lời tả chuyển động từng chiêu
+  nằm ở <a href="tai-nguyen.html#cong-phap">Danh mục</a> (cột cuối) và <code>tranh-goc/chieu-cp/chieu.json</code>.
+  Cách làm chi tiết: <code>docs/phong/tu-tien/chieu-thuc.md</code> §4 (FramePack trên hpc, AI video với nền xám, hoặc
+  ChatGPT vẽ 4–6 khung).</p>
+  <div class="meo">Chiêu bay: vật <b>đứng yên giữa khung</b> (game tự lo đường bay), đầu chiêu ở 86–90% bề ngang. Thủy Tông bay sang trái nên game lật dọc, không cần vẽ riêng.</div>
+
+  <h2 id="dan">8. Đan dược</h2>
+  <p>Icon viên đan mỗi tông một bộ (<code>vp/D&lt;n&gt;-&lt;tông&gt;.webp</code>, đã đủ 18). Hiệu ứng trên người hiện là CSS
+  (<code>.sh-dan-hq.dan-&lt;kiểu&gt;</code>, 6 kiểu). Hướng nâng cấp: mỗi kiểu một video alpha ngắn 2,6 giây (khí xoáy, cột
+  sáng, lửa, khiên, hồn hỏa, hào quang) làm bằng Muse trên nền đen, lấy độ sáng làm alpha, gắn vào khối nhân vật.</p>
+
+  <h2 id="soat">9. Soát trước khi đưa vào game</h2>
+  <div class="bang-cuon"><table>
+    <tr><th>Kiểm</th><th>Đạt khi</th></tr>
+    <tr><td>Đúng nhân vật, đúng áo</td><td>Mặt, tóc, áo khớp tranh gốc của bộ đó, không lẫn chi tiết bộ khác.</td></tr>
+    <tr><td>Đúng động tác</td><td>Sơn bắn cung, Thủy phóng lao, Thủ dựng khiên, Máu vận khí. Không mượn động tác khác.</td></tr>
+    <tr><td>Nền trong suốt sạch</td><td>Trên nền đỏ không thấy viền xanh, không thấy mảng nền sót, lụa mỏng không bị khoét lỗ.</td></tr>
+    <tr><td>Lặp liền</td><td>Xem chỗ nối 3 lần liền không thấy giật. Nước, bong bóng không chạy ngược.</td></tr>
+    <tr><td>Nhịp chậm đồng đều</td><td>Đặt cạnh video nền: không lớp nào nhanh hẳn lên.</td></tr>
+    <tr><td>Đứng yên tại chỗ</td><td>Nhân vật không trôi khỏi điểm neo, không phóng to thu nhỏ.</td></tr>
+    <tr><td>Dung lượng</td><td>Đúng bảng §0.</td></tr>
+    <tr><td>Trong game</td><td>Bản chơi thử: Phòng Thử Đồ, Võ Trường, sân thiền đều hiện video, không khung trống lúc đổi.</td></tr>
+  </table></div>
+</main>
+<footer id="chan"></footer>
+<script src="js/du-lieu.js"></script>
+<script src="js/xuong.js"></script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 /** Thế giới Sơn Hà dựng bằng three.js: trời, sao, trăng, biển mây, núi Ba Vì ba đỉnh, rừng, hoa đào,
- *  đảo đá trôi, nhà sàn mái thuyền (Long Cung, Sơn Môn), đàn tế mặt trống đồng, mặt nước, mây xoáy
+ *  đảo đá trôi, nhà sàn mái thuyền (Long Cung, Sơn Tông), đàn tế mặt trống đồng, mặt nước, mây xoáy
  *  lôi kiếp, đạo cụ ba bãi yêu tinh. Phong cách theo Kinh Thư §5: Đông Sơn tiên hiệp. */
 
 import * as THREE from 'three';

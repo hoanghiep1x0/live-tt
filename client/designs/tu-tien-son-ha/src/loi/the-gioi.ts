@@ -16,8 +16,8 @@ export interface ThongTinPhe {
 export const PHE: Record<Phe, ThongTinPhe> = {
   son: {
     id: 'son',
-    ten: 'Tản Viên Sơn Môn',
-    tenNgan: 'Sơn Môn',
+    ten: 'Sơn Tông Núi Thánh',
+    tenNgan: 'Sơn Tông',
     chu: 'Sơn Tinh',
     khauHieu: 'Nước dâng bao nhiêu, núi cao bấy nhiêu',
     mau: '#3f8f5a',
@@ -25,8 +25,8 @@ export const PHE: Record<Phe, ThongTinPhe> = {
   },
   thuy: {
     id: 'thuy',
-    ten: 'Long Cung Thủy Phủ',
-    tenNgan: 'Thủy Phủ',
+    ten: 'Thủy Tông Long Cung',
+    tenNgan: 'Thủy Tông',
     chu: 'Thủy Tinh',
     khauHieu: 'Nước chảy đá mòn',
     mau: '#1f6fb2',
@@ -38,7 +38,7 @@ export interface CanhGioi {
   ten: string;
   /** Linh khí tích luỹ cần để vào cảnh giới này. */
   can: number;
-  /** Số hộ pháp đủ để qua kiếp khi trả lời sai. 0 là không cần độ kiếp. */
+  /** Số hộ pháp đủ để chắc chắn qua kiếp (thiếu thì trông vào vận, `KIEP_TU`). 0 là không cần độ kiếp. */
   hoPhap: number;
   /** Màu hào quang. */
   hao: string;
@@ -58,7 +58,7 @@ export const CANH_GIOI: readonly CanhGioi[] = [
 ];
 
 /** Chức vụ trong môn phái theo cảnh giới — cảnh giới càng cao, chức càng lớn, ngồi càng cao.
- *  Sơn Môn là môn phái tu tiên trên núi Tản; Thủy Phủ là triều đình dưới nước của Long Cung,
+ *  Sơn Tông là môn phái tu tiên trên núi Tản; Thủy Tông là triều đình dưới nước của Long Cung,
  *  nên chức mang tên quan võ đáy biển. Mỗi cấp một dòng, khớp CANH_GIOI. */
 export const CHUC_VU: Record<Phe, readonly string[]> = {
   son: [
@@ -101,14 +101,14 @@ export function bacChuc(canh: number): 0 | 1 | 2 | 3 {
  *  thần trong truyền thuyết: Sơn Tinh bốc đồi dời núi, Thủy Tinh hô mưa gọi gió dâng nước. */
 export const CHIEU: Record<Phe, readonly string[]> = {
   son: ['Ném Đá', 'Bốc Đồi', 'Dời Núi', 'Sơn Băng Địa Liệt', 'Tản Viên Thần Lực'],
-  thuy: ['Té Nước', 'Hô Mưa', 'Gọi Gió', 'Sóng Thần Vạn Trượng', 'Thủy Long Ngâm'],
+  thuy: ['Té Nước', 'Hô Mưa', 'Gọi Gió', 'Băng Phong Vạn Lý', 'Thủy Long Ngâm'],
 };
 
 export const chieuCua = (phe: Phe, canh: number) => CHIEU[phe][Math.max(0, Math.min(4, Math.floor(canh / 2)))]!;
 
 /** Danh hiệu ba hàng đỉnh kim tự tháp mỗi phe. Hàng 1: người đứng đầu phe. Hàng 2: Tả, Hữu Hộ Pháp
- *  (trái, phải). Hàng 3, bốn trụ cột, đọc từ trái sang: Sơn Môn là Tứ Trấn giữ bốn mặt núi Ba Vì;
- *  Thủy Phủ là Tứ Tuần canh bốn thủy vực sông, hồ, đầm, biển. */
+ *  (trái, phải). Hàng 3, bốn trụ cột, đọc từ trái sang: Sơn Tông là Tứ Trấn giữ bốn mặt núi Ba Vì;
+ *  Thủy Tông là Tứ Tuần canh bốn thủy vực sông, hồ, đầm, biển. */
 export const DANH_HIEU: Record<Phe, { dau: string; hoPhap: readonly [string, string]; truCot: readonly string[] }> = {
   son: { dau: 'Chưởng Môn', hoPhap: ['Tả Hộ Pháp', 'Hữu Hộ Pháp'], truCot: ['Trấn Đông', 'Trấn Tây', 'Trấn Nam', 'Trấn Bắc'] },
   thuy: { dau: 'Long Soái', hoPhap: ['Tả Hộ Pháp', 'Hữu Hộ Pháp'], truCot: ['Tuần Giang', 'Tuần Hồ', 'Tuần Đầm', 'Tuần Hải'] },
@@ -166,6 +166,51 @@ export const CAN_CO: Record<CanCo, { ten: string; hinh: string; ky: Ky; uu: stri
   quan: { ten: 'Phá Quân', hinh: '🗡', ky: 'pha', uu: 'hô "phá" 2 phiếu · bạo kích 20% · tuyệt kỹ dễ ra · trả lời đúng Linh Mạch +2', nhuoc: 'đỡ phản đòn −20%' },
 };
 
+/** Trận tu luyện của phe lên cấp nhờ quà của môn đồ (lệ Sơn Hà). Mỗi cấp một tên; trận càng cao thì
+ *  mỗi câu đáp đúng môn đồ càng được nhiều linh thạch, và cộng hưởng linh khí càng lớn. */
+export const TRAN_TU: readonly { ten: string; can: number }[] = [
+  { ten: 'Tụ Linh Trận', can: 0 },
+  { ten: 'Lạc Điểu Trận', can: 100 },
+  { ten: 'Đồng Cổ Trận', can: 300 },
+  { ten: 'Thiên Phù Trận', can: 800 },
+  { ten: 'Sơn Hà Đại Trận', can: 2000 },
+];
+/** Mốc xu để nhánh trận của một môn đồ lên cấp (1–4). Mỗi lần nhánh lên cấp đẩy thêm 20 trận lực cho trận phe. */
+export const NHANH_MOC: readonly number[] = [10, 50, 200, 500];
+export const NHANH_DAY = 20;
+
+/** Võ công: mỗi căn cơ một môn (tên theo phe), 5 tầng, học bằng linh thạch. Mỗi môn hỗ trợ một kiểu
+ *  khi PK và đánh yêu tinh (lệ Sơn Hà). */
+export const VO_CONG: Record<CanCo, { ten: Record<Phe, string>; ta: string }> = {
+  tuong: { ten: { son: 'Phá Sơn Phủ Pháp', thuy: 'Nộ Triều Thương Pháp' }, ta: 'đòn +8% mỗi tầng' },
+  ve: { ten: { son: 'Thạch Bích Công', thuy: 'Long Lân Hộ Thể' }, ta: 'đỡ phản đòn +5% mỗi tầng, đòn +3%' },
+  y: { ten: { son: 'Linh Chi Quyết', thuy: 'Hồi Xuân Thủy Pháp' }, ta: 'mỗi đòn tiếp sức hồi trận khí cho phe, đòn +3%' },
+  quan: { ten: { son: 'Xuyên Vân Tiễn', thuy: 'Xé Sóng Đao' }, ta: 'bạo kích +3% mỗi tầng, đòn +5%' },
+};
+/** Giá linh thạch để lên từng tầng võ công (tầng 1 → 5). */
+export const VO_GIA: readonly number[] = [30, 60, 120, 240, 480];
+/** Tụ Khí Đan: 20 linh thạch một viên, luyện hoá được 25 linh khí. */
+export const DAN_GIA = 20;
+export const DAN_LK = 25;
+
+/** Hệ số linh thạch (mốc neo: 1 xu quà = 1 linh thạch). Mọi nguồn và mọi giá phải quy về bảng này —
+ *  xem docs/phong/tu-tien/ban-do.md §3b trước khi thêm nguồn hay món mới. */
+export const THACH = {
+  /** Quà: mỗi xu. */
+  xu: 1,
+  /** Đột phá: người đột phá được hệ số này × cảnh giới mới. */
+  dotPha: 5,
+  /** Đột phá: mỗi người đang online trong phòng được hệ số này × cảnh giới mới của người đột phá. */
+  phong: 1,
+  /** Tim trong một buổi: [số tim, linh thạch thưởng khi chạm mốc]. */
+  timMoc: [
+    [50, 2],
+    [200, 5],
+    [500, 10],
+    [1000, 20],
+  ] as readonly (readonly [number, number])[],
+} as const;
+
 export type Gioi = 'nam' | 'nu';
 
 /** Trưởng lão NPC ngồi trận tu luyện khi phe chưa đủ 6 đệ tử thật — truyện bắt đầu được từ một người.
@@ -203,7 +248,27 @@ export const NPC_TRUONG_LAO: Record<Phe, readonly Npc[]> = {
 export const GIOI_GOC: Record<Phe, Gioi> = { son: 'nam', thuy: 'nu' };
 
 /** Các tranh thử lần lượt cho một nhân vật, tốt nhất trước. Khách (chưa nhập môn) là phàm nhân. */
-export function duongTranh(phe: Phe | null, gioi: Gioi | null, canh: number): string[] {
+/** Trang phục cơ bản (nhận lúc nhập môn) mặc tới hết Kết Đan; từ Nguyên Anh đổi sang áo cảnh giới. */
+export const CANH_HET_AO = 4;
+
+/** Tên bộ trang phục cơ bản theo phe (tranh `<nhân vật>-tp<1..5>`). */
+export const TEN_AO: Record<Phe, readonly string[]> = {
+  son: ['Sơn Dã Y', 'Hộ Sơn Giáp', 'Bạch Vân Bào', 'Hồng Hội Bào', 'Dạ Hành Y'],
+  thuy: ['Ngư Gia Y', 'Ngân Lân Giáp', 'Bạch Châu Bào', 'San Hô Bào', 'Nguyệt Dạ Y'],
+};
+
+/** Đuôi tên tranh theo trang phục T1–T9 (chỉ số = mã T): T1–T5 bộ cơ bản `tp1`…`tp5`, T6–T9 pháp y cảnh giới. */
+export const DUOI_AO = ['', 'tp1', 'tp2', 'tp3', 'tp4', 'tp5', 'c1', 'c4', 'c6', 'c9'] as const;
+/** Tên nhân vật trong tên file tranh: giới gốc của phe là `son` / `thuy`, giới kia `son-nu` / `thuy-nam`. */
+export const tenNv = (phe: Phe, gioi: Gioi | null) => ((gioi ?? GIOI_GOC[phe]) === GIOI_GOC[phe] ? phe : `${phe}-${gioi}`);
+/** Dáng chiến (Đại Chiến) đúng trang phục đang mặc: `nhan-vat/chien-<nhân vật>-<đuôi áo>` (+ `-2` khung ra đòn).
+ *  Chưa vẽ bộ đó thì nơi gọi lùi về dáng chiến chung `chien-<phe>-<giới>`. */
+export const duongChienAo = (phe: Phe, gioi: Gioi | null, ao: number): string | null => {
+  const d = DUOI_AO[ao];
+  return d ? `nhan-vat/chien-${tenNv(phe, gioi)}-${d}` : null;
+};
+
+export function duongTranh(phe: Phe | null, gioi: Gioi | null, canh: number, ao = 0): string[] {
   if (phe === null) {
     const g = gioi ?? 'nam';
     return [`nhan-vat/khach-${g}.webp`, g === 'nam' ? 'nhan-vat/son-c0.webp' : 'nhan-vat/thuy-c0.webp'];
@@ -211,12 +276,28 @@ export function duongTranh(phe: Phe | null, gioi: Gioi | null, canh: number): st
   const g = gioi ?? GIOI_GOC[phe];
   const ra: string[] = [];
   const tran = Math.max(0, Math.min(9, canh));
+  // Trang phục người chơi tự chọn (T1–T9) luôn được mặc: T1–T5 bộ cơ bản, T6–T9 pháp y cảnh giới.
+  const duoiAo = DUOI_AO[ao];
+  if (duoiAo) ra.push(`nhan-vat/${g === GIOI_GOC[phe] ? phe : `${phe}-${g}`}-${duoiAo}.webp`);
   if (g !== GIOI_GOC[phe]) for (let c = tran; c >= 0; c--) ra.push(`nhan-vat/${phe}-${g}-c${c}.webp`);
   for (let c = tran; c >= 0; c--) ra.push(`nhan-vat/${phe}-c${c}.webp`);
   return ra;
 }
 
-export type YeuId = 'ngu' | 'moc' | 'ho' | 'tam';
+export type YeuId = 'ngu' | 'moc' | 'ho' | 'tam' | 'chan' | 'bang' | 'cop' | 'giai';
+
+/** Chiêu lớn của yêu tinh — báo trước vài giây, phe gõ đúng số kịp thì đỡ được:
+ *  `quet` đánh cả đội → 2 thủ · `choang` choáng / độc nhiều người → 3 hồi · `giap` yêu tinh khoác giáp → 4 phá ·
+ *  `hut` yêu tinh hút máu hồi sức → 1 công. */
+export type LoaiChieuYeu = 'quet' | 'choang' | 'giap' | 'hut';
+
+export interface ChieuYeu {
+  ten: string;
+  loai: LoaiChieuYeu;
+}
+
+/** Số gõ để đỡ từng loại chiêu (khớp 1 công · 2 thủ · 3 hồi · 4 phá). */
+export const SO_DO_CHIEU: Record<LoaiChieuYeu, '1' | '2' | '3' | '4'> = { hut: '1', quet: '2', choang: '3', giap: '4' };
 
 export interface ThongTinYeu {
   id: YeuId;
@@ -228,8 +309,12 @@ export interface ThongTinYeu {
   khac: Phe | null;
   /** Tỉ lệ đòn trượt. */
   truot: number;
-  /** Chiêu phản đòn (lệ Sơn Hà). */
+  /** Chiêu phản đòn đầu tiên (lệ Sơn Hà). */
   chieu: string;
+  /** Các chiêu ra luân phiên mỗi lần phản đòn (chiêu đầu là `chieu`). */
+  chieuDs: readonly string[];
+  /** Ba chiêu lớn báo trước (gõ số đỡ), ra luân phiên. */
+  chieuLon: readonly ChieuYeu[];
 }
 
 export const YEU: Record<YeuId, ThongTinYeu> = {
@@ -240,6 +325,8 @@ export const YEU: Record<YeuId, ThongTinYeu> = {
     khac: 'son',
     truot: 0,
     chieu: 'Sóng Dữ Biển Đông',
+    chieuDs: ['Sóng Dữ Biển Đông', 'Vảy Thép Xoáy Nước', 'Ngư Long Phun Thủy'],
+    chieuLon: [{ ten: 'Sóng Thần Nuốt Thuyền', loai: 'quet' }, { ten: 'Vảy Thép Hộ Thân', loai: 'giap' }, { ten: 'Xoáy Nước Hút Hồn', loai: 'hut' }],
   },
   ho: {
     id: 'ho',
@@ -248,6 +335,8 @@ export const YEU: Record<YeuId, ThongTinYeu> = {
     khac: 'thuy',
     truot: 0,
     chieu: 'Mê Hồn Hồ Ly',
+    chieuDs: ['Mê Hồn Hồ Ly', 'Cửu Vĩ Hồ Hỏa', 'Ảo Ảnh Chín Đuôi'],
+    chieuLon: [{ ten: 'Mê Hồn Nhãn', loai: 'choang' }, { ten: 'Cửu Vĩ Hồ Hỏa', loai: 'quet' }, { ten: 'Hút Tinh Khí', loai: 'hut' }],
   },
   moc: {
     id: 'moc',
@@ -256,6 +345,8 @@ export const YEU: Record<YeuId, ThongTinYeu> = {
     khac: null,
     truot: 0.2,
     chieu: 'Rễ Cổ Quấn Chân',
+    chieuDs: ['Rễ Cổ Quấn Chân', 'Lá Độc Cuốn Gió', 'Thân Gỗ Đè Núi'],
+    chieuLon: [{ ten: 'Rễ Cổ Trói Chân', loai: 'choang' }, { ten: 'Vỏ Gỗ Nghìn Năm', loai: 'giap' }, { ten: 'Thân Gỗ Đè Núi', loai: 'quet' }],
   },
   tam: {
     id: 'tam',
@@ -264,11 +355,54 @@ export const YEU: Record<YeuId, ThongTinYeu> = {
     khac: null,
     truot: 0.1,
     chieu: 'Tam Yêu Loạn Kích',
+    chieuDs: ['Tam Yêu Loạn Kích', 'Hắc Thủy Cuồng Lôi', 'Vạn Yêu Triều Bái'],
+    chieuLon: [{ ten: 'Tam Yêu Loạn Kích', loai: 'quet' }, { ten: 'Vạn Yêu Hộ Thể', loai: 'giap' }, { ten: 'Hắc Thủy Hút Hồn', loai: 'hut' }],
+  },
+
+  chan: {
+    id: 'chan',
+    ten: 'Chằn Tinh Hang Núi',
+    loi: 'Trăn khổng lồ ăn thịt người — xưa chết dưới lưỡi rìu Thạch Sanh, nay vẫn sợ rìu đồng Sơn Tông',
+    khac: 'son',
+    truot: 0,
+    chieu: 'Quật Đuôi',
+    chieuDs: ['Quật Đuôi', 'Nanh Độc', 'Siết Mồi'],
+    chieuLon: [{ ten: 'Quật Đuôi Đổ Núi', loai: 'quet' }, { ten: 'Phun Độc Mù Trời', loai: 'choang' }, { ten: 'Lột Xác Hồi Sinh', loai: 'hut' }],
+  },
+  bang: {
+    id: 'bang',
+    ten: 'Đại Bàng Tinh',
+    loi: 'Chim khổng lồ cắp người lên núi — bay cao, một phần đòn đánh hụt',
+    khac: null,
+    truot: 0.15,
+    chieu: 'Vuốt Sắt',
+    chieuDs: ['Vuốt Sắt', 'Mỏ Đồng Mổ', 'Cắp Người Bay'],
+    chieuLon: [{ ten: 'Bão Cánh Cuốn Trời', loai: 'quet' }, { ten: 'Lông Sắt Hộ Thân', loai: 'giap' }, { ten: 'Tiếng Rít Xé Hồn', loai: 'choang' }],
+  },
+  cop: {
+    id: 'cop',
+    ten: 'Hổ Tinh Rừng Thiêng',
+    loi: 'Ông Ba Mươi trăm tuổi thành tinh — hổ dữ sợ nước, Thủy Tông đánh đau',
+    khac: 'thuy',
+    truot: 0,
+    chieu: 'Vồ Mồi',
+    chieuDs: ['Vồ Mồi', 'Móng Hổ Xé Gió', 'Đuôi Sắt Quất'],
+    chieuLon: [{ ten: 'Gầm Rung Núi Rừng', loai: 'choang' }, { ten: 'Hổ Uy Hộ Thể', loai: 'giap' }, { ten: 'Uống Máu Hồi Sức', loai: 'hut' }],
+  },
+  giai: {
+    id: 'giai',
+    ten: 'Giải Tinh Biển Sâu',
+    loi: 'Cua khổng lồ mai đen như đá — đá núi đập vỡ mai, Sơn Tông đánh đau',
+    khac: 'son',
+    truot: 0,
+    chieu: 'Càng Thép Kẹp',
+    chieuDs: ['Càng Thép Kẹp', 'Bọt Độc', 'Mai Đá Húc'],
+    chieuLon: [{ ten: 'Càng Thép Quét Ngang', loai: 'quet' }, { ten: 'Mai Đá Bất Hoại', loai: 'giap' }, { ten: 'Bọt Độc Mê Man', loai: 'choang' }],
   },
 };
 
-/** Yêu tinh thường thay phiên; Tam Yêu chỉ ra ở sự kiện Đại Yêu Dạ. */
-export const THU_TU_YEU: readonly YeuId[] = ['ngu', 'ho', 'moc'];
+/** Yêu tinh thường bốc ngẫu nhiên (không trùng con vừa đánh); Tam Yêu chỉ ra ở sự kiện Đại Yêu Dạ. */
+export const THU_TU_YEU: readonly YeuId[] = ['ngu', 'ho', 'moc', 'chan', 'bang', 'cop', 'giai'];
 
 export interface LinhVat {
   id: string;
@@ -289,24 +423,60 @@ export const LINH_VAT: readonly LinhVat[] = [
   { id: 'giao', ten: 'Giao Long', hinh: '🐉', phe: 'thuy' },
 ];
 
-export type LoaiDacBiet = 'dai-yeu' | 'dai-lu' | 'hoi-thi' | 'phuc-loc';
+export type LoaiDacBiet =
+  | 'dai-yeu'
+  | 'dai-lu'
+  | 'hoi-thi'
+  | 'phuc-loc'
+  | 'ai'
+  | 'dia-cung'
+  | 'pk'
+  | 'cho'
+  | 'loi-dai'
+  | 'yeu-ngu'
+  | 'yeu-ho'
+  | 'yeu-moc';
 
 export const DAC_BIET: Record<LoaiDacBiet, { ten: string; loi: string }> = {
   'dai-yeu': { ten: 'Đại Yêu Dạ', loi: 'Tam Yêu Hợp Thể — máu gấp ba, top 3 sát thương nhận linh vật' },
   'dai-lu': { ten: 'Đại Hồng Thủy', loi: 'Kéo co hai phút, thắng đẩy thế trận hai bậc' },
   'hoi-thi': { ten: 'Hội thi Ngọc Phả', loi: 'Tám câu khó liền, linh khí nhân đôi' },
   'phuc-loc': { ten: 'Giờ Linh Khí', loi: 'Mỵ Nương rải phúc — mười câu nhân đôi linh khí' },
+  ai: { ten: 'Thử Thách Nhập Môn', loi: 'Mê cung cấp 1 — phàm nhân vượt ải để nhập tông' },
+  'dia-cung': { ten: 'Tranh Đoạt Bảo Vật', loi: 'Mê cung cấp 2 — đệ tử giành bảo vật' },
+  pk: { ten: 'Nước Dâng Đoạt Mị Nương', loi: 'Hai tông PK tới khi một bên cạn trận khí — quà ra chiêu' },
+  cho: { ten: 'Thành Trì Tự Do', loi: 'Chợ chung hai tông: Đan Các bán đan dược, Tàng Kinh Các bán bí kíp' },
+  'loi-dai': { ten: 'Tỉ Thí Lôi Đài', loi: 'Đồng môn so tài — lời khiêu chiến đã xếp hàng lên đài lần lượt' },
+  'yeu-ngu': { ten: 'Ngư Tinh Biển Đông', loi: 'Yêu tinh xuất thế' },
+  'yeu-ho': { ten: 'Hồ Tinh Chín Đuôi', loi: 'Yêu tinh xuất thế' },
+  'yeu-moc': { ten: 'Mộc Tinh Rừng Già', loi: 'Yêu tinh xuất thế' },
+};
+
+/** Biểu tượng từng loại dòng lịch trình (bảng Lịch trình trên màn). */
+export const HINH_LICH: Record<LoaiDacBiet, string> = {
+  'dai-yeu': '👹',
+  'dai-lu': '🌊',
+  'hoi-thi': '📜',
+  'phuc-loc': '✨',
+  ai: '🚪',
+  'dia-cung': '🏺',
+  pk: '⚔️',
+  cho: '🏯',
+  'loi-dai': '🏆',
+  'yeu-ngu': '👹',
+  'yeu-ho': '👹',
+  'yeu-moc': '👹',
 };
 
 /** Dòng sử thi. `{ten}` là người chơi, các khoá khác tuỳ việc. Nhiều câu cho một việc để
  *  dải chữ không lặp lại y nguyên cả buổi. */
 export const SU_THI = {
-  nhapSon: ['{ten} lên núi Tản bái sư.', '{ten} vác đá theo Sơn Tinh.', 'Sơn Môn có thêm {ten}, núi cao thêm một tấc.'],
-  nhapThuy: ['{ten} xuống Long Cung nhận ấn rồng.', '{ten} theo sóng về Thủy Phủ.', 'Thủy Phủ đón {ten}, sóng vỗ ba lần chào.'],
+  nhapSon: ['{ten} lên núi Tản bái sư.', '{ten} vác đá theo Sơn Tinh.', 'Sơn Tông có thêm {ten}, núi cao thêm một tấc.'],
+  nhapThuy: ['{ten} xuống Long Cung nhận ấn rồng.', '{ten} theo sóng về Thủy Tông.', 'Thủy Tông đón {ten}, sóng vỗ ba lần chào.'],
   dotPha: ['{ten} đột phá {canh}! Linh khí cuồn cuộn.', '{ten} bước vào {canh}.', 'Mây tụ trên đầu {ten}: {canh} đã thành.'],
   binhCanh: ['{ten} chạm bình cảnh {canh}. Trời bắt đầu nổi sấm…'],
   quaKiep: ['Sét đánh chín lần, {ten} vẫn đứng. Một vị {canh} ra đời — Mỵ Nương rải phúc!', '{ten} nuốt trọn lôi kiếp, thành {canh}! Hoa vàng rơi khắp núi Tản.'],
-  quaKiepNhoHo: ['{ten} trả lời trật, nhưng {so} đồng đạo che sét. {canh} — qua!'],
+  quaKiepNhoHo: ['{so} đồng đạo che sét cho {ten}. {canh} — qua, cả phòng hưởng phúc!'],
   ngaKiep: ['{ten} ngã dưới lôi kiếp… hẹn ngày tái chiến.', 'Sét đánh trúng {ten}. Tóc xoăn tít, ba phút nữa thử lại.'],
   yeuHien: ['{yeu} xuất thế! Hai phe tạm gác thù, cùng ra tay.'],
   yeuChet: ['{ten} tung đòn cuối — {yeu} hóa khói!', '{yeu} gục dưới tay {ten}.'],
@@ -315,24 +485,39 @@ export const SU_THI = {
   linhVatThuy: ['Thủy Tinh ban cho {ten} {lv}.'],
   dacBiet: ['{ten} bắt đầu! {loi}.'],
   luBatDau: ['Thủy Tinh hô mưa gọi gió — nước bắt đầu dâng!'],
-  luSon: ['Nước rút! Sơn Môn giữ vững chân núi.', 'Núi mọc cao thêm, Thủy Phủ đành lui sóng.'],
-  luThuy: ['Nước tràn lên sườn núi — Thủy Phủ thắng trận lũ này!', 'Sóng vỗ tới lưng chừng núi Tản. Thủy Phủ thắng!'],
+  luSon: ['Nước rút! Sơn Tông giữ vững chân núi.', 'Núi mọc cao thêm, Thủy Tông đành lui sóng.'],
+  luThuy: ['Nước tràn lên sườn núi — Thủy Tông thắng trận lũ này!', 'Sóng vỗ tới lưng chừng núi Tản. Thủy Tông thắng!'],
   luHoa: ['Nước và núi giằng co bất phân thắng bại.'],
-  muaSon: ['Hết năm thứ {nam}: Sơn Môn thắng mùa lũ! Núi Tản vững như bàn thạch.'],
-  muaThuy: ['Hết năm thứ {nam}: Thủy Phủ thắng mùa lũ! Phù sa phủ khắp đồng bằng.'],
+  muaSon: ['Hết năm thứ {nam}: Sơn Tông thắng mùa lũ! Núi Tản vững như bàn thạch.'],
+  muaThuy: ['Hết năm thứ {nam}: Thủy Tông thắng mùa lũ! Phù sa phủ khắp đồng bằng.'],
   muaHoa: ['Hết năm thứ {nam}: hai phe hòa nhau. Năm sau đánh tiếp!'],
   qua: ['{ten} thắp {so} {qua} dâng hương.'],
-  meMo: ['Nước lũ rút, cửa Địa Cung Đồng Cổ lộ ra — đồ đồng vua Hùng rơi khắp lối!', 'Lò đúc đồng cổ mở cửa. Hai phe tranh nhau xuống nhặt!'],
-  meRuong: ['Rương Đồng hiện giữa lõi Địa Cung — ai tới trước được đồ quý!'],
+  meMo: ['Tranh Đoạt Bảo Vật! Nước lũ rút, bảo khố Đồng Cổ lộ ra — đồ đồng vua Hùng rơi khắp lối!', 'Lò đúc đồng cổ mở cửa. Hai phe tranh nhau xuống nhặt!'],
+  meRuong: ['Rương Đồng hiện giữa mê cung — ai tới trước được đồ quý!'],
   meNhat: ['{ten} nhặt được {vat}!', '{ten} lượm {vat} trong đống tro lò đúc.'],
   meRuongMo: ['{ten} mở Rương Đồng: {vat}!'],
+  duLinhKhi: ['{ten} đã đủ linh khí — gõ "đột phá" để lên {canh}!', 'Linh khí của {ten} đã đầy. Gõ "đột phá" để bước vào {canh}.'],
+  xuatMon: ['{ten} bỏ bê tu luyện quá lâu, bị xuất môn làm khách.', '{ten} lâu không tiến bộ, trưởng lão cho về làm khách.'],
+  hocVo: ['{ten} luyện {vo} lên tầng {tang}.'],
+  tranLen: ['{phe} nâng trận lên {tran}! Mỗi câu đáp đúng thêm {thach} linh thạch.'],
   congHuong: ['{so} đồng môn {phe} cùng đáp đúng — Tụ Linh Trận sáng rực!', 'Linh khí {so} người {phe} hoà làm một dòng.'],
-  kyNgo: ['Kỳ ngộ! {ten} nhặt được {vat} trong Địa Cung, bước vào tiên lộ {phe}.', '{ten} vốn phàm nhân, lượm được {vat} — duyên tu tiên bắt đầu ở {phe}.'],
+  nmMo: ['Ải Nhập Môn mở cửa! Phàm nhân nào muốn theo tiên lộ, ba mươi giây để bước vào.', 'Mê cung Nhập Môn hiện ra giữa mây — hai cửa, hai tông, ai tới được thì thành đệ tử.'],
+  muaMon: ['{ten} đổi linh thạch lấy {mon} ({ma}).', 'Tàng Bảo Các: {ten} vừa mua {mon}.'],
+  dungMon: ['{ten} đổi sang {mon}.'],
+  choMo: ['Cửa Thành Trì Tự Do mở! Đan Các đỏ lửa lò, Tàng Kinh Các rộng cửa — đệ tử hai tông cùng xuống chợ.'],
+  nmBiKip: ['Hên quá! {ten} nhặt được bí kíp võ công giữa Ải Nhập Môn!', 'Bí kíp thất truyền rơi xuống tay {ten} — vượt ải là lĩnh ngộ!'],
+  nmQua: ['{ten} vượt Ải Nhập Môn thứ {thu}, bái nhập {phe}!', 'Ải Nhập Môn: {ten} tới cửa {phe} — một đồng môn mới!'],
+  kyNgo: ['Kỳ ngộ! {ten} giành được {vat} lúc tranh đoạt bảo vật, bước vào tiên lộ {phe}.', '{ten} vốn phàm nhân, lượm được {vat} — duyên tu tiên bắt đầu ở {phe}.'],
   thayTuong: ['{ten} lên thay làm Chủ Tướng {phe}!'],
   ketTran: ['{phe} kết trận {tran}!', '{phe} đồng thanh hô — {tran} thành!'],
-  meThoat: ['{ten} thoát Địa Cung thứ {thu}, mang theo {so} món!', '{ten} lao ra Cửa Ra — hạng {thu}!'],
-  meDong: ['Địa Cung đóng cửa. {ten} ra đầu tiên, {so} người thoát được.'],
-  meVang: ['Địa Cung đóng cửa, chưa ai kịp ra — đồ nhặt được vẫn mang về.'],
+  meThoat: ['{ten} ra cửa thứ {thu}, mang theo {so} bảo vật!', '{ten} lao ra Cửa Ra — hạng {thu}!'],
+  meDong: ['Tranh Đoạt Bảo Vật kết thúc. {ten} ra đầu tiên, {so} người ra kịp.'],
+  yeuCuong: ['{yeu} chưa chết — cuồng bạo sống lại, đồ sát khắp trận!'],
+  yeuThuong: ['{phe} hạ {yeu}! Mỗi đệ tử ra tay được {thach} linh thạch.'],
+  yeuDoSat: ['{yeu} cuồng bạo đồ sát cả đội — trận này yêu tinh thắng.'],
+  tpHa: ['{ten} — tiên phong {phe} — bị hạ giữa trận!'],
+  tpHiSinh: ['{ten} liều mình tung đòn hi sinh cho {phe} — cả chiến trường chấn động!'],
+  meVang: ['Tranh Đoạt Bảo Vật kết thúc, chưa ai kịp ra — bảo vật giành được vẫn mang về.'],
   yeuRoi: ['{yeu} rơi ra {vat} — {ten} chộp được!'],
   tuyetKy: ['{ten} tung tuyệt kỹ {chieu}!'],
 } as const;

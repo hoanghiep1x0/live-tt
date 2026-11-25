@@ -137,6 +137,11 @@ export interface ConfigField {
   boSan?: string;
   /** Cho `list`: mục mới khi bấm Thêm (chưa có `id` — tự sinh). */
   moi?: { readonly [k: string]: Json };
+  /** Cho `list`: bày các mục thành LƯỚI Ô CÓ ẢNH (vật phẩm, phần thưởng, sự kiện) thay cho bảng dòng. Bấm một ô
+   *  để sửa. `anh`: khoá giữ ảnh người vận hành tải lên (URL); trống thì lấy `macDinh` — khoá giữ đường dẫn asset
+   *  của thiết kế (vd `do/vu.webp`); cả hai trống thì hiện chữ ở khoá `hinh` (emoji). `phu`: các khoá ghi dòng nhỏ
+   *  dưới tên. `mau`: khoá giữ màu viền ô (vd màu phẩm). */
+  luoi?: { anh?: string; macDinh?: string; hinh?: string; phu?: readonly string[]; mau?: string };
 }
 
 /** Nút bấm trên thẻ, ví dụ "Quay" của module quay thưởng, "Nhảy ngay" của vũ công.
@@ -409,6 +414,26 @@ export function themList(f: ConfigField, v: Json, id: string): Json {
 /** Giá trị `list` sau khi sửa ô `o` của mục thứ `i`. */
 export function suaList(v: Json, i: number, o: string, x: Json): Json {
   return mucList(v).map((m, k) => (k === i ? { ...m, [o]: x } : m));
+}
+
+/** Giá trị `list` sau khi chuyển mục thứ `tu` tới chỗ thứ `toi` (kéo-thả, nút lên / xuống). */
+export function doiList(v: Json, tu: number, toi: number): Json {
+  const ds = mucList(v);
+  if (tu < 0 || tu >= ds.length || toi < 0 || toi >= ds.length || tu === toi) return ds;
+  const m = ds.splice(tu, 1)[0]!;
+  ds.splice(toi, 0, m);
+  return ds;
+}
+
+/** Tên hiện của một mục `list`: ô `ten` nếu có, không thì nhãn của ô chọn đầu tiên (vd "Ải Nhập Môn"). */
+export function tenMucList(f: ConfigField, m: JsonObj, i: number): string {
+  if (typeof m['ten'] === 'string' && m['ten'] !== '') return m['ten'];
+  const chon = (f.fields ?? []).find((o) => o.type === 'select');
+  if (chon !== undefined) {
+    const nhan = chon.options?.find((o) => o.value === m[chon.key])?.label;
+    if (nhan !== undefined) return nhan;
+  }
+  return `${f.label} ${i + 1}`;
 }
 
 /** Giá trị `list` sau khi bỏ mục thứ `i`. */

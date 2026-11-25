@@ -8,11 +8,10 @@
  *  Toàn bộ là CSS animation theo mốc thời gian; thiết kế không giữ trạng thái nào. */
 
 import { useState, type CSSProperties } from 'react';
-import { tenCanh, type NguoiChoi } from './loi/core';
+import { lucChienCua, tenCanh, type NguoiChoi } from './loi/core';
 import { CANH_GIOI, PHE, chucVu, duongTranh, type Gioi, type Phe } from './loi/the-gioi';
 import { ChuVang } from './ChuVang';
 import { VongHao } from './VongHao';
-import { chiSo } from './loi/trang-bi';
 
 export const DOT_PHA_MS = 6200;
 /** Bản ngắn cho cảnh giới thấp: người mới đột phá liên tục, bản dài sẽ chiếm cả buổi live. */
@@ -39,14 +38,17 @@ export function TranhCanh({
   canh,
   asset,
   lop,
+  ao = 0,
 }: {
   phe: Phe | null;
   gioi: Gioi | null;
   canh: number;
   asset: (p: string) => string;
   lop: string;
+  /** Bộ trang phục cơ bản (0 là áo theo cảnh giới). */
+  ao?: number;
 }) {
-  const ds = duongTranh(phe, gioi, canh);
+  const ds = duongTranh(phe, gioi, canh, ao);
   const [thu, setThu] = useState(0);
   const p = ds[thu];
   if (p === undefined) return null;
@@ -59,20 +61,21 @@ export function DotPha({
   anh,
   asset,
   ngan,
+  thach,
+  phong,
 }: {
   n: NguoiChoi;
   canh: number;
   anh: string | undefined;
   asset: (p: string) => string;
   ngan: boolean;
+  thach: number;
+  phong: number;
 }) {
   const hao = CANH_GIOI[canh]?.hao ?? '#ffffff';
   const haoCu = CANH_GIOI[Math.max(0, canh - 1)]?.hao ?? '#cccccc';
   const phe = n.phe ?? 'son';
-  const tong = (c: number) => {
-    const x = chiSo(Math.max(0, c), n.tb);
-    return x.cong + x.thu;
-  };
+  const tong = (c: number) => lucChienCua(Math.max(0, c), n.tb, n.vo);
   const lucCu = tong(canh - 1);
   const lucMoi = tong(canh);
   const kieu = {
@@ -103,7 +106,7 @@ export function DotPha({
         ))}
         <div className="sh-dp-nv">
           {/* Vòng hào quang hiện cùng trang phục mới, sau chớp sáng. */}
-          <VongHao asset={asset} mau={hao} tre={1.15} />
+          {canh >= 4 ? <VongHao asset={asset} mau={hao} tre={1.15} /> : null}
           <TranhCanh phe={phe} gioi={n.gioi} canh={canh - 1} asset={asset} lop="cu" />
           <TranhCanh phe={phe} gioi={n.gioi} canh={canh} asset={asset} lop="moi" />
           {anh ? <img className="sh-dp-huy" src={anh} alt="" referrerPolicy="no-referrer" /> : null}
@@ -142,6 +145,13 @@ export function DotPha({
         {chucVu(phe, canh) !== chucVu(phe, canh - 1) ? (
           <div className="sh-dp-cv">
             Thăng <b>{chucVu(phe, canh)}</b>
+          </div>
+        ) : null}
+        {/* Hàng cuối: lộc linh thạch — người đột phá và cả phòng đang online. */}
+        {thach > 0 ? (
+          <div className="sh-dp-thach">
+            💎 <b>+{thach}</b> linh thạch · đang có <b>{n.tinChi.toLocaleString('vi-VN')}</b> · cả phòng mỗi người{' '}
+            <b>+{phong}</b>
           </div>
         ) : null}
       </div>

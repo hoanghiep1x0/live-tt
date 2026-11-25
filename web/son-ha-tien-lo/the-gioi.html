@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thế giới — Sơn Hà Tiên Lộ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=Playfair+Display:wght@700;900&family=Noto+Serif:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header id="dau"></header>
+<main>
+  <section class="khoi">
+    <div class="khung">
+      <div class="dau-khoi">
+        <h2>Thế giới Sơn Hà</h2>
+        <p>Đất Văn Lang ba nghìn năm sau ngày Lạc Long Quân trấn yêu. Đông Sơn chứ không phải điện ngói: nhà sàn mái thuyền, mặt trời trống đồng, chim Lạc bay vòng.</p>
+      </div>
+      <div class="tab" id="nhay">
+        <button data-den="tong">Hai tông</button><button data-den="thang">Thang Trời</button><button data-den="dia">Địa danh</button>
+        <button data-den="nam">Một năm</button><button data-den="vat">Linh vật</button><button data-den="tran">Căn cơ & trận pháp</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="khoi" id="tong" style="padding-top:0">
+    <div class="khung">
+      <h2>Hai tông môn</h2>
+      <div class="luoi luoi-2">
+        <div class="the">
+          <h3 style="color:#8fe6c9">Sơn Tông Núi Thánh</h3>
+          <p style="color:var(--chu-mo)">Môn phái tu tiên trên núi Tản, giữ mạch linh khí của núi. Đứng đầu là <b>Chưởng Môn</b>, kế là Tả Hữu Hộ Pháp, rồi <b>Tứ Trấn Ba Vì</b> (Trấn Đông, Tây, Nam, Bắc). Thần thú hộ sơn: Voi Chín Ngà, Ngựa Chín Hồng Mao.</p>
+        </div>
+        <div class="the">
+          <h3 style="color:#9fd0ff">Thủy Tông Long Cung</h3>
+          <p style="color:var(--chu-mo)">Triều đình dưới nước của Long Cung, giữ long mạch dưới đáy biển. Đứng đầu là <b>Long Soái</b>, kế là Tả Hữu Hộ Pháp, rồi <b>Tứ Tuần</b> (Tuần Giang, Hồ, Đầm, Hải). Thần thú hộ sơn: Giao Long, Rùa Thần.</p>
+        </div>
+      </div>
+      <div class="the cuon-ngang" style="margin-top:16px">
+        <h3>Chức vụ theo cảnh giới</h3>
+        <p style="color:var(--chu-mo);margin-top:0">Cảnh giới càng cao, chức càng lớn, ngồi càng cao trên kim tự tháp — như điện môn phái: chức lớn ngồi trên, đệ tử ngồi dưới. Không người nào mang danh Sơn Tinh, Thủy Tinh hay Long Vương: đó là thần.</p>
+        <table class="bang" id="bang-chuc"><thead><tr><th>Cảnh giới</th><th>Sơn Tông</th><th>Thủy Tông</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <section class="khoi" id="thang">
+    <div class="khung">
+      <h2>Thang Trời mười bậc</h2>
+      <p style="color:var(--chu-mo);margin-top:0">Lệ chung của Thiên Đình cho mọi kẻ tu. Bậc càng cao, áo <b>thêm</b> chứ không thay: thêm lớp lụa, thêm đồ đồng, mũ lông chim cao hơn. Nhìn một người là đoán được bậc. Từ Nguyên Anh, muốn qua phải chịu lôi kiếp.</p>
+      <div class="the">
+        <div class="tab" id="chon-nv" style="justify-content:flex-start">
+          <button data-p="son">Sơn nam</button><button data-p="son-nu">Sơn nữ</button><button data-p="thuy">Thủy nữ</button><button data-p="thuy-nam">Thủy nam</button>
+        </div>
+        <div class="thang">
+          <div class="tranh"><div class="hao" id="hao"></div><img id="anh-canh" src="anh/nv/son-c0.webp" alt=""></div>
+          <div>
+            <div class="so" style="color:var(--dong);letter-spacing:.1em;font-size:.85rem" id="so-canh"></div>
+            <h3 class="serif" style="font-size:2rem;margin:0" id="ten-canh"></h3>
+            <dl class="so-lieu" id="so-lieu"></dl>
+            <p id="loi-canh" style="color:var(--chu-mo)"></p>
+            <div class="bac" id="bac"></div>
+            <div class="hang-nut" style="justify-content:flex-start;margin-top:14px">
+              <button class="nut" id="lui">‹ Bậc dưới</button><button class="nut" id="tien">Bậc trên ›</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="khoi" id="dia">
+    <div class="khung">
+      <h2>Địa danh</h2>
+      <div class="luoi luoi-3">
+        <div class="dia-danh" style="background-image:url(anh/nen/sanh.webp)"><div class="chu"><h3>Sảnh Thiên Vấn</h3><p>Biển mây trước ba đỉnh Ba Vì, Long Cung bên phải. Nơi hai tông cùng nghe Ngọc Phả hỏi.</p></div></div>
+        <div class="dia-danh" style="background-image:url(anh/nen/son.webp)"><div class="chu"><h3>Núi Tản — đạo trường Sơn Tông</h3><p>Cổng chim Lạc, cờ xanh, quảng trường mặt trống đồng. Nơi Tụ Linh Trận của Sơn Tông.</p></div></div>
+        <div class="dia-danh" style="background-image:url(anh/nen/thuy.webp)"><div class="chu"><h3>Long Cung — đạo trường Thủy Tông</h3><p>Cung ngọc trai, cổng vỏ sò, quảng trường vòng sóng dưới đáy biển.</p></div></div>
+        <div class="dia-danh" style="background-image:url(anh/nen/kiep.webp)"><div class="chu"><h3>Đàn tế đỉnh Tản</h3><p>Mặt trống đồng khổng lồ trên đỉnh gần trời nhất. Nơi lôi kiếp giáng xuống.</p></div></div>
+        <div class="dia-danh" style="background-image:url(anh/nen/lu.webp)"><div class="chu"><h3>Cửa sông mùa lũ</h3><p>Chỗ nước gặp núi. Mỗi năm một lần, đồ đệ hai tông quyết đấu ở đây.</p></div></div>
+        <div class="dia-danh" style="background-image:url(anh/nen/me.webp)"><div class="chu"><h3>Địa Cung Đồng Cổ</h3><p>Lò đúc đồng của các vua Hùng bị lũ vùi. Cửa hang chỉ lộ khi nước rút.</p></div></div>
+        <div class="dia-danh" style="background-image:url(anh/nen/cho.webp)"><div class="chu"><h3>Thành Trì Tự Do</h3><p>Chợ trên bãi phù sa giữa núi và biển. Thiên Đình giữ cho trung lập: không ai rút gươm.</p></div></div>
+        <div class="dia-danh" style="background-image:url(anh/yeu/ngu.webp);background-color:#0c2a33"><div class="chu"><h3>Biển Đông</h3><p>Nơi đuôi Ngư Tinh chìm. Oán khí của nó bị trấn ngoài khơi.</p></div></div>
+        <div class="dia-danh" style="background-image:url(anh/yeu/ho.webp);background-color:#2a1838"><div class="chu"><h3>Hồ Tây</h3><p>Hang cáo cũ bị nước phá thành đầm lớn. Đêm trăng sương tím, sen nở.</p></div></div>
+        <div class="dia-danh" style="background-image:url(anh/yeu/moc.webp);background-color:#0f2618"><div class="chu"><h3>Rừng già Phong Châu</h3><p>Gốc chiên đàn nghìn năm. Sương xanh, rễ bò như tay.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="khoi" id="nam">
+    <div class="khung" style="max-width:860px">
+      <h2>Một năm ở Sơn Hà</h2>
+      <p style="color:var(--chu-mo);margin-top:0">Ở Sơn Hà, <b>một giờ live là một năm</b>. Năm nào cũng lũ — "tháng bảy kiến bò, chỉ lo lại lụt". Mỗi việc trong năm sinh ra thứ việc sau cần.</p>
+      <div class="dong-thoi-gian">
+        <div class="moc"><b>Phút :00 · Ải Nhập Môn mở</b><p>Hai tông nhận người tự tìm được cửa. Phàm nhân vượt mê cung để thành đệ tử. Giữa năm, ải còn mở xen cho người mới tới.</p></div>
+        <div class="moc"><b>Suốt năm · Tu luyện</b><p>Ngọc Phả hỏi, ai đáp đúng được rót linh khí; mỗi câu đúng bồi Linh Mạch cho tông. Ai chạm ngưỡng thì tự bước qua cửa đột phá; từ Nguyên Anh thì lên đàn tế chịu lôi kiếp.</p></div>
+        <div class="moc"><b>Phút :15 · Mùa lũ — Đại Chiến</b><p>Thủy Tinh dâng nước, Sơn Tinh dời núi — nhưng chỉ đồ đệ được ra trận. Linh Mạch kết trận pháp; phe thắng đẩy thế trận mùa.</p></div>
+        <div class="moc"><b>Phút :25 · Nước rút — Tranh Đoạt Bảo Vật</b><p>Lũ rút, cửa Địa Cung lộ ra. Hai tông tranh nhau xuống nhặt binh khí, giáp đồng.</p></div>
+        <div class="moc"><b>Phút :30 · Thành Trì Tự Do</b><p>Chợ phiên sau lũ. Mua đan ở Đan Các, học chiêu ở Tàng Kinh Các.</p></div>
+        <div class="moc"><b>Phút :45 · Yêu tinh trồi lên</b><p>Lũ xói đất, phong ấn vốn đã yếu càng hở. Tông khắc con yêu ấy ra tay; hai tông tạm gác thù.</p></div>
+        <div class="moc"><b>Phút :55 · Địa Cung lần hai</b><p>Đất sụt sau trận đánh yêu, hang mở lại một lần — nhặt chiến lợi phẩm.</p></div>
+        <div class="moc"><b>Phút :58 · Thiên Đình ghi công</b><p>Nước dâng thì Thủy Tông thắng năm, núi cao thì Sơn Tông thắng năm. Sang năm mới.</p></div>
+      </div>
+      <h3 class="tieu-game" style="font-size:1.2rem;margin-top:22px">Trong phòng live</h3>
+      <div class="man-live" id="man-nam"></div>
+    </div>
+  </section>
+
+  <section class="khoi" id="vat">
+    <div class="khung">
+      <h2>Linh vật và thần thú</h2>
+      <p style="color:var(--chu-mo);margin-top:0">Yêu tinh không bao giờ "rơi" ra voi chín ngà. Ai có công diệt yêu thì <b>thần của phe mình</b> ban một linh vật trong đạo quân của thần. Thần đã ban thì không đòi lại.</p>
+      <div class="luoi luoi-4" style="margin-bottom:18px">
+        <div class="yeu"><img src="anh/thu/voi-1.webp" alt="Voi Chín Ngà" loading="lazy"><b>Voi Chín Ngà</b><small>thần thú hộ sơn · Sơn</small></div>
+        <div class="yeu"><img src="anh/thu/ngua-1.webp" alt="Ngựa Chín Hồng Mao" loading="lazy"><b>Ngựa Chín Hồng Mao</b><small>thần thú hộ sơn · Sơn</small></div>
+        <div class="yeu"><img src="anh/thu/giao-1.webp" alt="Giao Long" loading="lazy"><b>Giao Long</b><small>thần thú hộ sơn · Thủy</small></div>
+        <div class="yeu"><img src="anh/thu/rua-1.webp" alt="Rùa Thần" loading="lazy"><b>Rùa Thần</b><small>thần thú hộ sơn · Thủy</small></div>
+      </div>
+      <div class="luoi luoi-2">
+        <div class="the"><h3 style="color:#8fe6c9">Sơn Tinh ban</h3><p>🐘 Voi Chín Ngà · 🐓 Gà Chín Cựa · 🐎 Ngựa Chín Hồng Mao · 🕊️ Chim Lạc</p><p style="color:var(--chu-mo);font-size:.9rem;margin:0">Ba con đầu là sính lễ năm xưa.</p></div>
+        <div class="the"><h3 style="color:#9fd0ff">Thủy Tinh ban</h3><p>🐍 Thuồng Luồng · 🐟 Cá Chép Hóa Rồng · 🐢 Rùa Thần · 🐉 Giao Long</p><p style="color:var(--chu-mo);font-size:.9rem;margin:0">Lấy từ đạo quân thủy tộc dâng nước năm xưa.</p></div>
+      </div>
+      <p style="color:var(--chu-mo);font-size:.92rem">Linh thú nuôi ở Tàng Bảo Các là chuyện khác: đó là thú tông nuôi, đổi bằng linh thạch, không phải linh vật thần ban.</p>
+    </div>
+  </section>
+
+  <section class="khoi" id="tran">
+    <div class="khung">
+      <h2>Căn cơ, Linh Mạch, trận pháp</h2>
+      <div class="luoi luoi-2">
+        <div class="the cuon-ngang">
+          <h3>Bốn căn cơ — trời chia khi nhập môn</h3>
+          <table class="bang"><thead><tr><th>Căn cơ</th><th>Mạnh</th><th>Yếu</th></tr></thead><tbody>
+            <tr><td>⚔ Chiến Tướng</td><td>đòn nặng, trả lời nhanh được thưởng thêm</td><td>đỡ đòn kém</td></tr>
+            <tr><td>🛡 Hộ Vệ</td><td>đỡ phản đòn giỏi, trả lời sai không mất chuỗi</td><td>đòn nhẹ</td></tr>
+            <tr><td>💚 Y Sư</td><td>hồi trận mạnh, hộ pháp độ kiếp tính hai người</td><td>đòn nhẹ</td></tr>
+            <tr><td>🗡 Phá Quân</td><td>bạo kích, đáp đúng bồi Linh Mạch gấp đôi</td><td>đỡ đòn kém</td></tr>
+          </tbody></table>
+          <p style="color:var(--chu-mo);font-size:.92rem">Tông chỉ toàn Chiến Tướng đánh mạnh mà không ai dựng khiên, không ai hồi. Phải đủ mặt mới kết đủ bốn trận.</p>
+        </div>
+        <div class="the cuon-ngang">
+          <h3>Bốn trận pháp</h3>
+          <table class="bang"><thead><tr><th></th><th>Sơn Tông</th><th>Thủy Tông</th></tr></thead><tbody>
+            <tr><td>Hồi</td><td>Linh Chi Ba Vì</td><td>Ngọc Trai Hồi Xuân</td></tr>
+            <tr><td>Thủ</td><td>Thạch Bích Hộ Sơn</td><td>Vảy Rồng Hộ Thể</td></tr>
+            <tr><td>Công</td><td>Trống Đồng Thúc Quân</td><td>Tù Và Long Cung</td></tr>
+            <tr><td>Phá</td><td>Rìu Đồng Phá Trận</td><td>Thuồng Luồng Xé Giáp</td></tr>
+          </tbody></table>
+          <p style="color:var(--chu-mo);font-size:.92rem">Phá khắc Thủ, Hồi gỡ lại phần bị Công đánh, Công gặp Thủ thì hụt.</p>
+        </div>
+      </div>
+      <div class="the" style="margin-top:16px">
+        <h3>Vòng Linh Mạch</h3>
+        <p style="margin:0">Sơn Tông giữ mạch linh khí núi Tản; Thủy Tông giữ long mạch dưới Long Cung. <b>Tu luyện bồi mạch → mạch nuôi trận pháp → trận pháp giúp thắng → thắng lại dày mạch.</b> Tông nào tu chăm thì vào trận có nhiều trận pháp hơn. Quà là hương hỏa: dâng lên thì thần thỉnh trận ngay, không tốn mạch.</p>
+      </div>
+    </div>
+  </section>
+</main>
+<footer id="chan"></footer>
+<script src="js/site.js"></script>
+<script>
+(function () {
+  var S = window.SHTL, G = S.CANH_GIOI;
+  document.getElementById('man-nam').innerHTML = S.MAN.map(S.veMan).join('');
+  document.querySelectorAll('#nhay button').forEach(function (b) {
+    b.onclick = function () { document.getElementById(b.dataset.den).scrollIntoView(); };
+  });
+  document.querySelector('#bang-chuc tbody').innerHTML = G.map(function (g) {
+    return '<tr><td>' + g.ten + '</td><td>' + g.son + '</td><td>' + g.thuy + '</td></tr>';
+  }).join('');
+
+  var LOI = [
+    'Người thường. Áo vải, chân đất. Vẫn nghe được Ngọc Phả.',
+    'Bắt đầu cảm được linh khí trời đất.',
+    'Dựng nền: thắt lưng đồng, lông trĩ cài khăn.',
+    'Linh khí kết thành đan. Bậc cuối trước lôi kiếp.',
+    'Lôi kiếp đầu tiên. Từ đây có vòng hào quang sau lưng và biển chức trên đầu.',
+    'Thần thức vượt khỏi thân. Ngồi ghế viền vàng.',
+    'Áo choàng hai lớp, hào quang thêm tia.',
+    'Bậc cao nhất của trưởng lão. Ngồi ghế vàng hào quang.',
+    'Thành tiên. Mão hình mặt trời trống đồng hay mão rồng nước, vòng hào quang kép.',
+    'Sánh vai Tứ Bất Tử — Tản Viên, Thánh Gióng, Chử Đồng Tử, Mẫu Liễu Hạnh.'
+  ];
+  var nv = 'son', i = 0;
+  var bac = document.getElementById('bac');
+  bac.innerHTML = G.map(function (g) { return '<button>' + g.ten + '</button>'; }).join('');
+  function ve() {
+    var g = G[i], phe = nv.indexOf('son') === 0 ? 'son' : 'thuy';
+    document.getElementById('anh-canh').src = 'anh/nv/' + nv + '-c' + g.tranh + '.webp';
+    document.getElementById('anh-canh').alt = g.ten;
+    document.getElementById('hao').style.background = 'radial-gradient(circle, ' + g.hao + ', transparent 70%)';
+    document.getElementById('so-canh').textContent = 'BẬC ' + (i + 1) + ' / 10';
+    document.getElementById('ten-canh').textContent = g.ten;
+    document.getElementById('so-lieu').innerHTML =
+      '<dt>Linh khí cần</dt><dd>' + g.can.toLocaleString('vi-VN') + '</dd>' +
+      '<dt>Chức</dt><dd>' + g[phe] + '</dd>' +
+      '<dt>Vượt bậc</dt><dd>' + (g.hoPhap ? 'lôi kiếp · cần ' + g.hoPhap + ' hộ pháp' : (i ? 'tự gõ đột phá' : '—')) + '</dd>';
+    document.getElementById('loi-canh').textContent = LOI[i];
+    bac.querySelectorAll('button').forEach(function (b, j) { b.classList.toggle('dang', j === i); });
+    document.querySelectorAll('#chon-nv button').forEach(function (b) { b.classList.toggle('dang', b.dataset.p === nv); });
+  }
+  bac.querySelectorAll('button').forEach(function (b, j) { b.onclick = function () { i = j; ve(); }; });
+  document.querySelectorAll('#chon-nv button').forEach(function (b) { b.onclick = function () { nv = b.dataset.p; ve(); }; });
+  document.getElementById('lui').onclick = function () { i = Math.max(0, i - 1); ve(); };
+  document.getElementById('tien').onclick = function () { i = Math.min(9, i + 1); ve(); };
+  ve();
+})();
+</script>
+</body>
+</html>
